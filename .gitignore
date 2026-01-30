@@ -1,6 +1,6 @@
 # Dependencies
 node_modules/
-admin/node_modules/
+*/node_modules/
 
 # Logs
 *.log
@@ -29,32 +29,16 @@ Thumbs.db
 *.swo
 *~
 
-# Database files (local development)
-data/worklink.db
-data/worklink.db-shm
-data/worklink.db-wal
-worklink.db
-worklink.db-shm
-worklink.db-wal
-*.db
+# Database files (keep sample, exclude temp files)
 *.db-shm
 *.db-wal
 
-# Live data files (keep seed data)
-data/core/*.json
-data/business/*.json
-data/transactions/*.json
-data/communications/*.json
-
-# Build outputs
+# Build outputs (regenerated on deploy)
 admin/dist/
+worker/dist/
 admin/.vite/
-
-# Credentials
-credentials_n_infomation
-
-# Legacy
-worker/js
+worker/.vite/
+.vite/
 
 # Testing
 coverage/
@@ -64,3 +48,7 @@ coverage/
 *.tmp
 *.temp
 .cache/
+
+# Package manager
+package-lock.json
+*/package-lock.json
