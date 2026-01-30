@@ -1,5 +1,5 @@
 /**
- * TalentVis Platform Server
+ * WorkLink Platform Server v2
  * Main entry point with real-time chat support
  */
 
@@ -24,10 +24,13 @@ const server = http.createServer(app);
 const { setupWebSocket } = require('./websocket');
 const wss = setupWebSocket(server);
 
+// Trust proxy for Railway
+app.set('trust proxy', 1);
+
 // Middleware
 app.use(compression());
-app.use(express.json());
-app.use(express.urlencoded({ extended: true }));
+app.use(express.json({ limit: '10mb' }));
+app.use(express.urlencoded({ extended: true, limit: '10mb' }));
 
 // Request logging
 app.use((req, res, next) => {
@@ -41,11 +44,27 @@ app.use((req, res, next) => {
   next();
 });
 
-// CORS for development
+// CORS configuration
+const allowedOrigins = process.env.ALLOWED_ORIGINS 
+  ? process.env.ALLOWED_ORIGINS.split(',') 
+  : ['http://localhost:3000', 'http://localhost:5173', 'http://localhost:5174'];
+
 app.use((req, res, next) => {
-  res.header('Access-Control-Allow-Origin', '*');
+  const origin = req.headers.origin;
+  
+  // In production, allow all origins from same domain or specified origins
+  if (process.env.NODE_ENV === 'production') {
+    res.header('Access-Control-Allow-Origin', origin || '*');
+  } else if (allowedOrigins.includes(origin)) {
+    res.header('Access-Control-Allow-Origin', origin);
+  } else {
+    res.header('Access-Control-Allow-Origin', '*');
+  }
+  
   res.header('Access-Control-Allow-Methods', 'GET, POST, PUT, PATCH, DELETE, OPTIONS');
   res.header('Access-Control-Allow-Headers', 'Origin, X-Requested-With, Content-Type, Accept, Authorization');
+  res.header('Access-Control-Allow-Credentials', 'true');
+  
   if (req.method === 'OPTIONS') {
     return res.sendStatus(200);
   }
@@ -55,64 +74,150 @@ app.use((req, res, next) => {
 // API routes
 app.use('/api/v1', require('./routes/api/v1'));
 
-// Health check
+// Health check endpoint for Railway
 app.get('/health', (req, res) => {
-  res.json({ status: 'ok', timestamp: new Date().toISOString() });
+  try {
+    // Test database connection
+    db.prepare('SELECT 1').get();
+    res.json({ 
+      status: 'ok', 
+      timestamp: new Date().toISOString(),
+      environment: process.env.NODE_ENV || 'development',
+      uptime: process.uptime()
+    });
+  } catch (error) {
+    res.status(500).json({ 
+      status: 'error', 
+      message: error.message,
+      timestamp: new Date().toISOString()
+    });
+  }
 });
 
-// Serve static files for admin
+// Favicon
+app.get('/favicon.ico', (req, res) => {
+  res.sendFile(path.join(__dirname, 'favicon.png'));
+});
+app.get('/favicon.png', (req, res) => {
+  res.sendFile(path.join(__dirname, 'favicon.png'));
+});
+
+// Serve static files for admin portal
 const adminDistPath = path.join(__dirname, 'admin', 'dist');
 if (fs.existsSync(adminDistPath)) {
-  app.use('/admin', express.static(adminDistPath));
+  app.use('/admin', express.static(adminDistPath, {
+    maxAge: process.env.NODE_ENV === 'production' ? '1d' : 0
+  }));
   app.get('/admin/*', (req, res) => {
     res.sendFile(path.join(adminDistPath, 'index.html'));
+  });
+} else {
+  console.log('⚠️  Admin dist folder not found. Run: cd admin && npm run build');
+  app.get('/admin', (req, res) => {
+    res.status(503).send('Admin portal not built. Please run: cd admin && npm run build');
   });
 }
 
 // Serve static files for worker PWA
 const workerDistPath = path.join(__dirname, 'worker', 'dist');
 if (fs.existsSync(workerDistPath)) {
-  app.use(express.static(workerDistPath));
+  app.use(express.static(workerDistPath, {
+    maxAge: process.env.NODE_ENV === 'production' ? '1d' : 0
+  }));
+  
+  // SPA fallback for worker app
   app.get('*', (req, res, next) => {
-    if (req.path.startsWith('/api') || req.path.startsWith('/admin') || req.path.startsWith('/ws')) {
+    // Skip API, admin, and websocket routes
+    if (req.path.startsWith('/api') || req.path.startsWith('/admin') || req.path.startsWith('/ws') || req.path === '/health') {
       return next();
     }
     res.sendFile(path.join(workerDistPath, 'index.html'));
   });
+} else {
+  console.log('⚠️  Worker dist folder not found. Run: cd worker && npm run build');
+  app.get('/', (req, res) => {
+    res.status(503).send('Worker app not built. Please run: cd worker && npm run build');
+  });
 }
 
-// Error handling
+// 404 handler
+app.use((req, res) => {
+  res.status(404).json({ 
+    success: false, 
+    error: 'Not Found',
+    path: req.path 
+  });
+});
+
+// Error handling middleware
 app.use((err, req, res, next) => {
   console.error('Error:', err);
-  res.status(500).json({ success: false, error: err.message });
+  res.status(err.status || 500).json({ 
+    success: false, 
+    error: process.env.NODE_ENV === 'production' ? 'Internal Server Error' : err.message,
+    ...(process.env.NODE_ENV !== 'production' && { stack: err.stack })
+  });
 });
 
 // Start server
 const PORT = process.env.PORT || 3000;
-server.listen(PORT, () => {
+const HOST = process.env.HOST || '0.0.0.0';
+
+server.listen(PORT, HOST, () => {
   console.log(`
-╔═══════════════════════════════════════════════════════════╗
-║                                                           ║
-║   🚀 TalentVis Platform Server                           ║
-║                                                           ║
-║   Backend API:    http://localhost:${PORT}                   ║
-║   Admin Portal:   http://localhost:${PORT}/admin             ║
-║   Worker PWA:     http://localhost:${PORT}                   ║
-║   WebSocket:      ws://localhost:${PORT}/ws                  ║
-║                                                           ║
-║   Environment:    ${process.env.NODE_ENV || 'development'}                          ║
-║                                                           ║
-╚═══════════════════════════════════════════════════════════╝
+╔════════════════════════════════════════════════════════════╗
+║                                                            ║
+║   🚀 WorkLink Platform Server v2                          ║
+║                                                            ║
+║   Server:         http://${HOST}:${PORT}                       ║
+║   Admin Portal:   http://${HOST}:${PORT}/admin                 ║
+║   Worker PWA:     http://${HOST}:${PORT}                       ║
+║   Health Check:   http://${HOST}:${PORT}/health                ║
+║   WebSocket:      ws://${HOST}:${PORT}/ws                      ║
+║                                                            ║
+║   Environment:    ${(process.env.NODE_ENV || 'development').padEnd(20)}             ║
+║   Node Version:   ${process.version.padEnd(20)}             ║
+║                                                            ║
+╚════════════════════════════════════════════════════════════╝
   `);
 });
 
 // Graceful shutdown
-process.on('SIGTERM', () => {
-  console.log('SIGTERM received. Closing server...');
+const shutdown = (signal) => {
+  console.log(`\n${signal} received. Starting graceful shutdown...`);
+  
   server.close(() => {
-    db.close();
+    console.log('HTTP server closed');
+    
+    try {
+      db.close();
+      console.log('Database connection closed');
+    } catch (err) {
+      console.error('Error closing database:', err);
+    }
+    
+    console.log('Graceful shutdown completed');
     process.exit(0);
   });
+
+  // Force close after 30 seconds
+  setTimeout(() => {
+    console.error('Could not close connections in time, forcefully shutting down');
+    process.exit(1);
+  }, 30000);
+};
+
+process.on('SIGTERM', () => shutdown('SIGTERM'));
+process.on('SIGINT', () => shutdown('SIGINT'));
+
+// Handle uncaught exceptions
+process.on('uncaughtException', (err) => {
+  console.error('Uncaught Exception:', err);
+  shutdown('UNCAUGHT_EXCEPTION');
+});
+
+process.on('unhandledRejection', (reason, promise) => {
+  console.error('Unhandled Rejection at:', promise, 'reason:', reason);
 });
 
 module.exports = { app, server, wss };

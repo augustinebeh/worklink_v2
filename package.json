@@ -1,10 +1,11 @@
 {
-  "name": "talentvis-platform",
+  "name": "worklink-v2",
   "version": "2.0.0",
-  "description": "TalentVis recruitment platform - Admin portal and candidate PWA",
+  "description": "WorkLink recruitment platform - Admin portal and worker PWA",
   "main": "server.js",
   "engines": {
-    "node": ">=20.0.0"
+    "node": ">=20.0.0",
+    "npm": ">=10.0.0"
   },
   "scripts": {
     "start": "node server.js",
@@ -13,8 +14,9 @@
     "dev:admin": "cd admin && npm run dev",
     "dev:worker": "cd worker && npm run dev",
     "build": "npm run build:admin && npm run build:worker",
-    "build:admin": "cd admin && npm run build",
-    "build:worker": "cd worker && npm run build",
+    "build:admin": "cd admin && npm install && npm run build",
+    "build:worker": "cd worker && npm install && npm run build",
+    "postinstall": "echo 'Main dependencies installed'",
     "install:all": "npm install && cd admin && npm install && cd ../worker && npm install",
     "db:reset": "node -e \"require('./db/database').resetToSampleData()\""
   },
@@ -25,7 +27,7 @@
     "bpo",
     "singapore"
   ],
-  "author": "TalentVis",
+  "author": "WorkLink",
   "license": "MIT",
   "dependencies": {
     "better-sqlite3": "^11.0.0",
