@@ -1,0 +1,66 @@
+# Dependencies
+node_modules/
+admin/node_modules/
+
+# Logs
+*.log
+npm-debug.log*
+yarn-debug.log*
+yarn-error.log*
+lerna-debug.log*
+logs/
+!logs/.gitkeep
+
+# Environment variables
+.env
+.env.local
+.env.development
+.env.test
+.env.production
+
+# OS files
+.DS_Store
+Thumbs.db
+
+# IDE files
+.vscode/
+.idea/
+*.swp
+*.swo
+*~
+
+# Database files (local development)
+data/worklink.db
+data/worklink.db-shm
+data/worklink.db-wal
+worklink.db
+worklink.db-shm
+worklink.db-wal
+*.db
+*.db-shm
+*.db-wal
+
+# Live data files (keep seed data)
+data/core/*.json
+data/business/*.json
+data/transactions/*.json
+data/communications/*.json
+
+# Build outputs
+admin/dist/
+admin/.vite/
+
+# Credentials
+credentials_n_infomation
+
+# Legacy
+worker/js
+
+# Testing
+coverage/
+.nyc_output/
+
+# Temporary files
+*.tmp
+*.temp
+.cache/

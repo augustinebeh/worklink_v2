@@ -1,0 +1,42 @@
+{
+  "name": "talentvis-platform",
+  "version": "2.0.0",
+  "description": "TalentVis recruitment platform - Admin portal and candidate PWA",
+  "main": "server.js",
+  "engines": {
+    "node": ">=20.0.0"
+  },
+  "scripts": {
+    "start": "node server.js",
+    "dev": "concurrently -n server,admin,worker -c blue,green,magenta \"nodemon --ignore data/ server.js\" \"cd admin && npm run dev\" \"cd worker && npm run dev\"",
+    "dev:server": "nodemon --ignore data/ server.js",
+    "dev:admin": "cd admin && npm run dev",
+    "dev:worker": "cd worker && npm run dev",
+    "build": "npm run build:admin && npm run build:worker",
+    "build:admin": "cd admin && npm run build",
+    "build:worker": "cd worker && npm run build",
+    "install:all": "npm install && cd admin && npm install && cd ../worker && npm install",
+    "db:reset": "node -e \"require('./db/database').resetToSampleData()\""
+  },
+  "keywords": [
+    "recruitment",
+    "gig-economy",
+    "workforce-management",
+    "bpo",
+    "singapore"
+  ],
+  "author": "TalentVis",
+  "license": "MIT",
+  "dependencies": {
+    "better-sqlite3": "^11.0.0",
+    "compression": "^1.7.4",
+    "dotenv": "^16.3.1",
+    "express": "^4.18.2",
+    "web-push": "^3.6.7",
+    "ws": "^8.16.0"
+  },
+  "devDependencies": {
+    "concurrently": "^8.2.2",
+    "nodemon": "^3.0.1"
+  }
+}
