@@ -25,7 +25,7 @@ export function PageTransition({ children }) {
 
   return (
     <div
-      className={`page-transition ${isAnimating ? 'page-exit' : 'page-enter'}`}
+      className={`page-transition flex-1 flex flex-col ${isAnimating ? 'page-exit' : 'page-enter'}`}
       style={{
         animation: isAnimating
           ? 'page-fade-out 0.15s ease-out forwards'

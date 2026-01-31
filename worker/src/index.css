@@ -131,6 +131,9 @@
     /* Full dimensions when body is fixed */
     height: 100%;
     width: 100%;
+    /* Flex layout for sticky footer */
+    display: flex;
+    flex-direction: column;
   }
 
   /* Hide scrollbar but keep functionality */

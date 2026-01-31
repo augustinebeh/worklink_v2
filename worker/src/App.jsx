@@ -27,12 +27,14 @@ function AppLayout({ children }) {
   const location = useLocation();
 
   return (
-    <>
-      <PageTransition key={location.pathname}>
-        {children}
-      </PageTransition>
+    <div className="flex flex-col min-h-screen min-h-[100dvh]">
+      <main className="flex-1 flex flex-col">
+        <PageTransition key={location.pathname}>
+          {children}
+        </PageTransition>
+      </main>
       <BottomNav />
-    </>
+    </div>
   );
 }
 
