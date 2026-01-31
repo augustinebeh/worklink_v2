@@ -11,9 +11,13 @@ import {
   Users,
   MessageSquare,
   ChevronDown,
+  ChevronLeft,
+  ChevronRight,
   X,
   FileText,
   Zap,
+  PanelLeftClose,
+  PanelLeft,
 } from 'lucide-react';
 import EmojiPicker from 'emoji-picker-react';
 
@@ -140,6 +144,7 @@ export default function AdminChat() {
   const [searchTerm, setSearchTerm] = useState('');
   const [loading, setLoading] = useState(true);
   const [isConnected, setIsConnected] = useState(false);
+  const [sidebarCollapsed, setSidebarCollapsed] = useState(false);
 
   const messagesEndRef = useRef(null);
   const wsRef = useRef(null);
@@ -392,13 +397,13 @@ export default function AdminChat() {
   );
 
   return (
-    <div className="flex h-[calc(100vh-4rem)] bg-dark-900 overflow-hidden">
+    <div className="flex h-[95vh] bg-dark-900 overflow-hidden rounded-xl">
       {/* Sidebar - Conversations */}
-      <div className="w-80 flex-shrink-0 border-r border-dark-700 flex flex-col">
+      <div className={`${sidebarCollapsed ? 'w-0' : 'w-80'} flex-shrink-0 border-r border-dark-700 flex flex-col transition-all duration-300 overflow-hidden`}>
         {/* Header */}
         <div className="p-4 border-b border-dark-700 flex-shrink-0">
           <div className="flex items-center justify-between mb-4">
-            <h2 className="text-lg font-semibold text-white">Messages</h2>
+            <h2 className="text-lg font-semibold text-white whitespace-nowrap">Messages</h2>
             <div className="flex items-center gap-2">
               <span className={`w-2 h-2 rounded-full ${isConnected ? 'bg-green-500' : 'bg-red-500'}`} />
               <button
@@ -446,6 +451,18 @@ export default function AdminChat() {
           )}
         </div>
       </div>
+
+      {/* Sidebar toggle button */}
+      <button
+        onClick={() => setSidebarCollapsed(!sidebarCollapsed)}
+        className="flex-shrink-0 w-6 bg-dark-800 hover:bg-dark-700 border-r border-dark-700 flex items-center justify-center transition-colors"
+      >
+        {sidebarCollapsed ? (
+          <ChevronRight className="h-4 w-4 text-dark-400" />
+        ) : (
+          <ChevronLeft className="h-4 w-4 text-dark-400" />
+        )}
+      </button>
 
       {/* Chat area */}
       <div className="flex-1 flex flex-col min-h-0 overflow-hidden">
