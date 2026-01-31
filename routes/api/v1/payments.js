@@ -89,10 +89,10 @@ router.patch('/:id', (req, res) => {
       if (status === 'paid') {
         updates.push('paid_at = CURRENT_TIMESTAMP');
         
-        // Update candidate earnings
+        // Update candidate earnings (round to 2 decimal places)
         db.prepare(`
-          UPDATE candidates 
-          SET total_earnings = total_earnings + ?
+          UPDATE candidates
+          SET total_earnings = ROUND(total_earnings + ?, 2)
           WHERE id = ?
         `).run(payment.total_amount, payment.candidate_id);
       }
@@ -153,9 +153,9 @@ router.post('/batch-paid', (req, res) => {
       WHERE id IN (${placeholders}) AND status = 'approved'
     `).run(transaction_id, ...payment_ids);
 
-    // Update candidate earnings
+    // Update candidate earnings (round to 2 decimal places)
     payments.forEach(p => {
-      db.prepare(`UPDATE candidates SET total_earnings = total_earnings + ? WHERE id = ?`).run(p.total_amount, p.candidate_id);
+      db.prepare(`UPDATE candidates SET total_earnings = ROUND(total_earnings + ?, 2) WHERE id = ?`).run(p.total_amount, p.candidate_id);
     });
 
     res.json({ success: true, message: `${payments.length} payments marked as paid` });
