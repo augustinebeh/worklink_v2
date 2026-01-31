@@ -43,7 +43,7 @@ router.get('/dashboard/:candidateId', (req, res) => {
     };
 
     // Generate share links
-    const baseUrl = process.env.APP_URL || 'https://worklink.app';
+    const baseUrl = process.env.APP_URL || 'https://worklinkv2-production.up.railway.app';
     const shareLinks = {
       web: `${baseUrl}/join?ref=${candidate.referral_code}`,
       whatsapp: generateWhatsAppLink(candidate.name, candidate.referral_code, baseUrl),
