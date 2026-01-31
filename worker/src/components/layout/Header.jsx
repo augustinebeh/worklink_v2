@@ -1,25 +1,11 @@
+import { useState } from 'react';
 import { useNavigate, useLocation } from 'react-router-dom';
-import { BellIcon, SettingsIcon } from 'lucide-react';
+import { MenuIcon, BellIcon, QrCodeIcon } from 'lucide-react';
 import { useAuth } from '../../contexts/AuthContext';
 import { useTheme } from '../../contexts/ThemeContext';
 import { useWebSocket } from '../../contexts/WebSocketContext';
 import { clsx } from 'clsx';
-import { LogoIcon } from '../ui/Logo';
-
-const PAGE_TITLES = {
-  '/': null, // Home shows logo
-  '/jobs': 'Find Jobs',
-  '/wallet': 'Wallet',
-  '/profile': 'Profile',
-  '/calendar': 'Availability',
-  '/notifications': 'Notifications',
-  '/quests': 'Quests',
-  '/achievements': 'Achievements',
-  '/leaderboard': 'Leaderboard',
-  '/training': 'Training',
-  '/referrals': 'Refer & Earn',
-  '/chat': 'Messages',
-};
+import Sidebar from './Sidebar';
 
 export default function Header() {
   const navigate = useNavigate();
@@ -27,81 +13,112 @@ export default function Header() {
   const { user } = useAuth();
   const { isDark } = useTheme();
   const ws = useWebSocket();
+  const [sidebarOpen, setSidebarOpen] = useState(false);
 
   // Hide on login page
   if (location.pathname === '/login') return null;
 
-  // Get page title or show logo on home
-  const isHome = location.pathname === '/';
-  const pageTitle = PAGE_TITLES[location.pathname] ||
-    (location.pathname.startsWith('/jobs/') ? 'Job Details' : 'WorkLink');
-
   return (
-    <header
-      className={clsx(
-        'sticky top-0 z-40 border-b',
-        isDark
-          ? 'bg-[#0a0f1a] border-white/5'
-          : 'bg-white border-slate-200'
-      )}
-      style={{ paddingTop: 'env(safe-area-inset-top, 0px)' }}
-    >
-      <div className="flex items-center justify-between px-4 h-14">
-        {/* Left side - Logo or Title */}
-        <div className="flex items-center gap-3">
-          {isHome ? (
-            <>
-              <LogoIcon size={32} />
-              <span className={clsx(
-                'font-bold text-lg',
-                isDark ? 'text-white' : 'text-slate-900'
-              )}>
-                WorkLink
-              </span>
-            </>
-          ) : (
-            <h1 className={clsx(
-              'font-semibold text-lg',
-              isDark ? 'text-white' : 'text-slate-900'
-            )}>
-              {pageTitle}
-            </h1>
-          )}
-        </div>
-
-        {/* Right side - Actions */}
-        <div className="flex items-center gap-2">
-          {/* Notifications */}
+    <>
+      <header
+        className={clsx(
+          'sticky top-0 left-0 right-0 z-40',
+          isDark
+            ? 'bg-[#0a0f1a]/95 backdrop-blur-lg'
+            : 'bg-white/95 backdrop-blur-lg'
+        )}
+        style={{ paddingTop: 'env(safe-area-inset-top, 0px)' }}
+      >
+        {/* Main Header Content */}
+        <div className="flex items-center justify-between px-4 h-14">
+          {/* Left - Menu */}
           <button
-            onClick={() => navigate('/notifications')}
+            onClick={() => setSidebarOpen(true)}
             className={clsx(
-              'relative p-2 rounded-full transition-colors',
+              'p-2 -ml-2 rounded-xl transition-all active:scale-95',
               isDark
-                ? 'text-dark-400 hover:text-white hover:bg-white/5'
-                : 'text-slate-500 hover:text-slate-900 hover:bg-slate-100'
+                ? 'text-white hover:bg-white/10'
+                : 'text-slate-900 hover:bg-slate-100'
             )}
           >
-            <BellIcon className="h-5 w-5" />
-            {ws?.unreadNotifications > 0 && (
-              <span className="absolute top-1.5 right-1.5 w-2 h-2 rounded-full bg-red-500" />
-            )}
+            <MenuIcon className="h-6 w-6" strokeWidth={2} />
           </button>
 
-          {/* Profile Avatar */}
-          {user && (
+          {/* Right - Actions */}
+          <div className="flex items-center gap-1">
+            {/* QR Scanner */}
             <button
-              onClick={() => navigate('/profile')}
-              className="w-8 h-8 rounded-full bg-gradient-to-br from-primary-500 to-violet-500 flex items-center justify-center text-white font-semibold text-sm overflow-hidden"
+              className={clsx(
+                'p-2.5 rounded-xl transition-all active:scale-95',
+                isDark
+                  ? 'text-slate-400 hover:text-white hover:bg-white/5'
+                  : 'text-slate-500 hover:text-slate-900 hover:bg-slate-100'
+              )}
             >
-              {user.profile_photo ? (
-                <img src={user.profile_photo} alt="" className="w-full h-full object-cover" />
-              ) : (
-                user.name?.charAt(0) || 'U'
+              <QrCodeIcon className="h-5 w-5" strokeWidth={2} />
+            </button>
+
+            {/* Notifications */}
+            <button
+              onClick={() => navigate('/notifications')}
+              className={clsx(
+                'relative p-2.5 rounded-xl transition-all active:scale-95',
+                isDark
+                  ? 'text-slate-400 hover:text-white hover:bg-white/5'
+                  : 'text-slate-500 hover:text-slate-900 hover:bg-slate-100'
+              )}
+            >
+              <BellIcon className="h-5 w-5" strokeWidth={2} />
+              {ws?.unreadNotifications > 0 && (
+                <span className="absolute top-1.5 right-1.5 min-w-[18px] h-[18px] rounded-full bg-gradient-to-br from-red-500 to-rose-600 flex items-center justify-center">
+                  <span className="text-[10px] font-bold text-white px-1">
+                    {ws.unreadNotifications > 99 ? '99+' : ws.unreadNotifications}
+                  </span>
+                </span>
               )}
             </button>
-          )}
+
+            {/* Profile Avatar */}
+            {user && (
+              <button
+                onClick={() => navigate('/profile')}
+                className={clsx(
+                  'relative ml-1 rounded-xl p-0.5 transition-all active:scale-95',
+                  'bg-gradient-to-br from-primary-500 via-violet-500 to-fuchsia-500'
+                )}
+              >
+                <div className={clsx(
+                  'w-9 h-9 rounded-[10px] flex items-center justify-center overflow-hidden',
+                  isDark ? 'bg-[#0d1421]' : 'bg-white'
+                )}>
+                  {user.profile_photo ? (
+                    <img
+                      src={user.profile_photo}
+                      alt=""
+                      className="w-full h-full object-cover"
+                    />
+                  ) : (
+                    <span className="text-sm font-bold bg-gradient-to-br from-primary-400 to-violet-500 bg-clip-text text-transparent">
+                      {user.name?.charAt(0) || 'U'}
+                    </span>
+                  )}
+                </div>
+              </button>
+            )}
+          </div>
         </div>
-      </div>
-    </header>
+
+        {/* Subtle bottom gradient line */}
+        <div className={clsx(
+          'h-px',
+          isDark
+            ? 'bg-gradient-to-r from-transparent via-white/10 to-transparent'
+            : 'bg-gradient-to-r from-transparent via-slate-200 to-transparent'
+        )} />
+      </header>
+
+      {/* Sidebar */}
+      <Sidebar isOpen={sidebarOpen} onClose={() => setSidebarOpen(false)} />
+    </>
   );
 }

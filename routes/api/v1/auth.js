@@ -92,23 +92,29 @@ router.post('/worker/login', (req, res) => {
         `).run();
       }
 
-      // Ensure payment history exists
-      const payments = [
-        ['PAY_DEMO_001', 120.00, 0, 120.00, 8.0, 'paid', '-7 days'],
-        ['PAY_DEMO_002', 108.00, 20.00, 128.00, 6.0, 'paid', '-14 days'],
-        ['PAY_DEMO_003', 160.00, 0, 160.00, 8.0, 'paid', '-21 days'],
-        ['PAY_DEMO_004', 110.00, 15.00, 125.00, 5.0, 'pending', '-3 days'],
-        ['PAY_DEMO_005', 128.00, 0, 128.00, 8.0, 'approved', '-1 days'],
-      ];
-      payments.forEach(p => {
-        db.prepare(`
-          INSERT OR IGNORE INTO payments (id, candidate_id, base_amount, incentive_amount, total_amount, hours_worked, status, created_at)
-          VALUES (?, 'CND_DEMO_001', ?, ?, ?, ?, ?, datetime('now', ?))
-        `).run(p[0], p[1], p[2], p[3], p[4], p[5], p[6]);
-      });
-
-      // Refresh candidate data after update
+      // Refresh candidate data to get the ID
       candidate = db.prepare('SELECT * FROM candidates WHERE email = ?').get(email);
+
+      // Ensure payment history exists (only if candidate was created successfully)
+      if (candidate) {
+        try {
+          const payments = [
+            ['PAY_DEMO_001', 120.00, 0, 120.00, 8.0, 'paid', '-7 days'],
+            ['PAY_DEMO_002', 108.00, 20.00, 128.00, 6.0, 'paid', '-14 days'],
+            ['PAY_DEMO_003', 160.00, 0, 160.00, 8.0, 'paid', '-21 days'],
+            ['PAY_DEMO_004', 110.00, 15.00, 125.00, 5.0, 'pending', '-3 days'],
+            ['PAY_DEMO_005', 128.00, 0, 128.00, 8.0, 'approved', '-1 days'],
+          ];
+          payments.forEach(p => {
+            db.prepare(`
+              INSERT OR IGNORE INTO payments (id, candidate_id, base_amount, incentive_amount, total_amount, hours_worked, status, created_at)
+              VALUES (?, ?, ?, ?, ?, ?, ?, datetime('now', ?))
+            `).run(p[0], candidate.id, p[1], p[2], p[3], p[4], p[5], p[6]);
+          });
+        } catch (paymentErr) {
+          console.log('⚠️ Could not create demo payments:', paymentErr.message);
+        }
+      }
     }
 
     if (!candidate) {
