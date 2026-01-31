@@ -25,6 +25,12 @@ const db = new Database(DB_PATH);
 db.pragma('journal_mode = WAL');
 db.pragma('foreign_keys = ON');
 
+// Generate DiceBear avatar URL
+function generateAvatar(name, style = 'avataaars') {
+  const seed = encodeURIComponent(name);
+  return `https://api.dicebear.com/7.x/${style}/svg?seed=${seed}`;
+}
+
 function createSchema() {
   db.exec(`
     -- Core tables
@@ -73,6 +79,7 @@ function createSchema() {
       contact_name TEXT,
       contact_email TEXT,
       contact_phone TEXT,
+      logo_url TEXT,
       payment_terms INTEGER DEFAULT 30,
       status TEXT DEFAULT 'active',
       notes TEXT,
@@ -379,6 +386,25 @@ function createSchema() {
       FOREIGN KEY (candidate_id) REFERENCES candidates(id)
     );
 
+    -- Admin onboarding progress
+    CREATE TABLE IF NOT EXISTS admin_onboarding (
+      id INTEGER PRIMARY KEY AUTOINCREMENT,
+      user_id TEXT DEFAULT 'admin',
+      step_id TEXT NOT NULL,
+      completed INTEGER DEFAULT 0,
+      completed_at DATETIME,
+      UNIQUE(user_id, step_id)
+    );
+
+    -- Admin achievements (gamify the admin experience)
+    CREATE TABLE IF NOT EXISTS admin_achievements (
+      id INTEGER PRIMARY KEY AUTOINCREMENT,
+      user_id TEXT DEFAULT 'admin',
+      achievement_id TEXT NOT NULL,
+      unlocked_at DATETIME DEFAULT CURRENT_TIMESTAMP,
+      UNIQUE(user_id, achievement_id)
+    );
+
     CREATE TABLE IF NOT EXISTS settings (
       key TEXT PRIMARY KEY,
       value TEXT,
@@ -400,7 +426,6 @@ function createSchema() {
   `);
   console.log('✅ Schema created successfully');
 }
-
 
 // Seed essential data (achievements, quests, tiers) - runs in both environments
 function seedEssentialData() {
@@ -499,7 +524,6 @@ function seedEssentialData() {
   console.log('✅ Essential data seeded');
 }
 
-
 // Seed COMPREHENSIVE sample data - ONLY in development
 function seedSampleData() {
   if (IS_PRODUCTION) {
@@ -517,24 +541,35 @@ function seedSampleData() {
 
   const addDays = (d, n) => { const r = new Date(d); r.setDate(r.getDate() + n); return r.toISOString().split('T')[0]; };
   const today = new Date();
-  const todayStr = today.toISOString().split('T')[0];
 
-  // 8 Clients (progressively onboarded from July 2024)
+  // Client logos using company initials
+  const clientLogos = {
+    'Marina Bay Sands': 'https://api.dicebear.com/7.x/initials/svg?seed=MBS&backgroundColor=0d6efd',
+    'Changi Airport Group': 'https://api.dicebear.com/7.x/initials/svg?seed=CAG&backgroundColor=198754',
+    'Resorts World Sentosa': 'https://api.dicebear.com/7.x/initials/svg?seed=RWS&backgroundColor=dc3545',
+    'Grand Hyatt Singapore': 'https://api.dicebear.com/7.x/initials/svg?seed=GH&backgroundColor=6f42c1',
+    'Singapore Expo': 'https://api.dicebear.com/7.x/initials/svg?seed=SE&backgroundColor=fd7e14',
+    'Mandarin Oriental': 'https://api.dicebear.com/7.x/initials/svg?seed=MO&backgroundColor=20c997',
+    'CapitaLand Mall': 'https://api.dicebear.com/7.x/initials/svg?seed=CL&backgroundColor=0dcaf0',
+    'Gardens by the Bay': 'https://api.dicebear.com/7.x/initials/svg?seed=GBTB&backgroundColor=198754',
+  };
+
+  // 8 Clients
   const clients = [
-    ['CLT001', 'Marina Bay Sands', '200604327R', 'Hospitality', 'Jennifer Lim', 'events@mbs.com', '+65 6688 8888', 30, 'active', '2024-07-15'],
-    ['CLT002', 'Changi Airport Group', '200902638D', 'Aviation', 'David Tan', 'hr@changi.com', '+65 6595 6868', 30, 'active', '2024-08-01'],
-    ['CLT003', 'Resorts World Sentosa', '200601402R', 'Entertainment', 'Michelle Wong', 'events@rws.com', '+65 6577 8888', 30, 'active', '2024-08-20'],
-    ['CLT004', 'Grand Hyatt Singapore', '197100403R', 'Hospitality', 'Andrew Lee', 'hr@grandhyatt.sg', '+65 6738 1234', 30, 'active', '2024-09-10'],
-    ['CLT005', 'Singapore Expo', '199703626Z', 'Events', 'Sarah Chen', 'ops@expo.com', '+65 6403 2160', 30, 'active', '2024-10-01'],
-    ['CLT006', 'Mandarin Oriental', '198702333H', 'Hospitality', 'Patricia Goh', 'events@mo.com', '+65 6338 0066', 30, 'active', '2024-11-15'],
-    ['CLT007', 'CapitaLand Mall', '200208877K', 'Retail', 'Kenny Ong', 'retail@cland.com', '+65 6713 2888', 30, 'active', '2024-12-01'],
-    ['CLT008', 'Gardens by the Bay', '201110689R', 'Tourism', 'Linda Tay', 'events@gbtb.com', '+65 6420 6848', 30, 'active', '2025-01-10'],
+    ['CLT001', 'Marina Bay Sands', '200604327R', 'Hospitality', 'Jennifer Lim', 'events@mbs.com', '+65 6688 8888', clientLogos['Marina Bay Sands'], 30, 'active', '2024-07-15'],
+    ['CLT002', 'Changi Airport Group', '200902638D', 'Aviation', 'David Tan', 'hr@changi.com', '+65 6595 6868', clientLogos['Changi Airport Group'], 30, 'active', '2024-08-01'],
+    ['CLT003', 'Resorts World Sentosa', '200601402R', 'Entertainment', 'Michelle Wong', 'events@rws.com', '+65 6577 8888', clientLogos['Resorts World Sentosa'], 30, 'active', '2024-08-20'],
+    ['CLT004', 'Grand Hyatt Singapore', '197100403R', 'Hospitality', 'Andrew Lee', 'hr@grandhyatt.sg', '+65 6738 1234', clientLogos['Grand Hyatt Singapore'], 30, 'active', '2024-09-10'],
+    ['CLT005', 'Singapore Expo', '199703626Z', 'Events', 'Sarah Chen', 'ops@expo.com', '+65 6403 2160', clientLogos['Singapore Expo'], 30, 'active', '2024-10-01'],
+    ['CLT006', 'Mandarin Oriental', '198702333H', 'Hospitality', 'Patricia Goh', 'events@mo.com', '+65 6338 0066', clientLogos['Mandarin Oriental'], 30, 'active', '2024-11-15'],
+    ['CLT007', 'CapitaLand Mall', '200208877K', 'Retail', 'Kenny Ong', 'retail@cland.com', '+65 6713 2888', clientLogos['CapitaLand Mall'], 30, 'active', '2024-12-01'],
+    ['CLT008', 'Gardens by the Bay', '201110689R', 'Tourism', 'Linda Tay', 'events@gbtb.com', '+65 6420 6848', clientLogos['Gardens by the Bay'], 30, 'active', '2025-01-10'],
   ];
   clients.forEach(c => {
-    db.prepare('INSERT INTO clients (id, company_name, uen, industry, contact_name, contact_email, contact_phone, payment_terms, status, created_at) VALUES (?,?,?,?,?,?,?,?,?,?)').run(c[0], c[1], c[2], c[3], c[4], c[5], c[6], c[7], c[8], c[9]);
+    db.prepare('INSERT INTO clients (id, company_name, uen, industry, contact_name, contact_email, contact_phone, logo_url, payment_terms, status, created_at) VALUES (?,?,?,?,?,?,?,?,?,?,?)').run(...c);
   });
 
-  // 20 Candidates (growing pool over time)
+  // 20 Candidates with profile photos
   const candidateData = [
     {name:'Sarah Tan',email:'sarah.tan@email.com',phone:'+65 9123 4567',dob:'2005-03-15',joined:'2024-07-20'},
     {name:'Muhammad Rizal',email:'rizal.m@email.com',phone:'+65 9234 5678',dob:'2003-07-22',joined:'2024-07-25'},
@@ -577,15 +612,16 @@ function seedSampleData() {
     const status = i < 15 ? 'active' : (i < 18 ? 'onboarding' : 'screening');
     const rating = jobsCompleted > 0 ? (4.2 + Math.random() * 0.8).toFixed(1) : 0;
     const referralCode = generateReferralCode(c.name);
+    const profilePhoto = generateAvatar(c.name, 'avataaars');
 
     db.prepare(`
       INSERT INTO candidates (id, name, email, phone, date_of_birth, status, source, xp, level, 
         streak_days, total_jobs_completed, certifications, referral_code, total_incentives_earned, 
-        total_earnings, rating, whatsapp_opted_in, created_at)
-      VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, 1, ?)
+        total_earnings, rating, profile_photo, whatsapp_opted_in, created_at)
+      VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, 1, ?)
     `).run(id, c.name, c.email, c.phone, c.dob, status, sources[i % 5], xp, level, 
            Math.floor(Math.random() * 12), jobsCompleted, JSON.stringify(certs), referralCode, 
-           incentives, earnings, rating, c.joined);
+           incentives, earnings, rating, profilePhoto, c.joined);
     
     candidates.push({ id, joined: c.joined, status });
 
@@ -597,7 +633,6 @@ function seedSampleData() {
       }
     }
   });
-
 
   // Job templates
   const jobTemplates = [
@@ -617,15 +652,10 @@ function seedSampleData() {
 
   let jobN = 1, depN = 1, payN = 1;
 
-  // Monthly job counts showing business growth from July 2024
+  // Monthly job counts showing business growth
   const monthlyJobs = {
-    '2024-07': 3,
-    '2024-08': 8,
-    '2024-09': 15,
-    '2024-10': 22,
-    '2024-11': 30,
-    '2024-12': 45,
-    '2025-01': 38
+    '2024-07': 3, '2024-08': 8, '2024-09': 15, '2024-10': 22,
+    '2024-11': 30, '2024-12': 45, '2025-01': 38
   };
 
   Object.entries(monthlyJobs).forEach(([month, count]) => {
@@ -635,7 +665,7 @@ function seedSampleData() {
       const jobDate = `${month}-${String(day).padStart(2, '0')}`;
       const jobId = `JOB${String(jobN++).padStart(4, '0')}`;
 
-      const availClients = clients.filter(c => c[9] <= jobDate);
+      const availClients = clients.filter(c => c[10] <= jobDate);
       if (availClients.length === 0) continue;
       const client = availClients[Math.floor(Math.random() * availClients.length)];
 
@@ -666,7 +696,7 @@ function seedSampleData() {
     }
   });
 
-  // Upcoming jobs (next 2 weeks)
+  // Upcoming jobs
   for (let i = 1; i <= 15; i++) {
     const t = jobTemplates[Math.floor(Math.random() * jobTemplates.length)];
     const client = clients[Math.floor(Math.random() * clients.length)];
@@ -679,16 +709,12 @@ function seedSampleData() {
     ['TND001', 'gebiz', 'GBZ-2025-001234', 'Admin Support Staff', 'MOE', 'Manpower', 450000, addDays(today, 15), 'reviewing', 15, 12, 'Buona Vista', 22, 15, 37500, null, 65, 'STRONG BID'],
     ['TND002', 'gebiz', 'GBZ-2025-001198', 'Event Support National Day', 'MCCY', 'Events', 280000, addDays(today, 10), 'bidding', 50, 3, 'Marina Bay', 20, 13, 93333, null, 55, 'HIGH PRIORITY'],
     ['TND003', 'gebiz', 'GBZ-2025-001245', 'SingPass Customer Service', 'GovTech', 'Service', 620000, addDays(today, 20), 'new', 20, 24, 'Multiple', 18, 12, 25833, null, 40, 'EVALUATE'],
-    ['TND004', 'gebiz', 'GBZ-2025-001156', 'Warehouse Logistics', 'MOH', 'Logistics', 180000, addDays(today, 5), 'submitted', 8, 6, 'Tuas', 17, 11, null, 165000, 70, 'SUBMITTED'],
-    ['TND005', 'vendors-gov', 'VG-2025-0456', 'Reception Services', 'SLA', 'Admin', 95000, addDays(today, -5), 'won', 4, 12, 'Newton', 19, 13, null, 89000, 100, 'WON'],
-    ['TND006', 'gebiz', 'GBZ-2024-009876', 'F&B Government Event', 'MFA', 'F&B', 75000, addDays(today, -30), 'won', 12, 1, 'Shangri-La', 24, 16, null, 72000, 100, 'COMPLETED'],
-    ['TND007', 'gebiz', 'GBZ-2024-008765', 'IT Support Staff', 'IMDA', 'IT', 320000, addDays(today, -45), 'lost', 10, 12, 'Mapletree', 28, 20, null, 310000, 0, 'LOST'],
   ];
   tenders.forEach(t => {
     db.prepare(`INSERT INTO tenders (id, source, external_id, title, agency, category, estimated_value, closing_date, status, manpower_required, duration_months, location, estimated_charge_rate, estimated_pay_rate, estimated_monthly_revenue, our_bid_amount, win_probability, recommended_action) VALUES (?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?)`).run(...t);
   });
 
-  // Financial Projections (showing growth from zero)
+  // Financial projections
   const projections = [
     ['2024-07', 2024, 2000, 1400, 600, 1850, 1295, 555],
     ['2024-08', 2024, 5000, 3500, 1500, 5200, 3640, 1560],
@@ -697,8 +723,6 @@ function seedSampleData() {
     ['2024-11', 2024, 20000, 14000, 6000, 22500, 15750, 6750],
     ['2024-12', 2024, 30000, 21000, 9000, 35200, 24640, 10560],
     ['2025-01', 2025, 28000, 19600, 8400, 26500, 18550, 7950],
-    ['2025-02', 2025, 35000, 24500, 10500, null, null, null],
-    ['2025-03', 2025, 42000, 29400, 12600, null, null, null],
   ];
   projections.forEach(p => {
     db.prepare('INSERT INTO financial_projections (month, year, projected_revenue, projected_costs, projected_profit, actual_revenue, actual_costs, actual_profit) VALUES (?,?,?,?,?,?,?,?)').run(...p);
@@ -707,7 +731,6 @@ function seedSampleData() {
   // Referrals
   db.prepare('INSERT INTO referrals (id, referrer_id, referred_id, status, tier, bonus_amount, jobs_completed_by_referred, total_bonus_paid, created_at) VALUES (?,?,?,?,?,?,?,?,?)').run('REF001', 'CND001', 'CND003', 'bonus_paid', 1, 30, 5, 30, '2024-08-10');
   db.prepare('INSERT INTO referrals (id, referrer_id, referred_id, status, tier, bonus_amount, jobs_completed_by_referred, total_bonus_paid, created_at) VALUES (?,?,?,?,?,?,?,?,?)').run('REF002', 'CND002', 'CND005', 'bonus_paid', 2, 50, 8, 80, '2024-09-01');
-  db.prepare('INSERT INTO referrals (id, referrer_id, referred_id, status, tier, bonus_amount, jobs_completed_by_referred, total_bonus_paid, created_at) VALUES (?,?,?,?,?,?,?,?,?)').run('REF003', 'CND001', 'CND015', 'registered', 1, 30, 0, 0, '2025-01-05');
 
   // Candidate achievements
   candidates.filter(c => c.status === 'active').slice(0, 12).forEach((c, i) => {
@@ -716,39 +739,35 @@ function seedSampleData() {
     if (i < 4) db.prepare(`INSERT OR IGNORE INTO candidate_achievements VALUES (?, 'ACH003', datetime('now'))`).run(c.id);
   });
 
-  console.log(`✅ Comprehensive data seeded: ${candidates.length} candidates, ${clients.length} clients, ${jobN - 1} jobs, ${depN - 1} deployments, ${payN - 1} payments`);
+  console.log(`✅ Comprehensive data seeded: ${candidates.length} candidates, ${clients.length} clients, ${jobN - 1} jobs`);
 }
 
-
-// Reset database to fresh sample data (development only)
+// Reset database (dev only)
 function resetToSampleData() {
   if (IS_PRODUCTION) {
-    console.log('❌ Cannot reset database in production');
+    console.log('❌ Cannot reset in production');
     return;
   }
 
-  console.log('🔄 Resetting database to sample data...');
-  
+  console.log('🔄 Resetting database...');
   const tables = [
     'push_queue', 'job_match_scores', 'notifications', 'messages', 'tender_matches',
     'xp_transactions', 'candidate_quests', 'candidate_achievements', 'candidate_availability',
     'payments', 'deployments', 'jobs', 'referrals', 'candidates', 'clients',
     'tenders', 'financial_projections', 'tender_alerts', 'referral_tiers',
-    'message_templates', 'incentive_schemes', 'training', 'quests', 'achievements'
+    'message_templates', 'incentive_schemes', 'training', 'quests', 'achievements',
+    'admin_onboarding', 'admin_achievements'
   ];
-  
-  tables.forEach(t => {
-    try { db.exec(`DELETE FROM ${t}`); } catch (e) { }
-  });
+  tables.forEach(t => { try { db.exec(`DELETE FROM ${t}`); } catch (e) { } });
 
   seedEssentialData();
   seedSampleData();
   console.log('✅ Database reset complete');
 }
 
-// Initialize database
+// Initialize
 createSchema();
 seedEssentialData();
 seedSampleData();
 
-module.exports = { db, resetToSampleData, IS_PRODUCTION };
+module.exports = { db, resetToSampleData, IS_PRODUCTION, generateAvatar };

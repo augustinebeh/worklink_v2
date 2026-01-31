@@ -19,9 +19,7 @@ import Settings from './pages/Settings';
 import FinancialDashboard from './pages/FinancialDashboard';
 import Deployments from './pages/Deployments';
 import Payments from './pages/Payments';
-import Analytics from './pages/Analytics';
 import Chat from './pages/Chat';
-import AIAutomation from './pages/AIAutomation';
 import Training from './pages/Training';
 import Gamification from './pages/Gamification';
 import TenderMonitor from './pages/TenderMonitor';
@@ -60,41 +58,37 @@ function AppRoutes() {
           </ProtectedRoute>
         }
       >
-        {/* Dashboard */}
+        {/* Dashboard - main entry point with guides */}
         <Route index element={<Dashboard />} />
         
-        {/* Candidates */}
+        {/* Operations */}
         <Route path="candidates" element={<Candidates />} />
         <Route path="candidates/:id" element={<CandidateProfile />} />
-        
-        {/* Jobs */}
         <Route path="jobs" element={<Jobs />} />
         <Route path="jobs/:id" element={<JobDetail />} />
-        
-        {/* Deployments */}
         <Route path="deployments" element={<Deployments />} />
-        
-        {/* Payments */}
         <Route path="payments" element={<Payments />} />
         
-        {/* BPO */}
+        {/* Sales & Tenders */}
         <Route path="bpo" element={<BPODashboard />} />
         <Route path="tender-monitor" element={<TenderMonitor />} />
-        <Route path="ai-automation" element={<AIAutomation />} />
-        
-        {/* Clients */}
         <Route path="clients" element={<Clients />} />
         <Route path="clients/:id" element={<ClientDetail />} />
         
-        {/* Engagement */}
-        <Route path="training" element={<Training />} />
+        {/* Performance */}
+        <Route path="financials" element={<FinancialDashboard />} />
         <Route path="gamification" element={<Gamification />} />
+        <Route path="training" element={<Training />} />
+        
+        {/* Engagement */}
         <Route path="chat" element={<Chat />} />
         
-        {/* Insights */}
-        <Route path="financials" element={<FinancialDashboard />} />
-        <Route path="analytics" element={<Analytics />} />
+        {/* Settings */}
         <Route path="settings" element={<Settings />} />
+        
+        {/* Redirects for removed/consolidated pages */}
+        <Route path="analytics" element={<Navigate to="/financials" replace />} />
+        <Route path="ai-automation" element={<Navigate to="/bpo" replace />} />
       </Route>
 
       {/* Catch all */}

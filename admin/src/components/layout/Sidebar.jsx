@@ -8,67 +8,62 @@ import {
   WalletIcon,
   GraduationCapIcon,
   TrophyIcon,
-  MessageSquareIcon,
   BarChart3Icon,
   SettingsIcon,
-  FileTextIcon,
   Building2Icon,
-  SearchIcon,
   ChevronDownIcon,
   XIcon,
   DollarSignIcon,
-  TrendingUpIcon,
   TargetIcon,
-  BotIcon,
   BellIcon,
-  RssIcon,
+  SparklesIcon,
 } from 'lucide-react';
 import { clsx } from 'clsx';
 
-// Navigation structure
+// Simplified navigation - removed redundant pages
 const navigation = [
   {
     name: 'Dashboard',
     href: '/',
     icon: LayoutDashboardIcon,
+    description: 'Overview & guides',
   },
   {
     name: 'Operations',
     icon: BriefcaseIcon,
+    description: 'Daily workflow',
     children: [
-      { name: 'Candidates', href: '/candidates', icon: UsersIcon },
-      { name: 'Jobs', href: '/jobs', icon: BriefcaseIcon },
-      { name: 'Deployments', href: '/deployments', icon: CalendarCheckIcon },
-      { name: 'Payments', href: '/payments', icon: WalletIcon },
+      { name: 'Candidates', href: '/candidates', icon: UsersIcon, description: 'Your talent pool' },
+      { name: 'Jobs', href: '/jobs', icon: BriefcaseIcon, description: 'Job postings' },
+      { name: 'Deployments', href: '/deployments', icon: CalendarCheckIcon, description: 'Worker assignments' },
+      { name: 'Payments', href: '/payments', icon: WalletIcon, description: 'Pay workers' },
     ],
   },
   {
-    name: 'BPO Automation',
+    name: 'Sales & Tenders',
     icon: TargetIcon,
+    description: 'Win new business',
     children: [
-      { name: 'Tender Dashboard', href: '/bpo', icon: SearchIcon },
-      { name: 'Tender Monitor', href: '/tender-monitor', icon: BellIcon, highlight: true },
-      { name: 'AI Automation', href: '/ai-automation', icon: BotIcon },
-      { name: 'Clients', href: '/clients', icon: Building2Icon },
+      { name: 'Tender Pipeline', href: '/bpo', icon: TargetIcon, description: 'All tenders' },
+      { name: 'Tender Alerts', href: '/tender-monitor', icon: BellIcon, highlight: true, description: 'Keyword monitoring' },
+      { name: 'Clients', href: '/clients', icon: Building2Icon, description: 'Your clients' },
     ],
   },
   {
-    name: 'Engagement',
-    icon: TrophyIcon,
-    children: [
-      { name: 'Training', href: '/training', icon: GraduationCapIcon },
-      { name: 'Gamification', href: '/gamification', icon: TrophyIcon },
-      { name: 'Chat', href: '/chat', icon: MessageSquareIcon },
-    ],
-  },
-  {
-    name: 'Insights',
+    name: 'Performance',
     icon: BarChart3Icon,
+    description: 'Track success',
     children: [
-      { name: 'Financials', href: '/financials', icon: DollarSignIcon },
-      { name: 'Analytics', href: '/analytics', icon: TrendingUpIcon },
-      { name: 'Settings', href: '/settings', icon: SettingsIcon },
+      { name: 'Financials', href: '/financials', icon: DollarSignIcon, description: 'Revenue & profit' },
+      { name: 'Gamification', href: '/gamification', icon: TrophyIcon, description: 'Worker engagement' },
+      { name: 'Training', href: '/training', icon: GraduationCapIcon, description: 'Certifications' },
     ],
+  },
+  {
+    name: 'Settings',
+    href: '/settings',
+    icon: SettingsIcon,
+    description: 'Configuration',
   },
 ];
 
@@ -78,6 +73,7 @@ function NavItem({ item, collapsed }) {
   const hasChildren = item.children && item.children.length > 0;
   
   const isChildActive = hasChildren && item.children.some(child => location.pathname === child.href);
+  const isActive = location.pathname === item.href;
 
   if (hasChildren) {
     return (
@@ -85,15 +81,27 @@ function NavItem({ item, collapsed }) {
         <button
           onClick={() => setIsOpen(!isOpen)}
           className={clsx(
-            'w-full flex items-center justify-between px-3 py-2.5 text-sm font-medium rounded-lg transition-colors',
+            'w-full flex items-center justify-between px-3 py-2.5 text-sm font-medium rounded-xl transition-all',
             isChildActive
-              ? 'text-primary-600 dark:text-primary-400'
+              ? 'text-primary-600 dark:text-primary-400 bg-primary-50 dark:bg-primary-900/20'
               : 'text-slate-600 dark:text-slate-400 hover:text-slate-900 dark:hover:text-white hover:bg-slate-100 dark:hover:bg-slate-800'
           )}
         >
           <div className="flex items-center gap-3">
-            <item.icon className="h-5 w-5 flex-shrink-0" />
-            {!collapsed && <span>{item.name}</span>}
+            <div className={clsx(
+              'p-1.5 rounded-lg',
+              isChildActive ? 'bg-primary-100 dark:bg-primary-900/50' : 'bg-slate-100 dark:bg-slate-800'
+            )}>
+              <item.icon className="h-4 w-4" />
+            </div>
+            {!collapsed && (
+              <div className="text-left">
+                <span className="block">{item.name}</span>
+                {item.description && (
+                  <span className="text-2xs text-slate-400 font-normal">{item.description}</span>
+                )}
+              </div>
+            )}
           </div>
           {!collapsed && (
             <span className={clsx('transition-transform', isOpen && 'rotate-180')}>
@@ -103,14 +111,14 @@ function NavItem({ item, collapsed }) {
         </button>
         
         {!collapsed && isOpen && (
-          <div className="ml-4 pl-4 border-l border-slate-200 dark:border-slate-700 space-y-1">
+          <div className="ml-4 pl-4 border-l-2 border-slate-200 dark:border-slate-700 space-y-1">
             {item.children.map((child) => (
               <NavLink
                 key={child.href}
                 to={child.href}
                 className={({ isActive }) =>
                   clsx(
-                    'flex items-center gap-3 px-3 py-2 text-sm rounded-lg transition-colors',
+                    'flex items-center gap-3 px-3 py-2 text-sm rounded-lg transition-all group',
                     isActive
                       ? 'bg-primary-50 dark:bg-primary-900/20 text-primary-600 dark:text-primary-400 font-medium'
                       : 'text-slate-600 dark:text-slate-400 hover:text-slate-900 dark:hover:text-white hover:bg-slate-100 dark:hover:bg-slate-800',
@@ -119,9 +127,11 @@ function NavItem({ item, collapsed }) {
                 }
               >
                 <child.icon className="h-4 w-4 flex-shrink-0" />
-                <span>{child.name}</span>
+                <div className="flex-1 min-w-0">
+                  <span className="block">{child.name}</span>
+                </div>
                 {child.highlight && (
-                  <span className="ml-auto px-1.5 py-0.5 text-2xs font-medium bg-emerald-100 dark:bg-emerald-900/30 text-emerald-600 dark:text-emerald-400 rounded">
+                  <span className="px-1.5 py-0.5 text-2xs font-medium bg-emerald-100 dark:bg-emerald-900/30 text-emerald-600 dark:text-emerald-400 rounded-full">
                     NEW
                   </span>
                 )}
@@ -138,15 +148,27 @@ function NavItem({ item, collapsed }) {
       to={item.href}
       className={({ isActive }) =>
         clsx(
-          'flex items-center gap-3 px-3 py-2.5 text-sm font-medium rounded-lg transition-colors',
+          'flex items-center gap-3 px-3 py-2.5 text-sm font-medium rounded-xl transition-all',
           isActive
             ? 'bg-primary-50 dark:bg-primary-900/20 text-primary-600 dark:text-primary-400'
             : 'text-slate-600 dark:text-slate-400 hover:text-slate-900 dark:hover:text-white hover:bg-slate-100 dark:hover:bg-slate-800'
         )
       }
     >
-      <item.icon className="h-5 w-5 flex-shrink-0" />
-      {!collapsed && <span>{item.name}</span>}
+      <div className={clsx(
+        'p-1.5 rounded-lg',
+        isActive ? 'bg-primary-100 dark:bg-primary-900/50' : 'bg-slate-100 dark:bg-slate-800'
+      )}>
+        <item.icon className="h-4 w-4" />
+      </div>
+      {!collapsed && (
+        <div className="text-left">
+          <span className="block">{item.name}</span>
+          {item.description && (
+            <span className="text-2xs text-slate-400 font-normal">{item.description}</span>
+          )}
+        </div>
+      )}
     </NavLink>
   );
 }
@@ -156,26 +178,26 @@ export default function Sidebar({ collapsed, onClose, isMobile }) {
     <aside
       className={clsx(
         'fixed inset-y-0 left-0 z-50 flex flex-col bg-white dark:bg-slate-900 border-r border-slate-200 dark:border-slate-800 transition-all duration-300',
-        collapsed ? 'w-[72px]' : 'w-64',
+        collapsed ? 'w-[72px]' : 'w-72',
         isMobile && 'shadow-xl'
       )}
     >
       {/* Logo */}
       <div className="h-16 flex items-center justify-between px-4 border-b border-slate-200 dark:border-slate-800">
         {!collapsed && (
-          <div className="flex items-center gap-2">
-            <div className="h-8 w-8 rounded-lg bg-gradient-to-br from-primary-500 to-primary-700 flex items-center justify-center">
-              <span className="text-white font-bold text-sm">WL</span>
+          <div className="flex items-center gap-3">
+            <div className="h-10 w-10 rounded-xl bg-gradient-to-br from-primary-500 via-primary-600 to-purple-600 flex items-center justify-center shadow-lg shadow-primary-500/20">
+              <SparklesIcon className="h-5 w-5 text-white" />
             </div>
             <div>
               <h1 className="text-lg font-bold text-slate-900 dark:text-white">WorkLink</h1>
-              <p className="text-2xs text-slate-500 dark:text-slate-400 -mt-0.5">Admin Portal</p>
+              <p className="text-2xs text-slate-500 dark:text-slate-400 -mt-0.5">Recruitment Platform</p>
             </div>
           </div>
         )}
         {collapsed && (
-          <div className="mx-auto h-8 w-8 rounded-lg bg-gradient-to-br from-primary-500 to-primary-700 flex items-center justify-center">
-            <span className="text-white font-bold text-sm">WL</span>
+          <div className="mx-auto h-10 w-10 rounded-xl bg-gradient-to-br from-primary-500 via-primary-600 to-purple-600 flex items-center justify-center">
+            <SparklesIcon className="h-5 w-5 text-white" />
           </div>
         )}
         {isMobile && onClose && (
@@ -195,19 +217,23 @@ export default function Sidebar({ collapsed, onClose, isMobile }) {
         ))}
       </nav>
 
-      {/* Footer */}
-      <div className="p-4 border-t border-slate-200 dark:border-slate-800">
-        {!collapsed && (
-          <div className="px-3 py-2 rounded-lg bg-slate-50 dark:bg-slate-800/50">
-            <p className="text-xs text-slate-500 dark:text-slate-400">
-              WorkLink Platform v2.0
-            </p>
-            <p className="text-2xs text-slate-400 dark:text-slate-500 mt-0.5">
-              © 2025 WorkLink Singapore
+      {/* Quick Tips Footer */}
+      {!collapsed && (
+        <div className="p-4 border-t border-slate-200 dark:border-slate-800">
+          <div className="p-3 rounded-xl bg-gradient-to-r from-primary-50 to-purple-50 dark:from-primary-900/20 dark:to-purple-900/20 border border-primary-100 dark:border-primary-800">
+            <div className="flex items-center gap-2 mb-2">
+              <SparklesIcon className="h-4 w-4 text-primary-500" />
+              <span className="text-xs font-semibold text-primary-700 dark:text-primary-300">Pro Tip</span>
+            </div>
+            <p className="text-xs text-slate-600 dark:text-slate-400">
+              Check GeBIZ daily for new tenders. Set up keyword alerts to never miss an opportunity!
             </p>
           </div>
-        )}
-      </div>
+          <p className="text-2xs text-slate-400 text-center mt-3">
+            WorkLink v2.0 • © 2025
+          </p>
+        </div>
+      )}
     </aside>
   );
 }
