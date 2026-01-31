@@ -30,23 +30,30 @@ export default function StreakCounter({ streak, lastActiveDate }) {
   };
 
   return (
-    <div className={clsx(
-      'glass-card-solid p-4 relative overflow-hidden',
-      streak >= 7 && 'border-gold-500/30'
-    )}>
+    <div
+      className={clsx(
+        'glass-card-solid p-4 relative overflow-hidden',
+        streak >= 7 && 'border-gold-500/30'
+      )}
+      role="region"
+      aria-label={`Activity streak: ${streak} days. ${getStreakMessage()}`}
+    >
       {/* Background flame effect for high streaks */}
       {streak >= 7 && (
-        <div className="absolute inset-0 bg-gradient-to-br from-gold-900/20 to-transparent" />
+        <div className="absolute inset-0 bg-gradient-to-br from-gold-900/20 to-transparent" aria-hidden="true" />
       )}
 
       <div className="relative flex items-center justify-between">
         <div className="flex items-center gap-4">
           {/* Streak icon */}
-          <div className={clsx(
-            'h-14 w-14 rounded-2xl flex items-center justify-center text-3xl',
-            streak >= 7 ? 'bg-gold-900/50' : 'bg-dark-800',
-            streak >= 7 && 'animate-pulse-glow glow-gold'
-          )}>
+          <div
+            className={clsx(
+              'h-14 w-14 rounded-2xl flex items-center justify-center text-3xl',
+              streak >= 7 ? 'bg-gold-900/50' : 'bg-dark-800',
+              streak >= 7 && 'animate-pulse-glow glow-gold'
+            )}
+            aria-hidden="true"
+          >
             {getStreakEmoji()}
           </div>
 
@@ -71,10 +78,14 @@ export default function StreakCounter({ streak, lastActiveDate }) {
         </div>
 
         {/* Streak status indicator */}
-        <div className={clsx(
-          'flex flex-col items-center gap-1 px-3 py-2 rounded-xl',
-          isActive ? 'bg-accent-900/30' : 'bg-red-900/30'
-        )}>
+        <div
+          className={clsx(
+            'flex flex-col items-center gap-1 px-3 py-2 rounded-xl',
+            isActive ? 'bg-accent-900/30' : 'bg-red-900/30'
+          )}
+          role="status"
+          aria-live="polite"
+        >
           <span className={clsx(
             'text-xs font-medium uppercase',
             isActive ? 'text-accent-400' : 'text-red-400'
@@ -90,17 +101,19 @@ export default function StreakCounter({ streak, lastActiveDate }) {
       </div>
 
       {/* Streak milestones */}
-      <div className="relative mt-4 pt-4 border-t border-white/5">
-        <div className="flex justify-between">
+      <div className="relative mt-4 pt-4 border-t border-white/5" aria-label="Streak milestones">
+        <div className="flex justify-between" role="list">
           {[3, 7, 14, 30].map((milestone) => (
-            <div 
+            <div
               key={milestone}
+              role="listitem"
+              aria-label={`${milestone} day milestone: ${streak >= milestone ? 'achieved' : 'not achieved'}`}
               className={clsx(
                 'flex flex-col items-center',
                 streak >= milestone ? 'text-gold-400' : 'text-dark-500'
               )}
             >
-              <span className="text-lg">
+              <span className="text-lg" aria-hidden="true">
                 {streak >= milestone ? '🌟' : '○'}
               </span>
               <span className="text-2xs mt-1">{milestone}d</span>
@@ -108,11 +121,11 @@ export default function StreakCounter({ streak, lastActiveDate }) {
           ))}
         </div>
         {/* Progress line */}
-        <div className="absolute top-[calc(1rem+12px)] left-6 right-6 h-0.5 bg-dark-700">
-          <div 
+        <div className="absolute top-[calc(1rem+12px)] left-6 right-6 h-0.5 bg-dark-700" aria-hidden="true">
+          <div
             className="h-full bg-gradient-to-r from-gold-400 to-gold-500 rounded-full transition-all duration-500"
-            style={{ 
-              width: `${Math.min((streak / 30) * 100, 100)}%` 
+            style={{
+              width: `${Math.min((streak / 30) * 100, 100)}%`
             }}
           />
         </div>

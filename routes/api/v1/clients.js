@@ -7,36 +7,37 @@ router.get('/', (req, res) => {
   try {
     const { status, industry, search } = req.query;
 
-    let query = 'SELECT * FROM clients WHERE 1=1';
+    // Single query with JOIN to get clients and job stats (avoids N+1 problem)
+    let query = `
+      SELECT c.*,
+        COALESCE(COUNT(j.id), 0) as total_jobs,
+        COALESCE(SUM(CASE WHEN j.status IN ('open', 'in_progress') THEN 1 ELSE 0 END), 0) as active_jobs
+      FROM clients c
+      LEFT JOIN jobs j ON c.id = j.client_id
+      WHERE 1=1
+    `;
     const params = [];
 
     if (status && status !== 'all') {
-      query += ' AND status = ?';
+      query += ' AND c.status = ?';
       params.push(status);
     }
 
     if (industry) {
-      query += ' AND industry = ?';
+      query += ' AND c.industry = ?';
       params.push(industry);
     }
 
     if (search) {
-      query += ' AND (company_name LIKE ? OR contact_name LIKE ?)';
+      query += ' AND (c.company_name LIKE ? OR c.contact_name LIKE ?)';
       params.push(`%${search}%`, `%${search}%`);
     }
 
-    query += ' ORDER BY company_name ASC';
+    query += ' GROUP BY c.id ORDER BY c.company_name ASC';
 
     const clients = db.prepare(query).all(...params);
 
-    // Add job counts
-    const clientsWithStats = clients.map(client => {
-      const jobCount = db.prepare('SELECT COUNT(*) as count FROM jobs WHERE client_id = ?').get(client.id).count;
-      const activeJobs = db.prepare("SELECT COUNT(*) as count FROM jobs WHERE client_id = ? AND status IN ('open', 'in_progress')").get(client.id).count;
-      return { ...client, total_jobs: jobCount, active_jobs: activeJobs };
-    });
-
-    res.json({ success: true, data: clientsWithStats });
+    res.json({ success: true, data: clients });
   } catch (error) {
     res.status(500).json({ success: false, error: error.message });
   }

@@ -5,6 +5,7 @@
 const express = require('express');
 const router = express.Router();
 const { db } = require('../../../db/database');
+const { validate, schemas } = require('../../../middleware/validation');
 
 // Get referral dashboard for a candidate
 router.get('/dashboard/:candidateId', (req, res) => {
@@ -89,7 +90,7 @@ function generateSMSLink(referrerName, code, baseUrl) {
 }
 
 // Register via referral code
-router.post('/register', (req, res) => {
+router.post('/register', validate(schemas.referralRegistration), (req, res) => {
   try {
     const { name, email, phone, referral_code } = req.body;
 

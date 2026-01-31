@@ -1,16 +1,7 @@
 const express = require('express');
 const router = express.Router();
 const { db } = require('../../../db/database');
-
-// XP thresholds for leveling
-const XP_THRESHOLDS = [0, 500, 1200, 2500, 5000, 8000, 12000, 18000, 25000, 35000];
-
-function calculateLevel(xp) {
-  for (let i = XP_THRESHOLDS.length - 1; i >= 0; i--) {
-    if (xp >= XP_THRESHOLDS[i]) return i + 1;
-  }
-  return 1;
-}
+const { XP_THRESHOLDS, calculateLevel } = require('../../../shared/constants');
 
 // Get candidate gamification profile
 router.get('/profile/:candidateId', (req, res) => {

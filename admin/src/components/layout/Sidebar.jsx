@@ -1,6 +1,6 @@
 import { useState } from 'react';
 import { NavLink, useLocation } from 'react-router-dom';
-import { 
+import {
   LayoutDashboardIcon,
   UsersIcon,
   BriefcaseIcon,
@@ -17,10 +17,16 @@ import {
   TargetIcon,
   BellIcon,
   SparklesIcon,
+  MessageCircleIcon,
+  BotIcon,
+  FileTextIcon,
+  SendIcon,
+  SearchIcon,
 } from 'lucide-react';
 import { clsx } from 'clsx';
+import Logo, { LogoIcon } from '../ui/Logo';
 
-// Simplified navigation - removed redundant pages
+// Navigation organized by role/focus area
 const navigation = [
   {
     name: 'Dashboard',
@@ -28,27 +34,47 @@ const navigation = [
     icon: LayoutDashboardIcon,
     description: 'Overview & guides',
   },
+
+  // === BPO & TENDER ACQUISITION ===
+  {
+    name: 'BPO & Tenders',
+    icon: TargetIcon,
+    description: 'Tender acquisition',
+    badge: 'BPO',
+    children: [
+      { name: 'Tender Pipeline', href: '/bpo', icon: FileTextIcon, description: 'View all tenders' },
+      { name: 'Tender Alerts', href: '/tender-monitor', icon: BellIcon, highlight: true, description: 'GeBIZ monitoring' },
+      { name: 'Tender AI Tools', href: '/ai-automation', icon: BotIcon, description: 'Scraper & analysis' },
+      { name: 'Clients', href: '/clients', icon: Building2Icon, description: 'Client management' },
+    ],
+  },
+
+  // === CANDIDATE RECRUITMENT ===
+  {
+    name: 'Recruitment',
+    icon: UsersIcon,
+    description: 'Candidate acquisition',
+    badge: 'HR',
+    children: [
+      { name: 'Candidates', href: '/candidates', icon: UsersIcon, description: 'Talent pool' },
+      { name: 'Jobs', href: '/jobs', icon: BriefcaseIcon, description: 'Job postings' },
+      { name: 'Sourcing AI', href: '/ai-sourcing', icon: SearchIcon, description: 'Posting & outreach' },
+      { name: 'Chat', href: '/chat', icon: MessageCircleIcon, description: 'Message workers' },
+    ],
+  },
+
+  // === OPERATIONS (Active work) ===
   {
     name: 'Operations',
-    icon: BriefcaseIcon,
-    description: 'Daily workflow',
+    icon: CalendarCheckIcon,
+    description: 'Day-to-day work',
     children: [
-      { name: 'Candidates', href: '/candidates', icon: UsersIcon, description: 'Your talent pool' },
-      { name: 'Jobs', href: '/jobs', icon: BriefcaseIcon, description: 'Job postings' },
       { name: 'Deployments', href: '/deployments', icon: CalendarCheckIcon, description: 'Worker assignments' },
       { name: 'Payments', href: '/payments', icon: WalletIcon, description: 'Pay workers' },
     ],
   },
-  {
-    name: 'Sales & Tenders',
-    icon: TargetIcon,
-    description: 'Win new business',
-    children: [
-      { name: 'Tender Pipeline', href: '/bpo', icon: TargetIcon, description: 'All tenders' },
-      { name: 'Tender Alerts', href: '/tender-monitor', icon: BellIcon, highlight: true, description: 'Keyword monitoring' },
-      { name: 'Clients', href: '/clients', icon: Building2Icon, description: 'Your clients' },
-    ],
-  },
+
+  // === PERFORMANCE ===
   {
     name: 'Performance',
     icon: BarChart3Icon,
@@ -59,6 +85,7 @@ const navigation = [
       { name: 'Training', href: '/training', icon: GraduationCapIcon, description: 'Certifications' },
     ],
   },
+
   {
     name: 'Settings',
     href: '/settings',
@@ -80,8 +107,10 @@ function NavItem({ item, collapsed }) {
       <div className="space-y-1">
         <button
           onClick={() => setIsOpen(!isOpen)}
+          aria-expanded={isOpen}
+          aria-controls={`nav-section-${item.name.toLowerCase().replace(/\s+/g, '-')}`}
           className={clsx(
-            'w-full flex items-center justify-between px-3 py-2.5 text-sm font-medium rounded-xl transition-all',
+            'w-full flex items-center justify-between px-3 py-2.5 text-sm font-medium rounded-xl transition-all min-h-[44px] focus:outline-none focus:ring-2 focus:ring-primary-500/50',
             isChildActive
               ? 'text-primary-600 dark:text-primary-400 bg-primary-50 dark:bg-primary-900/20'
               : 'text-slate-600 dark:text-slate-400 hover:text-slate-900 dark:hover:text-white hover:bg-slate-100 dark:hover:bg-slate-800'
@@ -95,8 +124,20 @@ function NavItem({ item, collapsed }) {
               <item.icon className="h-4 w-4" />
             </div>
             {!collapsed && (
-              <div className="text-left">
-                <span className="block">{item.name}</span>
+              <div className="text-left flex-1">
+                <div className="flex items-center gap-2">
+                  <span className="block">{item.name}</span>
+                  {item.badge && (
+                    <span className={clsx(
+                      'px-1.5 py-0.5 text-2xs font-semibold rounded',
+                      item.badge === 'BPO' ? 'bg-amber-100 dark:bg-amber-900/30 text-amber-700 dark:text-amber-400' :
+                      item.badge === 'HR' ? 'bg-emerald-100 dark:bg-emerald-900/30 text-emerald-700 dark:text-emerald-400' :
+                      'bg-slate-100 dark:bg-slate-800 text-slate-600 dark:text-slate-400'
+                    )}>
+                      {item.badge}
+                    </span>
+                  )}
+                </div>
                 {item.description && (
                   <span className="text-2xs text-slate-400 font-normal">{item.description}</span>
                 )}
@@ -111,14 +152,20 @@ function NavItem({ item, collapsed }) {
         </button>
         
         {!collapsed && isOpen && (
-          <div className="ml-4 pl-4 border-l-2 border-slate-200 dark:border-slate-700 space-y-1">
+          <div
+            id={`nav-section-${item.name.toLowerCase().replace(/\s+/g, '-')}`}
+            className="ml-4 pl-4 border-l-2 border-slate-200 dark:border-slate-700 space-y-1"
+            role="group"
+            aria-label={`${item.name} navigation`}
+          >
             {item.children.map((child) => (
               <NavLink
                 key={child.href}
                 to={child.href}
+                aria-current={location.pathname === child.href ? 'page' : undefined}
                 className={({ isActive }) =>
                   clsx(
-                    'flex items-center gap-3 px-3 py-2 text-sm rounded-lg transition-all group',
+                    'flex items-center gap-3 px-3 py-2 min-h-[40px] text-sm rounded-lg transition-all group focus:outline-none focus:ring-2 focus:ring-primary-500/50',
                     isActive
                       ? 'bg-primary-50 dark:bg-primary-900/20 text-primary-600 dark:text-primary-400 font-medium'
                       : 'text-slate-600 dark:text-slate-400 hover:text-slate-900 dark:hover:text-white hover:bg-slate-100 dark:hover:bg-slate-800',
@@ -126,12 +173,12 @@ function NavItem({ item, collapsed }) {
                   )
                 }
               >
-                <child.icon className="h-4 w-4 flex-shrink-0" />
+                <child.icon className="h-4 w-4 flex-shrink-0" aria-hidden="true" />
                 <div className="flex-1 min-w-0">
                   <span className="block">{child.name}</span>
                 </div>
                 {child.highlight && (
-                  <span className="px-1.5 py-0.5 text-2xs font-medium bg-emerald-100 dark:bg-emerald-900/30 text-emerald-600 dark:text-emerald-400 rounded-full">
+                  <span className="px-1.5 py-0.5 text-2xs font-medium bg-emerald-100 dark:bg-emerald-900/30 text-emerald-600 dark:text-emerald-400 rounded-full" aria-label="New feature">
                     NEW
                   </span>
                 )}
@@ -146,9 +193,10 @@ function NavItem({ item, collapsed }) {
   return (
     <NavLink
       to={item.href}
+      aria-current={isActive ? 'page' : undefined}
       className={({ isActive }) =>
         clsx(
-          'flex items-center gap-3 px-3 py-2.5 text-sm font-medium rounded-xl transition-all',
+          'flex items-center gap-3 px-3 py-2.5 min-h-[44px] text-sm font-medium rounded-xl transition-all focus:outline-none focus:ring-2 focus:ring-primary-500/50',
           isActive
             ? 'bg-primary-50 dark:bg-primary-900/20 text-primary-600 dark:text-primary-400'
             : 'text-slate-600 dark:text-slate-400 hover:text-slate-900 dark:hover:text-white hover:bg-slate-100 dark:hover:bg-slate-800'
@@ -159,7 +207,7 @@ function NavItem({ item, collapsed }) {
         'p-1.5 rounded-lg',
         isActive ? 'bg-primary-100 dark:bg-primary-900/50' : 'bg-slate-100 dark:bg-slate-800'
       )}>
-        <item.icon className="h-4 w-4" />
+        <item.icon className="h-4 w-4" aria-hidden="true" />
       </div>
       {!collapsed && (
         <div className="text-left">
@@ -184,34 +232,21 @@ export default function Sidebar({ collapsed, onClose, isMobile }) {
     >
       {/* Logo */}
       <div className="h-16 flex items-center justify-between px-4 border-b border-slate-200 dark:border-slate-800">
-        {!collapsed && (
-          <div className="flex items-center gap-3">
-            <div className="h-10 w-10 rounded-xl bg-gradient-to-br from-primary-500 via-primary-600 to-purple-600 flex items-center justify-center shadow-lg shadow-primary-500/20">
-              <SparklesIcon className="h-5 w-5 text-white" />
-            </div>
-            <div>
-              <h1 className="text-lg font-bold text-slate-900 dark:text-white">WorkLink</h1>
-              <p className="text-2xs text-slate-500 dark:text-slate-400 -mt-0.5">Recruitment Platform</p>
-            </div>
-          </div>
-        )}
-        {collapsed && (
-          <div className="mx-auto h-10 w-10 rounded-xl bg-gradient-to-br from-primary-500 via-primary-600 to-purple-600 flex items-center justify-center">
-            <SparklesIcon className="h-5 w-5 text-white" />
-          </div>
-        )}
+        {!collapsed && <Logo size="md" />}
+        {collapsed && <LogoIcon size={40} className="mx-auto" />}
         {isMobile && onClose && (
           <button
             onClick={onClose}
-            className="p-1.5 rounded-lg hover:bg-slate-100 dark:hover:bg-slate-800"
+            aria-label="Close sidebar"
+            className="p-2 min-h-[40px] min-w-[40px] rounded-lg hover:bg-slate-100 dark:hover:bg-slate-800 focus:outline-none focus:ring-2 focus:ring-primary-500/50"
           >
-            <XIcon className="h-5 w-5 text-slate-500" />
+            <XIcon className="h-5 w-5 text-slate-500" aria-hidden="true" />
           </button>
         )}
       </div>
 
       {/* Navigation */}
-      <nav className="flex-1 overflow-y-auto p-4 space-y-2">
+      <nav className="flex-1 overflow-y-auto p-4 space-y-2" aria-label="Main navigation">
         {navigation.map((item) => (
           <NavItem key={item.name} item={item} collapsed={collapsed} />
         ))}

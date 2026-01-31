@@ -1,6 +1,7 @@
 const express = require('express');
 const router = express.Router();
 const { db } = require('../../../db/database');
+const { broadcastToCandidate, broadcastToAdmins, EventTypes } = require('../../../websocket');
 
 // Get messages for a candidate
 router.get('/:candidateId/messages', (req, res) => {
@@ -115,6 +116,20 @@ router.post('/admin/:candidateId/messages', (req, res) => {
     `).run(id, candidateId, content, template_id || null);
 
     const message = db.prepare('SELECT * FROM messages WHERE id = ?').get(id);
+
+    // Broadcast to candidate via WebSocket for real-time delivery
+    broadcastToCandidate(candidateId, {
+      type: EventTypes.CHAT_MESSAGE,
+      message,
+    });
+
+    // Also notify other admin clients
+    broadcastToAdmins({
+      type: 'message_sent',
+      message,
+      candidateId,
+    });
+
     res.json({ success: true, data: message });
   } catch (error) {
     res.status(500).json({ success: false, error: error.message });
@@ -150,6 +165,15 @@ router.post('/admin/broadcast', (req, res) => {
     candidate_ids.forEach((candidateId, idx) => {
       const id = Date.now() + idx;
       insertStmt.run(id, candidateId, content, template_id || null);
+
+      const message = db.prepare('SELECT * FROM messages WHERE id = ?').get(id);
+
+      // Broadcast to each candidate via WebSocket
+      broadcastToCandidate(candidateId, {
+        type: EventTypes.CHAT_MESSAGE,
+        message,
+      });
+
       results.push({ candidate_id: candidateId, message_id: id });
     });
 

@@ -1,19 +1,5 @@
 import { clsx } from 'clsx';
-
-const levelTitles = {
-  1: 'Rookie',
-  2: 'Starter',
-  3: 'Active',
-  4: 'Reliable',
-  5: 'Pro',
-  6: 'Expert',
-  7: 'Elite',
-  8: 'Master',
-  9: 'Legend',
-  10: 'Champion',
-};
-
-const xpThresholds = [0, 500, 1200, 2500, 5000, 8000, 12000, 18000, 25000, 35000];
+import { XP_THRESHOLDS as xpThresholds, LEVEL_TITLES as levelTitles } from '../../utils/gamification';
 
 export default function XPBar({ currentXP, level, showDetails = true, size = 'md' }) {
   const currentThreshold = xpThresholds[level - 1] || 0;
@@ -29,36 +15,46 @@ export default function XPBar({ currentXP, level, showDetails = true, size = 'md
   };
 
   return (
-    <div className="w-full">
+    <div className="w-full" role="region" aria-label={`Experience progress: Level ${level} ${levelTitles[level]}`}>
       {showDetails && (
         <div className="flex items-center justify-between mb-2">
           <div className="flex items-center gap-2">
-            <span className={clsx(
-              'level-badge',
-              level >= 8 ? 'level-badge-elite' :
-              level >= 5 ? 'level-badge-pro' :
-              'level-badge-rookie'
-            )}>
+            <span
+              className={clsx(
+                'level-badge',
+                level >= 8 ? 'level-badge-elite' :
+                level >= 5 ? 'level-badge-pro' :
+                'level-badge-rookie'
+              )}
+              aria-hidden="true"
+            >
               Lv.{level}
             </span>
             <span className="text-sm text-dark-300">{levelTitles[level]}</span>
           </div>
-          <div className="text-sm">
+          <div className="text-sm" aria-hidden="true">
             <span className="font-semibold text-accent-400">{xpInLevel.toLocaleString()}</span>
             <span className="text-dark-400"> / {xpNeeded.toLocaleString()} XP</span>
           </div>
         </div>
       )}
-      
-      <div className={clsx('xp-bar', sizes[size])}>
-        <div 
+
+      <div
+        className={clsx('xp-bar', sizes[size])}
+        role="progressbar"
+        aria-valuenow={Math.round(progress)}
+        aria-valuemin={0}
+        aria-valuemax={100}
+        aria-label={`${Math.round(progress)}% progress to next level`}
+      >
+        <div
           className="xp-bar-fill"
           style={{ width: `${progress}%` }}
         />
       </div>
-      
+
       {level < 10 && showDetails && (
-        <p className="text-xs text-dark-500 mt-1.5 text-right">
+        <p className="text-xs text-dark-500 mt-1.5 text-right" aria-live="polite">
           {(xpNeeded - xpInLevel).toLocaleString()} XP to {levelTitles[level + 1]}
         </p>
       )}
@@ -66,4 +62,4 @@ export default function XPBar({ currentXP, level, showDetails = true, size = 'md
   );
 }
 
-export { levelTitles, xpThresholds };
+export { levelTitles, xpThresholds } from '../../utils/gamification';

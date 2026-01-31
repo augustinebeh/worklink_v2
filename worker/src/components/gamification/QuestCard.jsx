@@ -122,18 +122,26 @@ export default function QuestCard({ quest, onAccept, onComplete }) {
         {!isCompleted && (
           <button
             onClick={progressPercent >= 100 ? onComplete : onAccept}
+            disabled={isActive && progressPercent < 100}
+            aria-label={
+              progressPercent >= 100
+                ? `Claim ${xpReward} XP reward for ${title}`
+                : isActive
+                ? `Quest ${title} is in progress`
+                : `Accept quest: ${title}`
+            }
             className={clsx(
-              'w-full py-2.5 rounded-xl font-medium text-sm transition-all',
-              progressPercent >= 100 
+              'w-full min-h-[44px] py-3 rounded-xl font-medium text-sm transition-all focus:outline-none focus:ring-2 focus:ring-primary-500/50',
+              progressPercent >= 100
                 ? 'bg-accent-600 text-white active:scale-95'
                 : isActive
-                ? 'bg-dark-800 text-dark-300'
+                ? 'bg-dark-800 text-dark-300 cursor-default'
                 : 'bg-primary-600 text-white active:scale-95'
             )}
           >
-            {progressPercent >= 100 
-              ? '🎉 Claim Reward' 
-              : isActive 
+            {progressPercent >= 100
+              ? '🎉 Claim Reward'
+              : isActive
               ? 'In Progress...'
               : 'Accept Quest'
             }

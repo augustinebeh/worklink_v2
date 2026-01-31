@@ -30,22 +30,21 @@ import Modal, { ModalFooter } from '../components/ui/Modal';
 import Input from '../components/ui/Input';
 import Select from '../components/ui/Select';
 import { clsx } from 'clsx';
+import { XP_THRESHOLDS as xpThresholds, LEVEL_TITLES } from '../utils/gamification';
 
-// Level configuration
+// Level configuration (uses shared LEVEL_TITLES)
 const levelConfig = {
-  1: { title: 'Rookie', color: 'slate', minXp: 0 },
-  2: { title: 'Starter', color: 'slate', minXp: 500 },
-  3: { title: 'Active', color: 'slate', minXp: 1200 },
-  4: { title: 'Reliable', color: 'blue', minXp: 2500 },
-  5: { title: 'Pro', color: 'blue', minXp: 5000 },
-  6: { title: 'Expert', color: 'purple', minXp: 8000 },
-  7: { title: 'Elite', color: 'purple', minXp: 12000 },
-  8: { title: 'Master', color: 'amber', minXp: 18000 },
-  9: { title: 'Legend', color: 'amber', minXp: 25000 },
-  10: { title: 'Champion', color: 'amber', minXp: 35000 },
+  1: { title: LEVEL_TITLES[1], color: 'slate', minXp: 0 },
+  2: { title: LEVEL_TITLES[2], color: 'slate', minXp: 500 },
+  3: { title: LEVEL_TITLES[3], color: 'slate', minXp: 1200 },
+  4: { title: LEVEL_TITLES[4], color: 'blue', minXp: 2500 },
+  5: { title: LEVEL_TITLES[5], color: 'blue', minXp: 5000 },
+  6: { title: LEVEL_TITLES[6], color: 'purple', minXp: 8000 },
+  7: { title: LEVEL_TITLES[7], color: 'purple', minXp: 12000 },
+  8: { title: LEVEL_TITLES[8], color: 'amber', minXp: 18000 },
+  9: { title: LEVEL_TITLES[9], color: 'amber', minXp: 25000 },
+  10: { title: LEVEL_TITLES[10], color: 'amber', minXp: 35000 },
 };
-
-const xpThresholds = [0, 500, 1200, 2500, 5000, 8000, 12000, 18000, 25000, 35000];
 
 function StatCard({ icon: Icon, label, value, subValue, color = 'primary' }) {
   const colorClasses = {

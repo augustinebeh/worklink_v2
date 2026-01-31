@@ -94,12 +94,20 @@ app.get('/health', (req, res) => {
   }
 });
 
-// Favicon
+// Favicon and logo
 app.get('/favicon.ico', (req, res) => {
-  res.sendFile(path.join(__dirname, 'favicon.png'));
+  res.sendFile(path.join(__dirname, 'favicon.svg'));
+});
+app.get('/favicon.svg', (req, res) => {
+  res.type('image/svg+xml');
+  res.sendFile(path.join(__dirname, 'favicon.svg'));
 });
 app.get('/favicon.png', (req, res) => {
   res.sendFile(path.join(__dirname, 'favicon.png'));
+});
+app.get('/logo.svg', (req, res) => {
+  res.type('image/svg+xml');
+  res.sendFile(path.join(__dirname, 'logo.svg'));
 });
 
 // Serve static files for admin portal
@@ -180,44 +188,6 @@ server.listen(PORT, HOST, () => {
 ║                                                            ║
 ╚════════════════════════════════════════════════════════════╝
   `);
-});
-
-// Graceful shutdown
-const shutdown = (signal) => {
-  console.log(`\n${signal} received. Starting graceful shutdown...`);
-  
-  server.close(() => {
-    console.log('HTTP server closed');
-    
-    try {
-      db.close();
-      console.log('Database connection closed');
-    } catch (err) {
-      console.error('Error closing database:', err);
-    }
-    
-    console.log('Graceful shutdown completed');
-    process.exit(0);
-  });
-
-  // Force close after 30 seconds
-  setTimeout(() => {
-    console.error('Could not close connections in time, forcefully shutting down');
-    process.exit(1);
-  }, 30000);
-};
-
-process.on('SIGTERM', () => shutdown('SIGTERM'));
-process.on('SIGINT', () => shutdown('SIGINT'));
-
-// Handle uncaught exceptions
-process.on('uncaughtException', (err) => {
-  console.error('Uncaught Exception:', err);
-  shutdown('UNCAUGHT_EXCEPTION');
-});
-
-process.on('unhandledRejection', (reason, promise) => {
-  console.error('Unhandled Rejection at:', promise, 'reason:', reason);
 });
 
 module.exports = { app, server, wss };

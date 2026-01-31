@@ -24,23 +24,7 @@ import Select from '../components/ui/Select';
 import Table from '../components/ui/Table';
 import Modal from '../components/ui/Modal';
 import { clsx } from 'clsx';
-
-// Level title mapping
-const levelTitles = {
-  1: 'Rookie',
-  2: 'Starter',
-  3: 'Active',
-  4: 'Reliable',
-  5: 'Pro',
-  6: 'Expert',
-  7: 'Elite',
-  8: 'Master',
-  9: 'Legend',
-  10: 'Champion',
-};
-
-// XP thresholds
-const xpThresholds = [0, 500, 1200, 2500, 5000, 8000, 12000, 18000, 25000, 35000];
+import { XP_THRESHOLDS as xpThresholds, LEVEL_TITLES as levelTitles } from '../utils/gamification';
 
 // Generate avatar URL if not provided
 const getAvatarUrl = (candidate) => {

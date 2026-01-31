@@ -1,5 +1,6 @@
 import { createContext, useContext, useEffect, useRef, useState, useCallback } from 'react';
 import { useAuth } from './AuthContext';
+import logger from '../utils/logger';
 
 const WebSocketContext = createContext(null);
 
@@ -25,7 +26,7 @@ export function WebSocketProvider({ children }) {
       wsRef.current = new WebSocket(wsUrl);
 
       wsRef.current.onopen = () => {
-        console.log('🔌 Admin WebSocket connected');
+        logger.log('Admin WebSocket connected');
         setIsConnected(true);
         
         if (reconnectTimeoutRef.current) {
@@ -40,27 +41,27 @@ export function WebSocketProvider({ children }) {
           setLastMessage(data);
           handleMessage(data);
         } catch (error) {
-          console.error('Failed to parse WebSocket message:', error);
+          logger.error('Failed to parse WebSocket message:', error);
         }
       };
 
       wsRef.current.onclose = (event) => {
-        console.log('🔌 Admin WebSocket disconnected:', event.code);
+        logger.log('Admin WebSocket disconnected:', event.code);
         setIsConnected(false);
-        
+
         if (event.code !== 4001) {
           reconnectTimeoutRef.current = setTimeout(() => {
-            console.log('🔄 Attempting to reconnect...');
+            logger.log('Attempting to reconnect...');
             connect();
           }, 3000);
         }
       };
 
       wsRef.current.onerror = (error) => {
-        console.error('WebSocket error:', error);
+        logger.error('WebSocket error:', error);
       };
     } catch (error) {
-      console.error('Failed to create WebSocket:', error);
+      logger.error('Failed to create WebSocket:', error);
     }
   }, [isAuthenticated]);
 
@@ -68,7 +69,7 @@ export function WebSocketProvider({ children }) {
   const handleMessage = useCallback((data) => {
     switch (data.type) {
       case 'connected':
-        console.log('✅ Admin connection confirmed');
+        logger.debug('Admin connection confirmed');
         break;
 
       case 'online_candidates':
@@ -131,7 +132,7 @@ export function WebSocketProvider({ children }) {
         break;
 
       default:
-        console.log('Unknown admin WebSocket message:', data.type);
+        logger.debug('Unknown admin WebSocket message:', data.type);
     }
   }, []);
 
@@ -149,7 +150,7 @@ export function WebSocketProvider({ children }) {
       wsRef.current.send(JSON.stringify(data));
       return true;
     }
-    console.warn('WebSocket not connected, message not sent');
+    logger.warn('WebSocket not connected, message not sent');
     return false;
   }, []);
 

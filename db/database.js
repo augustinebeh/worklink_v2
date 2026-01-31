@@ -423,6 +423,14 @@ function createSchema() {
     CREATE INDEX IF NOT EXISTS idx_referrals_referrer ON referrals(referrer_id);
     CREATE INDEX IF NOT EXISTS idx_tender_alerts_active ON tender_alerts(active);
     CREATE INDEX IF NOT EXISTS idx_job_match_scores ON job_match_scores(candidate_id, score);
+
+    -- Additional indexes for query performance
+    CREATE INDEX IF NOT EXISTS idx_payments_candidate ON payments(candidate_id);
+    CREATE INDEX IF NOT EXISTS idx_payments_status ON payments(status);
+    CREATE INDEX IF NOT EXISTS idx_payments_created ON payments(created_at);
+    CREATE INDEX IF NOT EXISTS idx_candidates_email ON candidates(email);
+    CREATE INDEX IF NOT EXISTS idx_xp_transactions_candidate ON xp_transactions(candidate_id);
+    CREATE INDEX IF NOT EXISTS idx_messages_candidate_created ON messages(candidate_id, created_at);
   `);
   console.log('✅ Schema created successfully');
 }

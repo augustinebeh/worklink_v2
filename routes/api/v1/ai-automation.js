@@ -1,11 +1,17 @@
 /**
  * AI Automation Routes - GeBIZ Scraping, Candidate Sourcing, Tender Analysis
- * TalentVis Worklink v2
+ * WorkLink v2 - Powered by Claude AI
  */
 
 const express = require('express');
 const router = express.Router();
 const { db } = require('../../../db/database');
+const {
+  generateJobPostings,
+  generateOutreachMessage,
+  analyzeTender: analyzeWithClaude,
+  matchCandidates,
+} = require('../../../utils/claude');
 
 // ============================================
 // GEBIZ TENDER SCRAPER (Simulated for now)
@@ -102,21 +108,34 @@ router.get('/gebiz/status', (req, res) => {
 // ============================================
 
 /**
- * Analyze a tender and provide AI recommendations
+ * Analyze a tender and provide AI recommendations (Claude-powered)
  */
-router.post('/tenders/:id/analyze', (req, res) => {
+router.post('/tenders/:id/analyze', async (req, res) => {
   try {
     const tender = db.prepare('SELECT * FROM tenders WHERE id = ?').get(req.params.id);
     if (!tender) {
       return res.status(404).json({ success: false, error: 'Tender not found' });
     }
 
-    // Analyze based on our historical data
-    const analysis = analyzeTender(tender);
-    
+    // Get company context for better analysis
+    const companyContext = {
+      totalCandidates: db.prepare(`SELECT COUNT(*) as c FROM candidates WHERE status = 'active'`).get().c,
+      avgRating: db.prepare(`SELECT AVG(rating) as r FROM candidates WHERE rating IS NOT NULL`).get().r || 4.2,
+    };
+
+    let analysis;
+    try {
+      // Use Claude AI for analysis
+      analysis = await analyzeWithClaude(tender, companyContext);
+    } catch (aiError) {
+      console.warn('Claude AI unavailable, using fallback analysis:', aiError.message);
+      // Fallback to rule-based analysis
+      analysis = analyzeTender(tender);
+    }
+
     // Update tender with analysis
     db.prepare(`
-      UPDATE tenders 
+      UPDATE tenders
       SET win_probability = ?, recommended_action = ?, updated_at = datetime('now')
       WHERE id = ?
     `).run(analysis.winProbability, analysis.recommendedAction, tender.id);
@@ -126,6 +145,7 @@ router.post('/tenders/:id/analyze', (req, res) => {
       data: {
         tender,
         analysis,
+        aiPowered: true,
       }
     });
   } catch (error) {
@@ -134,28 +154,43 @@ router.post('/tenders/:id/analyze', (req, res) => {
 });
 
 /**
- * Batch analyze all new tenders
+ * Batch analyze all new tenders (Claude-powered)
  */
-router.post('/tenders/analyze-all', (req, res) => {
+router.post('/tenders/analyze-all', async (req, res) => {
   try {
     const newTenders = db.prepare(`
       SELECT * FROM tenders WHERE status = 'new' AND win_probability IS NULL
     `).all();
 
-    const results = newTenders.map(tender => {
-      const analysis = analyzeTender(tender);
+    const companyContext = {
+      totalCandidates: db.prepare(`SELECT COUNT(*) as c FROM candidates WHERE status = 'active'`).get().c,
+      avgRating: db.prepare(`SELECT AVG(rating) as r FROM candidates WHERE rating IS NOT NULL`).get().r || 4.2,
+    };
+
+    const results = [];
+    for (const tender of newTenders) {
+      let analysis;
+      try {
+        analysis = await analyzeWithClaude(tender, companyContext);
+      } catch (aiError) {
+        // Fallback to rule-based
+        analysis = analyzeTender(tender);
+      }
+
       db.prepare(`
-        UPDATE tenders 
+        UPDATE tenders
         SET win_probability = ?, recommended_action = ?
         WHERE id = ?
       `).run(analysis.winProbability, analysis.recommendedAction, tender.id);
-      return { id: tender.id, title: tender.title, ...analysis };
-    });
+
+      results.push({ id: tender.id, title: tender.title, ...analysis });
+    }
 
     res.json({
       success: true,
-      message: `Analyzed ${results.length} tenders`,
+      message: `Analyzed ${results.length} tenders with AI`,
       data: results,
+      aiPowered: true,
     });
   } catch (error) {
     res.status(500).json({ success: false, error: error.message });
@@ -168,32 +203,40 @@ router.post('/tenders/analyze-all', (req, res) => {
 // ============================================
 
 /**
- * Generate job posting content for multiple platforms
+ * Generate job posting content for multiple platforms (Claude-powered)
  */
-router.post('/sourcing/generate-posting', (req, res) => {
+router.post('/sourcing/generate-posting', async (req, res) => {
   try {
     const { jobTitle, payRate, location, requirements, slots } = req.body;
 
-    const postings = {
-      telegram: generateTelegramPosting(jobTitle, payRate, location, requirements, slots),
-      whatsapp: generateWhatsAppPosting(jobTitle, payRate, location, requirements, slots),
-      fastjobs: generateFastJobsPosting(jobTitle, payRate, location, requirements, slots),
-      instagram: generateInstagramPosting(jobTitle, payRate, location, requirements, slots),
-    };
+    let postings;
+    try {
+      // Use Claude AI to generate engaging postings
+      postings = await generateJobPostings({ jobTitle, payRate, location, requirements, slots });
+    } catch (aiError) {
+      console.warn('Claude AI unavailable, using template postings:', aiError.message);
+      // Fallback to template-based generation
+      postings = {
+        telegram: generateTelegramPosting(jobTitle, payRate, location, requirements, slots),
+        whatsapp: generateWhatsAppPosting(jobTitle, payRate, location, requirements, slots),
+        facebook: generateFastJobsPosting(jobTitle, payRate, location, requirements, slots),
+        instagram: generateInstagramPosting(jobTitle, payRate, location, requirements, slots),
+      };
+    }
 
-    res.json({ success: true, data: postings });
+    res.json({ success: true, data: postings, aiPowered: true });
   } catch (error) {
     res.status(500).json({ success: false, error: error.message });
   }
 });
 
 /**
- * Generate mass outreach messages for candidates
+ * Generate mass outreach messages for candidates (Claude-powered)
  */
-router.post('/sourcing/generate-outreach', (req, res) => {
+router.post('/sourcing/generate-outreach', async (req, res) => {
   try {
     const { jobId, candidateIds } = req.body;
-    
+
     const job = db.prepare('SELECT j.*, c.company_name FROM jobs j LEFT JOIN clients c ON j.client_id = c.id WHERE j.id = ?').get(jobId);
     if (!job) {
       return res.status(404).json({ success: false, error: 'Job not found' });
@@ -207,19 +250,31 @@ router.post('/sourcing/generate-outreach', (req, res) => {
     } else {
       // Auto-select best candidates
       candidates = db.prepare(`
-        SELECT * FROM candidates 
-        WHERE status = 'active' 
-        ORDER BY rating DESC, total_jobs_completed DESC 
+        SELECT * FROM candidates
+        WHERE status = 'active'
+        ORDER BY rating DESC, total_jobs_completed DESC
         LIMIT 20
       `).all();
     }
 
-    const messages = candidates.map(candidate => ({
-      candidateId: candidate.id,
-      candidateName: candidate.name,
-      phone: candidate.phone,
-      message: generatePersonalizedOutreach(candidate, job),
-    }));
+    // Generate messages - use Claude for each candidate
+    const messages = [];
+    for (const candidate of candidates) {
+      let message;
+      try {
+        message = await generateOutreachMessage(candidate, job);
+      } catch (aiError) {
+        // Fallback to template
+        message = generatePersonalizedOutreach(candidate, job);
+      }
+
+      messages.push({
+        candidateId: candidate.id,
+        candidateName: candidate.name,
+        phone: candidate.phone,
+        message,
+      });
+    }
 
     res.json({
       success: true,
@@ -227,6 +282,7 @@ router.post('/sourcing/generate-outreach', (req, res) => {
         job,
         totalCandidates: messages.length,
         messages,
+        aiPowered: true,
       }
     });
   } catch (error) {
@@ -235,53 +291,62 @@ router.post('/sourcing/generate-outreach', (req, res) => {
 });
 
 /**
- * Get candidate recommendations for a job
+ * Get candidate recommendations for a job (Claude-powered)
  */
-router.get('/sourcing/recommend/:jobId', (req, res) => {
+router.get('/sourcing/recommend/:jobId', async (req, res) => {
   try {
     const job = db.prepare('SELECT * FROM jobs WHERE id = ?').get(req.params.jobId);
     if (!job) {
       return res.status(404).json({ success: false, error: 'Job not found' });
     }
 
-    // Score candidates based on match
+    // Get candidates with their stats
     const candidates = db.prepare(`
-      SELECT c.*, 
+      SELECT c.*,
         (SELECT COUNT(*) FROM deployments d WHERE d.candidate_id = c.id AND d.status = 'completed') as completed_jobs,
         (SELECT AVG(d.rating) FROM deployments d WHERE d.candidate_id = c.id AND d.rating IS NOT NULL) as avg_rating
       FROM candidates c
       WHERE c.status = 'active'
     `).all();
 
-    const scored = candidates.map(c => {
-      let score = 0;
-      
-      // Rating score (0-30)
-      score += (c.avg_rating || 0) * 6;
-      
-      // Experience score (0-30)
-      score += Math.min(30, c.completed_jobs * 2);
-      
-      // Level score (0-20)
-      score += c.level * 2;
-      
-      // Certification match (0-20)
-      const certs = JSON.parse(c.certifications || '[]');
-      if (job.title.toLowerCase().includes('server') && certs.includes('Server Basics')) score += 10;
-      if (job.title.toLowerCase().includes('food') && certs.includes('Food Safety')) score += 10;
-      if (certs.includes('Customer Service')) score += 5;
+    let recommendations;
+    try {
+      // Use Claude AI for intelligent matching
+      const aiScores = await matchCandidates(job, candidates);
 
-      return { ...c, matchScore: Math.round(score) };
-    });
-
-    // Sort by match score
-    scored.sort((a, b) => b.matchScore - a.matchScore);
+      // Merge AI scores with candidate data
+      recommendations = aiScores.map(scored => {
+        const candidate = candidates.find(c => c.id === scored.id);
+        return {
+          ...candidate,
+          matchScore: scored.score,
+          matchReason: scored.reason,
+        };
+      });
+    } catch (aiError) {
+      console.warn('Claude AI unavailable, using rule-based matching:', aiError.message);
+      // Fallback to rule-based scoring
+      const scored = candidates.map(c => {
+        let score = 0;
+        score += (c.avg_rating || 0) * 6;
+        score += Math.min(30, (c.completed_jobs || 0) * 2);
+        score += (c.level || 1) * 2;
+        const certs = JSON.parse(c.certifications || '[]');
+        if (job.title.toLowerCase().includes('server') && certs.includes('Server Basics')) score += 10;
+        if (job.title.toLowerCase().includes('food') && certs.includes('Food Safety')) score += 10;
+        if (certs.includes('Customer Service')) score += 5;
+        return { ...c, matchScore: Math.round(score) };
+      });
+      scored.sort((a, b) => b.matchScore - a.matchScore);
+      recommendations = scored.slice(0, 15);
+    }
 
     res.json({
       success: true,
       data: {
         job,
-        recommendations: scored.slice(0, 15),
+        recommendations,
+        aiPowered: true,
       }
     });
   } catch (error) {
@@ -311,11 +376,58 @@ router.get('/stats', (req, res) => {
         openJobs: db.prepare(`SELECT COUNT(*) as c FROM jobs WHERE status = 'open'`).get().c,
         unfilledSlots: db.prepare(`SELECT SUM(total_slots - filled_slots) as c FROM jobs WHERE status = 'open'`).get().c || 0,
       },
+      ai: {
+        enabled: !!process.env.ANTHROPIC_API_KEY,
+        model: 'claude-3-5-sonnet-20241022',
+      },
     };
 
     res.json({ success: true, data: stats });
   } catch (error) {
     res.status(500).json({ success: false, error: error.message });
+  }
+});
+
+/**
+ * Check AI status and connectivity
+ */
+router.get('/ai-status', async (req, res) => {
+  const hasApiKey = !!process.env.ANTHROPIC_API_KEY;
+
+  if (!hasApiKey) {
+    return res.json({
+      success: true,
+      data: {
+        enabled: false,
+        status: 'not_configured',
+        message: 'ANTHROPIC_API_KEY not set in environment',
+      }
+    });
+  }
+
+  try {
+    // Quick test call to verify API key works
+    const { askClaude } = require('../../../utils/claude');
+    await askClaude('Say "ok"', 'Respond with only "ok"', { maxTokens: 10 });
+
+    res.json({
+      success: true,
+      data: {
+        enabled: true,
+        status: 'connected',
+        model: 'claude-3-5-sonnet-20241022',
+        message: 'Claude AI is ready',
+      }
+    });
+  } catch (error) {
+    res.json({
+      success: true,
+      data: {
+        enabled: true,
+        status: 'error',
+        message: error.message,
+      }
+    });
   }
 });
 
@@ -517,5 +629,68 @@ ${candidate.total_jobs_completed > 5 ? `You've been doing great with ${candidate
 
 Interested? Reply "YES" to confirm!`;
 }
+
+
+// ============================================
+// AI ASSISTANT (Ad-hoc questions)
+// ============================================
+
+/**
+ * Ask Claude AI a question about business, tenders, or recruitment
+ */
+router.post('/assistant', async (req, res) => {
+  try {
+    const { question, context = 'general' } = req.body;
+
+    if (!question) {
+      return res.status(400).json({ success: false, error: 'Question is required' });
+    }
+
+    const { askClaude } = require('../../../utils/claude');
+
+    // Get relevant data based on context
+    let businessContext = '';
+
+    if (context === 'tenders' || context === 'general') {
+      const tenderStats = {
+        total: db.prepare(`SELECT COUNT(*) as c FROM tenders`).get().c,
+        highPriority: db.prepare(`SELECT COUNT(*) as c FROM tenders WHERE win_probability >= 60`).get().c,
+        recent: db.prepare(`SELECT title, agency, win_probability FROM tenders ORDER BY created_at DESC LIMIT 5`).all(),
+      };
+      businessContext += `\nTender Pipeline: ${tenderStats.total} total, ${tenderStats.highPriority} high-priority\nRecent tenders: ${tenderStats.recent.map(t => t.title).join(', ')}`;
+    }
+
+    if (context === 'recruitment' || context === 'general') {
+      const candidateStats = {
+        total: db.prepare(`SELECT COUNT(*) as c FROM candidates WHERE status = 'active'`).get().c,
+        topRated: db.prepare(`SELECT COUNT(*) as c FROM candidates WHERE rating >= 4.5`).get().c,
+        openJobs: db.prepare(`SELECT COUNT(*) as c FROM jobs WHERE status = 'open'`).get().c,
+      };
+      businessContext += `\nActive Candidates: ${candidateStats.total} (${candidateStats.topRated} top-rated)\nOpen Jobs: ${candidateStats.openJobs}`;
+    }
+
+    const systemPrompt = `You are an AI assistant for WorkLink, a Singapore-based staffing and manpower agency. You help with:
+- BPO/Tender strategy (GeBIZ government tenders)
+- Candidate recruitment and management
+- Business operations advice
+
+Current Business Context:${businessContext}
+
+Be concise, practical, and use Singapore business context. Focus on actionable advice.`;
+
+    const response = await askClaude(question, systemPrompt, { maxTokens: 800 });
+
+    res.json({
+      success: true,
+      data: {
+        question,
+        answer: response,
+        context,
+      }
+    });
+  } catch (error) {
+    res.status(500).json({ success: false, error: error.message });
+  }
+});
 
 module.exports = router;

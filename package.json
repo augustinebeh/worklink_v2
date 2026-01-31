@@ -8,7 +8,8 @@
     "npm": ">=10.0.0"
   },
   "scripts": {
-    "start": "node server.js",
+    "start": "npm run build && node server.js",
+    "start:quick": "node server.js",
     "dev": "concurrently -n server,admin,worker -c blue,green,magenta \"nodemon --ignore data/ server.js\" \"cd admin && npm run dev\" \"cd worker && npm run dev\"",
     "dev:server": "nodemon --ignore data/ server.js",
     "dev:admin": "cd admin && npm run dev",

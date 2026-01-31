@@ -37,7 +37,7 @@ export function ChatProvider({ children }) {
             setUnreadCount(prev => prev + 1);
             // Show notification if page is not visible
             if (document.hidden && 'Notification' in window && Notification.permission === 'granted') {
-              new Notification('New Message from TalentVis', {
+              new Notification('New Message from WorkLink', {
                 body: data.message.content,
                 icon: '/icon-192.png',
               });

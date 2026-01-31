@@ -3,6 +3,7 @@ import { ThemeProvider } from './contexts/ThemeContext';
 import { AuthProvider, useAuth } from './contexts/AuthContext';
 import { DataProvider } from './contexts/DataContext';
 import { WebSocketProvider } from './contexts/WebSocketContext';
+import { ToastProvider } from './components/ui/Toast';
 import AdminLayout from './components/layout/AdminLayout';
 
 // Pages
@@ -23,6 +24,8 @@ import Chat from './pages/Chat';
 import Training from './pages/Training';
 import Gamification from './pages/Gamification';
 import TenderMonitor from './pages/TenderMonitor';
+import AIAutomation from './pages/AIAutomation';
+import AISourcing from './pages/AISourcing';
 
 // Protected Route wrapper
 function ProtectedRoute({ children }) {
@@ -86,9 +89,12 @@ function AppRoutes() {
         {/* Settings */}
         <Route path="settings" element={<Settings />} />
         
+        {/* AI & Automation */}
+        <Route path="ai-automation" element={<AIAutomation />} />
+        <Route path="ai-sourcing" element={<AISourcing />} />
+
         {/* Redirects for removed/consolidated pages */}
         <Route path="analytics" element={<Navigate to="/financials" replace />} />
-        <Route path="ai-automation" element={<Navigate to="/bpo" replace />} />
       </Route>
 
       {/* Catch all */}
@@ -104,7 +110,9 @@ export default function App() {
         <AuthProvider>
           <WebSocketProvider>
             <DataProvider>
-              <AppRoutes />
+              <ToastProvider>
+                <AppRoutes />
+              </ToastProvider>
             </DataProvider>
           </WebSocketProvider>
         </AuthProvider>

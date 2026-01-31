@@ -1,6 +1,7 @@
 const express = require('express');
 const router = express.Router();
 const { db } = require('../../../db/database');
+const { validate, schemas } = require('../../../middleware/validation');
 
 // Login (simplified - no password for demo)
 router.post('/login', (req, res) => {
@@ -8,8 +9,9 @@ router.post('/login', (req, res) => {
     const { email, password, type = 'candidate' } = req.body;
 
     if (type === 'admin') {
-      // Admin login - hardcoded for demo
-      if (email === 'admin@talentvis.com' || email) {
+      // Admin login - requires specific credentials
+      const adminPassword = process.env.ADMIN_PASSWORD || 'admin123';
+      if (email === 'admin@talentvis.com' && password === adminPassword) {
         return res.json({
           success: true,
           data: {
@@ -21,6 +23,7 @@ router.post('/login', (req, res) => {
           token: 'demo-admin-token',
         });
       }
+      return res.status(401).json({ success: false, error: 'Invalid admin credentials' });
     }
 
     // Candidate login
@@ -66,7 +69,7 @@ router.post('/worker/login', (req, res) => {
 });
 
 // Register new candidate
-router.post('/register', (req, res) => {
+router.post('/register', validate(schemas.registration), (req, res) => {
   try {
     const { name, email, phone, date_of_birth } = req.body;
 

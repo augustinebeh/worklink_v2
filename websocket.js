@@ -226,7 +226,7 @@ function sendMessageToCandidate(candidateId, content, templateId = null) {
     clientWs.send(JSON.stringify({ type: EventTypes.CHAT_MESSAGE, message }));
   } else {
     // Queue push notification
-    createNotification(candidateId, 'chat', 'New message from TalentVis', content);
+    createNotification(candidateId, 'chat', 'New message from WorkLink', content);
   }
 
   // Confirm to all admins

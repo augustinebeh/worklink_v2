@@ -1,5 +1,6 @@
 import { createContext, useContext, useEffect, useRef, useState, useCallback } from 'react';
 import { useAuth } from './AuthContext';
+import logger from '../utils/logger';
 
 const WebSocketContext = createContext(null);
 
@@ -26,7 +27,7 @@ export function WebSocketProvider({ children }) {
       wsRef.current = new WebSocket(wsUrl);
 
       wsRef.current.onopen = () => {
-        console.log('🔌 WebSocket connected');
+        logger.log('WebSocket connected');
         setIsConnected(true);
         
         // Clear any pending reconnect
@@ -42,28 +43,28 @@ export function WebSocketProvider({ children }) {
           setLastMessage(data);
           handleMessage(data);
         } catch (error) {
-          console.error('Failed to parse WebSocket message:', error);
+          logger.error('Failed to parse WebSocket message:', error);
         }
       };
 
       wsRef.current.onclose = (event) => {
-        console.log('🔌 WebSocket disconnected:', event.code, event.reason);
+        logger.log('WebSocket disconnected:', event.code, event.reason);
         setIsConnected(false);
-        
+
         // Reconnect after 3 seconds if not intentional close
         if (event.code !== 4001) { // 4001 = intentional close
           reconnectTimeoutRef.current = setTimeout(() => {
-            console.log('🔄 Attempting to reconnect...');
+            logger.log('Attempting to reconnect...');
             connect();
           }, 3000);
         }
       };
 
       wsRef.current.onerror = (error) => {
-        console.error('WebSocket error:', error);
+        logger.error('WebSocket error:', error);
       };
     } catch (error) {
-      console.error('Failed to create WebSocket:', error);
+      logger.error('Failed to create WebSocket:', error);
     }
   }, [user?.id]);
 
@@ -71,7 +72,7 @@ export function WebSocketProvider({ children }) {
   const handleMessage = useCallback((data) => {
     switch (data.type) {
       case 'connected':
-        console.log('✅ Connection confirmed:', data);
+        logger.debug('Connection confirmed:', data);
         break;
 
       case 'chat_history':
@@ -152,7 +153,7 @@ export function WebSocketProvider({ children }) {
         break;
 
       default:
-        console.log('Unknown WebSocket message:', data.type);
+        logger.debug('Unknown WebSocket message:', data.type);
     }
   }, []);
 
@@ -170,7 +171,7 @@ export function WebSocketProvider({ children }) {
       wsRef.current.send(JSON.stringify(data));
       return true;
     }
-    console.warn('WebSocket not connected, message not sent');
+    logger.warn('WebSocket not connected, message not sent');
     return false;
   }, []);
 

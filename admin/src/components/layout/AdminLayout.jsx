@@ -1,12 +1,14 @@
 import { useState } from 'react';
-import { Outlet } from 'react-router-dom';
+import { Outlet, useLocation } from 'react-router-dom';
 import Sidebar from './Sidebar';
 import Header from './Header';
+import { PageTransition } from './PageTransition';
 import { clsx } from 'clsx';
 
 export default function AdminLayout() {
   const [sidebarCollapsed, setSidebarCollapsed] = useState(false);
   const [mobileSidebarOpen, setMobileSidebarOpen] = useState(false);
+  const location = useLocation();
 
   return (
     <div className="min-h-screen bg-slate-50 dark:bg-slate-950">
@@ -18,10 +20,10 @@ export default function AdminLayout() {
         onMobileClose={() => setMobileSidebarOpen(false)}
       />
 
-      {/* Main content area */}
+      {/* Main content area - sidebar is w-72 (288px) when expanded, w-[72px] when collapsed */}
       <div className={clsx(
         'transition-all duration-300',
-        sidebarCollapsed ? 'lg:ml-20' : 'lg:ml-64'
+        sidebarCollapsed ? 'lg:ml-[72px]' : 'lg:ml-72'
       )}>
         {/* Header */}
         <Header 
@@ -31,7 +33,9 @@ export default function AdminLayout() {
 
         {/* Page content */}
         <main className="p-6">
-          <Outlet />
+          <PageTransition key={location.pathname}>
+            <Outlet />
+          </PageTransition>
         </main>
       </div>
 

@@ -1,6 +1,6 @@
 import { useState, useEffect, useRef } from 'react';
-import { 
-  SendIcon, 
+import {
+  SendIcon,
   SmileIcon,
   CheckIcon,
   CheckCheckIcon,
@@ -9,6 +9,7 @@ import { useAuth } from '../contexts/AuthContext';
 import { useWebSocket } from '../contexts/WebSocketContext';
 import { clsx } from 'clsx';
 import EmojiPicker from 'emoji-picker-react';
+import { LogoIcon } from '../components/ui/Logo';
 
 function MessageBubble({ message, isOwn }) {
   const time = new Date(message.created_at).toLocaleTimeString('en-SG', { 
@@ -246,11 +247,9 @@ export default function Chat() {
       {/* Header */}
       <div className="sticky top-0 z-10 bg-dark-900 px-4 pt-safe pb-4 border-b border-white/5">
         <div className="flex items-center gap-3">
-          <div className="w-10 h-10 rounded-full bg-primary-500 flex items-center justify-center">
-            <span className="text-white font-bold">TV</span>
-          </div>
+          <LogoIcon size={40} />
           <div>
-            <h1 className="font-semibold text-white">TalentVis Support</h1>
+            <h1 className="font-semibold text-white">WorkLink Support</h1>
             <div className="flex items-center gap-1">
               <span className={clsx(
                 'w-2 h-2 rounded-full',
@@ -276,7 +275,7 @@ export default function Chat() {
               <SendIcon className="h-8 w-8 text-primary-400" />
             </div>
             <p className="text-white font-medium">Start a conversation</p>
-            <p className="text-dark-400 text-sm mt-1">Send a message to TalentVis support</p>
+            <p className="text-dark-400 text-sm mt-1">Send a message to WorkLink support</p>
           </div>
         ) : (
           <div className="space-y-3">

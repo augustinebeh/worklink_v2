@@ -11,8 +11,12 @@ export default function LevelBadge({ level, size = 'md', showGlow = true }) {
   const isElite = level >= 8;
   const isPro = level >= 5;
 
+  const tierName = isElite ? 'Elite' : isPro ? 'Pro' : 'Rookie';
+
   return (
-    <div 
+    <div
+      role="img"
+      aria-label={`Level ${level} ${tierName} badge`}
       className={clsx(
         'relative flex items-center justify-center rounded-full font-display font-bold',
         sizes[size],
@@ -23,19 +27,22 @@ export default function LevelBadge({ level, size = 'md', showGlow = true }) {
         showGlow && isPro && !isElite && 'glow-primary',
       )}
     >
-      {level}
-      
+      <span aria-hidden="true">{level}</span>
+
       {/* Level ring decoration */}
-      <div className={clsx(
-        'absolute inset-0 rounded-full border-2',
-        isElite ? 'border-gold-300/50' :
-        isPro ? 'border-primary-300/30' :
-        'border-dark-600'
-      )} />
-      
+      <div
+        className={clsx(
+          'absolute inset-0 rounded-full border-2',
+          isElite ? 'border-gold-300/50' :
+          isPro ? 'border-primary-300/30' :
+          'border-dark-600'
+        )}
+        aria-hidden="true"
+      />
+
       {/* Outer glow ring for elite */}
       {isElite && (
-        <div className="absolute -inset-1 rounded-full border border-gold-400/20 animate-pulse" />
+        <div className="absolute -inset-1 rounded-full border border-gold-400/20 animate-pulse" aria-hidden="true" />
       )}
     </div>
   );

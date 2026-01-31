@@ -50,8 +50,12 @@ export default function AchievementCard({
   };
 
   return (
-    <div 
+    <div
       onClick={onClick}
+      role={onClick ? 'button' : undefined}
+      tabIndex={onClick ? 0 : undefined}
+      onKeyDown={onClick ? (e) => e.key === 'Enter' && onClick() : undefined}
+      aria-label={`${name} achievement${unlocked ? ' - unlocked' : ` - ${progress}% complete`}. ${description}`}
       className={clsx(
         'rounded-2xl border transition-all duration-200',
         sizes[size],
@@ -64,7 +68,7 @@ export default function AchievementCard({
           'border-dark-700/50',
           'opacity-50',
         ],
-        onClick && 'cursor-pointer active:scale-95',
+        onClick && 'cursor-pointer active:scale-95 focus:outline-none focus:ring-2 focus:ring-primary-500/50',
       )}
     >
       <div className="flex items-start gap-4">

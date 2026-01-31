@@ -8,21 +8,44 @@
   html {
     @apply antialiased;
     -webkit-tap-highlight-color: transparent;
+    background-color: #020617;
   }
-  
+
   body {
     @apply bg-dark-950 text-white min-h-screen;
     overscroll-behavior: none;
+    background-color: #020617;
+  }
+
+  /* Ensure root fills the screen properly on iOS */
+  #root {
+    min-height: 100vh;
+    min-height: -webkit-fill-available;
+    background-color: #020617;
   }
 
   /* Hide scrollbar but keep functionality */
   ::-webkit-scrollbar {
     display: none;
   }
-  
+
   * {
     -ms-overflow-style: none;
     scrollbar-width: none;
+  }
+
+  /* iOS status bar fix - ensure background extends under status bar */
+  @supports (padding-top: env(safe-area-inset-top)) {
+    body::before {
+      content: '';
+      position: fixed;
+      top: 0;
+      left: 0;
+      right: 0;
+      height: env(safe-area-inset-top);
+      background-color: #020617;
+      z-index: 9999;
+    }
   }
 }
 
@@ -227,11 +250,20 @@
 @layer utilities {
   /* Safe area padding for notched phones */
   .pb-safe {
-    padding-bottom: max(0.5rem, env(safe-area-inset-bottom));
+    padding-bottom: max(0.75rem, env(safe-area-inset-bottom));
   }
 
   .pt-safe {
-    padding-top: max(0.5rem, env(safe-area-inset-top));
+    padding-top: max(1rem, calc(env(safe-area-inset-top) + 0.5rem));
+  }
+
+  /* Scrollbar hide utility */
+  .scrollbar-hide {
+    -ms-overflow-style: none;
+    scrollbar-width: none;
+  }
+  .scrollbar-hide::-webkit-scrollbar {
+    display: none;
   }
 
   /* Gradient text */
