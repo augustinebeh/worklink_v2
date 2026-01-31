@@ -435,6 +435,77 @@ function createSchema() {
   console.log('✅ Schema created successfully');
 }
 
+// Ensure demo account exists - ALWAYS runs in both environments
+function ensureDemoAccount() {
+  const demoExists = db.prepare('SELECT COUNT(*) as c FROM candidates WHERE email = ?').get('sarah.tan@email.com').c;
+  if (demoExists > 0) {
+    console.log('✅ Demo account exists: sarah.tan@email.com');
+    return;
+  }
+
+  console.log('🎭 Creating demo account: Sarah Tan');
+
+  // Create Sarah Tan demo candidate
+  db.prepare(`
+    INSERT INTO candidates (
+      id, name, email, phone, status, source,
+      xp, level, streak_days, total_jobs_completed,
+      certifications, skills, preferred_locations,
+      referral_code, referral_tier, total_referral_earnings,
+      total_incentives_earned, total_earnings, rating,
+      profile_photo, online_status, whatsapp_opted_in, created_at, updated_at
+    ) VALUES (
+      'CND_DEMO_001',
+      'Sarah Tan',
+      'sarah.tan@email.com',
+      '+6591234567',
+      'active',
+      'direct',
+      15383,
+      10,
+      5,
+      42,
+      '["Food Safety", "First Aid", "Customer Service"]',
+      '["Customer Service", "Cash Handling", "Event Support", "F&B Service"]',
+      '["Central", "East", "West"]',
+      'SARAH001',
+      2,
+      180.00,
+      250.00,
+      8750.00,
+      4.8,
+      'https://api.dicebear.com/7.x/avataaars/svg?seed=Sarah%20Tan',
+      'online',
+      1,
+      datetime('now', '-180 days'),
+      datetime('now')
+    )
+  `).run();
+
+  // Add some payment history for Sarah
+  const payments = [
+    ['PAY_DEMO_001', 'CND_DEMO_001', null, 120.00, 0, 120.00, 8.0, 'paid', -7],
+    ['PAY_DEMO_002', 'CND_DEMO_001', null, 108.00, 20.00, 128.00, 6.0, 'paid', -14],
+    ['PAY_DEMO_003', 'CND_DEMO_001', null, 160.00, 0, 160.00, 8.0, 'paid', -21],
+    ['PAY_DEMO_004', 'CND_DEMO_001', null, 110.00, 15.00, 125.00, 5.0, 'pending', -3],
+    ['PAY_DEMO_005', 'CND_DEMO_001', null, 128.00, 0, 128.00, 8.0, 'approved', -1],
+  ];
+  payments.forEach(p => {
+    db.prepare(`
+      INSERT INTO payments (id, candidate_id, deployment_id, base_amount, incentive_amount, total_amount, hours_worked, status, created_at)
+      VALUES (?, ?, ?, ?, ?, ?, ?, ?, datetime('now', ? || ' days'))
+    `).run(p[0], p[1], p[2], p[3], p[4], p[5], p[6], p[7], p[8]);
+  });
+
+  // Add XP transactions
+  db.prepare(`INSERT INTO xp_transactions (candidate_id, amount, reason, created_at) VALUES ('CND_DEMO_001', 100, 'Job Completed', datetime('now', '-7 days'))`).run();
+  db.prepare(`INSERT INTO xp_transactions (candidate_id, amount, reason, created_at) VALUES ('CND_DEMO_001', 150, 'Job Completed + Bonus', datetime('now', '-14 days'))`).run();
+  db.prepare(`INSERT INTO xp_transactions (candidate_id, amount, reason, created_at) VALUES ('CND_DEMO_001', 50, 'Daily Login Streak', datetime('now', '-1 days'))`).run();
+  db.prepare(`INSERT INTO xp_transactions (candidate_id, amount, reason, created_at) VALUES ('CND_DEMO_001', 200, 'Referral Bonus', datetime('now', '-10 days'))`).run();
+
+  console.log('✅ Demo account created: sarah.tan@email.com');
+}
+
 // Seed essential data (achievements, quests, tiers) - runs in both environments
 function seedEssentialData() {
   const achievementCount = db.prepare('SELECT COUNT(*) as c FROM achievements').get().c;
@@ -528,72 +599,6 @@ function seedEssentialData() {
   alerts.forEach(a => {
     db.prepare('INSERT OR IGNORE INTO tender_alerts (keyword, source, email_notify, active) VALUES (?, ?, 1, 1)').run(...a);
   });
-
-  // Demo account - Sarah Tan (runs in both production and development)
-  const demoExists = db.prepare('SELECT COUNT(*) as c FROM candidates WHERE email = ?').get('sarah.tan@email.com').c;
-  if (demoExists === 0) {
-    console.log('🎭 Creating demo account: Sarah Tan');
-
-    // Create Sarah Tan demo candidate
-    db.prepare(`
-      INSERT INTO candidates (
-        id, name, email, phone, status, source,
-        xp, level, streak_days, total_jobs_completed,
-        certifications, skills, preferred_locations,
-        referral_code, referral_tier, total_referral_earnings,
-        total_incentives_earned, total_earnings, rating,
-        profile_photo, online_status, whatsapp_opted_in, created_at, updated_at
-      ) VALUES (
-        'CND_DEMO_001',
-        'Sarah Tan',
-        'sarah.tan@email.com',
-        '+6591234567',
-        'active',
-        'direct',
-        15383,
-        10,
-        5,
-        42,
-        '["Food Safety", "First Aid", "Customer Service"]',
-        '["Customer Service", "Cash Handling", "Event Support", "F&B Service"]',
-        '["Central", "East", "West"]',
-        'SARAH001',
-        2,
-        180.00,
-        250.00,
-        8750.00,
-        4.8,
-        'https://api.dicebear.com/7.x/avataaars/svg?seed=Sarah%20Tan',
-        'online',
-        1,
-        datetime('now', '-180 days'),
-        datetime('now')
-      )
-    `).run();
-
-    // Add some payment history for Sarah
-    const payments = [
-      ['PAY_DEMO_001', 'CND_DEMO_001', null, 120.00, 0, 120.00, 8.0, 'paid', -7],
-      ['PAY_DEMO_002', 'CND_DEMO_001', null, 108.00, 20.00, 128.00, 6.0, 'paid', -14],
-      ['PAY_DEMO_003', 'CND_DEMO_001', null, 160.00, 0, 160.00, 8.0, 'paid', -21],
-      ['PAY_DEMO_004', 'CND_DEMO_001', null, 110.00, 15.00, 125.00, 5.0, 'pending', -3],
-      ['PAY_DEMO_005', 'CND_DEMO_001', null, 128.00, 0, 128.00, 8.0, 'approved', -1],
-    ];
-    payments.forEach(p => {
-      db.prepare(`
-        INSERT INTO payments (id, candidate_id, deployment_id, base_amount, incentive_amount, total_amount, hours_worked, status, created_at)
-        VALUES (?, ?, ?, ?, ?, ?, ?, ?, datetime('now', ? || ' days'))
-      `).run(p[0], p[1], p[2], p[3], p[4], p[5], p[6], p[7], p[8]);
-    });
-
-    // Add XP transactions
-    db.prepare(`INSERT INTO xp_transactions (candidate_id, amount, reason, created_at) VALUES ('CND_DEMO_001', 100, 'Job Completed', datetime('now', '-7 days'))`).run();
-    db.prepare(`INSERT INTO xp_transactions (candidate_id, amount, reason, created_at) VALUES ('CND_DEMO_001', 150, 'Job Completed + Bonus', datetime('now', '-14 days'))`).run();
-    db.prepare(`INSERT INTO xp_transactions (candidate_id, amount, reason, created_at) VALUES ('CND_DEMO_001', 50, 'Daily Login Streak', datetime('now', '-1 days'))`).run();
-    db.prepare(`INSERT INTO xp_transactions (candidate_id, amount, reason, created_at) VALUES ('CND_DEMO_001', 200, 'Referral Bonus', datetime('now', '-10 days'))`).run();
-
-    console.log('✅ Demo account created: sarah.tan@email.com');
-  }
 
   console.log('✅ Essential data seeded');
 }
@@ -842,6 +847,7 @@ function resetToSampleData() {
 // Initialize
 createSchema();
 seedEssentialData();
+ensureDemoAccount();  // Always ensure demo account exists
 seedSampleData();
 
 module.exports = { db, resetToSampleData, IS_PRODUCTION, generateAvatar };
