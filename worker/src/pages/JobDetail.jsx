@@ -165,8 +165,8 @@ export default function JobDetail() {
           <div className="flex items-center justify-between">
             <div>
               <p className="text-accent-400 text-sm font-medium">Total Earnings</p>
-              <p className="text-4xl font-bold text-white">${totalPay.toFixed(0)}</p>
-              <p className="text-dark-400 text-sm">${job.pay_rate}/hr × {hours.toFixed(1)} hours</p>
+              <p className="text-4xl font-bold text-white">${totalPay.toFixed(2)}</p>
+              <p className="text-dark-400 text-sm">${Number(job.pay_rate).toFixed(2)}/hr × {hours.toFixed(1)} hours</p>
             </div>
             {job.xp_bonus > 0 && (
               <div className="text-right">

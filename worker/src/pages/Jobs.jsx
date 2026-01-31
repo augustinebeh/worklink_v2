@@ -80,8 +80,8 @@ function JobCard({ job, applied }) {
       {/* Pay & Slots */}
       <div className="flex items-center justify-between mt-4 pt-3 border-t border-white/5">
         <div>
-          <p className="text-xl font-bold text-accent-400">${totalPay.toFixed(0)}</p>
-          <p className="text-xs text-dark-500">${job.pay_rate}/hr • {hours.toFixed(1)}h</p>
+          <p className="text-xl font-bold text-accent-400">${totalPay.toFixed(2)}</p>
+          <p className="text-xs text-dark-500">${Number(job.pay_rate).toFixed(2)}/hr • {hours.toFixed(1)}h</p>
         </div>
         <div className="flex items-center gap-3">
           {job.xp_bonus > 0 && (

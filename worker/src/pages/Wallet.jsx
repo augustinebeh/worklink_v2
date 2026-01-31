@@ -136,7 +136,7 @@ export default function Wallet() {
           </div>
           <div className="p-4 rounded-xl bg-dark-800/50 border border-white/5 text-center">
             <GiftIcon className="h-5 w-5 text-gold-400 mx-auto mb-1" />
-            <p className="text-lg font-bold text-white">${user?.total_incentives_earned?.toFixed(0) || 0}</p>
+            <p className="text-lg font-bold text-white">${(user?.total_incentives_earned || 0).toFixed(2)}</p>
             <p className="text-xs text-dark-500">Bonuses</p>
           </div>
         </div>

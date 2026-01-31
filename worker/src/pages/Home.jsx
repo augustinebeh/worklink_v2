@@ -144,13 +144,15 @@ function DailyCheckIn({ streak, onCheckIn, checkedIn }) {
 
 // Earnings Spotlight Component
 function EarningsSpotlight({ earnings, pendingPayment, weeklyEarnings }) {
+  const formatMoney = (amount) => Number(amount || 0).toFixed(2);
+
   return (
     <div className="p-5 rounded-2xl bg-gradient-to-br from-emerald-900/50 to-green-900/30 border border-emerald-500/20">
       <div className="flex items-start justify-between mb-4">
         <div>
           <p className="text-sm text-emerald-400/80">Total Earnings</p>
           <p className="text-4xl font-bold text-white mt-1">
-            ${earnings.toLocaleString()}
+            ${formatMoney(earnings)}
           </p>
         </div>
         <Link
@@ -164,11 +166,11 @@ function EarningsSpotlight({ earnings, pendingPayment, weeklyEarnings }) {
       <div className="grid grid-cols-2 gap-3">
         <div className="p-3 rounded-xl bg-dark-800/50">
           <p className="text-xs text-dark-400">This Week</p>
-          <p className="text-lg font-semibold text-white">${weeklyEarnings}</p>
+          <p className="text-lg font-semibold text-white">${formatMoney(weeklyEarnings)}</p>
         </div>
         <div className="p-3 rounded-xl bg-dark-800/50">
           <p className="text-xs text-dark-400">Pending</p>
-          <p className="text-lg font-semibold text-amber-400">${pendingPayment}</p>
+          <p className="text-lg font-semibold text-amber-400">${formatMoney(pendingPayment)}</p>
         </div>
       </div>
     </div>
@@ -189,7 +191,7 @@ function SocialProof({ stats }) {
       <div className="flex-1">
         <p className="text-sm text-white">
           <span className="font-semibold text-accent-400">{stats.workersToday}</span> workers earned{' '}
-          <span className="font-semibold text-emerald-400">${stats.earningsToday}</span> today
+          <span className="font-semibold text-emerald-400">${Number(stats.earningsToday).toFixed(2)}</span> today
         </p>
       </div>
     </div>
@@ -252,8 +254,8 @@ function UrgentJobCard({ job }) {
       {/* Pay & CTA */}
       <div className="flex items-center justify-between mt-4 pt-4 border-t border-white/5">
         <div>
-          <p className="text-2xl font-bold text-emerald-400">${totalPay.toFixed(0)}</p>
-          <p className="text-xs text-dark-500">${job.pay_rate}/hr • {hours.toFixed(1)}h</p>
+          <p className="text-2xl font-bold text-emerald-400">${totalPay.toFixed(2)}</p>
+          <p className="text-xs text-dark-500">${Number(job.pay_rate).toFixed(2)}/hr • {hours.toFixed(1)}h</p>
         </div>
         <div className="flex items-center gap-2 px-4 py-2 rounded-xl bg-primary-500 text-white font-medium">
           Apply Now

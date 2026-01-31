@@ -159,47 +159,25 @@ export default function Login() {
             </button>
           </form>
 
-          {/* Demo accounts */}
+          {/* Demo account */}
           <div className="mt-8">
             <p className="text-center text-dark-500 text-sm mb-4">Or try a demo account</p>
-            <div className="grid grid-cols-2 gap-3">
-              <button
-                onClick={() => quickLogin('sarah.tan@email.com')}
-                disabled={loading}
-                aria-label="Login as Sarah Tan, Level 10"
-                className="p-3 min-h-[52px] rounded-xl bg-dark-800/50 border border-white/5 text-sm hover:bg-dark-800 active:scale-[0.98] transition-all focus:outline-none focus:ring-2 focus:ring-primary-500/50 disabled:opacity-50"
-              >
-                <p className="text-white font-medium">Sarah Tan</p>
-                <p className="text-dark-500 text-xs">Level 10</p>
-              </button>
-              <button
-                onClick={() => quickLogin('rizal.m@email.com')}
-                disabled={loading}
-                aria-label="Login as Muhammad Rizal, Level 10"
-                className="p-3 min-h-[52px] rounded-xl bg-dark-800/50 border border-white/5 text-sm hover:bg-dark-800 active:scale-[0.98] transition-all focus:outline-none focus:ring-2 focus:ring-primary-500/50 disabled:opacity-50"
-              >
-                <p className="text-white font-medium">Muhammad Rizal</p>
-                <p className="text-dark-500 text-xs">Level 10</p>
-              </button>
-              <button
-                onClick={() => quickLogin('amanda.c@email.com')}
-                disabled={loading}
-                aria-label="Login as Amanda Chen, Level 10"
-                className="p-3 min-h-[52px] rounded-xl bg-dark-800/50 border border-white/5 text-sm hover:bg-dark-800 active:scale-[0.98] transition-all focus:outline-none focus:ring-2 focus:ring-primary-500/50 disabled:opacity-50"
-              >
-                <p className="text-white font-medium">Amanda Chen</p>
-                <p className="text-dark-500 text-xs">Level 10</p>
-              </button>
-              <button
-                onClick={() => quickLogin('weijie@email.com')}
-                disabled={loading}
-                aria-label="Login as Wei Jie, New User"
-                className="p-3 min-h-[52px] rounded-xl bg-dark-800/50 border border-white/5 text-sm hover:bg-dark-800 active:scale-[0.98] transition-all focus:outline-none focus:ring-2 focus:ring-primary-500/50 disabled:opacity-50"
-              >
-                <p className="text-white font-medium">Wei Jie</p>
-                <p className="text-dark-500 text-xs">New User</p>
-              </button>
-            </div>
+            <button
+              onClick={() => quickLogin('sarah.tan@email.com')}
+              disabled={loading}
+              aria-label="Login as Sarah Tan"
+              className="w-full p-4 min-h-[60px] rounded-xl bg-gradient-to-r from-primary-900/50 to-violet-900/50 border border-primary-500/30 text-sm hover:border-primary-500/50 active:scale-[0.98] transition-all focus:outline-none focus:ring-2 focus:ring-primary-500/50 disabled:opacity-50"
+            >
+              <div className="flex items-center justify-between">
+                <div className="text-left">
+                  <p className="text-white font-semibold">Sarah Tan</p>
+                  <p className="text-primary-400 text-xs">Level 10 Elite Worker</p>
+                </div>
+                <div className="text-right">
+                  <p className="text-xs text-dark-400">sarah.tan@email.com</p>
+                </div>
+              </div>
+            </button>
           </div>
         </div>
       </div>
