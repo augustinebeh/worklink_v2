@@ -1,14 +1,11 @@
 /**
  * App Icon Generator for WorkLink PWA
- *
- * Generates all required icon sizes for PWA, favicon, and splash screens
- * Run with: node scripts/generate-icons.cjs
+ * Clean, simple design inspired by Crypto.com dark theme
  */
 
 const fs = require('fs');
 const path = require('path');
 
-// Try to use canvas for PNG generation
 let createCanvas;
 try {
   const canvas = require('canvas');
@@ -18,18 +15,13 @@ try {
   process.exit(1);
 }
 
-// Brand colors
+// Dark bluish theme colors (Crypto.com style)
 const COLORS = {
-  bgDark: '#020617',
-  bgGradientStart: '#0a1628',
-  bgGradientEnd: '#1a0a2e',
-  primary: '#8b5cf6',
-  primaryLight: '#a78bfa',
-  primaryDark: '#7c3aed',
-  accent: '#10b981',
-  accentLight: '#34d399',
+  bg: '#0a0f1a',
+  bgLight: '#0f1629',
+  primary: '#6366f1',      // Indigo
+  primaryLight: '#818cf8',
   white: '#ffffff',
-  gold: '#fbbf24',
 };
 
 // Icon sizes to generate
@@ -52,204 +44,41 @@ const ICON_SIZES = [
 
 const outputDir = path.join(__dirname, '../public');
 
-// Ensure output directory exists
-if (!fs.existsSync(outputDir)) {
-  fs.mkdirSync(outputDir, { recursive: true });
-}
-
 /**
- * Draw the WorkLink icon on a canvas
+ * Draw clean, simple WorkLink icon
  */
 function drawIcon(ctx, size) {
   const center = size / 2;
-  const padding = size * 0.1;
-  const iconSize = size - (padding * 2);
+  const radius = size * 0.22;  // Rounded corner radius
 
-  // Background with gradient
-  const bgGradient = ctx.createRadialGradient(
-    center, center * 0.7, 0,
-    center, center, size * 0.8
-  );
-  bgGradient.addColorStop(0, COLORS.bgGradientStart);
-  bgGradient.addColorStop(0.5, '#0f0a1f');
-  bgGradient.addColorStop(1, COLORS.bgGradientEnd);
-
-  // Rounded rectangle background
-  const radius = size * 0.22;
+  // Dark bluish background
   ctx.beginPath();
   ctx.roundRect(0, 0, size, size, radius);
-  ctx.fillStyle = bgGradient;
+  ctx.fillStyle = COLORS.bg;
   ctx.fill();
 
-  // Subtle outer glow
-  const glowGradient = ctx.createRadialGradient(
-    center, center * 0.6, size * 0.1,
-    center, center * 0.6, size * 0.5
-  );
-  glowGradient.addColorStop(0, 'rgba(139, 92, 246, 0.3)');
-  glowGradient.addColorStop(1, 'rgba(139, 92, 246, 0)');
-  ctx.fillStyle = glowGradient;
-  ctx.fillRect(0, 0, size, size);
-
-  // Main icon circle with gradient
-  const circleRadius = size * 0.32;
-  const circleGradient = ctx.createLinearGradient(
-    center - circleRadius, center - circleRadius,
-    center + circleRadius, center + circleRadius
-  );
-  circleGradient.addColorStop(0, COLORS.primary);
-  circleGradient.addColorStop(0.5, COLORS.primaryLight);
-  circleGradient.addColorStop(1, COLORS.primaryDark);
-
-  // Outer ring glow
-  ctx.beginPath();
-  ctx.arc(center, center, circleRadius + size * 0.02, 0, Math.PI * 2);
-  ctx.fillStyle = 'rgba(139, 92, 246, 0.4)';
-  ctx.fill();
-
-  // Main circle
-  ctx.beginPath();
-  ctx.arc(center, center, circleRadius, 0, Math.PI * 2);
-  ctx.fillStyle = circleGradient;
-  ctx.fill();
-
-  // Inner shadow on circle
-  const innerShadow = ctx.createRadialGradient(
-    center, center - circleRadius * 0.3, 0,
-    center, center, circleRadius
-  );
-  innerShadow.addColorStop(0, 'rgba(255, 255, 255, 0.2)');
-  innerShadow.addColorStop(0.5, 'rgba(255, 255, 255, 0)');
-  innerShadow.addColorStop(1, 'rgba(0, 0, 0, 0.2)');
-  ctx.beginPath();
-  ctx.arc(center, center, circleRadius, 0, Math.PI * 2);
-  ctx.fillStyle = innerShadow;
-  ctx.fill();
-
-  // Draw stylized "W" letter
-  const letterSize = size * 0.28;
-  const letterY = center + letterSize * 0.15;
-
+  // Simple "W" letter - clean and bold
+  const fontSize = size * 0.5;
   ctx.fillStyle = COLORS.white;
-  ctx.font = `bold ${letterSize}px "SF Pro Display", "Segoe UI", Arial, sans-serif`;
+  ctx.font = `600 ${fontSize}px -apple-system, "SF Pro Display", "Segoe UI", sans-serif`;
   ctx.textAlign = 'center';
   ctx.textBaseline = 'middle';
-
-  // Add subtle shadow to letter
-  ctx.shadowColor = 'rgba(0, 0, 0, 0.3)';
-  ctx.shadowBlur = size * 0.02;
-  ctx.shadowOffsetY = size * 0.01;
-  ctx.fillText('W', center, letterY);
-  ctx.shadowColor = 'transparent';
-
-  // Small accent dot (like a notification/level indicator)
-  const dotRadius = size * 0.06;
-  const dotX = center + circleRadius * 0.7;
-  const dotY = center - circleRadius * 0.7;
-
-  // Dot glow
-  ctx.beginPath();
-  ctx.arc(dotX, dotY, dotRadius + size * 0.015, 0, Math.PI * 2);
-  ctx.fillStyle = 'rgba(16, 185, 129, 0.5)';
-  ctx.fill();
-
-  // Dot
-  const dotGradient = ctx.createRadialGradient(
-    dotX - dotRadius * 0.3, dotY - dotRadius * 0.3, 0,
-    dotX, dotY, dotRadius
-  );
-  dotGradient.addColorStop(0, COLORS.accentLight);
-  dotGradient.addColorStop(1, COLORS.accent);
-  ctx.beginPath();
-  ctx.arc(dotX, dotY, dotRadius, 0, Math.PI * 2);
-  ctx.fillStyle = dotGradient;
-  ctx.fill();
-
-  // Dot shine
-  ctx.beginPath();
-  ctx.arc(dotX - dotRadius * 0.2, dotY - dotRadius * 0.2, dotRadius * 0.3, 0, Math.PI * 2);
-  ctx.fillStyle = 'rgba(255, 255, 255, 0.4)';
-  ctx.fill();
+  ctx.fillText('W', center, center + size * 0.02);
 }
 
 /**
- * Generate SVG version of the icon
+ * Generate SVG version
  */
 function generateSVG() {
   const svg = `<?xml version="1.0" encoding="UTF-8"?>
 <svg width="512" height="512" viewBox="0 0 512 512" xmlns="http://www.w3.org/2000/svg">
-  <defs>
-    <!-- Background gradient -->
-    <radialGradient id="bgGrad" cx="50%" cy="35%" r="80%">
-      <stop offset="0%" style="stop-color:#0a1628"/>
-      <stop offset="50%" style="stop-color:#0f0a1f"/>
-      <stop offset="100%" style="stop-color:#1a0a2e"/>
-    </radialGradient>
-
-    <!-- Glow gradient -->
-    <radialGradient id="glowGrad" cx="50%" cy="30%" r="50%">
-      <stop offset="0%" style="stop-color:rgba(139,92,246,0.3)"/>
-      <stop offset="100%" style="stop-color:rgba(139,92,246,0)"/>
-    </radialGradient>
-
-    <!-- Circle gradient -->
-    <linearGradient id="circleGrad" x1="0%" y1="0%" x2="100%" y2="100%">
-      <stop offset="0%" style="stop-color:#8b5cf6"/>
-      <stop offset="50%" style="stop-color:#a78bfa"/>
-      <stop offset="100%" style="stop-color:#7c3aed"/>
-    </linearGradient>
-
-    <!-- Dot gradient -->
-    <radialGradient id="dotGrad" cx="30%" cy="30%" r="70%">
-      <stop offset="0%" style="stop-color:#34d399"/>
-      <stop offset="100%" style="stop-color:#10b981"/>
-    </radialGradient>
-
-    <!-- Inner highlight -->
-    <radialGradient id="innerHighlight" cx="50%" cy="30%" r="100%">
-      <stop offset="0%" style="stop-color:rgba(255,255,255,0.2)"/>
-      <stop offset="50%" style="stop-color:rgba(255,255,255,0)"/>
-      <stop offset="100%" style="stop-color:rgba(0,0,0,0.2)"/>
-    </radialGradient>
-
-    <!-- Drop shadow -->
-    <filter id="shadow" x="-20%" y="-20%" width="140%" height="140%">
-      <feDropShadow dx="0" dy="2" stdDeviation="3" flood-color="rgba(0,0,0,0.3)"/>
-    </filter>
-  </defs>
-
-  <!-- Background -->
-  <rect width="512" height="512" rx="112" fill="url(#bgGrad)"/>
-
-  <!-- Glow overlay -->
-  <rect width="512" height="512" rx="112" fill="url(#glowGrad)"/>
-
-  <!-- Outer ring glow -->
-  <circle cx="256" cy="256" r="168" fill="rgba(139,92,246,0.4)"/>
-
-  <!-- Main circle -->
-  <circle cx="256" cy="256" r="164" fill="url(#circleGrad)"/>
-
-  <!-- Inner highlight on circle -->
-  <circle cx="256" cy="256" r="164" fill="url(#innerHighlight)"/>
-
-  <!-- W Letter -->
-  <text x="256" y="276"
-        font-family="SF Pro Display, Segoe UI, Arial, sans-serif"
-        font-size="144"
-        font-weight="bold"
+  <rect width="512" height="512" rx="112" fill="${COLORS.bg}"/>
+  <text x="256" y="270"
+        font-family="-apple-system, SF Pro Display, Segoe UI, sans-serif"
+        font-size="256"
+        font-weight="600"
         fill="white"
-        text-anchor="middle"
-        filter="url(#shadow)">W</text>
-
-  <!-- Accent dot glow -->
-  <circle cx="371" cy="141" r="38" fill="rgba(16,185,129,0.5)"/>
-
-  <!-- Accent dot -->
-  <circle cx="371" cy="141" r="31" fill="url(#dotGrad)"/>
-
-  <!-- Dot shine -->
-  <circle cx="365" cy="135" r="9" fill="rgba(255,255,255,0.4)"/>
+        text-anchor="middle">W</text>
 </svg>`;
 
   fs.writeFileSync(path.join(outputDir, 'favicon.svg'), svg);
@@ -265,24 +94,20 @@ async function generatePNGs() {
   for (const { size, name } of ICON_SIZES) {
     const canvas = createCanvas(size, size);
     const ctx = canvas.getContext('2d');
-
     drawIcon(ctx, size);
-
-    const buffer = canvas.toBuffer('image/png');
-    fs.writeFileSync(path.join(outputDir, name), buffer);
-    console.log(`  Generated ${name} (${size}x${size})`);
+    fs.writeFileSync(path.join(outputDir, name), canvas.toBuffer('image/png'));
+    console.log(`  Generated ${name}`);
   }
 
-  // Also save the main favicon.png (use 192x192)
+  // Main favicon.png
   const mainCanvas = createCanvas(192, 192);
-  const mainCtx = mainCanvas.getContext('2d');
-  drawIcon(mainCtx, 192);
+  drawIcon(mainCanvas.getContext('2d'), 192);
   fs.writeFileSync(path.join(outputDir, 'favicon.png'), mainCanvas.toBuffer('image/png'));
-  console.log('  Generated favicon.png (192x192)');
+  console.log('  Generated favicon.png');
 }
 
 /**
- * Update splash screens with new icon
+ * Update splash screens
  */
 async function updateSplashScreens() {
   const splashDir = path.join(outputDir, 'splash');
@@ -308,72 +133,39 @@ async function updateSplashScreens() {
     const canvas = createCanvas(width, height);
     const ctx = canvas.getContext('2d');
 
-    // Background gradient
-    const bgGradient = ctx.createRadialGradient(
-      width / 2, height * 0.4, 0,
-      width / 2, height * 0.4, Math.max(width, height) * 0.8
-    );
-    bgGradient.addColorStop(0, '#0a1628');
-    bgGradient.addColorStop(0.5, '#0f0a1f');
-    bgGradient.addColorStop(1, COLORS.bgDark);
-    ctx.fillStyle = bgGradient;
+    // Solid dark background
+    ctx.fillStyle = COLORS.bg;
     ctx.fillRect(0, 0, width, height);
 
-    // Ambient glow
-    const glowGradient = ctx.createRadialGradient(
-      width / 2, height * 0.35, 0,
-      width / 2, height * 0.35, width * 0.6
-    );
-    glowGradient.addColorStop(0, 'rgba(139, 92, 246, 0.15)');
-    glowGradient.addColorStop(1, 'rgba(139, 92, 246, 0)');
-    ctx.fillStyle = glowGradient;
-    ctx.fillRect(0, 0, width, height);
-
-    // Draw icon in center (larger for splash)
-    const iconSize = Math.min(width, height) * 0.25;
-    const iconX = (width - iconSize) / 2;
-    const iconY = height * 0.35 - iconSize / 2;
-
-    // Create temporary canvas for icon
+    // Draw icon centered
+    const iconSize = Math.min(width, height) * 0.2;
     const iconCanvas = createCanvas(iconSize, iconSize);
-    const iconCtx = iconCanvas.getContext('2d');
-    drawIcon(iconCtx, iconSize);
-
-    // Draw icon on splash
-    ctx.drawImage(iconCanvas, iconX, iconY);
+    drawIcon(iconCanvas.getContext('2d'), iconSize);
+    ctx.drawImage(iconCanvas, (width - iconSize) / 2, height * 0.38 - iconSize / 2);
 
     // App name
-    const fontSize = Math.min(width, height) * 0.07;
+    const fontSize = Math.min(width, height) * 0.055;
     ctx.fillStyle = COLORS.white;
-    ctx.font = `bold ${fontSize}px "SF Pro Display", "Segoe UI", Arial, sans-serif`;
+    ctx.font = `600 ${fontSize}px -apple-system, "SF Pro Display", "Segoe UI", sans-serif`;
     ctx.textAlign = 'center';
-    ctx.textBaseline = 'middle';
-    ctx.fillText('WorkLink', width / 2, height * 0.55);
+    ctx.fillText('WorkLink', width / 2, height * 0.52);
 
     // Tagline
     ctx.fillStyle = '#64748b';
-    ctx.font = `${fontSize * 0.45}px "SF Pro Display", "Segoe UI", Arial, sans-serif`;
-    ctx.fillText('Level Up Your Career', width / 2, height * 0.60);
+    ctx.font = `400 ${fontSize * 0.5}px -apple-system, "SF Pro Display", "Segoe UI", sans-serif`;
+    ctx.fillText('Level Up Your Career', width / 2, height * 0.57);
 
-    // Save
-    const buffer = canvas.toBuffer('image/png');
-    fs.writeFileSync(path.join(splashDir, `${name}.png`), buffer);
+    fs.writeFileSync(path.join(splashDir, `${name}.png`), canvas.toBuffer('image/png'));
     console.log(`  Generated ${name}.png`);
   }
 }
 
-// Main execution
 async function main() {
-  console.log('WorkLink Icon Generator\n');
-  console.log('========================\n');
-
+  console.log('WorkLink Icon Generator (Clean Design)\n');
   generateSVG();
   await generatePNGs();
   await updateSplashScreens();
-
-  console.log('\n========================');
-  console.log('All icons generated successfully!');
-  console.log(`Output directory: ${outputDir}`);
+  console.log('\nDone!');
 }
 
 main().catch(console.error);
