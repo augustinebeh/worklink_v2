@@ -5,7 +5,6 @@ import {
   ClockIcon,
   ZapIcon,
   SearchIcon,
-  FilterIcon,
   CalendarIcon,
   ChevronRightIcon,
   CheckCircleIcon,
@@ -14,21 +13,24 @@ import {
 import { useAuth } from '../contexts/AuthContext';
 import { useTheme } from '../contexts/ThemeContext';
 import { clsx } from 'clsx';
+import {
+  formatMoney,
+  DEFAULT_START_TIME,
+  DEFAULT_END_TIME,
+  MS_PER_DAY,
+  DEFAULT_LOCALE,
+  calculateJobHours,
+} from '../utils/constants';
 
 function JobCard({ job, applied, isDark }) {
-  const startTime = job.start_time || '09:00';
-  const endTime = job.end_time || '17:00';
-
-  // Calculate hours
-  const start = startTime.split(':').map(Number);
-  let end = endTime.split(':').map(Number);
-  if (end[0] < start[0]) end[0] += 24;
-  const hours = ((end[0] * 60 + end[1]) - (start[0] * 60 + start[1]) - (job.break_minutes || 0)) / 60;
+  const startTime = job.start_time || DEFAULT_START_TIME;
+  const endTime = job.end_time || DEFAULT_END_TIME;
+  const hours = calculateJobHours(startTime, endTime, job.break_minutes);
   const totalPay = hours * job.pay_rate;
 
   const jobDate = new Date(job.job_date);
   const isToday = jobDate.toDateString() === new Date().toDateString();
-  const isTomorrow = jobDate.toDateString() === new Date(Date.now() + 86400000).toDateString();
+  const isTomorrow = jobDate.toDateString() === new Date(Date.now() + MS_PER_DAY).toDateString();
 
   return (
     <Link
@@ -72,7 +74,7 @@ function JobCard({ job, applied, isDark }) {
       <div className={clsx('flex flex-wrap items-center gap-3 mt-3 text-sm', isDark ? 'text-dark-300' : 'text-slate-600')}>
         <div className="flex items-center gap-1">
           <CalendarIcon className={clsx('h-4 w-4', isDark ? 'text-dark-500' : 'text-slate-400')} />
-          <span>{jobDate.toLocaleDateString('en-SG', { weekday: 'short', day: 'numeric', month: 'short' })}</span>
+          <span>{jobDate.toLocaleDateString(DEFAULT_LOCALE, { weekday: 'short', day: 'numeric', month: 'short' })}</span>
         </div>
         <div className="flex items-center gap-1">
           <ClockIcon className={clsx('h-4 w-4', isDark ? 'text-dark-500' : 'text-slate-400')} />
@@ -87,8 +89,8 @@ function JobCard({ job, applied, isDark }) {
       {/* Pay & Slots */}
       <div className={clsx('flex items-center justify-between mt-4 pt-3 border-t', isDark ? 'border-white/5' : 'border-slate-100')}>
         <div>
-          <p className="text-xl font-bold text-accent-400">${totalPay.toFixed(2)}</p>
-          <p className={clsx('text-xs', isDark ? 'text-dark-500' : 'text-slate-400')}>${Number(job.pay_rate).toFixed(2)}/hr • {hours.toFixed(1)}h</p>
+          <p className="text-xl font-bold text-accent-400">${formatMoney(totalPay)}</p>
+          <p className={clsx('text-xs', isDark ? 'text-dark-500' : 'text-slate-400')}>${formatMoney(job.pay_rate)}/hr • {hours.toFixed(1)}h</p>
         </div>
         <div className="flex items-center gap-3">
           {job.xp_bonus > 0 && (

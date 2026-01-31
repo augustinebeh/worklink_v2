@@ -15,6 +15,7 @@ import {
 import { useAuth } from '../contexts/AuthContext';
 import { useTheme } from '../contexts/ThemeContext';
 import { clsx } from 'clsx';
+import { formatMoney, REFERRAL_STATUS_LABELS } from '../utils/constants';
 
 const tierColors = {
   1: { bg: 'bg-amber-900/30', text: 'text-amber-400', border: 'border-amber-500/30', label: 'Bronze' },
@@ -88,7 +89,7 @@ function TierProgress({ currentTier, tiers, totalEarned, isDark }) {
       {next && (
         <div className="text-center text-sm">
           <span className={isDark ? 'text-dark-400' : 'text-slate-500'}>Next tier: </span>
-          <span className="text-primary-400 font-medium">${Number(next.bonus_amount).toFixed(2)} bonus</span>
+          <span className="text-primary-400 font-medium">${formatMoney(next.bonus_amount)} bonus</span>
           <span className={isDark ? 'text-dark-400' : 'text-slate-500'}> at {next.jobs_required} jobs</span>
         </div>
       )}
@@ -101,12 +102,6 @@ function ReferralCard({ referral, isDark }) {
     pending: 'bg-amber-500/20 text-amber-400',
     registered: 'bg-blue-500/20 text-blue-400',
     bonus_paid: 'bg-emerald-500/20 text-emerald-400',
-  };
-
-  const statusLabels = {
-    pending: 'Pending',
-    registered: 'Signed Up',
-    bonus_paid: 'Bonus Paid!',
   };
 
   return (
@@ -125,7 +120,7 @@ function ReferralCard({ referral, isDark }) {
           </div>
         </div>
         <span className={clsx('px-2 py-1 rounded-full text-xs font-medium', statusColors[referral.status])}>
-          {statusLabels[referral.status]}
+          {REFERRAL_STATUS_LABELS[referral.status] || 'Pending'}
         </span>
       </div>
       {referral.total_bonus_paid > 0 && (
@@ -134,7 +129,7 @@ function ReferralCard({ referral, isDark }) {
           isDark ? 'border-white/5' : 'border-slate-100'
         )}>
           <span className={clsx('text-sm', isDark ? 'text-dark-400' : 'text-slate-500')}>You earned</span>
-          <span className="font-semibold text-emerald-400">${Number(referral.total_bonus_paid).toFixed(2)}</span>
+          <span className="font-semibold text-emerald-400">${formatMoney(referral.total_bonus_paid)}</span>
         </div>
       )}
     </div>
@@ -282,7 +277,7 @@ export default function Referrals() {
           </div>
 
           <p className={clsx('text-sm text-center', isDark ? 'text-accent-300' : 'text-emerald-600')}>
-            You both get <span className="font-bold">${Number(data?.currentTier?.bonus_amount || 30).toFixed(2)}</span> when they complete their first job!
+            You both get <span className="font-bold">${formatMoney(data?.currentTier?.bonus_amount || 30)}</span> when they complete their first job!
           </p>
         </div>
 
@@ -320,7 +315,7 @@ export default function Referrals() {
         {/* Stats */}
         <div className="grid grid-cols-2 gap-3">
           <StatCard icon={UsersIcon} label="Total Referrals" value={data?.stats?.totalReferrals || 0} color="primary" isDark={isDark} />
-          <StatCard icon={DollarSignIcon} label="Total Earned" value={`$${Number(data?.stats?.totalEarned || 0).toFixed(2)}`} color="green" isDark={isDark} />
+          <StatCard icon={DollarSignIcon} label="Total Earned" value={`$${formatMoney(data?.stats?.totalEarned)}`} color="green" isDark={isDark} />
         </div>
 
         {/* Tier Progress */}

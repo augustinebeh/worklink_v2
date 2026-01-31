@@ -9,7 +9,6 @@ import {
   GiftIcon,
   CalendarIcon,
   ArrowDownLeftIcon,
-  TrendingUpIcon,
   SparklesIcon,
   EyeIcon,
   EyeOffIcon,
@@ -24,9 +23,17 @@ import { useToast } from '../components/ui/Toast';
 import { clsx } from 'clsx';
 import { XP_THRESHOLDS as xpThresholds, LEVEL_TITLES as levelTitles, calculateLevel } from '../utils/gamification';
 import { FloatingXP, LevelUpCelebration, AchievementUnlock } from '../components/gamification/Confetti';
-
-// Format money helper
-const formatMoney = (amount) => Number(amount || 0).toFixed(2);
+import {
+  formatMoney,
+  DEFAULT_START_TIME,
+  DEFAULT_END_TIME,
+  MS_PER_DAY,
+  DEFAULT_LOCALE,
+  DATE_FORMAT_MEDIUM,
+  calculateJobHours,
+  DEFAULTS,
+} from '../utils/constants';
+import { iconBadgeStyles, cardStyles, textStyles } from '../utils/styles';
 
 // Quick Action Button (Crypto.com style circular)
 function QuickActionCircle({ icon: Icon, label, onClick, color = 'primary', isDark }) {
@@ -53,16 +60,13 @@ function QuickActionCircle({ icon: Icon, label, onClick, color = 'primary', isDa
 // Portfolio Card (Job as asset)
 function JobAssetCard({ job, isDark }) {
   const slotsLeft = job.total_slots - job.filled_slots;
-  const startTime = job.start_time || '09:00';
-  const endTime = job.end_time || '17:00';
-  const start = startTime.split(':').map(Number);
-  let end = endTime.split(':').map(Number);
-  if (end[0] < start[0]) end[0] += 24;
-  const hours = ((end[0] * 60 + end[1]) - (start[0] * 60 + start[1]) - (job.break_minutes || 0)) / 60;
+  const startTime = job.start_time || DEFAULT_START_TIME;
+  const endTime = job.end_time || DEFAULT_END_TIME;
+  const hours = calculateJobHours(startTime, endTime, job.break_minutes);
   const totalPay = hours * job.pay_rate;
   const jobDate = new Date(job.job_date);
-  const isToday = jobDate.toDateString() === new Date().toDateString();
-  const isTomorrow = jobDate.toDateString() === new Date(Date.now() + 86400000).toDateString();
+  const isJobToday = jobDate.toDateString() === new Date().toDateString();
+  const isJobTomorrow = jobDate.toDateString() === new Date(Date.now() + MS_PER_DAY).toDateString();
 
   return (
     <Link
@@ -92,7 +96,7 @@ function JobAssetCard({ job, isDark }) {
         </div>
         <div className="flex items-center gap-2 mt-1">
           <span className={clsx('text-sm', isDark ? 'text-dark-400' : 'text-slate-500')}>
-            {isToday ? 'Today' : isTomorrow ? 'Tomorrow' : jobDate.toLocaleDateString('en-SG', { day: 'numeric', month: 'short' })}
+            {isJobToday ? 'Today' : isJobTomorrow ? 'Tomorrow' : jobDate.toLocaleDateString(DEFAULT_LOCALE, { day: 'numeric', month: 'short' })}
           </span>
           <span className={isDark ? 'text-dark-600' : 'text-slate-300'}>•</span>
           <span className={clsx('text-sm', isDark ? 'text-dark-400' : 'text-slate-500')}>{startTime}</span>
@@ -219,13 +223,12 @@ export default function Home() {
   };
 
   // Safe user data with defaults
-  const userName = user?.name?.split(' ')[0] || 'Friend';
-  const userXP = user?.xp || 0;
+  const userName = user?.name?.split(' ')[0] || DEFAULTS.userName;
+  const userXP = user?.xp || DEFAULTS.xp;
   const userLevel = calculateLevel(userXP);
-  const userStreak = user?.streak_days || 0;
+  const userStreak = user?.streak_days || DEFAULTS.streakDays;
   const totalEarnings = user?.total_earnings || 0;
   const pendingPayment = user?.pending_payment || 0;
-  const weeklyChange = 12.5; // Mock weekly change percentage
 
   // Level progress
   const maxLevel = xpThresholds.length;
@@ -291,15 +294,17 @@ export default function Home() {
             {/* Total Balance Label */}
             <div className="flex items-center justify-between mb-2">
               <div className="flex items-center gap-2">
-                <span className="text-white/70 text-sm">Total Balance</span>
+                <span className="text-white/70 text-sm">Total Earned</span>
                 <button onClick={() => setBalanceHidden(!balanceHidden)} className="text-white/50">
                   {balanceHidden ? <EyeOffIcon className="h-4 w-4" /> : <EyeIcon className="h-4 w-4" />}
                 </button>
               </div>
-              <div className="flex items-center gap-1 px-2 py-1 rounded-full bg-emerald-500/20">
-                <TrendingUpIcon className="h-3 w-3 text-emerald-400" />
-                <span className="text-xs font-medium text-emerald-400">+{weeklyChange}%</span>
-              </div>
+              {userStreak > 0 && (
+                <div className="flex items-center gap-1 px-2 py-1 rounded-full bg-amber-500/20">
+                  <FlameIcon className="h-3 w-3 text-amber-400" />
+                  <span className="text-xs font-medium text-amber-400">{userStreak} day streak</span>
+                </div>
+              )}
             </div>
 
             {/* Balance Amount */}

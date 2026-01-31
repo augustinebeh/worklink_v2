@@ -23,6 +23,7 @@ import { useAuth } from '../contexts/AuthContext';
 import { useTheme } from '../contexts/ThemeContext';
 import { clsx } from 'clsx';
 import { XP_THRESHOLDS as xpThresholds, LEVEL_TITLES as levelTitles, calculateLevel } from '../utils/gamification';
+import { DEFAULTS } from '../utils/constants';
 
 function StatItem({ icon: Icon, label, value, color = 'primary' }) {
   const { isDark } = useTheme();
@@ -254,7 +255,7 @@ export default function Profile() {
   const userLevel = calculateLevel(userXP);
   const userRating = user.rating || 0;
   const userEmail = user.email || '';
-  const userPhone = user.phone || 'Not set';
+  const userPhone = user.phone || DEFAULTS.userPhone;
   const referralCode = user.referral_code || 'N/A';
   const jobsCompleted = user.total_jobs_completed || 0;
   const streakDays = user.streak_days || 0;

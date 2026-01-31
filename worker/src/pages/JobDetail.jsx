@@ -4,7 +4,6 @@ import {
   MapPinIcon,
   ClockIcon,
   CalendarIcon,
-  DollarSignIcon,
   ZapIcon,
   ArrowLeftIcon,
   CheckCircleIcon,
@@ -15,6 +14,13 @@ import {
 import { useAuth } from '../contexts/AuthContext';
 import { useTheme } from '../contexts/ThemeContext';
 import { clsx } from 'clsx';
+import {
+  formatMoney,
+  DEFAULT_START_TIME,
+  DEFAULT_END_TIME,
+  DEFAULT_LOCALE,
+  calculateJobHours,
+} from '../utils/constants';
 
 export default function JobDetail() {
   const { id } = useParams();
@@ -96,10 +102,7 @@ export default function JobDetail() {
   }
 
   // Calculate hours and pay
-  const start = (job.start_time || '09:00').split(':').map(Number);
-  let end = (job.end_time || '17:00').split(':').map(Number);
-  if (end[0] < start[0]) end[0] += 24;
-  const hours = ((end[0] * 60 + end[1]) - (start[0] * 60 + start[1]) - (job.break_minutes || 0)) / 60;
+  const hours = calculateJobHours(job.start_time, job.end_time, job.break_minutes);
   const totalPay = hours * job.pay_rate;
 
   const jobDate = new Date(job.job_date);
@@ -151,7 +154,7 @@ export default function JobDetail() {
           )}>
             <CalendarIcon className="h-5 w-5 text-primary-400 mb-2" />
             <p className={clsx('text-xs', isDark ? 'text-dark-500' : 'text-slate-400')}>Date</p>
-            <p className={clsx('font-medium', isDark ? 'text-white' : 'text-slate-900')}>{jobDate.toLocaleDateString('en-SG', { weekday: 'long', day: 'numeric', month: 'long' })}</p>
+            <p className={clsx('font-medium', isDark ? 'text-white' : 'text-slate-900')}>{jobDate.toLocaleDateString(DEFAULT_LOCALE, { weekday: 'long', day: 'numeric', month: 'long' })}</p>
           </div>
           <div className={clsx(
             'p-4 rounded-xl border',
@@ -190,8 +193,8 @@ export default function JobDetail() {
           <div className="flex items-center justify-between">
             <div>
               <p className="text-accent-400 text-sm font-medium">Total Earnings</p>
-              <p className={clsx('text-4xl font-bold', isDark ? 'text-white' : 'text-slate-900')}>${totalPay.toFixed(2)}</p>
-              <p className={clsx('text-sm', isDark ? 'text-dark-400' : 'text-slate-500')}>${Number(job.pay_rate).toFixed(2)}/hr × {hours.toFixed(1)} hours</p>
+              <p className={clsx('text-4xl font-bold', isDark ? 'text-white' : 'text-slate-900')}>${formatMoney(totalPay)}</p>
+              <p className={clsx('text-sm', isDark ? 'text-dark-400' : 'text-slate-500')}>${formatMoney(job.pay_rate)}/hr × {hours.toFixed(1)} hours</p>
             </div>
             {job.xp_bonus > 0 && (
               <div className="text-right">
@@ -266,7 +269,7 @@ export default function JobDetail() {
           ) : slotsLeft === 0 ? (
             'No Slots Available'
           ) : (
-            `Apply for $${totalPay.toFixed(2)}`
+            `Apply for $${formatMoney(totalPay)}`
           )}
         </button>
       </div>

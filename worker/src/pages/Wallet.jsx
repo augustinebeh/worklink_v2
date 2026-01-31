@@ -11,19 +11,18 @@ import {
 import { useAuth } from '../contexts/AuthContext';
 import { useTheme } from '../contexts/ThemeContext';
 import { clsx } from 'clsx';
-
-// Format money helper
-const formatMoney = (amount) => Number(amount || 0).toFixed(2);
+import { formatMoney, DEFAULT_LOCALE, PAYMENT_STATUS_LABELS } from '../utils/constants';
 
 function TransactionItem({ payment, isDark }) {
   const statusConfig = {
-    pending: { color: 'text-amber-400', bg: 'bg-amber-500/20', label: 'Pending' },
-    approved: { color: 'text-blue-400', bg: 'bg-blue-500/20', label: 'Approved' },
-    processing: { color: 'text-purple-400', bg: 'bg-purple-500/20', label: 'Processing' },
-    paid: { color: 'text-emerald-400', bg: 'bg-emerald-500/20', label: 'Completed' },
+    pending: { color: 'text-amber-400', bg: 'bg-amber-500/20' },
+    approved: { color: 'text-blue-400', bg: 'bg-blue-500/20' },
+    processing: { color: 'text-purple-400', bg: 'bg-purple-500/20' },
+    paid: { color: 'text-emerald-400', bg: 'bg-emerald-500/20' },
   };
 
   const config = statusConfig[payment.status] || statusConfig.pending;
+  const statusLabel = PAYMENT_STATUS_LABELS[payment.status] || PAYMENT_STATUS_LABELS.pending;
   const isPaid = payment.status === 'paid';
 
   return (
@@ -38,14 +37,14 @@ function TransactionItem({ payment, isDark }) {
       <div className="flex-1 min-w-0">
         <p className={clsx('font-medium truncate', isDark ? 'text-white' : 'text-slate-900')}>{payment.job_title || 'Job Payment'}</p>
         <p className={clsx('text-sm', isDark ? 'text-dark-500' : 'text-slate-500')}>
-          {new Date(payment.created_at).toLocaleDateString('en-SG', { day: 'numeric', month: 'short', year: 'numeric' })}
+          {new Date(payment.created_at).toLocaleDateString(DEFAULT_LOCALE, { day: 'numeric', month: 'short', year: 'numeric' })}
         </p>
       </div>
       <div className="text-right">
         <p className={clsx('font-semibold', isPaid ? 'text-emerald-400' : isDark ? 'text-white' : 'text-slate-900')}>
           {isPaid ? '+' : ''}${formatMoney(payment.total_amount)}
         </p>
-        <p className={clsx('text-xs', config.color)}>{config.label}</p>
+        <p className={clsx('text-xs', config.color)}>{statusLabel}</p>
       </div>
     </div>
   );
