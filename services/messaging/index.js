@@ -4,8 +4,9 @@
  */
 
 const { db } = require('../../db/database');
-const { broadcastToCandidate, broadcastToAdmins, createNotification, EventTypes } = require('../../websocket');
+const { broadcastToCandidate, broadcastToAdmins, createNotification, EventTypes, isCandidateOnline } = require('../../websocket');
 const telegram = require('./telegram');
+const webpush = require('web-push');
 
 // Channel types
 const Channels = {
@@ -16,16 +17,19 @@ const Channels = {
 
 /**
  * Send a message from admin to candidate via the appropriate channel
+ * Smart fallback: App (WebSocket) → Push Notification → Telegram
+ *
  * @param {string} candidateId - Candidate ID
  * @param {string} content - Message content
- * @param {object} options - { channel, templateId, autoChannel }
+ * @param {object} options - { channel, templateId }
+ *   - channel: 'auto' (smart fallback), 'app', 'telegram', or 'both'
  */
 async function sendToCandidate(candidateId, content, options = {}) {
   const { channel = 'auto', templateId = null } = options;
 
   // Get candidate info
   const candidate = db.prepare(`
-    SELECT id, name, telegram_chat_id, preferred_contact, online_status
+    SELECT id, name, telegram_chat_id, preferred_contact, online_status, push_token
     FROM candidates WHERE id = ?
   `).get(candidateId);
 
@@ -33,42 +37,65 @@ async function sendToCandidate(candidateId, content, options = {}) {
     return { success: false, error: 'Candidate not found' };
   }
 
-  // Determine channel
-  let selectedChannel = channel;
-  if (channel === 'auto') {
-    selectedChannel = determineChannel(candidate);
-  }
-
-  // Send via appropriate channel
-  let result;
+  let selectedChannel = 'app';
+  let result = { success: true };
   let externalId = null;
+  let deliveryMethod = [];
 
-  switch (selectedChannel) {
-    case Channels.TELEGRAM:
-      if (!candidate.telegram_chat_id) {
-        // Fallback to app if telegram not linked
-        selectedChannel = Channels.APP;
-        result = await sendViaApp(candidateId, content);
-      } else {
-        result = await telegram.sendMessage(candidate.telegram_chat_id, content);
-        if (result.success) {
-          externalId = String(result.messageId);
+  // If explicit channel specified (not auto), use it
+  if (channel === 'telegram') {
+    if (candidate.telegram_chat_id) {
+      result = await telegram.sendMessage(candidate.telegram_chat_id, content);
+      if (result.success) {
+        externalId = String(result.messageId);
+        selectedChannel = 'telegram';
+        deliveryMethod.push('telegram');
+      }
+    } else {
+      return { success: false, error: 'Telegram not linked for this candidate' };
+    }
+  } else if (channel === 'both' || channel === 'auto') {
+    // Smart fallback logic
+    const isOnline = isCandidateOnline(candidateId);
+
+    // 1. Always try WebSocket first (for real-time if online)
+    broadcastToCandidate(candidateId, {
+      type: EventTypes.CHAT_MESSAGE,
+      message: { content, sender: 'admin', created_at: new Date().toISOString() },
+    });
+
+    if (isOnline) {
+      deliveryMethod.push('websocket');
+    }
+
+    // 2. If offline, send push notification
+    if (!isOnline) {
+      const pushSent = await sendPushNotification(candidate, 'New Message', content);
+      if (pushSent) {
+        deliveryMethod.push('push');
+      }
+
+      // 3. If push failed and Telegram is linked, send via Telegram as fallback
+      if (!pushSent && candidate.telegram_chat_id && telegram.isConfigured()) {
+        const telegramResult = await telegram.sendMessage(candidate.telegram_chat_id, content);
+        if (telegramResult.success) {
+          externalId = String(telegramResult.messageId);
+          deliveryMethod.push('telegram');
         }
       }
-      break;
+    }
 
-    case Channels.WHATSAPP:
-      // WhatsApp not yet implemented - fallback to app
-      console.log('WhatsApp not yet implemented, falling back to app');
-      selectedChannel = Channels.APP;
-      result = await sendViaApp(candidateId, content);
-      break;
-
-    case Channels.APP:
-    default:
-      selectedChannel = Channels.APP;
-      result = await sendViaApp(candidateId, content);
-      break;
+    // Always create in-app notification for history
+    createNotification(candidateId, 'chat', 'New message from WorkLink', content);
+    selectedChannel = 'app';
+  } else {
+    // Default: app only
+    broadcastToCandidate(candidateId, {
+      type: EventTypes.CHAT_MESSAGE,
+      message: { content, sender: 'admin', created_at: new Date().toISOString() },
+    });
+    createNotification(candidateId, 'chat', 'New message from WorkLink', content);
+    deliveryMethod.push('app');
   }
 
   // Store message in database
@@ -93,24 +120,53 @@ async function sendToCandidate(candidateId, content, options = {}) {
     message,
     candidateId,
     channel: selectedChannel,
+    deliveryMethod,
   });
 
   return {
-    success: result.success,
+    success: true,
     message,
     channel: selectedChannel,
-    error: result.error,
+    deliveryMethod,
   };
 }
 
 /**
- * Send via in-app WebSocket
+ * Send push notification to candidate
+ */
+async function sendPushNotification(candidate, title, body) {
+  if (!candidate.push_token) {
+    return false;
+  }
+
+  try {
+    const subscription = JSON.parse(candidate.push_token);
+    await webpush.sendNotification(subscription, JSON.stringify({
+      title,
+      body,
+      icon: '/icon-192x192.png',
+      badge: '/icon-72x72.png',
+      data: { type: 'chat' },
+    }));
+    return true;
+  } catch (error) {
+    console.error('Push notification failed:', error.message);
+    // If subscription is invalid, clear it
+    if (error.statusCode === 410 || error.statusCode === 404) {
+      db.prepare('UPDATE candidates SET push_token = NULL WHERE id = ?').run(candidate.id);
+    }
+    return false;
+  }
+}
+
+/**
+ * Send via in-app WebSocket only (legacy support)
  */
 async function sendViaApp(candidateId, content) {
   try {
     broadcastToCandidate(candidateId, {
       type: EventTypes.CHAT_MESSAGE,
-      message: { content, sender: 'admin' },
+      message: { content, sender: 'admin', created_at: new Date().toISOString() },
     });
 
     // Create notification for offline candidates
@@ -120,29 +176,6 @@ async function sendViaApp(candidateId, content) {
   } catch (error) {
     return { success: false, error: error.message };
   }
-}
-
-/**
- * Determine the best channel for a candidate
- */
-function determineChannel(candidate) {
-  // If candidate has a preferred contact method, use it if available
-  if (candidate.preferred_contact === 'telegram' && candidate.telegram_chat_id) {
-    return Channels.TELEGRAM;
-  }
-
-  // If candidate is online in app, use app
-  if (candidate.online_status === 'online') {
-    return Channels.APP;
-  }
-
-  // If telegram is linked, use it for offline candidates
-  if (candidate.telegram_chat_id) {
-    return Channels.TELEGRAM;
-  }
-
-  // Default to app
-  return Channels.APP;
 }
 
 /**
