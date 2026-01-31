@@ -1,9 +1,9 @@
 import { useState, useEffect } from 'react';
 import { Link } from 'react-router-dom';
-import { 
-  ChevronLeftIcon, 
-  ChevronRightIcon, 
-  MapPinIcon, 
+import {
+  ChevronLeftIcon,
+  ChevronRightIcon,
+  MapPinIcon,
   ClockIcon,
   CalendarIcon,
   CheckIcon,
@@ -11,7 +11,9 @@ import {
   AlertCircleIcon,
 } from 'lucide-react';
 import { useAuth } from '../contexts/AuthContext';
+import { useTheme } from '../contexts/ThemeContext';
 import { clsx } from 'clsx';
+import { DEFAULT_LOCALE } from '../utils/constants';
 
 const DAYS = ['Sun', 'Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat'];
 const MONTHS = ['January', 'February', 'March', 'April', 'May', 'June', 'July', 'August', 'September', 'October', 'November', 'December'];
@@ -26,6 +28,7 @@ function getFirstDayOfMonth(year, month) {
 
 export default function Calendar() {
   const { user } = useAuth();
+  const { isDark } = useTheme();
   const [currentDate, setCurrentDate] = useState(new Date());
   const [selectedDate, setSelectedDate] = useState(new Date());
   const [deployments, setDeployments] = useState([]);
@@ -188,21 +191,27 @@ export default function Calendar() {
   };
 
   return (
-    <div className="min-h-screen bg-dark-950 pb-24">
+    <div className={clsx('min-h-screen pb-24', isDark ? 'bg-dark-950' : 'bg-slate-50')}>
       {/* Header */}
-      <div className="sticky top-0 z-10 bg-dark-950/95 backdrop-blur-lg px-4 pt-safe pb-4 border-b border-white/5">
+      <div className={clsx(
+        'sticky top-0 z-10 backdrop-blur-lg px-4 pt-safe pb-4 border-b',
+        isDark ? 'bg-dark-950/95 border-white/5' : 'bg-white/95 border-slate-200'
+      )}>
         <div className="flex items-center justify-between mb-4">
-          <h1 className="text-2xl font-bold text-white">Calendar</h1>
+          <h1 className={clsx('text-2xl font-bold', isDark ? 'text-white' : 'text-slate-900')}>Calendar</h1>
           <div className="flex items-center gap-2">
             {mode === 'edit' ? (
               <>
-                <button 
+                <button
                   onClick={() => { setPendingChanges({}); setMode('view'); }}
-                  className="px-3 py-1.5 rounded-lg bg-dark-800 text-dark-400 text-sm font-medium"
+                  className={clsx(
+                    'px-3 py-1.5 rounded-lg text-sm font-medium',
+                    isDark ? 'bg-dark-800 text-dark-400' : 'bg-slate-100 text-slate-500'
+                  )}
                 >
                   Cancel
                 </button>
-                <button 
+                <button
                   onClick={handleSaveAvailability}
                   disabled={saving}
                   className="px-3 py-1.5 rounded-lg bg-primary-500 text-white text-sm font-medium disabled:opacity-50"
@@ -212,13 +221,16 @@ export default function Calendar() {
               </>
             ) : (
               <>
-                <button 
+                <button
                   onClick={goToToday}
-                  className="px-3 py-1.5 rounded-lg bg-dark-800 text-dark-300 text-sm font-medium"
+                  className={clsx(
+                    'px-3 py-1.5 rounded-lg text-sm font-medium',
+                    isDark ? 'bg-dark-800 text-dark-300' : 'bg-slate-100 text-slate-600'
+                  )}
                 >
                   Today
                 </button>
-                <button 
+                <button
                   onClick={() => setMode('edit')}
                   className="px-3 py-1.5 rounded-lg bg-primary-500/20 text-primary-400 text-sm font-medium"
                 >
@@ -232,7 +244,7 @@ export default function Calendar() {
         {/* Edit mode legend */}
         {mode === 'edit' && (
           <div className="flex items-center gap-4 mb-4 text-xs">
-            <span className="text-dark-400">Tap dates to toggle:</span>
+            <span className={isDark ? 'text-dark-400' : 'text-slate-500'}>Tap dates to toggle:</span>
             <div className="flex items-center gap-1">
               <span className="w-3 h-3 rounded-full bg-emerald-400" />
               <span className="text-emerald-400">Available</span>
@@ -246,14 +258,14 @@ export default function Calendar() {
 
         {/* Month navigation */}
         <div className="flex items-center justify-between">
-          <button onClick={goToPreviousMonth} className="p-2 rounded-lg hover:bg-dark-800">
-            <ChevronLeftIcon className="h-5 w-5 text-dark-400" />
+          <button onClick={goToPreviousMonth} className={clsx('p-2 rounded-lg', isDark ? 'hover:bg-dark-800' : 'hover:bg-slate-100')}>
+            <ChevronLeftIcon className={clsx('h-5 w-5', isDark ? 'text-dark-400' : 'text-slate-500')} />
           </button>
-          <h2 className="text-lg font-semibold text-white">
+          <h2 className={clsx('text-lg font-semibold', isDark ? 'text-white' : 'text-slate-900')}>
             {MONTHS[month]} {year}
           </h2>
-          <button onClick={goToNextMonth} className="p-2 rounded-lg hover:bg-dark-800">
-            <ChevronRightIcon className="h-5 w-5 text-dark-400" />
+          <button onClick={goToNextMonth} className={clsx('p-2 rounded-lg', isDark ? 'hover:bg-dark-800' : 'hover:bg-slate-100')}>
+            <ChevronRightIcon className={clsx('h-5 w-5', isDark ? 'text-dark-400' : 'text-slate-500')} />
           </button>
         </div>
       </div>
@@ -262,7 +274,7 @@ export default function Calendar() {
         {/* Day headers */}
         <div className="grid grid-cols-7 gap-1 mb-2">
           {DAYS.map(day => (
-            <div key={day} className="text-center text-xs font-medium text-dark-500 py-2">
+            <div key={day} className={clsx('text-center text-xs font-medium py-2', isDark ? 'text-dark-500' : 'text-slate-500')}>
               {day}
             </div>
           ))}
@@ -288,13 +300,13 @@ export default function Calendar() {
                 className={clsx(
                   'aspect-square rounded-xl flex flex-col items-center justify-center relative transition-all border',
                   isSelected(day) && mode !== 'edit'
-                    ? 'bg-primary-500 text-white border-primary-400' 
+                    ? 'bg-primary-500 text-white border-primary-400'
                     : isToday(day)
                       ? 'bg-primary-500/20 text-primary-400 border-primary-500/30'
                       : isPast(day)
-                        ? 'text-dark-600 border-transparent'
+                        ? (isDark ? 'text-dark-600' : 'text-slate-300') + ' border-transparent'
                         : mode === 'edit' && status !== 'booked'
-                          ? `cursor-pointer ${statusColors[status] || 'border-dark-700 hover:border-dark-600'}`
+                          ? `cursor-pointer ${statusColors[status] || (isDark ? 'border-dark-700 hover:border-dark-600' : 'border-slate-200 hover:border-slate-300')}`
                           : `border-transparent ${statusColors[status]}`,
                   hasPendingChange && 'ring-2 ring-yellow-400'
                 )}
@@ -315,15 +327,15 @@ export default function Calendar() {
         <div className="flex items-center justify-center gap-6 mt-4 text-xs">
           <div className="flex items-center gap-1.5">
             <span className="w-2 h-2 rounded-full bg-emerald-400" />
-            <span className="text-dark-400">Available</span>
+            <span className={isDark ? 'text-dark-400' : 'text-slate-500'}>Available</span>
           </div>
           <div className="flex items-center gap-1.5">
             <span className="w-2 h-2 rounded-full bg-primary-400" />
-            <span className="text-dark-400">Booked</span>
+            <span className={isDark ? 'text-dark-400' : 'text-slate-500'}>Booked</span>
           </div>
           <div className="flex items-center gap-1.5">
             <span className="w-2 h-2 rounded-full bg-red-400" />
-            <span className="text-dark-400">Unavailable</span>
+            <span className={isDark ? 'text-dark-400' : 'text-slate-500'}>Unavailable</span>
           </div>
         </div>
 
@@ -331,15 +343,15 @@ export default function Calendar() {
         {mode !== 'edit' && (
           <div className="mt-6">
             <div className="flex items-center justify-between mb-3">
-              <h3 className="text-lg font-semibold text-white">
-                {selectedDate.toLocaleDateString('en-SG', { weekday: 'long', day: 'numeric', month: 'long' })}
+              <h3 className={clsx('text-lg font-semibold', isDark ? 'text-white' : 'text-slate-900')}>
+                {selectedDate.toLocaleDateString(DEFAULT_LOCALE, { weekday: 'long', day: 'numeric', month: 'long' })}
               </h3>
             </div>
 
             {/* Quick availability buttons */}
             {!isPast(selectedDate.getDate()) && selectedDeployments.length === 0 && (
               <div className="flex items-center gap-2 mb-4">
-                <span className="text-sm text-dark-400">Set as:</span>
+                <span className={clsx('text-sm', isDark ? 'text-dark-400' : 'text-slate-500')}>Set as:</span>
                 <button
                   onClick={() => handleSetAvailability('available')}
                   className={clsx(
@@ -372,8 +384,8 @@ export default function Calendar() {
                 <div className="animate-spin h-6 w-6 border-2 border-primary-500 border-t-transparent rounded-full" />
               </div>
             ) : selectedDeployments.length === 0 ? (
-              <div className="text-center py-8 text-dark-500">
-                <CalendarIcon className="h-10 w-10 mx-auto mb-2 opacity-50" />
+              <div className={clsx('text-center py-8', isDark ? 'text-dark-500' : 'text-slate-400')}>
+                <CalendarIcon className={clsx('h-10 w-10 mx-auto mb-2', isDark ? 'opacity-50' : 'text-slate-300')} />
                 <p>No jobs scheduled</p>
                 {selectedAvailability === 'available' && (
                   <p className="text-sm text-emerald-400 mt-1">You're marked as available</p>
@@ -388,12 +400,15 @@ export default function Calendar() {
                   <Link
                     key={deployment.id}
                     to={`/jobs/${deployment.job_id}`}
-                    className="block p-4 rounded-xl bg-dark-800/50 border border-white/5 hover:border-primary-500/30"
+                    className={clsx(
+                      'block p-4 rounded-xl border',
+                      isDark ? 'bg-dark-800/50 border-white/5 hover:border-primary-500/30' : 'bg-white border-slate-200 shadow-sm hover:border-primary-300'
+                    )}
                   >
                     <div className="flex items-start justify-between">
                       <div>
-                        <h4 className="font-semibold text-white">{deployment.job_title}</h4>
-                        <p className="text-sm text-dark-400">{deployment.company_name || deployment.location}</p>
+                        <h4 className={clsx('font-semibold', isDark ? 'text-white' : 'text-slate-900')}>{deployment.job_title}</h4>
+                        <p className={clsx('text-sm', isDark ? 'text-dark-400' : 'text-slate-500')}>{deployment.company_name || deployment.location}</p>
                       </div>
                       <span className={clsx(
                         'px-2 py-1 rounded-full text-xs font-medium',
@@ -404,7 +419,7 @@ export default function Calendar() {
                         {deployment.status}
                       </span>
                     </div>
-                    <div className="flex items-center gap-4 mt-3 text-sm text-dark-400">
+                    <div className={clsx('flex items-center gap-4 mt-3 text-sm', isDark ? 'text-dark-400' : 'text-slate-500')}>
                       <div className="flex items-center gap-1">
                         <ClockIcon className="h-4 w-4" />
                         <span>{deployment.start_time || '09:00'} - {deployment.end_time || '17:00'}</span>

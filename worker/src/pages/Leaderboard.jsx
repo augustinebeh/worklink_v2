@@ -1,6 +1,6 @@
 import React, { useState, useEffect } from 'react';
-import { 
-  TrophyIcon, 
+import {
+  TrophyIcon,
   MedalIcon,
   CrownIcon,
   StarIcon,
@@ -11,6 +11,7 @@ import {
   MinusIcon,
 } from 'lucide-react';
 import { useAuth } from '../contexts/AuthContext';
+import { useTheme } from '../contexts/ThemeContext';
 import { clsx } from 'clsx';
 
 const rankConfig = {
@@ -19,31 +20,31 @@ const rankConfig = {
   3: { icon: MedalIcon, color: 'text-amber-600', bg: 'bg-amber-600/20', border: 'border-amber-600/30' },
 };
 
-function LeaderboardRow({ entry, rank, isCurrentUser }) {
+function LeaderboardRow({ entry, rank, isCurrentUser, isDark }) {
   const config = rankConfig[rank];
   const RankIcon = config?.icon;
 
   const changeIcon = entry.change > 0 ? ChevronUpIcon : entry.change < 0 ? ChevronDownIcon : MinusIcon;
-  const changeColor = entry.change > 0 ? 'text-accent-400' : entry.change < 0 ? 'text-red-400' : 'text-dark-500';
+  const changeColor = entry.change > 0 ? 'text-accent-400' : entry.change < 0 ? 'text-red-400' : (isDark ? 'text-dark-500' : 'text-slate-400');
 
   return (
     <div className={clsx(
       'flex items-center gap-3 p-4 rounded-xl transition-colors',
-      isCurrentUser 
-        ? 'bg-primary-900/30 border border-primary-500/30' 
-        : config 
+      isCurrentUser
+        ? 'bg-primary-900/30 border border-primary-500/30'
+        : config
           ? `${config.bg} border ${config.border}`
-          : 'bg-dark-800/50 border border-white/5'
+          : isDark ? 'bg-dark-800/50 border border-white/5' : 'bg-white border border-slate-200 shadow-sm'
     )}>
       {/* Rank */}
       <div className={clsx(
         'w-10 h-10 rounded-xl flex items-center justify-center font-bold',
-        config ? `${config.bg}` : 'bg-dark-700'
+        config ? `${config.bg}` : isDark ? 'bg-dark-700' : 'bg-slate-100'
       )}>
         {RankIcon ? (
           <RankIcon className={clsx('h-6 w-6', config.color)} />
         ) : (
-          <span className="text-dark-400">{rank}</span>
+          <span className={isDark ? 'text-dark-400' : 'text-slate-500'}>{rank}</span>
         )}
       </div>
 
@@ -51,20 +52,20 @@ function LeaderboardRow({ entry, rank, isCurrentUser }) {
       <div className="flex items-center gap-3 flex-1">
         <div className={clsx(
           'w-12 h-12 rounded-full flex items-center justify-center text-lg font-bold',
-          isCurrentUser ? 'bg-primary-500 text-white' : 'bg-dark-700 text-dark-300'
+          isCurrentUser ? 'bg-primary-500 text-white' : isDark ? 'bg-dark-700 text-dark-300' : 'bg-slate-200 text-slate-600'
         )}>
           {entry.name?.charAt(0)}
         </div>
         <div>
           <div className="flex items-center gap-2">
-            <span className={clsx('font-semibold', isCurrentUser ? 'text-primary-300' : 'text-white')}>
+            <span className={clsx('font-semibold', isCurrentUser ? 'text-primary-300' : isDark ? 'text-white' : 'text-slate-900')}>
               {entry.name}
             </span>
             {isCurrentUser && (
               <span className="px-2 py-0.5 rounded-full bg-primary-500/30 text-primary-300 text-xs">You</span>
             )}
           </div>
-          <div className="flex items-center gap-2 text-sm text-dark-400">
+          <div className={clsx('flex items-center gap-2 text-sm', isDark ? 'text-dark-400' : 'text-slate-500')}>
             <span>Level {entry.level}</span>
             {entry.streak_days > 0 && (
               <div className="flex items-center gap-1">
@@ -91,10 +92,10 @@ function LeaderboardRow({ entry, rank, isCurrentUser }) {
   );
 }
 
-function TopThree({ entries, currentUserId }) {
+function TopThree({ entries, currentUserId, isDark }) {
   // Reorder for display: 2nd, 1st, 3rd
   const displayOrder = [entries[1], entries[0], entries[2]].filter(Boolean);
-  
+
   return (
     <div className="flex items-end justify-center gap-4 px-4 py-6">
       {displayOrder.map((entry, idx) => {
@@ -106,8 +107,8 @@ function TopThree({ entries, currentUserId }) {
         if (!entry) return null;
 
         return (
-          <div 
-            key={entry.id} 
+          <div
+            key={entry.id}
             className={clsx(
               'flex flex-col items-center',
               isFirst ? 'order-2' : idx === 0 ? 'order-1' : 'order-3'
@@ -117,16 +118,16 @@ function TopThree({ entries, currentUserId }) {
             {isFirst && (
               <CrownIcon className="h-8 w-8 text-gold-400 mb-2 animate-bounce" />
             )}
-            
+
             {/* Avatar */}
             <div className={clsx(
               'relative rounded-full flex items-center justify-center font-bold border-4',
               isFirst ? 'w-24 h-24 text-2xl' : 'w-20 h-20 text-xl',
-              isCurrentUser ? 'bg-primary-500 border-primary-400' : 'bg-dark-700 border-dark-600',
+              isCurrentUser ? 'bg-primary-500 border-primary-400 text-white' : isDark ? 'bg-dark-700 border-dark-600 text-dark-300' : 'bg-slate-200 border-slate-300 text-slate-600',
               config.border
             )}>
               {entry.name?.charAt(0)}
-              
+
               {/* Rank badge */}
               <div className={clsx(
                 'absolute -bottom-2 px-3 py-1 rounded-full font-bold text-sm',
@@ -139,7 +140,7 @@ function TopThree({ entries, currentUserId }) {
             {/* Name & XP */}
             <p className={clsx(
               'font-semibold mt-4',
-              isCurrentUser ? 'text-primary-300' : 'text-white'
+              isCurrentUser ? 'text-primary-300' : isDark ? 'text-white' : 'text-slate-900'
             )}>
               {entry.name?.split(' ')[0]}
             </p>
@@ -156,6 +157,7 @@ function TopThree({ entries, currentUserId }) {
 
 export default function Leaderboard() {
   const { user } = useAuth();
+  const { isDark } = useTheme();
   const [leaderboard, setLeaderboard] = useState([]);
   const [userRank, setUserRank] = useState(null);
   const [loading, setLoading] = useState(true);
@@ -192,17 +194,20 @@ export default function Leaderboard() {
   const restOfLeaderboard = leaderboard.slice(3);
 
   return (
-    <div className="min-h-screen bg-dark-950 pb-24">
+    <div className={clsx('min-h-screen pb-24', isDark ? 'bg-dark-950' : 'bg-slate-50')}>
       {/* Header */}
-      <div className="bg-gradient-to-b from-primary-900/50 to-dark-950 px-4 pt-safe pb-2">
+      <div className={clsx(
+        'px-4 pt-safe pb-2',
+        isDark ? 'bg-gradient-to-b from-primary-900/50 to-dark-950' : 'bg-gradient-to-b from-primary-100 to-slate-50'
+      )}>
         <div className="flex items-center justify-between mb-4">
           <div>
-            <h1 className="text-2xl font-bold text-white">Leaderboard</h1>
-            <p className="text-dark-400 text-sm mt-1">Compete with other workers</p>
+            <h1 className={clsx('text-2xl font-bold', isDark ? 'text-white' : 'text-slate-900')}>Leaderboard</h1>
+            <p className={clsx('text-sm mt-1', isDark ? 'text-dark-400' : 'text-slate-500')}>Compete with other workers</p>
           </div>
           {userRank && (
             <div className="text-right">
-              <p className="text-sm text-dark-400">Your Rank</p>
+              <p className={clsx('text-sm', isDark ? 'text-dark-400' : 'text-slate-500')}>Your Rank</p>
               <p className="text-2xl font-bold text-primary-400">#{userRank}</p>
             </div>
           )}
@@ -220,9 +225,9 @@ export default function Leaderboard() {
               onClick={() => setPeriod(tab.id)}
               className={clsx(
                 'flex-1 py-2 rounded-lg text-sm font-medium transition-colors',
-                period === tab.id 
-                  ? 'bg-primary-500 text-white' 
-                  : 'bg-dark-800/50 text-dark-400'
+                period === tab.id
+                  ? 'bg-primary-500 text-white'
+                  : isDark ? 'bg-dark-800/50 text-dark-400' : 'bg-white text-slate-500 shadow-sm'
               )}
             >
               {tab.label}
@@ -232,7 +237,7 @@ export default function Leaderboard() {
 
         {/* Top 3 Podium */}
         {!loading && topThree.length > 0 && (
-          <TopThree entries={topThree} currentUserId={user?.id} />
+          <TopThree entries={topThree} currentUserId={user?.id} isDark={isDark} />
         )}
       </div>
 
@@ -243,18 +248,19 @@ export default function Leaderboard() {
             <div className="animate-spin h-8 w-8 border-4 border-primary-500 border-t-transparent rounded-full" />
           </div>
         ) : restOfLeaderboard.length === 0 ? (
-          <div className="text-center py-8 text-dark-400">
-            <TrophyIcon className="h-12 w-12 mx-auto mb-4 opacity-50" />
+          <div className={clsx('text-center py-8', isDark ? 'text-dark-400' : 'text-slate-500')}>
+            <TrophyIcon className={clsx('h-12 w-12 mx-auto mb-4', isDark ? 'opacity-50' : 'text-slate-300')} />
             <p>No more entries</p>
           </div>
         ) : (
           <div className="space-y-3">
             {restOfLeaderboard.map((entry, idx) => (
-              <LeaderboardRow 
-                key={entry.id} 
-                entry={entry} 
+              <LeaderboardRow
+                key={entry.id}
+                entry={entry}
                 rank={idx + 4}
                 isCurrentUser={entry.id === user?.id}
+                isDark={isDark}
               />
             ))}
           </div>
@@ -262,15 +268,16 @@ export default function Leaderboard() {
 
         {/* User's position if not in top */}
         {userRank && userRank > 10 && user && (
-          <div className="mt-6 pt-6 border-t border-white/5">
-            <p className="text-center text-dark-400 text-sm mb-3">Your Position</p>
-            <LeaderboardRow 
+          <div className={clsx('mt-6 pt-6 border-t', isDark ? 'border-white/5' : 'border-slate-200')}>
+            <p className={clsx('text-center text-sm mb-3', isDark ? 'text-dark-400' : 'text-slate-500')}>Your Position</p>
+            <LeaderboardRow
               entry={{
                 ...user,
                 change: 0,
               }}
               rank={userRank}
               isCurrentUser={true}
+              isDark={isDark}
             />
           </div>
         )}
