@@ -21,6 +21,11 @@ import {
   CameraIcon,
   SparklesIcon,
   CircleIcon,
+  MessageCircleIcon,
+  ExternalLinkIcon,
+  XIcon,
+  LinkIcon,
+  UnlinkIcon,
 } from 'lucide-react';
 import { useToast } from '../components/ui/Toast';
 import { useAuth } from '../contexts/AuthContext';
@@ -361,6 +366,10 @@ export default function Profile() {
   const [achievements, setAchievements] = useState([]);
   const [loading, setLoading] = useState(false);
   const [uploadingPhoto, setUploadingPhoto] = useState(false);
+  const [showTelegramModal, setShowTelegramModal] = useState(false);
+  const [telegramCode, setTelegramCode] = useState(null);
+  const [telegramLoading, setTelegramLoading] = useState(false);
+  const [codeCopied, setCodeCopied] = useState(false);
 
   useEffect(() => {
     if (user?.id) {
@@ -451,6 +460,65 @@ export default function Profile() {
   const handleLogout = () => {
     logout();
     navigate('/login');
+  };
+
+  const handleConnectTelegram = async () => {
+    setShowTelegramModal(true);
+    setTelegramLoading(true);
+    setTelegramCode(null);
+
+    try {
+      const res = await fetch('/api/v1/messaging/telegram/verify', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ candidateId: user.id }),
+      });
+      const data = await res.json();
+
+      if (data.success) {
+        if (data.data.alreadyLinked) {
+          toast.info('Already Connected', 'Your Telegram is already linked');
+          setShowTelegramModal(false);
+        } else {
+          setTelegramCode(data.data);
+        }
+      } else {
+        toast.error('Error', data.error || 'Failed to generate code');
+        setShowTelegramModal(false);
+      }
+    } catch (error) {
+      toast.error('Error', 'Failed to connect. Please try again.');
+      setShowTelegramModal(false);
+    } finally {
+      setTelegramLoading(false);
+    }
+  };
+
+  const handleCopyTelegramCode = () => {
+    if (telegramCode?.code) {
+      navigator.clipboard.writeText(telegramCode.code);
+      setCodeCopied(true);
+      setTimeout(() => setCodeCopied(false), 2000);
+      toast.success('Copied', 'Code copied to clipboard');
+    }
+  };
+
+  const handleUnlinkTelegram = async () => {
+    try {
+      const res = await fetch(`/api/v1/messaging/telegram/${user.id}`, {
+        method: 'DELETE',
+      });
+      const data = await res.json();
+
+      if (data.success) {
+        toast.success('Disconnected', 'Telegram has been unlinked');
+        refreshUser();
+      } else {
+        toast.error('Error', data.error || 'Failed to unlink');
+      }
+    } catch (error) {
+      toast.error('Error', 'Failed to unlink. Please try again.');
+    }
   };
 
   // Not logged in state
@@ -669,9 +737,100 @@ export default function Profile() {
           <MenuLink icon={ShareIcon} label="Refer & Earn" sublabel="Invite friends, get $30" onClick={() => navigate('/referrals')} />
           <MenuLink icon={AwardIcon} label="Achievements" onClick={() => navigate('/achievements')} />
           <MenuLink icon={TrophyIcon} label="Leaderboard" onClick={() => navigate('/leaderboard')} />
+          <MenuLink
+            icon={MessageCircleIcon}
+            label="Connect Telegram"
+            sublabel={user.telegram_chat_id ? 'Connected' : 'Get notifications via Telegram'}
+            onClick={user.telegram_chat_id ? handleUnlinkTelegram : handleConnectTelegram}
+            rightElement={
+              user.telegram_chat_id ? (
+                <span className="flex items-center gap-1 text-xs text-green-400">
+                  <CheckIcon className="h-4 w-4" /> Connected
+                </span>
+              ) : null
+            }
+          />
           <MenuLink icon={LogOutIcon} label="Log Out" onClick={handleLogout} danger />
         </div>
       </div>
+
+      {/* Telegram Connection Modal */}
+      {showTelegramModal && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/60 backdrop-blur-sm">
+          <div className={clsx(
+            'w-full max-w-sm rounded-2xl p-6',
+            isDark ? 'bg-dark-900 border border-dark-700' : 'bg-white'
+          )}>
+            {/* Header */}
+            <div className="flex items-center justify-between mb-4">
+              <div className="flex items-center gap-2">
+                <div className="p-2 rounded-lg bg-blue-500/20">
+                  <MessageCircleIcon className="h-5 w-5 text-blue-400" />
+                </div>
+                <h3 className={clsx('text-lg font-semibold', isDark ? 'text-white' : 'text-slate-900')}>
+                  Connect Telegram
+                </h3>
+              </div>
+              <button
+                onClick={() => setShowTelegramModal(false)}
+                className={clsx('p-2 rounded-lg', isDark ? 'hover:bg-dark-700' : 'hover:bg-slate-100')}
+              >
+                <XIcon className={clsx('h-5 w-5', isDark ? 'text-dark-400' : 'text-slate-500')} />
+              </button>
+            </div>
+
+            {telegramLoading ? (
+              <div className="flex flex-col items-center py-8">
+                <div className="animate-spin h-8 w-8 border-3 border-primary-500 border-t-transparent rounded-full mb-3" />
+                <p className={isDark ? 'text-dark-400' : 'text-slate-500'}>Generating code...</p>
+              </div>
+            ) : telegramCode ? (
+              <div className="space-y-4">
+                {/* Instructions */}
+                <div className={clsx('p-3 rounded-xl text-sm', isDark ? 'bg-dark-800' : 'bg-slate-100')}>
+                  <ol className={clsx('list-decimal list-inside space-y-2', isDark ? 'text-dark-300' : 'text-slate-600')}>
+                    <li>Open Telegram</li>
+                    <li>Search for <span className="font-semibold text-blue-400">@WorkLinkAdminBot</span></li>
+                    <li>Send the code below</li>
+                  </ol>
+                </div>
+
+                {/* Code Display */}
+                <div className={clsx(
+                  'flex items-center justify-between p-4 rounded-xl border-2 border-dashed',
+                  isDark ? 'bg-dark-800 border-dark-600' : 'bg-slate-50 border-slate-300'
+                )}>
+                  <span className={clsx('text-2xl font-mono font-bold tracking-widest', isDark ? 'text-white' : 'text-slate-900')}>
+                    {telegramCode.code}
+                  </span>
+                  <button
+                    onClick={handleCopyTelegramCode}
+                    className="p-2 rounded-lg bg-primary-500 text-white"
+                  >
+                    {codeCopied ? <CheckIcon className="h-5 w-5" /> : <CopyIcon className="h-5 w-5" />}
+                  </button>
+                </div>
+
+                {/* Expiry notice */}
+                <p className={clsx('text-xs text-center', isDark ? 'text-dark-500' : 'text-slate-500')}>
+                  Code expires in {telegramCode.expiresIn}
+                </p>
+
+                {/* Open Telegram Button */}
+                <a
+                  href={telegramCode.deepLink}
+                  target="_blank"
+                  rel="noopener noreferrer"
+                  className="flex items-center justify-center gap-2 w-full py-3 rounded-xl bg-blue-500 text-white font-medium"
+                >
+                  <ExternalLinkIcon className="h-5 w-5" />
+                  Open in Telegram
+                </a>
+              </div>
+            ) : null}
+          </div>
+        </div>
+      )}
     </div>
   );
 }
