@@ -1,5 +1,5 @@
 /**
- * TalentVis API v1 Routes
+ * WorkLink API v1 Routes
  * Aggregates all route modules
  */
 
@@ -21,6 +21,12 @@ const analyticsRoutes = require('./analytics');
 const adminRoutes = require('./admin');
 const aiAutomationRoutes = require('./ai-automation');
 
+// New feature routes
+const referralRoutes = require('./referrals');
+const availabilityRoutes = require('./availability');
+const notificationRoutes = require('./notifications');
+const tenderMonitorRoutes = require('./tender-monitor');
+
 // Mount routes
 router.use('/auth', authRoutes);
 router.use('/candidates', candidateRoutes);
@@ -35,5 +41,39 @@ router.use('/chat', chatRoutes);
 router.use('/analytics', analyticsRoutes);
 router.use('/admin', adminRoutes);
 router.use('/ai', aiAutomationRoutes);
+
+// New feature routes
+router.use('/referrals', referralRoutes);
+router.use('/availability', availabilityRoutes);
+router.use('/notifications', notificationRoutes);
+router.use('/tender-monitor', tenderMonitorRoutes);
+
+// API info endpoint
+router.get('/', (req, res) => {
+  res.json({
+    name: 'WorkLink API',
+    version: '2.0.0',
+    endpoints: {
+      auth: '/api/v1/auth',
+      candidates: '/api/v1/candidates',
+      jobs: '/api/v1/jobs',
+      deployments: '/api/v1/deployments',
+      payments: '/api/v1/payments',
+      clients: '/api/v1/clients',
+      tenders: '/api/v1/tenders',
+      training: '/api/v1/training',
+      gamification: '/api/v1/gamification',
+      chat: '/api/v1/chat',
+      analytics: '/api/v1/analytics',
+      admin: '/api/v1/admin',
+      ai: '/api/v1/ai',
+      // New features
+      referrals: '/api/v1/referrals',
+      availability: '/api/v1/availability',
+      notifications: '/api/v1/notifications',
+      tenderMonitor: '/api/v1/tender-monitor',
+    },
+  });
+});
 
 module.exports = router;

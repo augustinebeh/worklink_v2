@@ -29,9 +29,17 @@ Thumbs.db
 *.swo
 *~
 
-# Database files (keep sample, exclude temp files)
+# Database files - IMPORTANT: These are excluded to prevent data loss
+# Railway uses a persistent volume for the database
+data/*.db
+data/*.db-shm
+data/*.db-wal
+*.db
 *.db-shm
 *.db-wal
+
+# Keep data directory structure
+!data/.gitkeep
 
 # Build outputs (regenerated on deploy)
 admin/dist/
@@ -49,6 +57,6 @@ coverage/
 *.temp
 .cache/
 
-# Package manager
+# Package lock files (regenerated on install)
 package-lock.json
 */package-lock.json
