@@ -134,51 +134,28 @@ router.post('/admin/:candidateId/messages', async (req, res) => {
     const { candidateId } = req.params;
     const { content, template_id, channel } = req.body;
 
-    // Use unified messaging service if channel is specified
-    if (channel && channel !== 'app') {
-      const result = await messaging.sendToCandidate(candidateId, content, {
-        channel,
-        templateId: template_id,
+    // Always use unified messaging service with smart fallback
+    // channel: 'auto' = WebSocket → Push → Telegram fallback
+    // channel: 'telegram' = Direct to Telegram only
+    // channel: 'app' = WebSocket only (no fallback)
+    const result = await messaging.sendToCandidate(candidateId, content, {
+      channel: channel || 'auto',
+      templateId: template_id,
+    });
+
+    if (result.success) {
+      res.json({
+        success: true,
+        data: result.message,
+        channel: result.channel,
+        deliveryMethod: result.deliveryMethod,
       });
-
-      if (result.success) {
-        res.json({
-          success: true,
-          data: result.message,
-          channel: result.channel,
-        });
-      } else {
-        res.status(400).json({
-          success: false,
-          error: result.error,
-        });
-      }
-      return;
+    } else {
+      res.status(400).json({
+        success: false,
+        error: result.error,
+      });
     }
-
-    // Default: send via app (WebSocket)
-    const id = Date.now();
-    db.prepare(`
-      INSERT INTO messages (id, candidate_id, sender, content, template_id, channel, read, created_at)
-      VALUES (?, ?, 'admin', ?, ?, 'app', 0, datetime('now'))
-    `).run(id, candidateId, content, template_id || null);
-
-    const message = db.prepare('SELECT * FROM messages WHERE id = ?').get(id);
-
-    // Broadcast to candidate via WebSocket for real-time delivery
-    broadcastToCandidate(candidateId, {
-      type: EventTypes.CHAT_MESSAGE,
-      message,
-    });
-
-    // Also notify other admin clients
-    broadcastToAdmins({
-      type: 'message_sent',
-      message,
-      candidateId,
-    });
-
-    res.json({ success: true, data: message, channel: 'app' });
   } catch (error) {
     res.status(500).json({ success: false, error: error.message });
   }
