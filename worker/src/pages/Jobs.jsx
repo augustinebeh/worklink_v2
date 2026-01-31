@@ -166,13 +166,11 @@ export default function Jobs() {
 
   return (
     <div className={clsx('min-h-screen pb-24', isDark ? 'bg-dark-950' : 'bg-slate-50')}>
-      {/* Header */}
+      {/* Search & Filters */}
       <div className={clsx(
-        'sticky top-0 z-10 backdrop-blur-lg px-4 pt-safe pb-4 border-b',
-        isDark ? 'bg-dark-950/95 border-white/5' : 'bg-white/95 border-slate-200'
+        'px-4 pt-4 pb-4',
+        isDark ? 'bg-dark-950' : 'bg-slate-50'
       )}>
-        <h1 className={clsx('text-2xl font-bold mb-4', isDark ? 'text-white' : 'text-slate-900')}>Find Jobs</h1>
-
         {/* Search */}
         <div className="relative mb-4">
           <SearchIcon className={clsx('absolute left-3 top-1/2 -translate-y-1/2 h-5 w-5', isDark ? 'text-dark-500' : 'text-slate-400')} />

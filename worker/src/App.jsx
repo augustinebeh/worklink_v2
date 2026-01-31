@@ -3,6 +3,7 @@ import { AuthProvider, useAuth } from './contexts/AuthContext';
 import { WebSocketProvider } from './contexts/WebSocketContext';
 import { ThemeProvider } from './contexts/ThemeContext';
 import { ToastProvider } from './components/ui/Toast';
+import Header from './components/layout/Header';
 import BottomNav from './components/layout/BottomNav';
 import { PageTransition } from './components/layout/PageTransition';
 import InstallPrompt from './components/InstallPrompt';
@@ -27,12 +28,15 @@ function AppLayout({ children }) {
   const location = useLocation();
 
   return (
-    <>
-      <PageTransition key={location.pathname}>
-        {children}
-      </PageTransition>
+    <div className="flex flex-col min-h-screen">
+      <Header />
+      <main className="flex-1">
+        <PageTransition key={location.pathname}>
+          {children}
+        </PageTransition>
+      </main>
       <BottomNav />
-    </>
+    </div>
   );
 }
 

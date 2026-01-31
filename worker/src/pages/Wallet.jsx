@@ -96,11 +96,6 @@ export default function Wallet() {
 
   return (
     <div className={clsx('min-h-screen pb-24', isDark ? 'bg-dark-950' : 'bg-slate-50')}>
-      {/* Header */}
-      <div className="px-4 pt-safe pb-2">
-        <h1 className={clsx('text-2xl font-bold', isDark ? 'text-white' : 'text-slate-900')}>Wallet</h1>
-      </div>
-
       {/* Balance Card */}
       <div className="px-4 py-4">
         <div className={clsx(

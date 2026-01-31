@@ -332,15 +332,14 @@ export default function Profile() {
 
   return (
     <div className={clsx('min-h-screen pb-24', isDark ? 'bg-dark-950' : 'bg-slate-50')}>
-      {/* Header */}
+      {/* Profile Header Section */}
       <div className={clsx(
         'px-4 pt-4 pb-6',
         isDark
           ? 'bg-gradient-to-b from-primary-900/30 to-dark-950'
           : 'bg-gradient-to-b from-primary-100 to-slate-50'
       )}>
-        <div className="flex items-center justify-between mb-6">
-          <h1 className={clsx('text-2xl font-bold', isDark ? 'text-white' : 'text-slate-900')}>Profile</h1>
+        <div className="flex items-center justify-end mb-4">
           <ThemeToggleButton />
         </div>
 

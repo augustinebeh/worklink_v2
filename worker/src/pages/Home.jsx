@@ -5,7 +5,6 @@ import {
   BriefcaseIcon,
   ZapIcon,
   FlameIcon,
-  BellIcon,
   GiftIcon,
   CalendarIcon,
   ArrowDownLeftIcon,
@@ -250,40 +249,16 @@ export default function Home() {
 
   return (
     <div className={clsx('min-h-screen pb-24', isDark ? 'bg-dark-950' : 'bg-slate-50')}>
-      {/* Header */}
-      <div className="px-4 pt-safe pb-2">
+      {/* Welcome Banner */}
+      <div className="px-4 pt-4 pb-2">
         <div className="flex items-center justify-between">
-          <div className="flex items-center gap-3">
-            {/* Avatar */}
-            <div className="w-10 h-10 rounded-full bg-gradient-to-br from-primary-500 to-violet-500 flex items-center justify-center text-white font-bold">
-              {userName.charAt(0)}
-            </div>
-            <div>
-              <p className={clsx('text-sm', isDark ? 'text-dark-400' : 'text-slate-500')}>Welcome back</p>
-              <p className={clsx('font-semibold', isDark ? 'text-white' : 'text-slate-900')}>{userName}</p>
-            </div>
+          <div>
+            <p className={clsx('text-sm', isDark ? 'text-dark-400' : 'text-slate-500')}>Welcome back</p>
+            <p className={clsx('font-semibold text-lg', isDark ? 'text-white' : 'text-slate-900')}>{userName}</p>
           </div>
-
-          <div className="flex items-center gap-2">
-            {/* Level Badge */}
-            <div className="flex items-center gap-1.5 px-3 py-1.5 rounded-full bg-primary-500/20 border border-primary-500/30">
-              <StarIcon className="h-4 w-4 text-primary-400" />
-              <span className="text-sm font-bold text-primary-400">Lv.{userLevel}</span>
-            </div>
-
-            {/* Notifications */}
-            <button
-              onClick={() => navigate('/notifications')}
-              className={clsx(
-                'relative p-2.5 rounded-full transition-colors',
-                isDark ? 'bg-dark-800/80 text-dark-400 hover:text-white' : 'bg-white text-slate-500 hover:text-slate-900 shadow-sm'
-              )}
-            >
-              <BellIcon className="h-5 w-5" />
-              {ws?.unreadNotifications > 0 && (
-                <span className="absolute top-1 right-1 w-2 h-2 rounded-full bg-red-500" />
-              )}
-            </button>
+          <div className="flex items-center gap-1.5 px-3 py-1.5 rounded-full bg-primary-500/20 border border-primary-500/30">
+            <StarIcon className="h-4 w-4 text-primary-400" />
+            <span className="text-sm font-bold text-primary-400">Lv.{userLevel}</span>
           </div>
         </div>
       </div>
