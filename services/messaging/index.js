@@ -1,0 +1,331 @@
+/**
+ * Unified Messaging Service
+ * Routes messages to appropriate channels: app (WebSocket), telegram, whatsapp
+ */
+
+const { db } = require('../../db/database');
+const { broadcastToCandidate, broadcastToAdmins, createNotification, EventTypes } = require('../../websocket');
+const telegram = require('./telegram');
+
+// Channel types
+const Channels = {
+  APP: 'app',
+  TELEGRAM: 'telegram',
+  WHATSAPP: 'whatsapp',
+};
+
+/**
+ * Send a message from admin to candidate via the appropriate channel
+ * @param {string} candidateId - Candidate ID
+ * @param {string} content - Message content
+ * @param {object} options - { channel, templateId, autoChannel }
+ */
+async function sendToCandidate(candidateId, content, options = {}) {
+  const { channel = 'auto', templateId = null } = options;
+
+  // Get candidate info
+  const candidate = db.prepare(`
+    SELECT id, name, telegram_chat_id, preferred_contact, online_status
+    FROM candidates WHERE id = ?
+  `).get(candidateId);
+
+  if (!candidate) {
+    return { success: false, error: 'Candidate not found' };
+  }
+
+  // Determine channel
+  let selectedChannel = channel;
+  if (channel === 'auto') {
+    selectedChannel = determineChannel(candidate);
+  }
+
+  // Send via appropriate channel
+  let result;
+  let externalId = null;
+
+  switch (selectedChannel) {
+    case Channels.TELEGRAM:
+      if (!candidate.telegram_chat_id) {
+        // Fallback to app if telegram not linked
+        selectedChannel = Channels.APP;
+        result = await sendViaApp(candidateId, content);
+      } else {
+        result = await telegram.sendMessage(candidate.telegram_chat_id, content);
+        if (result.success) {
+          externalId = String(result.messageId);
+        }
+      }
+      break;
+
+    case Channels.WHATSAPP:
+      // WhatsApp not yet implemented - fallback to app
+      console.log('WhatsApp not yet implemented, falling back to app');
+      selectedChannel = Channels.APP;
+      result = await sendViaApp(candidateId, content);
+      break;
+
+    case Channels.APP:
+    default:
+      selectedChannel = Channels.APP;
+      result = await sendViaApp(candidateId, content);
+      break;
+  }
+
+  // Store message in database
+  const messageId = Date.now();
+  db.prepare(`
+    INSERT INTO messages (id, candidate_id, sender, content, template_id, channel, read, created_at)
+    VALUES (?, ?, 'admin', ?, ?, ?, 0, datetime('now'))
+  `).run(messageId, candidateId, content, templateId, selectedChannel);
+
+  // Store external ID if present
+  if (externalId) {
+    db.prepare(`
+      UPDATE messages SET external_id = ? WHERE id = ?
+    `).run(externalId, messageId);
+  }
+
+  const message = db.prepare('SELECT * FROM messages WHERE id = ?').get(messageId);
+
+  // Notify all admin clients
+  broadcastToAdmins({
+    type: 'message_sent',
+    message,
+    candidateId,
+    channel: selectedChannel,
+  });
+
+  return {
+    success: result.success,
+    message,
+    channel: selectedChannel,
+    error: result.error,
+  };
+}
+
+/**
+ * Send via in-app WebSocket
+ */
+async function sendViaApp(candidateId, content) {
+  try {
+    broadcastToCandidate(candidateId, {
+      type: EventTypes.CHAT_MESSAGE,
+      message: { content, sender: 'admin' },
+    });
+
+    // Create notification for offline candidates
+    createNotification(candidateId, 'chat', 'New message from WorkLink', content);
+
+    return { success: true };
+  } catch (error) {
+    return { success: false, error: error.message };
+  }
+}
+
+/**
+ * Determine the best channel for a candidate
+ */
+function determineChannel(candidate) {
+  // If candidate has a preferred contact method, use it if available
+  if (candidate.preferred_contact === 'telegram' && candidate.telegram_chat_id) {
+    return Channels.TELEGRAM;
+  }
+
+  // If candidate is online in app, use app
+  if (candidate.online_status === 'online') {
+    return Channels.APP;
+  }
+
+  // If telegram is linked, use it for offline candidates
+  if (candidate.telegram_chat_id) {
+    return Channels.TELEGRAM;
+  }
+
+  // Default to app
+  return Channels.APP;
+}
+
+/**
+ * Handle incoming message from external channel
+ * @param {string} channel - The channel the message came from
+ * @param {object} data - Channel-specific data
+ */
+async function handleIncomingMessage(channel, data) {
+  let candidateId = null;
+  let content = null;
+  let externalId = null;
+
+  switch (channel) {
+    case Channels.TELEGRAM:
+      // Find candidate by telegram_chat_id
+      const chatId = String(data.chat.id);
+      const candidate = db.prepare(`
+        SELECT id FROM candidates WHERE telegram_chat_id = ?
+      `).get(chatId);
+
+      if (!candidate) {
+        // Unknown sender - could be new user trying to link
+        return { success: false, error: 'Unknown telegram user', chatId };
+      }
+
+      candidateId = candidate.id;
+      content = data.text;
+      externalId = String(data.message_id);
+      break;
+
+    case Channels.WHATSAPP:
+      // Not yet implemented
+      return { success: false, error: 'WhatsApp not implemented' };
+
+    default:
+      return { success: false, error: 'Unknown channel' };
+  }
+
+  if (!candidateId || !content) {
+    return { success: false, error: 'Invalid message data' };
+  }
+
+  // Store message
+  const messageId = Date.now();
+  db.prepare(`
+    INSERT INTO messages (id, candidate_id, sender, content, channel, external_id, read, created_at)
+    VALUES (?, ?, 'candidate', ?, ?, ?, 0, datetime('now'))
+  `).run(messageId, candidateId, content, channel, externalId);
+
+  const message = db.prepare('SELECT * FROM messages WHERE id = ?').get(messageId);
+
+  // Notify admins via WebSocket
+  broadcastToAdmins({
+    type: 'new_message',
+    message,
+    candidateId,
+    channel,
+  });
+
+  return { success: true, message, candidateId };
+}
+
+/**
+ * Link a Telegram chat to a candidate
+ * @param {string} telegramChatId - Telegram chat ID
+ * @param {string} verificationCode - Code provided in app
+ */
+async function linkTelegram(telegramChatId, verificationCode) {
+  // Find pending verification
+  const pending = db.prepare(`
+    SELECT candidate_id FROM telegram_verifications
+    WHERE code = ? AND used = 0 AND expires_at > datetime('now')
+  `).get(verificationCode);
+
+  if (!pending) {
+    return { success: false, error: 'Invalid or expired code' };
+  }
+
+  // Update candidate
+  db.prepare(`
+    UPDATE candidates SET telegram_chat_id = ? WHERE id = ?
+  `).run(String(telegramChatId), pending.candidate_id);
+
+  // Mark verification as used
+  db.prepare(`
+    UPDATE telegram_verifications SET used = 1 WHERE code = ?
+  `).run(verificationCode);
+
+  return { success: true, candidateId: pending.candidate_id };
+}
+
+/**
+ * Generate a verification code for Telegram linking
+ * @param {string} candidateId - Candidate ID
+ */
+function generateVerificationCode(candidateId) {
+  const code = Math.random().toString(36).substring(2, 8).toUpperCase();
+
+  // Ensure table exists
+  db.exec(`
+    CREATE TABLE IF NOT EXISTS telegram_verifications (
+      id INTEGER PRIMARY KEY AUTOINCREMENT,
+      candidate_id TEXT NOT NULL,
+      code TEXT NOT NULL,
+      used INTEGER DEFAULT 0,
+      expires_at DATETIME,
+      created_at DATETIME DEFAULT CURRENT_TIMESTAMP
+    )
+  `);
+
+  // Insert verification code (expires in 10 minutes)
+  db.prepare(`
+    INSERT INTO telegram_verifications (candidate_id, code, expires_at)
+    VALUES (?, ?, datetime('now', '+10 minutes'))
+  `).run(candidateId, code);
+
+  return code;
+}
+
+/**
+ * Broadcast a message to a Telegram group
+ */
+async function broadcastToTelegramGroup(groupChatId, message) {
+  return telegram.sendToGroup(groupChatId, message);
+}
+
+/**
+ * Send job posting to Telegram groups
+ */
+async function postJobToTelegramGroups(job, groupIds, appBaseUrl) {
+  const applyUrl = `${appBaseUrl}/jobs/${job.id}`;
+  const formattedMessage = telegram.formatJobPost(job, applyUrl);
+
+  const results = [];
+  for (const groupId of groupIds) {
+    const result = await telegram.sendToGroup(groupId, formattedMessage);
+    results.push({ groupId, ...result });
+  }
+
+  return results;
+}
+
+/**
+ * Get channel status for a candidate
+ */
+function getCandidateChannels(candidateId) {
+  const candidate = db.prepare(`
+    SELECT telegram_chat_id, whatsapp_opted_in, preferred_contact
+    FROM candidates WHERE id = ?
+  `).get(candidateId);
+
+  if (!candidate) {
+    return null;
+  }
+
+  return {
+    app: true, // Always available
+    telegram: !!candidate.telegram_chat_id,
+    whatsapp: !!candidate.whatsapp_opted_in,
+    preferred: candidate.preferred_contact || 'app',
+  };
+}
+
+/**
+ * Check which messaging services are configured
+ */
+function getConfiguredChannels() {
+  return {
+    app: true,
+    telegram: telegram.isConfigured(),
+    whatsapp: false, // Not yet implemented
+  };
+}
+
+module.exports = {
+  Channels,
+  sendToCandidate,
+  handleIncomingMessage,
+  linkTelegram,
+  generateVerificationCode,
+  broadcastToTelegramGroup,
+  postJobToTelegramGroups,
+  getCandidateChannels,
+  getConfiguredChannels,
+  telegram,
+};

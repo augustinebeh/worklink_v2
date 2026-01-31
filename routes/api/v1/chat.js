@@ -2,6 +2,7 @@ const express = require('express');
 const router = express.Router();
 const { db } = require('../../../db/database');
 const { broadcastToCandidate, broadcastToAdmins, EventTypes } = require('../../../websocket');
+const messaging = require('../../../services/messaging');
 
 // Get messages for a candidate
 router.get('/:candidateId/messages', (req, res) => {
@@ -62,7 +63,7 @@ router.post('/:candidateId/read', (req, res) => {
 router.get('/admin/conversations', (req, res) => {
   try {
     const conversations = db.prepare(`
-      SELECT 
+      SELECT
         c.id as candidate_id,
         c.name,
         c.email,
@@ -71,16 +72,29 @@ router.get('/admin/conversations', (req, res) => {
         c.level,
         c.online_status,
         c.last_seen,
+        c.telegram_chat_id,
+        c.preferred_contact,
         (SELECT content FROM messages WHERE candidate_id = c.id ORDER BY created_at DESC LIMIT 1) as last_message,
         (SELECT created_at FROM messages WHERE candidate_id = c.id ORDER BY created_at DESC LIMIT 1) as last_message_at,
         (SELECT sender FROM messages WHERE candidate_id = c.id ORDER BY created_at DESC LIMIT 1) as last_message_sender,
+        (SELECT channel FROM messages WHERE candidate_id = c.id ORDER BY created_at DESC LIMIT 1) as last_message_channel,
         (SELECT COUNT(*) FROM messages WHERE candidate_id = c.id AND sender = 'candidate' AND read = 0) as unread_count
       FROM candidates c
       WHERE c.id IN (SELECT DISTINCT candidate_id FROM messages)
       ORDER BY last_message_at DESC
     `).all();
 
-    res.json({ success: true, data: conversations });
+    // Add available channels for each conversation
+    const conversationsWithChannels = conversations.map(conv => ({
+      ...conv,
+      channels: {
+        app: true,
+        telegram: !!conv.telegram_chat_id,
+        whatsapp: false, // Not implemented yet
+      },
+    }));
+
+    res.json({ success: true, data: conversationsWithChannels });
   } catch (error) {
     res.status(500).json({ success: false, error: error.message });
   }
@@ -90,29 +104,63 @@ router.get('/admin/conversations', (req, res) => {
 router.get('/admin/candidates', (req, res) => {
   try {
     const candidates = db.prepare(`
-      SELECT 
-        id, name, email, phone, profile_photo, status, level, online_status, last_seen
+      SELECT
+        id, name, email, phone, profile_photo, status, level, online_status, last_seen,
+        telegram_chat_id, preferred_contact
       FROM candidates
       WHERE status IN ('active', 'onboarding')
       ORDER BY name ASC
     `).all();
 
-    res.json({ success: true, data: candidates });
+    // Add channel availability
+    const candidatesWithChannels = candidates.map(c => ({
+      ...c,
+      channels: {
+        app: true,
+        telegram: !!c.telegram_chat_id,
+        whatsapp: false,
+      },
+    }));
+
+    res.json({ success: true, data: candidatesWithChannels });
   } catch (error) {
     res.status(500).json({ success: false, error: error.message });
   }
 });
 
 // Admin: Send message to candidate
-router.post('/admin/:candidateId/messages', (req, res) => {
+router.post('/admin/:candidateId/messages', async (req, res) => {
   try {
     const { candidateId } = req.params;
-    const { content, template_id } = req.body;
+    const { content, template_id, channel } = req.body;
 
+    // Use unified messaging service if channel is specified
+    if (channel && channel !== 'app') {
+      const result = await messaging.sendToCandidate(candidateId, content, {
+        channel,
+        templateId: template_id,
+      });
+
+      if (result.success) {
+        res.json({
+          success: true,
+          data: result.message,
+          channel: result.channel,
+        });
+      } else {
+        res.status(400).json({
+          success: false,
+          error: result.error,
+        });
+      }
+      return;
+    }
+
+    // Default: send via app (WebSocket)
     const id = Date.now();
     db.prepare(`
-      INSERT INTO messages (id, candidate_id, sender, content, template_id, read, created_at)
-      VALUES (?, ?, 'admin', ?, ?, 0, datetime('now'))
+      INSERT INTO messages (id, candidate_id, sender, content, template_id, channel, read, created_at)
+      VALUES (?, ?, 'admin', ?, ?, 'app', 0, datetime('now'))
     `).run(id, candidateId, content, template_id || null);
 
     const message = db.prepare('SELECT * FROM messages WHERE id = ?').get(id);
@@ -130,7 +178,7 @@ router.post('/admin/:candidateId/messages', (req, res) => {
       candidateId,
     });
 
-    res.json({ success: true, data: message });
+    res.json({ success: true, data: message, channel: 'app' });
   } catch (error) {
     res.status(500).json({ success: false, error: error.message });
   }

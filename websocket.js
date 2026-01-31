@@ -211,44 +211,48 @@ function handleMessage(ws, message, candidateId, isAdmin) {
 
 // ==================== CHAT FUNCTIONS ====================
 
-function sendMessageToCandidate(candidateId, content, templateId = null) {
+function sendMessageToCandidate(candidateId, content, templateId = null, channel = 'app') {
   const id = Date.now();
   db.prepare(`
-    INSERT INTO messages (id, candidate_id, sender, content, template_id, read, created_at)
-    VALUES (?, ?, 'admin', ?, ?, 0, datetime('now'))
-  `).run(id, candidateId, content, templateId);
+    INSERT INTO messages (id, candidate_id, sender, content, template_id, channel, read, created_at)
+    VALUES (?, ?, 'admin', ?, ?, ?, 0, datetime('now'))
+  `).run(id, candidateId, content, templateId, channel);
 
   const message = db.prepare('SELECT * FROM messages WHERE id = ?').get(id);
 
-  // Send to candidate if online
-  const clientWs = candidateClients.get(candidateId);
-  if (clientWs?.readyState === WebSocket.OPEN) {
-    clientWs.send(JSON.stringify({ type: EventTypes.CHAT_MESSAGE, message }));
-  } else {
-    // Queue push notification
-    createNotification(candidateId, 'chat', 'New message from WorkLink', content);
+  // Send to candidate if online (only for app channel)
+  if (channel === 'app') {
+    const clientWs = candidateClients.get(candidateId);
+    if (clientWs?.readyState === WebSocket.OPEN) {
+      clientWs.send(JSON.stringify({ type: EventTypes.CHAT_MESSAGE, message }));
+    } else {
+      // Queue push notification
+      createNotification(candidateId, 'chat', 'New message from WorkLink', content);
+    }
   }
 
   // Confirm to all admins
-  broadcastToAdmins({ type: 'message_sent', message, candidateId });
+  broadcastToAdmins({ type: 'message_sent', message, candidateId, channel });
 }
 
-function sendMessageFromCandidate(candidateId, content) {
+function sendMessageFromCandidate(candidateId, content, channel = 'app') {
   const id = Date.now();
   db.prepare(`
-    INSERT INTO messages (id, candidate_id, sender, content, read, created_at)
-    VALUES (?, ?, 'candidate', ?, 0, datetime('now'))
-  `).run(id, candidateId, content);
+    INSERT INTO messages (id, candidate_id, sender, content, channel, read, created_at)
+    VALUES (?, ?, 'candidate', ?, ?, 0, datetime('now'))
+  `).run(id, candidateId, content, channel);
 
   const message = db.prepare('SELECT * FROM messages WHERE id = ?').get(id);
 
   // Notify all admins
-  broadcastToAdmins({ type: 'new_message', message, candidateId });
+  broadcastToAdmins({ type: 'new_message', message, candidateId, channel });
 
-  // Confirm to candidate
-  const clientWs = candidateClients.get(candidateId);
-  if (clientWs?.readyState === WebSocket.OPEN) {
-    clientWs.send(JSON.stringify({ type: 'message_sent', message }));
+  // Confirm to candidate (only for app channel)
+  if (channel === 'app') {
+    const clientWs = candidateClients.get(candidateId);
+    if (clientWs?.readyState === WebSocket.OPEN) {
+      clientWs.send(JSON.stringify({ type: 'message_sent', message }));
+    }
   }
 }
 

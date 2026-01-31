@@ -27,6 +27,10 @@ const availabilityRoutes = require('./availability');
 const notificationRoutes = require('./notifications');
 const tenderMonitorRoutes = require('./tender-monitor');
 
+// Messaging & Webhooks
+const telegramWebhookRoutes = require('./webhooks/telegram');
+const messagingRoutes = require('./messaging');
+
 // Mount routes
 router.use('/auth', authRoutes);
 router.use('/candidates', candidateRoutes);
@@ -47,6 +51,10 @@ router.use('/referrals', referralRoutes);
 router.use('/availability', availabilityRoutes);
 router.use('/notifications', notificationRoutes);
 router.use('/tender-monitor', tenderMonitorRoutes);
+
+// Messaging & Webhooks
+router.use('/webhooks/telegram', telegramWebhookRoutes);
+router.use('/messaging', messagingRoutes);
 
 // API info endpoint
 router.get('/', (req, res) => {
@@ -72,6 +80,11 @@ router.get('/', (req, res) => {
       availability: '/api/v1/availability',
       notifications: '/api/v1/notifications',
       tenderMonitor: '/api/v1/tender-monitor',
+      // Messaging
+      messaging: '/api/v1/messaging',
+      webhooks: {
+        telegram: '/api/v1/webhooks/telegram',
+      },
     },
   });
 });

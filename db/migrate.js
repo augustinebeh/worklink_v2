@@ -57,6 +57,11 @@ function runMigrations() {
   // Message templates migrations
   addColumn('message_templates', 'whatsapp_content', 'TEXT');
 
+  // Messages table migrations (for multi-channel support)
+  addColumn('messages', 'channel', 'TEXT', "'app'");
+  addColumn('messages', 'external_id', 'TEXT');
+  addColumn('messages', 'external_status', 'TEXT');
+
   // Create new tables if they don't exist
   const createTables = `
     CREATE TABLE IF NOT EXISTS candidate_availability (
@@ -149,6 +154,26 @@ function runMigrations() {
       UNIQUE(candidate_id, quest_id),
       FOREIGN KEY (candidate_id) REFERENCES candidates(id),
       FOREIGN KEY (quest_id) REFERENCES quests(id)
+    );
+
+    CREATE TABLE IF NOT EXISTS telegram_verifications (
+      id INTEGER PRIMARY KEY AUTOINCREMENT,
+      candidate_id TEXT NOT NULL,
+      code TEXT NOT NULL,
+      used INTEGER DEFAULT 0,
+      expires_at DATETIME,
+      created_at DATETIME DEFAULT CURRENT_TIMESTAMP
+    );
+
+    CREATE TABLE IF NOT EXISTS telegram_groups (
+      id INTEGER PRIMARY KEY AUTOINCREMENT,
+      chat_id TEXT NOT NULL UNIQUE,
+      name TEXT,
+      description TEXT,
+      member_count INTEGER,
+      is_active INTEGER DEFAULT 1,
+      auto_post_jobs INTEGER DEFAULT 0,
+      created_at DATETIME DEFAULT CURRENT_TIMESTAMP
     );
   `;
 
