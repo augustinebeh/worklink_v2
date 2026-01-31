@@ -115,7 +115,7 @@ export default function Wallet() {
           <div className="relative">
             {/* Balance Label */}
             <div className="flex items-center gap-2 mb-2">
-              <span className="text-white/70 text-sm">Total Earned</span>
+              <span className="text-white/70 text-sm">This Month</span>
               <button onClick={() => setBalanceHidden(!balanceHidden)} className="text-white/50">
                 {balanceHidden ? <EyeOffIcon className="h-4 w-4" /> : <EyeIcon className="h-4 w-4" />}
               </button>
@@ -123,7 +123,7 @@ export default function Wallet() {
 
             {/* Balance Amount */}
             <p className="text-4xl font-bold text-white tracking-tight mb-1">
-              {balanceHidden ? '••••••' : `$${formatMoney(stats.total)}`}
+              {balanceHidden ? '••••••' : `$${formatMoney(stats.thisMonth)}`}
             </p>
             <p className="text-white/60 text-sm">SGD</p>
 
@@ -140,11 +140,11 @@ export default function Wallet() {
               </div>
               <div className="p-4 rounded-2xl bg-white/10 border border-white/10">
                 <div className="flex items-center gap-2 mb-1">
-                  <TrendingUpIcon className="h-4 w-4 text-emerald-400" />
-                  <span className="text-xs text-white/70">This Month</span>
+                  <CheckCircleIcon className="h-4 w-4 text-emerald-400" />
+                  <span className="text-xs text-white/70">Total Earned</span>
                 </div>
                 <p className="text-xl font-bold text-emerald-400">
-                  {balanceHidden ? '••••' : `$${formatMoney(stats.thisMonth)}`}
+                  {balanceHidden ? '••••' : `$${formatMoney(stats.total)}`}
                 </p>
               </div>
             </div>
