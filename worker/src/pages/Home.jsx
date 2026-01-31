@@ -14,6 +14,9 @@ import {
   HistoryIcon,
   StarIcon,
   ClockIcon,
+  TargetIcon,
+  CheckCircleIcon,
+  SwordIcon,
 } from 'lucide-react';
 import { useAuth } from '../contexts/AuthContext';
 import { useWebSocket } from '../contexts/WebSocketContext';
@@ -26,22 +29,41 @@ import {
   formatMoney,
   DEFAULT_START_TIME,
   DEFAULT_END_TIME,
-  MS_PER_DAY,
   DEFAULT_LOCALE,
-  DATE_FORMAT_MEDIUM,
+  TIMEZONE,
+  DATE_FORMAT_SHORT,
   calculateJobHours,
   DEFAULTS,
+  isToday,
+  isTomorrow,
+  getSGHour,
+  getSGDateString,
 } from '../utils/constants';
 import { iconBadgeStyles, cardStyles, textStyles } from '../utils/styles';
 
 // Quick Action Button (Crypto.com style circular)
 function QuickActionCircle({ icon: Icon, label, onClick, color = 'primary', isDark }) {
-  const colors = {
+  // Different color palettes for dark vs light mode inside the balance card
+  const darkColors = {
     primary: 'bg-primary-500/20 text-primary-400',
     green: 'bg-emerald-500/20 text-emerald-400',
     blue: 'bg-blue-500/20 text-blue-400',
-    purple: 'bg-purple-500/20 text-purple-400',
+    cyan: 'bg-cyan-500/20 text-cyan-400',
+    purple: 'bg-violet-500/20 text-violet-400',
+    orange: 'bg-orange-500/20 text-orange-400',
   };
+
+  // Light mode uses white-based circles with colored icons (inside the blue card)
+  const lightColors = {
+    primary: 'bg-white/25 text-white',
+    green: 'bg-white/25 text-emerald-100',
+    blue: 'bg-white/25 text-sky-100',
+    cyan: 'bg-white/25 text-cyan-100',
+    purple: 'bg-white/25 text-violet-100',
+    orange: 'bg-white/25 text-amber-100',
+  };
+
+  const colors = isDark ? darkColors : lightColors;
 
   return (
     <button onClick={onClick} className="flex flex-col items-center gap-2">
@@ -51,7 +73,7 @@ function QuickActionCircle({ icon: Icon, label, onClick, color = 'primary', isDa
       )}>
         <Icon className="h-6 w-6" />
       </div>
-      <span className={clsx('text-xs font-medium', isDark ? 'text-dark-300' : 'text-slate-600')}>{label}</span>
+      <span className={clsx('text-xs font-medium', 'text-white/80')}>{label}</span>
     </button>
   );
 }
@@ -64,8 +86,8 @@ function JobAssetCard({ job, isDark }) {
   const hours = calculateJobHours(startTime, endTime, job.break_minutes);
   const totalPay = hours * job.pay_rate;
   const jobDate = new Date(job.job_date);
-  const isJobToday = jobDate.toDateString() === new Date().toDateString();
-  const isJobTomorrow = jobDate.toDateString() === new Date(Date.now() + MS_PER_DAY).toDateString();
+  const isJobToday = isToday(job.job_date);
+  const isJobTomorrow = isTomorrow(job.job_date);
 
   return (
     <Link
@@ -74,13 +96,13 @@ function JobAssetCard({ job, isDark }) {
         'flex items-center gap-4 p-4 rounded-2xl border transition-all active:scale-[0.99]',
         isDark
           ? 'bg-dark-900/80 border-white/5 hover:border-primary-500/30'
-          : 'bg-white border-slate-200 hover:border-primary-500/30 shadow-sm'
+          : 'bg-white border-slate-200/60 hover:border-primary-500/30 shadow-sm hover:shadow-md'
       )}
     >
       {/* Job Icon */}
       <div className={clsx(
         'w-12 h-12 rounded-xl flex items-center justify-center flex-shrink-0',
-        job.featured ? 'bg-gradient-to-br from-primary-500 to-violet-500' : isDark ? 'bg-dark-800' : 'bg-slate-100'
+        job.featured ? 'bg-gradient-to-br from-primary-500 to-cyan-500' : isDark ? 'bg-dark-800' : 'bg-slate-100'
       )}>
         <BriefcaseIcon className={clsx('h-6 w-6', job.featured ? 'text-white' : isDark ? 'text-white' : 'text-slate-600')} />
       </div>
@@ -95,7 +117,7 @@ function JobAssetCard({ job, isDark }) {
         </div>
         <div className="flex items-center gap-2 mt-1">
           <span className={clsx('text-sm', isDark ? 'text-dark-400' : 'text-slate-500')}>
-            {isJobToday ? 'Today' : isJobTomorrow ? 'Tomorrow' : jobDate.toLocaleDateString(DEFAULT_LOCALE, { day: 'numeric', month: 'short' })}
+            {isJobToday ? 'Today' : isJobTomorrow ? 'Tomorrow' : jobDate.toLocaleDateString(DEFAULT_LOCALE, { day: 'numeric', month: 'short', timeZone: TIMEZONE })}
           </span>
           <span className={isDark ? 'text-dark-600' : 'text-slate-300'}>•</span>
           <span className={clsx('text-sm', isDark ? 'text-dark-400' : 'text-slate-500')}>{startTime}</span>
@@ -114,6 +136,86 @@ function JobAssetCard({ job, isDark }) {
         <p className="text-xs text-emerald-500">+{hours.toFixed(1)}h</p>
       </div>
     </Link>
+  );
+}
+
+// Quest Preview Item
+function QuestPreviewItem({ quest, isDark, onNavigate }) {
+  const progress = quest.target > 0 ? (quest.progress / quest.target) * 100 : 0;
+  const isClaimable = quest.status === 'claimable';
+  const isClaimed = quest.status === 'claimed';
+
+  return (
+    <button
+      onClick={onNavigate}
+      className={clsx(
+        'w-full flex items-center gap-3 p-3 rounded-xl border text-left transition-all active:scale-[0.98]',
+        isClaimed
+          ? (isDark ? 'bg-dark-800/30 border-white/5 opacity-60' : 'bg-slate-100/50 border-slate-200 opacity-60')
+          : isClaimable
+            ? 'bg-gold-900/20 border-gold-500/30'
+            : isDark
+              ? 'bg-dark-800/50 border-white/5'
+              : 'bg-white border-slate-200'
+      )}
+    >
+      {/* Icon */}
+      <div className={clsx(
+        'w-10 h-10 rounded-lg flex items-center justify-center flex-shrink-0',
+        isClaimed
+          ? 'bg-accent-500/20'
+          : isClaimable
+            ? 'bg-gold-500/20'
+            : 'bg-primary-500/20'
+      )}>
+        {isClaimed ? (
+          <CheckCircleIcon className="h-5 w-5 text-accent-400" />
+        ) : isClaimable ? (
+          <GiftIcon className="h-5 w-5 text-gold-400" />
+        ) : (
+          <TargetIcon className="h-5 w-5 text-primary-400" />
+        )}
+      </div>
+
+      {/* Content */}
+      <div className="flex-1 min-w-0">
+        <p className={clsx(
+          'font-medium truncate text-sm',
+          isClaimed
+            ? (isDark ? 'text-dark-500 line-through' : 'text-slate-400 line-through')
+            : (isDark ? 'text-white' : 'text-slate-900')
+        )}>
+          {quest.title}
+        </p>
+        {!isClaimed && quest.target > 1 && (
+          <div className="flex items-center gap-2 mt-1">
+            <div className={clsx('flex-1 h-1.5 rounded-full overflow-hidden', isDark ? 'bg-dark-700' : 'bg-slate-200')}>
+              <div
+                className={clsx('h-full rounded-full', isClaimable ? 'bg-gold-500' : 'bg-primary-500')}
+                style={{ width: `${Math.min(progress, 100)}%` }}
+              />
+            </div>
+            <span className={clsx('text-xs', isDark ? 'text-dark-400' : 'text-slate-500')}>
+              {quest.progress}/{quest.target}
+            </span>
+          </div>
+        )}
+        {isClaimable && (
+          <p className="text-xs text-gold-400 mt-0.5">Ready to claim!</p>
+        )}
+      </div>
+
+      {/* XP Reward */}
+      <div className={clsx(
+        'flex items-center gap-1 px-2 py-1 rounded-lg text-xs font-medium',
+        isClaimed
+          ? (isDark ? 'bg-dark-700 text-dark-500' : 'bg-slate-100 text-slate-400')
+          : 'bg-primary-500/20 text-primary-400'
+      )}>
+        <ZapIcon className="h-3 w-3" />
+        <span>+{quest.xp_reward}</span>
+      </div>
+    </button>
   );
 }
 
@@ -154,6 +256,7 @@ export default function Home() {
   const toast = useToast();
   const [jobs, setJobs] = useState([]);
   const [recentPayments, setRecentPayments] = useState([]);
+  const [quests, setQuests] = useState([]);
   const [thisMonthEarnings, setThisMonthEarnings] = useState(0);
   const [loading, setLoading] = useState(true);
   const [balanceHidden, setBalanceHidden] = useState(false);
@@ -199,13 +302,15 @@ export default function Home() {
 
   const fetchData = async () => {
     try {
-      const [jobsRes, paymentsRes] = await Promise.all([
+      const [jobsRes, paymentsRes, questsRes] = await Promise.all([
         fetch('/api/v1/jobs?status=open&limit=5'),
         user ? fetch(`/api/v1/payments?candidate_id=${user.id}&limit=3`) : Promise.resolve({ json: () => ({ data: [] }) }),
+        user ? fetch(`/api/v1/gamification/quests/user/${user.id}`) : Promise.resolve({ json: () => ({ data: [] }) }),
       ]);
 
       const jobsData = await jobsRes.json();
       const paymentsData = await paymentsRes.json();
+      const questsData = await questsRes.json();
 
       if (jobsData.success) {
         const sorted = [...jobsData.data].sort((a, b) => (b.featured || 0) - (a.featured || 0));
@@ -214,15 +319,27 @@ export default function Home() {
 
       if (paymentsData.success) {
         setRecentPayments(paymentsData.data?.slice(0, 3) || []);
-        // Calculate this month's earnings
-        const now = new Date();
+        // Calculate this month's earnings (Singapore timezone)
+        const nowSG = getSGDateString();
+        const currentMonth = nowSG.substring(0, 7); // YYYY-MM
         const monthlyTotal = (paymentsData.data || [])
           .filter(p => {
-            const date = new Date(p.created_at);
-            return p.status === 'paid' && date.getMonth() === now.getMonth() && date.getFullYear() === now.getFullYear();
+            const paymentMonth = getSGDateString(p.created_at).substring(0, 7);
+            return p.status === 'paid' && paymentMonth === currentMonth;
           })
           .reduce((sum, p) => sum + p.total_amount, 0);
         setThisMonthEarnings(monthlyTotal);
+      }
+
+      if (questsData.success) {
+        // Sort: claimable first, then in_progress, then available, exclude claimed
+        const sorted = (questsData.data || [])
+          .filter(q => q.status !== 'claimed')
+          .sort((a, b) => {
+            const order = { claimable: 0, in_progress: 1, available: 2 };
+            return (order[a.status] ?? 3) - (order[b.status] ?? 3);
+          });
+        setQuests(sorted.slice(0, 3)); // Show top 3 quests
       }
     } catch (error) {
       toast.error('Failed to load', 'Pull down to refresh');
@@ -232,7 +349,15 @@ export default function Home() {
   };
 
   // Safe user data with defaults
-  const userName = user?.name?.split(' ')[0] || DEFAULTS.userName;
+  const userName = user?.name || DEFAULTS.userName;
+
+  // Time-based greeting (Singapore timezone)
+  const getGreeting = () => {
+    const hour = getSGHour();
+    if (hour < 12) return 'Good Morning!';
+    if (hour < 17) return 'Good Afternoon!';
+    return 'Good Evening!';
+  };
   const userXP = user?.xp || DEFAULTS.xp;
   const userLevel = calculateLevel(userXP);
   const userStreak = user?.streak_days || DEFAULTS.streakDays;
@@ -248,12 +373,12 @@ export default function Home() {
   const progress = userLevel >= maxLevel ? 100 : Math.min((xpInLevel / xpNeeded) * 100, 100);
 
   return (
-    <div className={clsx('min-h-screen pb-24', isDark ? 'bg-dark-950' : 'bg-slate-50')}>
+    <div className={clsx('min-h-screen pb-24', isDark ? 'bg-dark-950' : 'bg-transparent')}>
       {/* Welcome Banner */}
       <div className="px-4 pt-4 pb-2">
         <div className="flex items-center justify-between">
           <div>
-            <p className={clsx('text-sm', isDark ? 'text-dark-400' : 'text-slate-500')}>Welcome back</p>
+            <p className={clsx('text-sm font-medium', isDark ? 'text-primary-400' : 'text-primary-600')}>{getGreeting()}</p>
             <p className={clsx('font-semibold text-lg', isDark ? 'text-white' : 'text-slate-900')}>{userName}</p>
           </div>
           <div className="flex items-center gap-1.5 px-3 py-1.5 rounded-full bg-primary-500/20 border border-primary-500/30">
@@ -266,14 +391,14 @@ export default function Home() {
       {/* Balance Card - Crypto.com style */}
       <div className="px-4 py-6">
         <div className={clsx(
-          'relative overflow-hidden rounded-3xl p-6 border',
+          'relative overflow-hidden rounded-3xl p-6',
           isDark
-            ? 'bg-gradient-to-br from-[#0a1628] via-[#0d1f3c] to-[#1a1a3e] border-white/5'
-            : 'bg-gradient-to-br from-primary-600 via-primary-700 to-violet-700 border-primary-500/20'
+            ? 'bg-gradient-to-br from-[#0a1628] via-[#0d1f3c] to-[#0f2847] border border-white/5'
+            : 'bg-gradient-to-br from-[#7dd3fc] via-[#38bdf8] to-[#0ea5e9] shadow-lg shadow-sky-500/25'
         )}>
           {/* Background decoration */}
           <div className="absolute top-0 right-0 w-64 h-64 bg-primary-500/10 rounded-full blur-3xl -translate-y-1/2 translate-x-1/2" />
-          <div className="absolute bottom-0 left-0 w-48 h-48 bg-violet-500/10 rounded-full blur-3xl translate-y-1/2 -translate-x-1/2" />
+          <div className="absolute bottom-0 left-0 w-48 h-48 bg-cyan-500/10 rounded-full blur-3xl translate-y-1/2 -translate-x-1/2" />
 
           <div className="relative">
             {/* This Month Label */}
@@ -306,11 +431,11 @@ export default function Home() {
             <div className="mb-6">
               <div className="flex items-center justify-between text-sm mb-2">
                 <span className="text-white/70">{levelTitles[userLevel]}</span>
-                <span className="text-primary-300">{xpInLevel.toLocaleString()} / {xpNeeded.toLocaleString()} XP</span>
+                <span className="text-cyan-300">{xpInLevel.toLocaleString()} / {xpNeeded.toLocaleString()} XP</span>
               </div>
               <div className="h-2 bg-white/20 rounded-full overflow-hidden">
                 <div
-                  className="h-full bg-gradient-to-r from-primary-400 to-violet-400 rounded-full transition-all duration-500"
+                  className="h-full bg-gradient-to-r from-primary-400 to-cyan-400 rounded-full transition-all duration-500"
                   style={{ width: `${progress}%` }}
                 />
               </div>
@@ -343,7 +468,7 @@ export default function Home() {
                 icon={HistoryIcon}
                 label="History"
                 onClick={() => navigate('/wallet')}
-                color="purple"
+                color="cyan"
                 isDark={true}
               />
             </div>
@@ -354,12 +479,15 @@ export default function Home() {
       {/* Streak Banner */}
       {userStreak > 0 && (
         <div className="px-4 mb-4">
-          <div className={clsx(
-            'flex items-center gap-3 p-3 rounded-2xl border',
-            isDark
-              ? 'bg-gradient-to-r from-orange-900/30 to-amber-900/20 border-orange-500/20'
-              : 'bg-gradient-to-r from-orange-100 to-amber-50 border-orange-200'
-          )}>
+          <Link
+            to="/achievements"
+            className={clsx(
+              'flex items-center gap-3 p-3 rounded-2xl border transition-all active:scale-[0.98]',
+              isDark
+                ? 'bg-gradient-to-r from-orange-900/30 to-amber-900/20 border-orange-500/20'
+                : 'bg-gradient-to-r from-orange-100 to-amber-50 border-orange-200'
+            )}
+          >
             <div className="w-10 h-10 rounded-full bg-orange-500/20 flex items-center justify-center">
               <FlameIcon className="h-5 w-5 text-orange-400" />
             </div>
@@ -368,6 +496,33 @@ export default function Home() {
               <p className="text-xs text-orange-500">Keep it going for bonus XP</p>
             </div>
             <ChevronRightIcon className={clsx('h-5 w-5', isDark ? 'text-dark-500' : 'text-slate-400')} />
+          </Link>
+        </div>
+      )}
+
+      {/* Daily Quests Section */}
+      {quests.length > 0 && (
+        <div className="px-4 mb-6">
+          <div className="flex items-center justify-between mb-3">
+            <div className="flex items-center gap-2">
+              <SwordIcon className={clsx('h-5 w-5', isDark ? 'text-primary-400' : 'text-primary-500')} />
+              <h2 className={clsx('text-lg font-semibold', isDark ? 'text-white' : 'text-slate-900')}>Daily Quests</h2>
+            </div>
+            <Link to="/quests" className="flex items-center gap-1 text-sm text-primary-500">
+              View all
+              <ChevronRightIcon className="h-4 w-4" />
+            </Link>
+          </div>
+
+          <div className="space-y-2">
+            {quests.map(quest => (
+              <QuestPreviewItem
+                key={quest.id}
+                quest={quest}
+                isDark={isDark}
+                onNavigate={() => navigate('/quests')}
+              />
+            ))}
           </div>
         </div>
       )}
@@ -427,7 +582,7 @@ export default function Home() {
                   title={payment.job_title || 'Job Payment'}
                   subtitle={payment.status === 'paid' ? 'Completed' : 'Processing'}
                   amount={payment.total_amount}
-                  time={new Date(payment.created_at).toLocaleDateString('en-SG', { day: 'numeric', month: 'short' })}
+                  time={new Date(payment.created_at).toLocaleDateString(DEFAULT_LOCALE, { day: 'numeric', month: 'short', timeZone: TIMEZONE })}
                   positive={payment.status === 'paid'}
                   isDark={isDark}
                 />

@@ -19,12 +19,14 @@ import {
   MoonIcon,
   SettingsIcon,
   CameraIcon,
+  SparklesIcon,
+  CircleIcon,
 } from 'lucide-react';
 import { useToast } from '../components/ui/Toast';
 import { useAuth } from '../contexts/AuthContext';
 import { useTheme } from '../contexts/ThemeContext';
 import { clsx } from 'clsx';
-import { XP_THRESHOLDS as xpThresholds, LEVEL_TITLES as levelTitles, calculateLevel } from '../utils/gamification';
+import { XP_THRESHOLDS as xpThresholds, LEVEL_TITLES as levelTitles, calculateLevel, getLevelTier, LEVEL_TIERS } from '../utils/gamification';
 import { DEFAULTS } from '../utils/constants';
 
 function StatItem({ icon: Icon, label, value, color = 'primary' }) {
@@ -49,6 +51,100 @@ function StatItem({ icon: Icon, label, value, color = 'primary' }) {
         <p className={clsx('font-semibold', isDark ? 'text-white' : 'text-slate-900')}>{value}</p>
       </div>
     </div>
+  );
+}
+
+// Border preview for customization
+function BorderPreview({ tier, isLocked, isSelected, onClick, level }) {
+  const { isDark } = useTheme();
+
+  const getTierStyles = () => {
+    switch (tier) {
+      case 'mythic':
+        return {
+          gradient: 'bg-gradient-to-br from-rose-400 via-pink-500 to-rose-600',
+          glow: isSelected ? 'shadow-lg shadow-rose-500/50' : '',
+          label: 'Mythic',
+          minLevel: 50,
+        };
+      case 'diamond':
+        return {
+          gradient: 'bg-gradient-to-br from-violet-400 via-purple-500 to-fuchsia-600',
+          glow: isSelected ? 'shadow-lg shadow-violet-500/40' : '',
+          label: 'Diamond',
+          minLevel: 40,
+        };
+      case 'platinum':
+        return {
+          gradient: 'bg-gradient-to-br from-cyan-300 via-cyan-500 to-teal-600',
+          glow: isSelected ? 'shadow-md shadow-cyan-500/30' : '',
+          label: 'Platinum',
+          minLevel: 30,
+        };
+      case 'gold':
+        return {
+          gradient: 'bg-gradient-to-br from-yellow-300 via-yellow-500 to-amber-600',
+          glow: isSelected ? 'shadow-md shadow-yellow-500/30' : '',
+          label: 'Gold',
+          minLevel: 20,
+        };
+      case 'silver':
+        return {
+          gradient: 'bg-gradient-to-br from-slate-200 via-slate-400 to-slate-500',
+          glow: isSelected ? 'shadow-sm shadow-slate-400/20' : '',
+          label: 'Silver',
+          minLevel: 10,
+        };
+      default: // bronze
+        return {
+          gradient: 'bg-gradient-to-br from-amber-500 via-amber-700 to-amber-900',
+          glow: '',
+          label: 'Bronze',
+          minLevel: 1,
+        };
+    }
+  };
+
+  const styles = getTierStyles();
+
+  return (
+    <button
+      onClick={onClick}
+      disabled={isLocked}
+      className={clsx(
+        'flex flex-col items-center gap-2 p-3 rounded-xl transition-all',
+        isSelected && !isLocked && (isDark ? 'bg-primary-500/20 ring-2 ring-primary-500' : 'bg-primary-100 ring-2 ring-primary-500'),
+        !isSelected && !isLocked && (isDark ? 'bg-dark-800/50 hover:bg-dark-700/50' : 'bg-white hover:bg-slate-50 border border-slate-200'),
+        isLocked && 'opacity-50 cursor-not-allowed'
+      )}
+    >
+      {/* Border preview circle */}
+      <div className={clsx(
+        'w-12 h-12 rounded-full p-[3px]',
+        styles.gradient,
+        styles.glow
+      )}>
+        <div className={clsx(
+          'w-full h-full rounded-full flex items-center justify-center',
+          isDark ? 'bg-dark-900' : 'bg-white'
+        )}>
+          {isLocked ? (
+            <span className={clsx('text-xs', isDark ? 'text-dark-500' : 'text-slate-400')}>Lv.{styles.minLevel}</span>
+          ) : (
+            <span className={clsx('text-sm font-bold', isDark ? 'text-white' : 'text-slate-700')}>{level}</span>
+          )}
+        </div>
+      </div>
+      <span className={clsx(
+        'text-xs font-medium',
+        isLocked ? (isDark ? 'text-dark-500' : 'text-slate-400') : (isDark ? 'text-white' : 'text-slate-700')
+      )}>
+        {styles.label}
+      </span>
+      {isSelected && !isLocked && (
+        <CheckIcon className="h-4 w-4 text-primary-500" />
+      )}
+    </button>
   );
 }
 
@@ -83,8 +179,27 @@ function MenuLink({ icon: Icon, label, sublabel, onClick, danger, rightElement }
   );
 }
 
-function ThemeToggleButton() {
+function ThemeToggleButton({ compact = false }) {
   const { toggleTheme, isDark } = useTheme();
+
+  if (compact) {
+    return (
+      <button
+        onClick={toggleTheme}
+        className={clsx(
+          'p-1.5 rounded-lg transition-colors',
+          isDark ? 'bg-dark-700 hover:bg-dark-600' : 'bg-slate-200 hover:bg-slate-300'
+        )}
+        aria-label={isDark ? 'Switch to light mode' : 'Switch to dark mode'}
+      >
+        {isDark ? (
+          <SunIcon className="h-4 w-4 text-amber-400" />
+        ) : (
+          <MoonIcon className="h-4 w-4 text-slate-600" />
+        )}
+      </button>
+    );
+  }
 
   return (
     <button
@@ -161,25 +276,77 @@ function XPProgressBar({ currentXP }) {
   );
 }
 
-function LevelBadgeSimple({ level }) {
+function LevelBadgeSimple({ level, size = 'md' }) {
   const safeLevel = level || 1;
+  const tier = getLevelTier(safeLevel);
 
-  // Tier-based styling
-  const getBadgeStyle = () => {
-    if (safeLevel >= 40) return 'bg-gradient-to-br from-violet-400 via-violet-500 to-violet-600 text-white'; // Diamond
-    if (safeLevel >= 30) return 'bg-gradient-to-br from-cyan-400 via-cyan-500 to-cyan-600 text-white'; // Platinum
-    if (safeLevel >= 20) return 'bg-gradient-to-br from-yellow-400 via-yellow-500 to-yellow-600 text-dark-900'; // Gold
-    if (safeLevel >= 10) return 'bg-gradient-to-br from-slate-300 via-slate-400 to-slate-500 text-dark-900'; // Silver
-    return 'bg-gradient-to-br from-amber-600 via-amber-700 to-amber-800 text-white'; // Bronze
+  // Tier-based styling with glow effects
+  const getTierStyles = () => {
+    switch (tier) {
+      case 'mythic':
+        return {
+          gradient: 'bg-gradient-to-br from-rose-400 via-pink-500 to-rose-600',
+          glow: 'shadow-lg shadow-rose-500/50',
+          ring: 'ring-2 ring-rose-300/50',
+          text: 'text-white',
+          animation: 'animate-pulse',
+        };
+      case 'diamond':
+        return {
+          gradient: 'bg-gradient-to-br from-violet-400 via-purple-500 to-fuchsia-600',
+          glow: 'shadow-lg shadow-violet-500/40',
+          ring: 'ring-2 ring-violet-300/50',
+          text: 'text-white',
+          animation: '',
+        };
+      case 'platinum':
+        return {
+          gradient: 'bg-gradient-to-br from-cyan-300 via-cyan-500 to-teal-600',
+          glow: 'shadow-md shadow-cyan-500/30',
+          ring: 'ring-2 ring-cyan-200/40',
+          text: 'text-white',
+          animation: '',
+        };
+      case 'gold':
+        return {
+          gradient: 'bg-gradient-to-br from-yellow-300 via-yellow-500 to-amber-600',
+          glow: 'shadow-md shadow-yellow-500/30',
+          ring: 'ring-2 ring-yellow-200/40',
+          text: 'text-amber-900',
+          animation: '',
+        };
+      case 'silver':
+        return {
+          gradient: 'bg-gradient-to-br from-slate-200 via-slate-400 to-slate-500',
+          glow: 'shadow-sm shadow-slate-400/20',
+          ring: 'ring-1 ring-slate-300/30',
+          text: 'text-slate-800',
+          animation: '',
+        };
+      default: // bronze
+        return {
+          gradient: 'bg-gradient-to-br from-amber-500 via-amber-700 to-amber-900',
+          glow: '',
+          ring: 'ring-1 ring-amber-400/30',
+          text: 'text-amber-100',
+          animation: '',
+        };
+    }
   };
 
+  const styles = getTierStyles();
+  const sizeClasses = size === 'sm' ? 'h-8 w-8 text-xs' : size === 'lg' ? 'h-12 w-12 text-base' : 'h-10 w-10 text-sm';
+
   return (
-    <div
-      className={clsx(
-        'flex items-center justify-center rounded-full font-bold h-10 w-10 text-sm',
-        getBadgeStyle()
-      )}
-    >
+    <div className={clsx(
+      'relative flex items-center justify-center rounded-full font-bold',
+      sizeClasses,
+      styles.gradient,
+      styles.glow,
+      styles.ring,
+      styles.text,
+      styles.animation
+    )}>
       {safeLevel}
     </div>
   );
@@ -339,10 +506,6 @@ export default function Profile() {
           ? 'bg-gradient-to-b from-primary-900/30 to-dark-950'
           : 'bg-gradient-to-b from-primary-100 to-slate-50'
       )}>
-        <div className="flex items-center justify-end mb-4">
-          <ThemeToggleButton />
-        </div>
-
         {/* Profile card */}
         <div className="flex items-center gap-4">
           {/* Avatar with photo upload */}
@@ -375,7 +538,10 @@ export default function Profile() {
           </div>
 
           <div className="flex-1">
-            <h2 className={clsx('text-xl font-bold', isDark ? 'text-white' : 'text-slate-900')}>{userName}</h2>
+            <div className="flex items-center justify-between">
+              <h2 className={clsx('text-xl font-bold', isDark ? 'text-white' : 'text-slate-900')}>{userName}</h2>
+              <ThemeToggleButton compact />
+            </div>
             <p className="text-primary-400 text-sm">{levelTitles[userLevel] || 'Newcomer'}</p>
             <div className="flex items-center gap-2 mt-1">
               <StarIcon className="h-4 w-4 text-gold-400 fill-gold-400" />
@@ -398,6 +564,40 @@ export default function Profile() {
           <StatItem icon={ZapIcon} label="Total XP" value={userXP.toLocaleString()} color="accent" />
           <StatItem icon={TrophyIcon} label="Achievements" value={achievements.length} color="gold" />
           <StatItem icon={ClockIcon} label="Streak" value={`${streakDays} days`} color="primary" />
+        </div>
+
+        {/* Profile Border Customization */}
+        <div>
+          <div className="flex items-center gap-2 mb-3">
+            <SparklesIcon className={clsx('h-5 w-5', isDark ? 'text-primary-400' : 'text-primary-500')} />
+            <h3 className={clsx('text-lg font-semibold', isDark ? 'text-white' : 'text-slate-900')}>Profile Border</h3>
+          </div>
+          <p className={clsx('text-sm mb-3', isDark ? 'text-dark-400' : 'text-slate-500')}>
+            Unlock premium borders by leveling up. Your current tier: <span className="font-semibold text-primary-400">{getLevelTier(userLevel).charAt(0).toUpperCase() + getLevelTier(userLevel).slice(1)}</span>
+          </p>
+          <div className="grid grid-cols-3 gap-2">
+            {['bronze', 'silver', 'gold', 'platinum', 'diamond', 'mythic'].map((tier) => {
+              const tierData = LEVEL_TIERS[tier];
+              const isLocked = userLevel < tierData.min;
+              const currentTier = getLevelTier(userLevel);
+              const isSelected = currentTier === tier;
+
+              return (
+                <BorderPreview
+                  key={tier}
+                  tier={tier}
+                  isLocked={isLocked}
+                  isSelected={isSelected}
+                  level={userLevel}
+                  onClick={() => {
+                    if (!isLocked) {
+                      toast.info('Border Applied', `Using ${tier.charAt(0).toUpperCase() + tier.slice(1)} border`);
+                    }
+                  }}
+                />
+              );
+            })}
+          </div>
         </div>
 
         {/* Referral Code */}
