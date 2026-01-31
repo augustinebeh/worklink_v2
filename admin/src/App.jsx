@@ -24,6 +24,7 @@ import Chat from './pages/Chat';
 import AIAutomation from './pages/AIAutomation';
 import Training from './pages/Training';
 import Gamification from './pages/Gamification';
+import TenderMonitor from './pages/TenderMonitor';
 
 // Protected Route wrapper
 function ProtectedRoute({ children }) {
@@ -78,6 +79,7 @@ function AppRoutes() {
         
         {/* BPO */}
         <Route path="bpo" element={<BPODashboard />} />
+        <Route path="tender-monitor" element={<TenderMonitor />} />
         <Route path="ai-automation" element={<AIAutomation />} />
         
         {/* Clients */}

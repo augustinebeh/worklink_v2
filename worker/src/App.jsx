@@ -17,6 +17,7 @@ import Achievements from './pages/Achievements';
 import Leaderboard from './pages/Leaderboard';
 import Training from './pages/Training';
 import Notifications from './pages/Notifications';
+import Referrals from './pages/Referrals';
 
 function AppLayout({ children }) {
   return (
@@ -63,6 +64,9 @@ function AppRoutes() {
       <Route path="/achievements" element={<AppLayout><Achievements /></AppLayout>} />
       <Route path="/leaderboard" element={<AppLayout><Leaderboard /></AppLayout>} />
       <Route path="/training" element={<AppLayout><Training /></AppLayout>} />
+      
+      {/* New: Referrals */}
+      <Route path="/referrals" element={<AppLayout><Referrals /></AppLayout>} />
       
       {/* Catch all */}
       <Route path="*" element={<Navigate to="/" replace />} />

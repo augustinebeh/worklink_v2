@@ -15,13 +15,13 @@ import {
   Building2Icon,
   SearchIcon,
   ChevronDownIcon,
-  ChevronRightIcon,
   XIcon,
   DollarSignIcon,
   TrendingUpIcon,
   TargetIcon,
   BotIcon,
-  SparklesIcon,
+  BellIcon,
+  RssIcon,
 } from 'lucide-react';
 import { clsx } from 'clsx';
 
@@ -47,8 +47,8 @@ const navigation = [
     icon: TargetIcon,
     children: [
       { name: 'Tender Dashboard', href: '/bpo', icon: SearchIcon },
-      { name: 'AI Automation', href: '/ai-automation', icon: BotIcon, highlight: true },
-      { name: 'All Tenders', href: '/tenders', icon: FileTextIcon },
+      { name: 'Tender Monitor', href: '/tender-monitor', icon: BellIcon, highlight: true },
+      { name: 'AI Automation', href: '/ai-automation', icon: BotIcon },
       { name: 'Clients', href: '/clients', icon: Building2Icon },
     ],
   },
@@ -65,21 +65,19 @@ const navigation = [
     name: 'Insights',
     icon: BarChart3Icon,
     children: [
-      { name: 'Financials', href: '/financials', icon: DollarSignIcon, highlight: true },
+      { name: 'Financials', href: '/financials', icon: DollarSignIcon },
       { name: 'Analytics', href: '/analytics', icon: TrendingUpIcon },
       { name: 'Settings', href: '/settings', icon: SettingsIcon },
     ],
   },
 ];
 
-function NavItem({ item, collapsed, depth = 0 }) {
+function NavItem({ item, collapsed }) {
   const location = useLocation();
   const [isOpen, setIsOpen] = useState(true);
   const hasChildren = item.children && item.children.length > 0;
   
-  // Check if any child is active
   const isChildActive = hasChildren && item.children.some(child => location.pathname === child.href);
-  const isActive = location.pathname === item.href;
 
   if (hasChildren) {
     return (
@@ -167,17 +165,17 @@ export default function Sidebar({ collapsed, onClose, isMobile }) {
         {!collapsed && (
           <div className="flex items-center gap-2">
             <div className="h-8 w-8 rounded-lg bg-gradient-to-br from-primary-500 to-primary-700 flex items-center justify-center">
-              <span className="text-white font-bold text-sm">TV</span>
+              <span className="text-white font-bold text-sm">WL</span>
             </div>
             <div>
-              <h1 className="text-lg font-bold text-slate-900 dark:text-white">TalentVis</h1>
-              <p className="text-2xs text-slate-500 dark:text-slate-400 -mt-0.5">Command Center</p>
+              <h1 className="text-lg font-bold text-slate-900 dark:text-white">WorkLink</h1>
+              <p className="text-2xs text-slate-500 dark:text-slate-400 -mt-0.5">Admin Portal</p>
             </div>
           </div>
         )}
         {collapsed && (
           <div className="mx-auto h-8 w-8 rounded-lg bg-gradient-to-br from-primary-500 to-primary-700 flex items-center justify-center">
-            <span className="text-white font-bold text-sm">TV</span>
+            <span className="text-white font-bold text-sm">WL</span>
           </div>
         )}
         {isMobile && onClose && (
@@ -202,10 +200,10 @@ export default function Sidebar({ collapsed, onClose, isMobile }) {
         {!collapsed && (
           <div className="px-3 py-2 rounded-lg bg-slate-50 dark:bg-slate-800/50">
             <p className="text-xs text-slate-500 dark:text-slate-400">
-              TalentVis Platform v2.0
+              WorkLink Platform v2.0
             </p>
             <p className="text-2xs text-slate-400 dark:text-slate-500 mt-0.5">
-              © 2025 TalentVis Singapore
+              © 2025 WorkLink Singapore
             </p>
           </div>
         )}

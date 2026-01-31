@@ -325,6 +325,7 @@ export default function Profile() {
 
         {/* Menu items */}
         <div className="space-y-2">
+          <MenuLink icon={ShareIcon} label="Refer & Earn" onClick={() => navigate('/referrals')} />
           <MenuLink icon={AwardIcon} label="Achievements" onClick={() => navigate('/achievements')} />
           <MenuLink icon={TrophyIcon} label="Leaderboard" onClick={() => navigate('/leaderboard')} />
           <MenuLink icon={LogOutIcon} label="Log Out" onClick={handleLogout} danger />
