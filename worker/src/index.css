@@ -104,30 +104,21 @@
   }
 
   body {
-    /* No pull-to-refresh, no rubber-banding, no swipe-back */
+    /* No pull-to-refresh, no rubber-banding */
     overscroll-behavior: none;
-    overscroll-behavior-x: none;
-    overscroll-behavior-y: none;
     /* No horizontal scroll */
     overflow-x: hidden;
+    overflow-y: auto;
     /* Full height */
     min-height: 100vh;
     min-height: 100dvh;
-    /* Prevent body scroll issues */
-    position: fixed;
-    width: 100%;
-    height: 100%;
+    margin: 0;
+    padding: 0;
   }
 
   #root {
-    /* Full dimensions when body is fixed */
-    height: 100%;
-    width: 100%;
-    /* Enable scrolling */
-    overflow-y: auto;
-    overflow-x: hidden;
-    /* Smooth iOS scrolling */
-    -webkit-overflow-scrolling: touch;
+    min-height: 100vh;
+    min-height: 100dvh;
   }
 
   /* Hide scrollbar but keep functionality */
@@ -140,30 +131,6 @@
     scrollbar-width: none;
   }
 
-  /* iOS status bar fix */
-  @supports (padding-top: env(safe-area-inset-top)) {
-    html.dark body::before {
-      content: '';
-      position: fixed;
-      top: 0;
-      left: 0;
-      right: 0;
-      height: env(safe-area-inset-top);
-      background-color: #020617;
-      z-index: 9999;
-    }
-
-    html.light body::before {
-      content: '';
-      position: fixed;
-      top: 0;
-      left: 0;
-      right: 0;
-      height: env(safe-area-inset-top);
-      background-color: #f8fafc;
-      z-index: 9999;
-    }
-  }
 }
 
 @layer components {
