@@ -1,10 +1,10 @@
 import { useState, useEffect, useRef, useCallback } from 'react';
-import { 
-  Search, 
-  Send, 
-  Smile, 
-  MoreVertical, 
-  Check, 
+import {
+  Search,
+  Send,
+  Smile,
+  MoreVertical,
+  Check,
   CheckCheck,
   Circle,
   Clock,
@@ -19,24 +19,30 @@ import EmojiPicker from 'emoji-picker-react';
 
 // Message bubble component
 function MessageBubble({ message, isOwn }) {
-  const time = new Date(message.created_at).toLocaleTimeString('en-SG', { 
-    hour: '2-digit', 
+  const time = new Date(message.created_at).toLocaleTimeString('en-SG', {
+    hour: '2-digit',
     minute: '2-digit',
-    hour12: true 
+    hour12: true
   });
+
+  // Show channel indicator for telegram messages
+  const channelBadge = message.channel === 'telegram' && (
+    <span className="text-xs opacity-50 ml-1">via Telegram</span>
+  );
 
   return (
     <div className={`flex ${isOwn ? 'justify-end' : 'justify-start'} mb-2`}>
       <div className={`max-w-[70%] px-4 py-2 rounded-2xl ${
-        isOwn 
-          ? 'bg-primary-600 text-white rounded-br-md' 
+        isOwn
+          ? 'bg-primary-600 text-white rounded-br-md'
           : 'bg-dark-700 text-white rounded-bl-md'
       }`}>
         <p className="whitespace-pre-wrap break-words">{message.content}</p>
         <div className={`flex items-center gap-1 mt-1 ${isOwn ? 'justify-end' : 'justify-start'}`}>
           <span className="text-xs opacity-60">{time}</span>
+          {channelBadge}
           {isOwn && (
-            message.read 
+            message.read
               ? <CheckCheck className="h-3 w-3 text-blue-300" />
               : <Check className="h-3 w-3 opacity-60" />
           )}
@@ -49,9 +55,9 @@ function MessageBubble({ message, isOwn }) {
 // Conversation item in sidebar
 function ConversationItem({ conversation, active, onClick }) {
   const isOnline = conversation.online_status === 'online';
-  const lastSeen = conversation.last_seen 
-    ? new Date(conversation.last_seen).toLocaleString('en-SG', { 
-        hour: '2-digit', 
+  const lastSeen = conversation.last_seen
+    ? new Date(conversation.last_seen).toLocaleString('en-SG', {
+        hour: '2-digit',
         minute: '2-digit',
         day: 'numeric',
         month: 'short'
@@ -68,8 +74,8 @@ function ConversationItem({ conversation, active, onClick }) {
       {/* Avatar with online indicator */}
       <div className="relative flex-shrink-0">
         {conversation.profile_photo ? (
-          <img 
-            src={conversation.profile_photo} 
+          <img
+            src={conversation.profile_photo}
             alt={conversation.name}
             className="w-12 h-12 rounded-full object-cover"
           />
@@ -88,7 +94,7 @@ function ConversationItem({ conversation, active, onClick }) {
         <div className="flex items-center justify-between">
           <span className="font-medium text-white truncate">{conversation.name}</span>
           <span className="text-xs text-dark-400">
-            {conversation.last_message_at 
+            {conversation.last_message_at
               ? new Date(conversation.last_message_at).toLocaleTimeString('en-SG', { hour: '2-digit', minute: '2-digit' })
               : ''
             }
@@ -110,58 +116,15 @@ function ConversationItem({ conversation, active, onClick }) {
   );
 }
 
-// Template selector modal
-function TemplateSelector({ templates, onSelect, onClose }) {
-  const [search, setSearch] = useState('');
-  const categories = [...new Set(templates.map(t => t.category))];
-  
-  const filteredTemplates = templates.filter(t => 
-    t.name.toLowerCase().includes(search.toLowerCase()) ||
-    t.content.toLowerCase().includes(search.toLowerCase())
-  );
-
+// Quick reply chip component
+function QuickReplyChip({ template, onClick }) {
   return (
-    <div className="absolute bottom-full left-0 right-0 mb-2 bg-dark-800 rounded-xl border border-dark-600 shadow-xl max-h-96 overflow-hidden">
-      <div className="p-3 border-b border-dark-600">
-        <div className="flex items-center justify-between mb-2">
-          <h3 className="font-semibold text-white">Message Templates</h3>
-          <button onClick={onClose} className="text-dark-400 hover:text-white">
-            <X className="h-5 w-5" />
-          </button>
-        </div>
-        <input
-          type="text"
-          placeholder="Search templates..."
-          value={search}
-          onChange={(e) => setSearch(e.target.value)}
-          className="w-full px-3 py-2 rounded-lg bg-dark-700 border border-dark-600 text-white text-sm"
-        />
-      </div>
-      <div className="max-h-64 overflow-y-auto">
-        {categories.map(category => {
-          const catTemplates = filteredTemplates.filter(t => t.category === category);
-          if (catTemplates.length === 0) return null;
-          
-          return (
-            <div key={category}>
-              <div className="px-3 py-2 text-xs font-medium text-dark-400 uppercase bg-dark-750">
-                {category}
-              </div>
-              {catTemplates.map(template => (
-                <button
-                  key={template.id}
-                  onClick={() => onSelect(template)}
-                  className="w-full px-3 py-2 text-left hover:bg-dark-700 transition-colors"
-                >
-                  <p className="text-sm font-medium text-white">{template.name}</p>
-                  <p className="text-xs text-dark-400 truncate">{template.content}</p>
-                </button>
-              ))}
-            </div>
-          );
-        })}
-      </div>
-    </div>
+    <button
+      onClick={onClick}
+      className="flex-shrink-0 px-3 py-1.5 rounded-full bg-dark-700 hover:bg-dark-600 text-sm text-white transition-colors whitespace-nowrap"
+    >
+      {template.name}
+    </button>
   );
 }
 
@@ -173,15 +136,21 @@ export default function AdminChat() {
   const [messages, setMessages] = useState([]);
   const [newMessage, setNewMessage] = useState('');
   const [showEmoji, setShowEmoji] = useState(false);
-  const [showTemplates, setShowTemplates] = useState(false);
   const [showNewChat, setShowNewChat] = useState(false);
   const [searchTerm, setSearchTerm] = useState('');
   const [loading, setLoading] = useState(true);
   const [isConnected, setIsConnected] = useState(false);
-  
+
   const messagesEndRef = useRef(null);
   const wsRef = useRef(null);
   const inputRef = useRef(null);
+  // Use ref to track selected conversation for WebSocket callback
+  const selectedConversationRef = useRef(null);
+
+  // Keep ref in sync with state
+  useEffect(() => {
+    selectedConversationRef.current = selectedConversation;
+  }, [selectedConversation]);
 
   // Fetch initial data
   useEffect(() => {
@@ -189,7 +158,7 @@ export default function AdminChat() {
     fetchCandidates();
     fetchTemplates();
     connectWebSocket();
-    
+
     return () => {
       if (wsRef.current) wsRef.current.close();
     };
@@ -210,7 +179,7 @@ export default function AdminChat() {
   const connectWebSocket = () => {
     const protocol = window.location.protocol === 'https:' ? 'wss:' : 'ws:';
     const wsUrl = `${protocol}//${window.location.host}/ws?admin=true`;
-    
+
     try {
       wsRef.current = new WebSocket(wsUrl);
 
@@ -220,51 +189,87 @@ export default function AdminChat() {
       };
 
       wsRef.current.onmessage = (event) => {
-        const data = JSON.parse(event.data);
-        handleWebSocketMessage(data);
+        try {
+          const data = JSON.parse(event.data);
+          console.log('WebSocket message received:', data.type, data);
+          handleWebSocketMessage(data);
+        } catch (e) {
+          console.error('Failed to parse WebSocket message:', e);
+        }
       };
 
       wsRef.current.onclose = () => {
+        console.log('WebSocket disconnected, reconnecting...');
         setIsConnected(false);
         // Reconnect after 3 seconds
         setTimeout(connectWebSocket, 3000);
       };
+
+      wsRef.current.onerror = (error) => {
+        console.error('WebSocket error:', error);
+      };
     } catch (error) {
-      console.error('WebSocket error:', error);
+      console.error('WebSocket connection error:', error);
     }
   };
 
   const handleWebSocketMessage = (data) => {
     switch (data.type) {
+      case 'connected':
+        console.log('WebSocket connected as admin');
+        break;
+
       case 'new_message':
-        // New message from candidate
+        // New message from candidate (including Telegram)
+        console.log('New message received:', data);
         setMessages(prev => {
-          if (selectedConversation?.candidate_id === data.candidateId) {
+          // Use ref to get current selected conversation
+          const currentConv = selectedConversationRef.current;
+          if (currentConv?.candidate_id === data.candidateId) {
+            // Check if message already exists to avoid duplicates
+            if (prev.some(m => m.id === data.message.id)) {
+              return prev;
+            }
             return [...prev, data.message];
           }
           return prev;
         });
-        // Update conversation list
+        // Update conversation list to show new message preview
         fetchConversations();
         break;
 
       case 'message_sent':
         // Confirmation of sent message
-        setMessages(prev => [...prev, data.message]);
+        setMessages(prev => {
+          // Check if message already exists to avoid duplicates
+          if (prev.some(m => m.id === data.message.id)) {
+            return prev;
+          }
+          return [...prev, data.message];
+        });
+        // Update conversation list
+        fetchConversations();
         break;
 
       case 'status_change':
         // Candidate online/offline status change
-        setConversations(prev => prev.map(c => 
-          c.candidate_id === data.candidateId 
+        setConversations(prev => prev.map(c =>
+          c.candidate_id === data.candidateId
             ? { ...c, online_status: data.status, last_seen: data.last_seen || c.last_seen }
             : c
         ));
         break;
 
+      case 'online_candidates':
+        console.log('Online candidates:', data.candidates);
+        break;
+
       case 'typing':
         // Handle typing indicator
         break;
+
+      default:
+        console.log('Unknown WebSocket message type:', data.type);
     }
   };
 
@@ -320,7 +325,6 @@ export default function AdminChat() {
     const content = newMessage.trim();
     setNewMessage('');
     setShowEmoji(false);
-    setShowTemplates(false);
 
     // Send via WebSocket if connected
     if (wsRef.current?.readyState === WebSocket.OPEN) {
@@ -342,14 +346,13 @@ export default function AdminChat() {
     inputRef.current?.focus();
   };
 
-  const handleTemplateSelect = (template) => {
-    // Replace variables with placeholders or actual values
+  const handleQuickReply = (template) => {
+    // Replace variables with actual values
     let content = template.content;
     if (selectedConversation) {
       content = content.replace('{name}', selectedConversation.name.split(' ')[0]);
     }
     setNewMessage(content);
-    setShowTemplates(false);
     inputRef.current?.focus();
   };
 
@@ -389,11 +392,11 @@ export default function AdminChat() {
   );
 
   return (
-    <div className="flex h-[calc(100vh-4rem)] bg-dark-900">
+    <div className="flex h-[calc(100vh-4rem)] bg-dark-900 overflow-hidden">
       {/* Sidebar - Conversations */}
       <div className="w-80 flex-shrink-0 border-r border-dark-700 flex flex-col">
         {/* Header */}
-        <div className="p-4 border-b border-dark-700">
+        <div className="p-4 border-b border-dark-700 flex-shrink-0">
           <div className="flex items-center justify-between mb-4">
             <h2 className="text-lg font-semibold text-white">Messages</h2>
             <div className="flex items-center gap-2">
@@ -406,7 +409,7 @@ export default function AdminChat() {
               </button>
             </div>
           </div>
-          
+
           {/* Search */}
           <div className="relative">
             <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-dark-400" />
@@ -445,16 +448,16 @@ export default function AdminChat() {
       </div>
 
       {/* Chat area */}
-      <div className="flex-1 flex flex-col">
+      <div className="flex-1 flex flex-col min-h-0 overflow-hidden">
         {selectedConversation ? (
           <>
             {/* Chat header */}
-            <div className="p-4 border-b border-dark-700 flex items-center justify-between">
+            <div className="flex-shrink-0 p-4 border-b border-dark-700 flex items-center justify-between">
               <div className="flex items-center gap-3">
                 <div className="relative">
                   {selectedConversation.profile_photo ? (
-                    <img 
-                      src={selectedConversation.profile_photo} 
+                    <img
+                      src={selectedConversation.profile_photo}
                       alt={selectedConversation.name}
                       className="w-10 h-10 rounded-full object-cover"
                     />
@@ -470,9 +473,9 @@ export default function AdminChat() {
                 <div>
                   <h3 className="font-medium text-white">{selectedConversation.name}</h3>
                   <p className="text-xs text-dark-400">
-                    {selectedConversation.online_status === 'online' 
-                      ? 'Online' 
-                      : selectedConversation.last_seen 
+                    {selectedConversation.online_status === 'online'
+                      ? 'Online'
+                      : selectedConversation.last_seen
                         ? `Last seen ${new Date(selectedConversation.last_seen).toLocaleString('en-SG', { hour: '2-digit', minute: '2-digit', day: 'numeric', month: 'short' })}`
                         : 'Offline'
                     }
@@ -484,31 +487,39 @@ export default function AdminChat() {
               </button>
             </div>
 
+            {/* Quick replies bar - below header */}
+            {templates.length > 0 && (
+              <div className="flex-shrink-0 px-4 py-2 border-b border-dark-700 bg-dark-850">
+                <div className="flex items-center gap-2 overflow-x-auto scrollbar-hide">
+                  <Zap className="h-4 w-4 text-dark-400 flex-shrink-0" />
+                  {templates.slice(0, 8).map(template => (
+                    <QuickReplyChip
+                      key={template.id}
+                      template={template}
+                      onClick={() => handleQuickReply(template)}
+                    />
+                  ))}
+                </div>
+              </div>
+            )}
+
             {/* Messages */}
             <div className="flex-1 overflow-y-auto p-4 bg-dark-850">
               {messages.map(msg => (
-                <MessageBubble 
-                  key={msg.id} 
-                  message={msg} 
-                  isOwn={msg.sender === 'admin'} 
+                <MessageBubble
+                  key={msg.id}
+                  message={msg}
+                  isOwn={msg.sender === 'admin'}
                 />
               ))}
               <div ref={messagesEndRef} />
             </div>
 
             {/* Input area */}
-            <div className="p-4 border-t border-dark-700 relative">
-              {showTemplates && (
-                <TemplateSelector
-                  templates={templates}
-                  onSelect={handleTemplateSelect}
-                  onClose={() => setShowTemplates(false)}
-                />
-              )}
-              
+            <div className="flex-shrink-0 p-4 border-t border-dark-700 relative">
               {showEmoji && (
                 <div className="absolute bottom-full left-4 mb-2">
-                  <EmojiPicker 
+                  <EmojiPicker
                     onEmojiClick={(emoji) => {
                       setNewMessage(prev => prev + emoji.emoji);
                       inputRef.current?.focus();
@@ -522,16 +533,10 @@ export default function AdminChat() {
 
               <div className="flex items-end gap-2">
                 <button
-                  onClick={() => { setShowEmoji(!showEmoji); setShowTemplates(false); }}
+                  onClick={() => setShowEmoji(!showEmoji)}
                   className={`p-3 rounded-xl ${showEmoji ? 'bg-primary-500 text-white' : 'bg-dark-700 text-dark-400 hover:text-white'}`}
                 >
                   <Smile className="h-5 w-5" />
-                </button>
-                <button
-                  onClick={() => { setShowTemplates(!showTemplates); setShowEmoji(false); }}
-                  className={`p-3 rounded-xl ${showTemplates ? 'bg-primary-500 text-white' : 'bg-dark-700 text-dark-400 hover:text-white'}`}
-                >
-                  <Zap className="h-5 w-5" />
                 </button>
                 <textarea
                   ref={inputRef}
@@ -546,8 +551,8 @@ export default function AdminChat() {
                   onClick={sendMessage}
                   disabled={!newMessage.trim()}
                   className={`p-3 rounded-xl ${
-                    newMessage.trim() 
-                      ? 'bg-primary-500 text-white hover:bg-primary-600' 
+                    newMessage.trim()
+                      ? 'bg-primary-500 text-white hover:bg-primary-600'
                       : 'bg-dark-700 text-dark-500'
                   }`}
                 >
@@ -593,8 +598,8 @@ export default function AdminChat() {
                   className="w-full p-3 flex items-center gap-3 hover:bg-dark-700 transition-colors"
                 >
                   {candidate.profile_photo ? (
-                    <img 
-                      src={candidate.profile_photo} 
+                    <img
+                      src={candidate.profile_photo}
                       alt={candidate.name}
                       className="w-10 h-10 rounded-full object-cover"
                     />

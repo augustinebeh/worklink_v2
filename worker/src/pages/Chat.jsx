@@ -220,6 +220,11 @@ export default function Chat() {
     setSending(true);
     setShowEmoji(false);
 
+    // Reset textarea height
+    if (inputRef.current) {
+      inputRef.current.style.height = '44px';
+    }
+
     // Stop typing indicator
     if (ws) {
       ws.sendTyping(false);
@@ -260,6 +265,23 @@ export default function Chat() {
       e.preventDefault();
       handleSend();
     }
+  };
+
+  const handleInputChange = (e) => {
+    const textarea = e.target;
+    setNewMessage(textarea.value);
+    handleTyping();
+
+    // Auto-expand textarea like Telegram
+    // Reset height to get accurate scrollHeight
+    textarea.style.height = '44px';
+
+    // Calculate new height based on content
+    const scrollHeight = textarea.scrollHeight;
+    const maxHeight = 120; // Max height before scrolling
+    const newHeight = Math.min(scrollHeight, maxHeight);
+
+    textarea.style.height = `${newHeight}px`;
   };
 
   const handleEmojiClick = (emojiData) => {
@@ -392,16 +414,13 @@ export default function Chat() {
             <textarea
               ref={inputRef}
               value={newMessage}
-              onChange={(e) => {
-                setNewMessage(e.target.value);
-                handleTyping();
-              }}
+              onChange={handleInputChange}
               onKeyPress={handleKeyPress}
               onFocus={handleInputFocus}
-              placeholder="Type a message..."
+              placeholder="Message"
               rows={1}
-              className="w-full px-4 py-3 rounded-xl bg-dark-800 border border-white/10 text-white placeholder-dark-500 focus:outline-none focus:border-primary-500 resize-none max-h-24"
-              style={{ minHeight: '48px' }}
+              className="w-full px-4 py-3 rounded-xl bg-dark-800 border border-white/10 text-white placeholder-dark-500 focus:outline-none focus:border-primary-500 resize-none overflow-hidden"
+              style={{ height: '44px', maxHeight: '120px' }}
             />
           </div>
 
