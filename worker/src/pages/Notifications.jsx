@@ -59,9 +59,9 @@ function NotificationItem({ notification, onRead }) {
       onClick={handleClick}
       className={clsx(
         'w-full flex items-start gap-3 p-4 rounded-xl text-left transition-colors',
-        isRead 
-          ? 'bg-dark-800/30' 
-          : 'bg-dark-800/80 border border-primary-500/20'
+        isRead
+          ? 'bg-slate-100/50 dark:bg-dark-800/30'
+          : 'bg-slate-100 dark:bg-dark-800/80 border border-primary-500/20'
       )}
     >
       {/* Icon */}
@@ -74,7 +74,7 @@ function NotificationItem({ notification, onRead }) {
         <div className="flex items-start justify-between gap-2">
           <h4 className={clsx(
             'font-medium',
-            isRead ? 'text-dark-300' : 'text-white'
+            isRead ? 'text-slate-500 dark:text-dark-300' : 'text-slate-900 dark:text-white'
           )}>
             {notification.title}
           </h4>
@@ -84,11 +84,11 @@ function NotificationItem({ notification, onRead }) {
         </div>
         <p className={clsx(
           'text-sm mt-0.5 line-clamp-2',
-          isRead ? 'text-dark-500' : 'text-dark-400'
+          isRead ? 'text-slate-400 dark:text-dark-500' : 'text-slate-600 dark:text-dark-400'
         )}>
           {notification.message}
         </p>
-        <p className="text-xs text-dark-500 mt-2">{timeAgo(notification.created_at)}</p>
+        <p className="text-xs text-slate-400 dark:text-dark-500 mt-2">{timeAgo(notification.created_at)}</p>
       </div>
     </button>
   );
@@ -122,7 +122,7 @@ export default function Notifications() {
       setLoading(false);
       return;
     }
-    
+
     try {
       const res = await fetch(`/api/v1/candidates/${user.id}/notifications`);
       const data = await res.json();
@@ -138,29 +138,29 @@ export default function Notifications() {
 
   const handleRead = async (notificationId) => {
     // Update local state
-    setNotifications(prev => prev.map(n => 
+    setNotifications(prev => prev.map(n =>
       n.id === notificationId ? { ...n, read: 1 } : n
     ));
-    
+
     // Update via WebSocket if available
     if (markNotificationRead) {
       markNotificationRead(notificationId);
     } else {
       // Fallback to REST
-      await fetch(`/api/v1/candidates/${user.id}/notifications/${notificationId}/read`, { 
-        method: 'POST' 
+      await fetch(`/api/v1/candidates/${user.id}/notifications/${notificationId}/read`, {
+        method: 'POST'
       });
     }
   };
 
   const handleMarkAllRead = async () => {
     setNotifications(prev => prev.map(n => ({ ...n, read: 1 })));
-    
+
     if (markAllNotificationsRead) {
       markAllNotificationsRead();
     } else {
-      await fetch(`/api/v1/candidates/${user.id}/notifications/read-all`, { 
-        method: 'POST' 
+      await fetch(`/api/v1/candidates/${user.id}/notifications/read-all`, {
+        method: 'POST'
       });
     }
   };
@@ -174,10 +174,10 @@ export default function Notifications() {
 
   if (!user) {
     return (
-      <div className="min-h-screen bg-dark-950 flex items-center justify-center pb-24">
+      <div className="min-h-screen bg-white dark:bg-dark-950 flex items-center justify-center pb-24">
         <div className="text-center">
-          <BellIcon className="h-12 w-12 text-dark-600 mx-auto mb-4" />
-          <p className="text-dark-400">Please log in to view notifications</p>
+          <BellIcon className="h-12 w-12 text-slate-300 dark:text-dark-600 mx-auto mb-4" />
+          <p className="text-slate-500 dark:text-dark-400">Please log in to view notifications</p>
           <button
             onClick={() => navigate('/login')}
             className="mt-4 px-6 py-2 rounded-xl bg-primary-500 text-white font-medium"
@@ -190,20 +190,20 @@ export default function Notifications() {
   }
 
   return (
-    <div className="min-h-screen bg-dark-950 pb-24">
+    <div className="min-h-screen bg-white dark:bg-dark-950 pb-24">
       {/* Header */}
-      <div className="sticky top-0 z-10 bg-dark-950/95 backdrop-blur-lg px-4 pt-safe pb-4 border-b border-white/5">
+      <div className="sticky top-0 z-10 bg-white/95 dark:bg-dark-950/95 backdrop-blur-lg px-4 pt-safe pb-4 border-b border-slate-200 dark:border-white/5">
         <div className="flex items-center justify-between">
           <div>
-            <h1 className="text-2xl font-bold text-white">Notifications</h1>
+            <h1 className="text-2xl font-bold text-slate-900 dark:text-white">Notifications</h1>
             {unreadCount > 0 && (
-              <p className="text-dark-400 text-sm mt-1">{unreadCount} unread</p>
+              <p className="text-slate-500 dark:text-dark-400 text-sm mt-1">{unreadCount} unread</p>
             )}
           </div>
           {unreadCount > 0 && (
             <button
               onClick={handleMarkAllRead}
-              className="flex items-center gap-2 px-3 py-2 rounded-lg bg-dark-800 text-dark-400 hover:text-white text-sm"
+              className="flex items-center gap-2 px-3 py-2 rounded-lg bg-slate-100 dark:bg-dark-800 text-slate-600 dark:text-dark-400 hover:text-slate-900 dark:hover:text-white text-sm"
             >
               <CheckCheckIcon className="h-4 w-4" />
               Mark all read
@@ -222,9 +222,9 @@ export default function Notifications() {
               onClick={() => setFilter(tab.id)}
               className={clsx(
                 'px-4 py-2 rounded-full text-sm font-medium transition-colors',
-                filter === tab.id 
-                  ? 'bg-primary-500 text-white' 
-                  : 'bg-dark-800 text-dark-400'
+                filter === tab.id
+                  ? 'bg-primary-500 text-white'
+                  : 'bg-slate-100 dark:bg-dark-800 text-slate-600 dark:text-dark-400'
               )}
             >
               {tab.label}
@@ -241,17 +241,17 @@ export default function Notifications() {
           </div>
         ) : filteredNotifications.length === 0 ? (
           <div className="text-center py-12">
-            <BellIcon className="h-12 w-12 text-dark-600 mx-auto mb-4" />
-            <p className="text-dark-400">
+            <BellIcon className="h-12 w-12 text-slate-300 dark:text-dark-600 mx-auto mb-4" />
+            <p className="text-slate-500 dark:text-dark-400">
               {filter === 'unread' ? 'No unread notifications' : 'No notifications yet'}
             </p>
           </div>
         ) : (
           <div className="space-y-3">
             {filteredNotifications.map(notification => (
-              <NotificationItem 
-                key={notification.id} 
-                notification={notification} 
+              <NotificationItem
+                key={notification.id}
+                notification={notification}
                 onRead={handleRead}
               />
             ))}

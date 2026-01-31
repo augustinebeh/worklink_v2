@@ -28,14 +28,14 @@ function MessageBubble({ message, isOwn }) {
         'max-w-[80%] px-4 py-2.5 rounded-2xl relative',
         isOwn
           ? 'bg-primary-500 text-white rounded-br-md'
-          : 'bg-dark-800 text-white rounded-bl-md'
+          : 'bg-slate-200 dark:bg-dark-800 text-slate-900 dark:text-white rounded-bl-md'
       )}>
         <p className="whitespace-pre-wrap break-words">{message.content}</p>
         <div className={clsx(
           'flex items-center gap-1 mt-1',
           isOwn ? 'justify-end' : 'justify-start'
         )}>
-          <span className={clsx('text-xs', isOwn ? 'text-white/60' : 'text-dark-500')}>
+          <span className={clsx('text-xs', isOwn ? 'text-white/60' : 'text-slate-500 dark:text-dark-500')}>
             {time}
           </span>
           {isOwn && (
@@ -65,7 +65,7 @@ function DateDivider({ date }) {
 
   return (
     <div className="flex items-center justify-center my-4">
-      <span className="px-3 py-1 rounded-full bg-dark-800 text-dark-400 text-xs">
+      <span className="px-3 py-1 rounded-full bg-slate-200 dark:bg-dark-800 text-slate-600 dark:text-dark-400 text-xs">
         {label}
       </span>
     </div>
@@ -306,8 +306,8 @@ export default function Chat() {
 
   if (!user) {
     return (
-      <div className="h-screen bg-dark-950 flex items-center justify-center">
-        <p className="text-dark-400">Please log in to chat</p>
+      <div className="h-screen bg-white dark:bg-dark-950 flex items-center justify-center">
+        <p className="text-slate-500 dark:text-dark-400">Please log in to chat</p>
       </div>
     );
   }
@@ -315,29 +315,29 @@ export default function Chat() {
   return (
     <div
       ref={containerRef}
-      className="fixed inset-0 bg-dark-950 flex flex-col"
+      className="fixed inset-0 bg-white dark:bg-dark-950 flex flex-col"
       style={{ height: '100dvh' }}
     >
       {/* Fixed Header */}
-      <div className="flex-shrink-0 bg-dark-900 px-4 pt-safe pb-3 border-b border-white/5 z-10">
+      <div className="flex-shrink-0 bg-slate-50 dark:bg-dark-900 px-4 pt-safe pb-3 border-b border-slate-200 dark:border-white/5 z-10">
         <div className="flex items-center gap-3">
           {/* Back button */}
           <button
             onClick={() => navigate(-1)}
-            className="p-2 -ml-2 rounded-full hover:bg-dark-800 transition-colors"
+            className="p-2 -ml-2 rounded-full hover:bg-slate-200 dark:hover:bg-dark-800 transition-colors"
           >
-            <ChevronLeftIcon className="h-6 w-6 text-white" />
+            <ChevronLeftIcon className="h-6 w-6 text-slate-900 dark:text-white" />
           </button>
 
           <LogoIcon size={36} />
           <div className="flex-1">
-            <h1 className="font-semibold text-white">WorkLink Support</h1>
+            <h1 className="font-semibold text-slate-900 dark:text-white">WorkLink Support</h1>
             <div className="flex items-center gap-1.5">
               <span className={clsx(
                 'w-2 h-2 rounded-full',
-                ws?.isConnected ? 'bg-accent-400' : 'bg-dark-500'
+                ws?.isConnected ? 'bg-accent-400' : 'bg-slate-400 dark:bg-dark-500'
               )} />
-              <span className="text-xs text-dark-400">
+              <span className="text-xs text-slate-500 dark:text-dark-400">
                 {ws?.isConnected ? (isTyping ? 'Typing...' : 'Online') : 'Connecting...'}
               </span>
             </div>
@@ -348,7 +348,7 @@ export default function Chat() {
       {/* Messages Area - Scrollable */}
       <div
         ref={messagesContainerRef}
-        className="flex-1 overflow-y-auto overscroll-contain px-4 py-4"
+        className="flex-1 overflow-y-auto overscroll-contain px-4 py-4 bg-slate-100 dark:bg-dark-950"
       >
         {loading ? (
           <div className="flex items-center justify-center h-full">
@@ -359,8 +359,8 @@ export default function Chat() {
             <div className="w-16 h-16 rounded-full bg-primary-500/20 flex items-center justify-center mb-4">
               <SendIcon className="h-8 w-8 text-primary-400" />
             </div>
-            <p className="text-white font-medium">Start a conversation</p>
-            <p className="text-dark-400 text-sm mt-1">Send a message to WorkLink support</p>
+            <p className="text-slate-900 dark:text-white font-medium">Start a conversation</p>
+            <p className="text-slate-500 dark:text-dark-400 text-sm mt-1">Send a message to WorkLink support</p>
           </div>
         ) : (
           <div className="space-y-3">
@@ -385,12 +385,12 @@ export default function Chat() {
 
       {/* Emoji picker - positioned above input */}
       {showEmoji && (
-        <div className="flex-shrink-0 border-t border-white/5">
+        <div className="flex-shrink-0 border-t border-slate-200 dark:border-white/5">
           <EmojiPicker
             onEmojiClick={handleEmojiClick}
             width="100%"
             height={280}
-            theme="dark"
+            theme="auto"
             searchPlaceHolder="Search emoji..."
             previewConfig={{ showPreview: false }}
           />
@@ -398,13 +398,13 @@ export default function Chat() {
       )}
 
       {/* Fixed Input Area */}
-      <div className="flex-shrink-0 bg-dark-950 px-4 py-3 pb-safe border-t border-white/5">
+      <div className="flex-shrink-0 bg-white dark:bg-dark-950 px-4 py-3 pb-safe border-t border-slate-200 dark:border-white/5">
         <div className="flex items-end gap-2">
           <button
             onClick={() => setShowEmoji(!showEmoji)}
             className={clsx(
               'p-3 rounded-xl transition-colors flex-shrink-0',
-              showEmoji ? 'bg-primary-500 text-white' : 'bg-dark-800 text-dark-400 hover:text-white'
+              showEmoji ? 'bg-primary-500 text-white' : 'bg-slate-200 dark:bg-dark-800 text-slate-500 dark:text-dark-400 hover:text-slate-700 dark:hover:text-white'
             )}
           >
             <SmileIcon className="h-5 w-5" />
@@ -419,7 +419,7 @@ export default function Chat() {
               onFocus={handleInputFocus}
               placeholder="Message"
               rows={1}
-              className="w-full px-4 py-3 rounded-xl bg-dark-800 border border-white/10 text-white placeholder-dark-500 focus:outline-none focus:border-primary-500 resize-none overflow-hidden"
+              className="w-full px-4 py-3 rounded-xl bg-slate-100 dark:bg-dark-800 border border-slate-300 dark:border-white/10 text-slate-900 dark:text-white placeholder-slate-500 dark:placeholder-dark-500 focus:outline-none focus:border-primary-500 resize-none overflow-hidden"
               style={{ height: '44px', maxHeight: '120px' }}
             />
           </div>
@@ -431,7 +431,7 @@ export default function Chat() {
               'p-3 rounded-xl transition-colors flex-shrink-0',
               newMessage.trim()
                 ? 'bg-primary-500 text-white'
-                : 'bg-dark-800 text-dark-500'
+                : 'bg-slate-200 dark:bg-dark-800 text-slate-400 dark:text-dark-500'
             )}
           >
             <SendIcon className="h-5 w-5" />
