@@ -16,13 +16,12 @@ const Channels = {
 };
 
 /**
- * Send a message from admin to candidate via the appropriate channel
- * Smart fallback: App (WebSocket) → Push Notification → Telegram
+ * Send a message from admin to candidate
+ * Sends to BOTH PWA (WebSocket + Push) AND Telegram when linked
  *
  * @param {string} candidateId - Candidate ID
  * @param {string} content - Message content
  * @param {object} options - { channel, templateId }
- *   - channel: 'auto' (smart fallback), 'app', 'telegram', or 'both'
  */
 async function sendToCandidate(candidateId, content, options = {}) {
   const { channel = 'auto', templateId = null } = options;
@@ -37,75 +36,47 @@ async function sendToCandidate(candidateId, content, options = {}) {
     return { success: false, error: 'Candidate not found' };
   }
 
-  let selectedChannel = 'app';
-  let result = { success: true };
   let externalId = null;
   let deliveryMethod = [];
 
-  // If explicit channel specified (not auto), use it
-  if (channel === 'telegram') {
-    if (candidate.telegram_chat_id) {
-      result = await telegram.sendMessage(candidate.telegram_chat_id, content);
-      if (result.success) {
-        externalId = String(result.messageId);
-        selectedChannel = 'telegram';
-        deliveryMethod.push('telegram');
-      }
+  // 1. Always send via WebSocket (for PWA real-time)
+  broadcastToCandidate(candidateId, {
+    type: EventTypes.CHAT_MESSAGE,
+    message: { content, sender: 'admin', created_at: new Date().toISOString() },
+  });
+  deliveryMethod.push('websocket');
+
+  // 2. Always create in-app notification
+  createNotification(candidateId, 'chat', 'New message from WorkLink', content);
+
+  // 3. Send push notification if offline
+  const isOnline = isCandidateOnline(candidateId);
+  if (!isOnline && candidate.push_token) {
+    const pushSent = await sendPushNotification(candidate, 'New Message', content);
+    if (pushSent) {
+      deliveryMethod.push('push');
+    }
+  }
+
+  // 4. ALWAYS send to Telegram if linked (regardless of online status)
+  if (candidate.telegram_chat_id && telegram.isConfigured()) {
+    const telegramResult = await telegram.sendMessage(candidate.telegram_chat_id, content);
+    if (telegramResult.success) {
+      externalId = String(telegramResult.messageId);
+      deliveryMethod.push('telegram');
     } else {
-      return { success: false, error: 'Telegram not linked for this candidate' };
+      console.error('Telegram send failed:', telegramResult.error);
     }
-  } else if (channel === 'both' || channel === 'auto') {
-    // Smart fallback logic
-    const isOnline = isCandidateOnline(candidateId);
-
-    // 1. Always try WebSocket first (for real-time if online)
-    broadcastToCandidate(candidateId, {
-      type: EventTypes.CHAT_MESSAGE,
-      message: { content, sender: 'admin', created_at: new Date().toISOString() },
-    });
-
-    if (isOnline) {
-      deliveryMethod.push('websocket');
-    }
-
-    // 2. If offline, send push notification
-    if (!isOnline) {
-      const pushSent = await sendPushNotification(candidate, 'New Message', content);
-      if (pushSent) {
-        deliveryMethod.push('push');
-      }
-
-      // 3. If push failed and Telegram is linked, send via Telegram as fallback
-      if (!pushSent && candidate.telegram_chat_id && telegram.isConfigured()) {
-        const telegramResult = await telegram.sendMessage(candidate.telegram_chat_id, content);
-        if (telegramResult.success) {
-          externalId = String(telegramResult.messageId);
-          deliveryMethod.push('telegram');
-        }
-      }
-    }
-
-    // Always create in-app notification for history
-    createNotification(candidateId, 'chat', 'New message from WorkLink', content);
-    selectedChannel = 'app';
-  } else {
-    // Default: app only
-    broadcastToCandidate(candidateId, {
-      type: EventTypes.CHAT_MESSAGE,
-      message: { content, sender: 'admin', created_at: new Date().toISOString() },
-    });
-    createNotification(candidateId, 'chat', 'New message from WorkLink', content);
-    deliveryMethod.push('app');
   }
 
   // Store message in database
   const messageId = Date.now();
   db.prepare(`
     INSERT INTO messages (id, candidate_id, sender, content, template_id, channel, read, created_at)
-    VALUES (?, ?, 'admin', ?, ?, ?, 0, datetime('now'))
-  `).run(messageId, candidateId, content, templateId, selectedChannel);
+    VALUES (?, ?, 'admin', ?, ?, 'app', 0, datetime('now'))
+  `).run(messageId, candidateId, content, templateId);
 
-  // Store external ID if present
+  // Store external ID if Telegram was sent
   if (externalId) {
     db.prepare(`
       UPDATE messages SET external_id = ? WHERE id = ?
@@ -119,14 +90,13 @@ async function sendToCandidate(candidateId, content, options = {}) {
     type: 'message_sent',
     message,
     candidateId,
-    channel: selectedChannel,
     deliveryMethod,
   });
 
   return {
     success: true,
     message,
-    channel: selectedChannel,
+    channel: 'app',
     deliveryMethod,
   };
 }

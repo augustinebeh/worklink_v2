@@ -6,6 +6,15 @@
 const WebSocket = require('ws');
 const { db } = require('./db/database');
 
+// Lazy-loaded messaging service to avoid circular dependency
+let messagingService = null;
+function getMessaging() {
+  if (!messagingService) {
+    messagingService = require('./services/messaging');
+  }
+  return messagingService;
+}
+
 // Store connected clients
 const candidateClients = new Map(); // candidateId -> WebSocket
 const adminClients = new Set(); // Set of admin WebSocket connections
@@ -152,7 +161,8 @@ function handleMessage(ws, message, candidateId, isAdmin) {
     // Chat messages
     case 'message':
       if (isAdmin) {
-        sendMessageToCandidate(message.candidateId, message.content, message.template_id);
+        // Use unified messaging service to send to both PWA and Telegram
+        handleAdminMessage(message.candidateId, message.content, message.template_id);
       } else {
         sendMessageFromCandidate(candidateId, message.content);
       }
@@ -210,6 +220,26 @@ function handleMessage(ws, message, candidateId, isAdmin) {
 }
 
 // ==================== CHAT FUNCTIONS ====================
+
+/**
+ * Handle admin message via WebSocket - uses unified messaging service
+ * to send to both PWA and Telegram
+ */
+async function handleAdminMessage(candidateId, content, templateId = null) {
+  try {
+    const messaging = getMessaging();
+    const result = await messaging.sendToCandidate(candidateId, content, {
+      channel: 'auto',
+      templateId: templateId,
+    });
+
+    if (!result.success) {
+      console.error('Failed to send message:', result.error);
+    }
+  } catch (error) {
+    console.error('Error in handleAdminMessage:', error);
+  }
+}
 
 function sendMessageToCandidate(candidateId, content, templateId = null, channel = 'app') {
   const id = Date.now();
