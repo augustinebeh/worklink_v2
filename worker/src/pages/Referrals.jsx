@@ -67,7 +67,7 @@ function TierProgress({ currentTier, tiers, totalEarned }) {
                 ? `${tierColors[tier.tier_level]?.bg} ${tierColors[tier.tier_level]?.text} ${tierColors[tier.tier_level]?.border}`
                 : 'bg-dark-800 text-dark-500 border-dark-700'
             )}>
-              ${tier.bonus_amount}
+              ${Number(tier.bonus_amount).toFixed(2)}
             </div>
             <span className="text-xs text-dark-500 mt-1">{tier.jobs_required}+ jobs</span>
           </div>
@@ -77,7 +77,7 @@ function TierProgress({ currentTier, tiers, totalEarned }) {
       {next && (
         <div className="text-center text-sm">
           <span className="text-dark-400">Next tier: </span>
-          <span className="text-primary-400 font-medium">${next.bonus_amount} bonus</span>
+          <span className="text-primary-400 font-medium">${Number(next.bonus_amount).toFixed(2)} bonus</span>
           <span className="text-dark-400"> at {next.jobs_required} jobs</span>
         </div>
       )}
@@ -117,7 +117,7 @@ function ReferralCard({ referral }) {
       {referral.total_bonus_paid > 0 && (
         <div className="mt-3 pt-3 border-t border-white/5 flex items-center justify-between">
           <span className="text-sm text-dark-400">You earned</span>
-          <span className="font-semibold text-emerald-400">${referral.total_bonus_paid}</span>
+          <span className="font-semibold text-emerald-400">${Number(referral.total_bonus_paid).toFixed(2)}</span>
         </div>
       )}
     </div>
@@ -251,7 +251,7 @@ export default function Referrals() {
           </div>
 
           <p className="text-sm text-accent-300 text-center">
-            You both get <span className="font-bold">${data?.currentTier?.bonus_amount || 30}</span> when they complete their first job!
+            You both get <span className="font-bold">${Number(data?.currentTier?.bonus_amount || 30).toFixed(2)}</span> when they complete their first job!
           </p>
         </div>
 
@@ -289,7 +289,7 @@ export default function Referrals() {
         {/* Stats */}
         <div className="grid grid-cols-2 gap-3">
           <StatCard icon={UsersIcon} label="Total Referrals" value={data?.stats?.totalReferrals || 0} color="primary" />
-          <StatCard icon={DollarSignIcon} label="Total Earned" value={`$${data?.stats?.totalEarned || 0}`} color="green" />
+          <StatCard icon={DollarSignIcon} label="Total Earned" value={`$${Number(data?.stats?.totalEarned || 0).toFixed(2)}`} color="green" />
         </div>
 
         {/* Tier Progress */}

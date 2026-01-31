@@ -230,7 +230,7 @@ export default function JobDetail() {
           ) : slotsLeft === 0 ? (
             'No Slots Available'
           ) : (
-            `Apply for $${totalPay.toFixed(0)}`
+            `Apply for $${totalPay.toFixed(2)}`
           )}
         </button>
       </div>
