@@ -1,0 +1,33 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<svg width="1242" height="2688" viewBox="0 0 1242 2688" xmlns="http://www.w3.org/2000/svg">
+  <!-- Background -->
+  <rect width="1242" height="2688" fill="#020617"/>
+
+  <!-- Gradient overlay -->
+  <defs>
+    <radialGradient id="glow" cx="50%" cy="50%" r="50%">
+      <stop offset="0%" style="stop-color:#8b5cf6;stop-opacity:0.15"/>
+      <stop offset="100%" style="stop-color:#020617;stop-opacity:0"/>
+    </radialGradient>
+  </defs>
+  <ellipse cx="621" cy="1075.2" rx="621" ry="806.4" fill="url(#glow)"/>
+
+  <!-- Logo circle -->
+  <circle cx="621" cy="1209.6" r="111.77999999999999" fill="#8b5cf6" opacity="0.2"/>
+  <circle cx="621" cy="1209.6" r="83.835" fill="#8b5cf6"/>
+
+  <!-- W letter -->
+  <text x="621" y="1237.5449999999998"
+        font-family="Arial, sans-serif" font-size="93.14999999999999" font-weight="bold"
+        fill="white" text-anchor="middle">W</text>
+
+  <!-- App name -->
+  <text x="621" y="1559.04"
+        font-family="Arial, sans-serif" font-size="74.52" font-weight="600"
+        fill="white" text-anchor="middle">WorkLink</text>
+
+  <!-- Tagline -->
+  <text x="621" y="1666.56"
+        font-family="Arial, sans-serif" font-size="37.26"
+        fill="#64748b" text-anchor="middle">Level Up Your Career</text>
+</svg>

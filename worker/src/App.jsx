@@ -5,6 +5,7 @@ import { ThemeProvider } from './contexts/ThemeContext';
 import { ToastProvider } from './components/ui/Toast';
 import BottomNav from './components/layout/BottomNav';
 import { PageTransition } from './components/layout/PageTransition';
+import InstallPrompt from './components/InstallPrompt';
 
 // Pages
 import Home from './pages/Home';
@@ -190,6 +191,7 @@ export default function App() {
           <WebSocketProvider>
             <ToastProvider>
               <AppRoutes />
+              <InstallPrompt />
             </ToastProvider>
           </WebSocketProvider>
         </AuthProvider>
