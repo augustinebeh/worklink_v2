@@ -2,25 +2,20 @@ import { useState, useEffect } from 'react';
 import { Link, useNavigate } from 'react-router-dom';
 import {
   ChevronRightIcon,
-  MapPinIcon,
-  ClockIcon,
   BriefcaseIcon,
   ZapIcon,
   FlameIcon,
   BellIcon,
   GiftIcon,
   CalendarIcon,
-  ArrowUpRightIcon,
   ArrowDownLeftIcon,
-  QrCodeIcon,
-  ScanLineIcon,
   TrendingUpIcon,
   SparklesIcon,
-  ChevronDownIcon,
   EyeIcon,
   EyeOffIcon,
   HistoryIcon,
   StarIcon,
+  ClockIcon,
 } from 'lucide-react';
 import { useAuth } from '../contexts/AuthContext';
 import { useWebSocket } from '../contexts/WebSocketContext';
@@ -34,7 +29,7 @@ import { FloatingXP, LevelUpCelebration, AchievementUnlock } from '../components
 const formatMoney = (amount) => Number(amount || 0).toFixed(2);
 
 // Quick Action Button (Crypto.com style circular)
-function QuickActionCircle({ icon: Icon, label, onClick, color = 'primary' }) {
+function QuickActionCircle({ icon: Icon, label, onClick, color = 'primary', isDark }) {
   const colors = {
     primary: 'bg-primary-500/20 text-primary-400',
     green: 'bg-emerald-500/20 text-emerald-400',
@@ -50,13 +45,13 @@ function QuickActionCircle({ icon: Icon, label, onClick, color = 'primary' }) {
       )}>
         <Icon className="h-6 w-6" />
       </div>
-      <span className="text-xs text-dark-300 font-medium">{label}</span>
+      <span className={clsx('text-xs font-medium', isDark ? 'text-dark-300' : 'text-slate-600')}>{label}</span>
     </button>
   );
 }
 
 // Portfolio Card (Job as asset)
-function JobAssetCard({ job }) {
+function JobAssetCard({ job, isDark }) {
   const slotsLeft = job.total_slots - job.filled_slots;
   const startTime = job.start_time || '09:00';
   const endTime = job.end_time || '17:00';
@@ -72,33 +67,38 @@ function JobAssetCard({ job }) {
   return (
     <Link
       to={`/jobs/${job.id}`}
-      className="flex items-center gap-4 p-4 rounded-2xl bg-dark-900/80 border border-white/5 hover:border-primary-500/30 transition-all active:scale-[0.99]"
+      className={clsx(
+        'flex items-center gap-4 p-4 rounded-2xl border transition-all active:scale-[0.99]',
+        isDark
+          ? 'bg-dark-900/80 border-white/5 hover:border-primary-500/30'
+          : 'bg-white border-slate-200 hover:border-primary-500/30 shadow-sm'
+      )}
     >
       {/* Job Icon */}
       <div className={clsx(
         'w-12 h-12 rounded-xl flex items-center justify-center flex-shrink-0',
-        job.featured ? 'bg-gradient-to-br from-primary-500 to-violet-500' : 'bg-dark-800'
+        job.featured ? 'bg-gradient-to-br from-primary-500 to-violet-500' : isDark ? 'bg-dark-800' : 'bg-slate-100'
       )}>
-        <BriefcaseIcon className="h-6 w-6 text-white" />
+        <BriefcaseIcon className={clsx('h-6 w-6', job.featured ? 'text-white' : isDark ? 'text-white' : 'text-slate-600')} />
       </div>
 
       {/* Job Info */}
       <div className="flex-1 min-w-0">
         <div className="flex items-center gap-2">
-          <h4 className="font-semibold text-white truncate">{job.title}</h4>
+          <h4 className={clsx('font-semibold truncate', isDark ? 'text-white' : 'text-slate-900')}>{job.title}</h4>
           {job.featured === 1 && (
             <ZapIcon className="h-4 w-4 text-primary-400 flex-shrink-0" />
           )}
         </div>
         <div className="flex items-center gap-2 mt-1">
-          <span className="text-sm text-dark-400">
+          <span className={clsx('text-sm', isDark ? 'text-dark-400' : 'text-slate-500')}>
             {isToday ? 'Today' : isTomorrow ? 'Tomorrow' : jobDate.toLocaleDateString('en-SG', { day: 'numeric', month: 'short' })}
           </span>
-          <span className="text-dark-600">•</span>
-          <span className="text-sm text-dark-400">{startTime}</span>
+          <span className={isDark ? 'text-dark-600' : 'text-slate-300'}>•</span>
+          <span className={clsx('text-sm', isDark ? 'text-dark-400' : 'text-slate-500')}>{startTime}</span>
           {slotsLeft <= 3 && (
             <>
-              <span className="text-dark-600">•</span>
+              <span className={isDark ? 'text-dark-600' : 'text-slate-300'}>•</span>
               <span className="text-xs text-red-400 font-medium">{slotsLeft} left</span>
             </>
           )}
@@ -107,36 +107,36 @@ function JobAssetCard({ job }) {
 
       {/* Pay */}
       <div className="text-right flex-shrink-0">
-        <p className="font-bold text-white">${formatMoney(totalPay)}</p>
-        <p className="text-xs text-emerald-400">+{hours.toFixed(1)}h</p>
+        <p className={clsx('font-bold', isDark ? 'text-white' : 'text-slate-900')}>${formatMoney(totalPay)}</p>
+        <p className="text-xs text-emerald-500">+{hours.toFixed(1)}h</p>
       </div>
     </Link>
   );
 }
 
 // Transaction/Activity Item
-function ActivityItem({ type, title, subtitle, amount, time, positive = true }) {
+function ActivityItem({ title, subtitle, amount, time, positive = true, isDark }) {
   return (
     <div className="flex items-center gap-4 py-3">
       <div className={clsx(
         'w-10 h-10 rounded-full flex items-center justify-center',
-        positive ? 'bg-emerald-500/20' : 'bg-dark-800'
+        positive ? 'bg-emerald-500/20' : isDark ? 'bg-dark-800' : 'bg-slate-100'
       )}>
         {positive ? (
           <ArrowDownLeftIcon className="h-5 w-5 text-emerald-400" />
         ) : (
-          <ArrowUpRightIcon className="h-5 w-5 text-dark-400" />
+          <ClockIcon className={clsx('h-5 w-5', isDark ? 'text-dark-400' : 'text-slate-400')} />
         )}
       </div>
       <div className="flex-1 min-w-0">
-        <p className="font-medium text-white truncate">{title}</p>
-        <p className="text-sm text-dark-500">{subtitle}</p>
+        <p className={clsx('font-medium truncate', isDark ? 'text-white' : 'text-slate-900')}>{title}</p>
+        <p className={clsx('text-sm', isDark ? 'text-dark-500' : 'text-slate-500')}>{subtitle}</p>
       </div>
       <div className="text-right">
-        <p className={clsx('font-semibold', positive ? 'text-emerald-400' : 'text-white')}>
-          {positive ? '+' : '-'}${formatMoney(amount)}
+        <p className={clsx('font-semibold', positive ? 'text-emerald-400' : isDark ? 'text-white' : 'text-slate-900')}>
+          {positive ? '+' : ''}${formatMoney(amount)}
         </p>
-        <p className="text-xs text-dark-500">{time}</p>
+        <p className={clsx('text-xs', isDark ? 'text-dark-500' : 'text-slate-500')}>{time}</p>
       </div>
     </div>
   );
@@ -290,8 +290,8 @@ export default function Home() {
             {/* Total Balance Label */}
             <div className="flex items-center justify-between mb-2">
               <div className="flex items-center gap-2">
-                <span className="text-dark-400 text-sm">Total Balance</span>
-                <button onClick={() => setBalanceHidden(!balanceHidden)} className="text-dark-500">
+                <span className="text-white/70 text-sm">Total Balance</span>
+                <button onClick={() => setBalanceHidden(!balanceHidden)} className="text-white/50">
                   {balanceHidden ? <EyeOffIcon className="h-4 w-4" /> : <EyeIcon className="h-4 w-4" />}
                 </button>
               </div>
@@ -306,7 +306,7 @@ export default function Home() {
               <p className="text-4xl font-bold text-white tracking-tight">
                 {balanceHidden ? '••••••' : `$${formatMoney(totalEarnings)}`}
               </p>
-              <p className="text-dark-400 text-sm mt-1">
+              <p className="text-white/60 text-sm mt-1">
                 SGD • <span className="text-amber-400">${formatMoney(pendingPayment)} pending</span>
               </p>
             </div>
@@ -314,12 +314,12 @@ export default function Home() {
             {/* XP Progress */}
             <div className="mb-6">
               <div className="flex items-center justify-between text-sm mb-2">
-                <span className="text-dark-400">{levelTitles[userLevel]}</span>
-                <span className="text-primary-400">{xpInLevel.toLocaleString()} / {xpNeeded.toLocaleString()} XP</span>
+                <span className="text-white/70">{levelTitles[userLevel]}</span>
+                <span className="text-primary-300">{xpInLevel.toLocaleString()} / {xpNeeded.toLocaleString()} XP</span>
               </div>
-              <div className="h-2 bg-dark-800 rounded-full overflow-hidden">
+              <div className="h-2 bg-white/20 rounded-full overflow-hidden">
                 <div
-                  className="h-full bg-gradient-to-r from-primary-500 to-violet-500 rounded-full transition-all duration-500"
+                  className="h-full bg-gradient-to-r from-primary-400 to-violet-400 rounded-full transition-all duration-500"
                   style={{ width: `${progress}%` }}
                 />
               </div>
@@ -332,24 +332,28 @@ export default function Home() {
                 label="Find Jobs"
                 onClick={() => navigate('/jobs')}
                 color="primary"
+                isDark={true}
               />
               <QuickActionCircle
                 icon={CalendarIcon}
                 label="Availability"
                 onClick={() => navigate('/calendar')}
                 color="blue"
+                isDark={true}
               />
               <QuickActionCircle
                 icon={GiftIcon}
                 label="Refer"
                 onClick={() => navigate('/referrals')}
                 color="green"
+                isDark={true}
               />
               <QuickActionCircle
                 icon={HistoryIcon}
                 label="History"
                 onClick={() => navigate('/wallet')}
                 color="purple"
+                isDark={true}
               />
             </div>
           </div>
@@ -359,15 +363,20 @@ export default function Home() {
       {/* Streak Banner */}
       {userStreak > 0 && (
         <div className="px-4 mb-4">
-          <div className="flex items-center gap-3 p-3 rounded-2xl bg-gradient-to-r from-orange-900/30 to-amber-900/20 border border-orange-500/20">
+          <div className={clsx(
+            'flex items-center gap-3 p-3 rounded-2xl border',
+            isDark
+              ? 'bg-gradient-to-r from-orange-900/30 to-amber-900/20 border-orange-500/20'
+              : 'bg-gradient-to-r from-orange-100 to-amber-50 border-orange-200'
+          )}>
             <div className="w-10 h-10 rounded-full bg-orange-500/20 flex items-center justify-center">
               <FlameIcon className="h-5 w-5 text-orange-400" />
             </div>
             <div className="flex-1">
-              <p className="font-semibold text-white">{userStreak} Day Streak!</p>
-              <p className="text-xs text-orange-400/80">Keep it going for bonus XP</p>
+              <p className={clsx('font-semibold', isDark ? 'text-white' : 'text-slate-900')}>{userStreak} Day Streak!</p>
+              <p className="text-xs text-orange-500">Keep it going for bonus XP</p>
             </div>
-            <ChevronRightIcon className="h-5 w-5 text-dark-500" />
+            <ChevronRightIcon className={clsx('h-5 w-5', isDark ? 'text-dark-500' : 'text-slate-400')} />
           </div>
         </div>
       )}
@@ -376,7 +385,7 @@ export default function Home() {
       <div className="px-4 mb-6">
         <div className="flex items-center justify-between mb-4">
           <h2 className={clsx('text-lg font-semibold', isDark ? 'text-white' : 'text-slate-900')}>Available Jobs</h2>
-          <Link to="/jobs" className="flex items-center gap-1 text-sm text-primary-400">
+          <Link to="/jobs" className="flex items-center gap-1 text-sm text-primary-500">
             View all
             <ChevronRightIcon className="h-4 w-4" />
           </Link>
@@ -385,19 +394,22 @@ export default function Home() {
         {loading ? (
           <div className="space-y-3">
             {[1, 2, 3].map(i => (
-              <div key={i} className="h-20 rounded-2xl bg-dark-800/50 animate-pulse" />
+              <div key={i} className={clsx('h-20 rounded-2xl animate-pulse', isDark ? 'bg-dark-800/50' : 'bg-slate-200')} />
             ))}
           </div>
         ) : jobs.length === 0 ? (
-          <div className="text-center py-12 rounded-2xl bg-dark-900/50 border border-white/5">
-            <SparklesIcon className="h-12 w-12 text-dark-600 mx-auto mb-3" />
-            <h3 className="font-semibold text-white mb-1">No jobs available</h3>
-            <p className="text-dark-400 text-sm">Check back soon for new opportunities</p>
+          <div className={clsx(
+            'text-center py-12 rounded-2xl border',
+            isDark ? 'bg-dark-900/50 border-white/5' : 'bg-white border-slate-200'
+          )}>
+            <SparklesIcon className={clsx('h-12 w-12 mx-auto mb-3', isDark ? 'text-dark-600' : 'text-slate-300')} />
+            <h3 className={clsx('font-semibold mb-1', isDark ? 'text-white' : 'text-slate-900')}>No jobs available</h3>
+            <p className={clsx('text-sm', isDark ? 'text-dark-400' : 'text-slate-500')}>Check back soon for new opportunities</p>
           </div>
         ) : (
           <div className="space-y-3">
             {jobs.map((job) => (
-              <JobAssetCard key={job.id} job={job} />
+              <JobAssetCard key={job.id} job={job} isDark={isDark} />
             ))}
           </div>
         )}
@@ -407,14 +419,17 @@ export default function Home() {
       {recentPayments.length > 0 && (
         <div className="px-4 mb-6">
           <div className="flex items-center justify-between mb-4">
-            <h2 className="text-lg font-semibold text-white">Recent Activity</h2>
-            <Link to="/wallet" className="flex items-center gap-1 text-sm text-primary-400">
+            <h2 className={clsx('text-lg font-semibold', isDark ? 'text-white' : 'text-slate-900')}>Recent Activity</h2>
+            <Link to="/wallet" className="flex items-center gap-1 text-sm text-primary-500">
               See all
               <ChevronRightIcon className="h-4 w-4" />
             </Link>
           </div>
 
-          <div className="rounded-2xl bg-dark-900/50 border border-white/5 divide-y divide-white/5">
+          <div className={clsx(
+            'rounded-2xl border divide-y overflow-hidden',
+            isDark ? 'bg-dark-900/50 border-white/5 divide-white/5' : 'bg-white border-slate-200 divide-slate-100'
+          )}>
             {recentPayments.map((payment) => (
               <div key={payment.id} className="px-4">
                 <ActivityItem
@@ -423,6 +438,7 @@ export default function Home() {
                   amount={payment.total_amount}
                   time={new Date(payment.created_at).toLocaleDateString('en-SG', { day: 'numeric', month: 'short' })}
                   positive={payment.status === 'paid'}
+                  isDark={isDark}
                 />
               </div>
             ))}
@@ -434,18 +450,23 @@ export default function Home() {
       <div className="px-4 mb-6">
         <Link
           to="/referrals"
-          className="block relative overflow-hidden rounded-2xl bg-gradient-to-r from-emerald-900/50 to-teal-900/30 border border-emerald-500/20 p-4"
+          className={clsx(
+            'block relative overflow-hidden rounded-2xl border p-4',
+            isDark
+              ? 'bg-gradient-to-r from-emerald-900/50 to-teal-900/30 border-emerald-500/20'
+              : 'bg-gradient-to-r from-emerald-50 to-teal-50 border-emerald-200'
+          )}
         >
           <div className="absolute top-0 right-0 w-32 h-32 bg-emerald-500/20 rounded-full blur-2xl -translate-y-1/2 translate-x-1/2" />
           <div className="relative flex items-center gap-4">
             <div className="w-12 h-12 rounded-2xl bg-emerald-500/20 flex items-center justify-center">
-              <GiftIcon className="h-6 w-6 text-emerald-400" />
+              <GiftIcon className="h-6 w-6 text-emerald-500" />
             </div>
             <div className="flex-1">
-              <p className="font-semibold text-white">Refer & Earn $30</p>
-              <p className="text-sm text-emerald-400/80">Invite friends, both get rewarded</p>
+              <p className={clsx('font-semibold', isDark ? 'text-white' : 'text-slate-900')}>Refer & Earn $30</p>
+              <p className="text-sm text-emerald-500">Invite friends, both get rewarded</p>
             </div>
-            <ChevronRightIcon className="h-5 w-5 text-dark-500" />
+            <ChevronRightIcon className={clsx('h-5 w-5', isDark ? 'text-dark-500' : 'text-slate-400')} />
           </div>
         </Link>
       </div>

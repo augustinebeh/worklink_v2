@@ -1,15 +1,12 @@
 import { useState, useEffect } from 'react';
 import {
   WalletIcon,
-  ArrowUpRightIcon,
   ArrowDownLeftIcon,
   ClockIcon,
   CheckCircleIcon,
   TrendingUpIcon,
-  ChevronRightIcon,
   EyeIcon,
   EyeOffIcon,
-  FilterIcon,
 } from 'lucide-react';
 import { useAuth } from '../contexts/AuthContext';
 import { useTheme } from '../contexts/ThemeContext';
@@ -18,7 +15,7 @@ import { clsx } from 'clsx';
 // Format money helper
 const formatMoney = (amount) => Number(amount || 0).toFixed(2);
 
-function TransactionItem({ payment }) {
+function TransactionItem({ payment, isDark }) {
   const statusConfig = {
     pending: { color: 'text-amber-400', bg: 'bg-amber-500/20', label: 'Pending' },
     approved: { color: 'text-blue-400', bg: 'bg-blue-500/20', label: 'Approved' },
@@ -39,13 +36,13 @@ function TransactionItem({ payment }) {
         )}
       </div>
       <div className="flex-1 min-w-0">
-        <p className="font-medium text-white truncate">{payment.job_title || 'Job Payment'}</p>
-        <p className="text-sm text-dark-500">
+        <p className={clsx('font-medium truncate', isDark ? 'text-white' : 'text-slate-900')}>{payment.job_title || 'Job Payment'}</p>
+        <p className={clsx('text-sm', isDark ? 'text-dark-500' : 'text-slate-500')}>
           {new Date(payment.created_at).toLocaleDateString('en-SG', { day: 'numeric', month: 'short', year: 'numeric' })}
         </p>
       </div>
       <div className="text-right">
-        <p className={clsx('font-semibold', isPaid ? 'text-emerald-400' : 'text-white')}>
+        <p className={clsx('font-semibold', isPaid ? 'text-emerald-400' : isDark ? 'text-white' : 'text-slate-900')}>
           {isPaid ? '+' : ''}${formatMoney(payment.total_amount)}
         </p>
         <p className={clsx('text-xs', config.color)}>{config.label}</p>
@@ -119,8 +116,8 @@ export default function Wallet() {
           <div className="relative">
             {/* Balance Label */}
             <div className="flex items-center gap-2 mb-2">
-              <span className="text-dark-400 text-sm">Total Earned</span>
-              <button onClick={() => setBalanceHidden(!balanceHidden)} className="text-dark-500">
+              <span className="text-white/70 text-sm">Total Earned</span>
+              <button onClick={() => setBalanceHidden(!balanceHidden)} className="text-white/50">
                 {balanceHidden ? <EyeOffIcon className="h-4 w-4" /> : <EyeIcon className="h-4 w-4" />}
               </button>
             </div>
@@ -129,23 +126,23 @@ export default function Wallet() {
             <p className="text-4xl font-bold text-white tracking-tight mb-1">
               {balanceHidden ? '••••••' : `$${formatMoney(stats.total)}`}
             </p>
-            <p className="text-dark-400 text-sm">SGD</p>
+            <p className="text-white/60 text-sm">SGD</p>
 
             {/* Stats Grid */}
             <div className="grid grid-cols-2 gap-4 mt-6">
-              <div className="p-4 rounded-2xl bg-dark-800/50 border border-white/5">
+              <div className="p-4 rounded-2xl bg-white/10 border border-white/10">
                 <div className="flex items-center gap-2 mb-1">
                   <ClockIcon className="h-4 w-4 text-amber-400" />
-                  <span className="text-xs text-dark-400">Pending</span>
+                  <span className="text-xs text-white/70">Pending</span>
                 </div>
                 <p className="text-xl font-bold text-amber-400">
                   {balanceHidden ? '••••' : `$${formatMoney(stats.pending)}`}
                 </p>
               </div>
-              <div className="p-4 rounded-2xl bg-dark-800/50 border border-white/5">
+              <div className="p-4 rounded-2xl bg-white/10 border border-white/10">
                 <div className="flex items-center gap-2 mb-1">
                   <TrendingUpIcon className="h-4 w-4 text-emerald-400" />
-                  <span className="text-xs text-dark-400">This Month</span>
+                  <span className="text-xs text-white/70">This Month</span>
                 </div>
                 <p className="text-xl font-bold text-emerald-400">
                   {balanceHidden ? '••••' : `$${formatMoney(stats.thisMonth)}`}
@@ -159,15 +156,15 @@ export default function Wallet() {
       {/* Quick Stats */}
       <div className="px-4 mb-4">
         <div className="flex gap-3">
-          <div className={clsx('flex-1 p-4 rounded-2xl text-center border', isDark ? 'bg-dark-900/50 border-white/5' : 'bg-white border-slate-200')}>
+          <div className={clsx('flex-1 p-4 rounded-2xl text-center border', isDark ? 'bg-dark-900/50 border-white/5' : 'bg-white border-slate-200 shadow-sm')}>
             <p className={clsx('text-2xl font-bold', isDark ? 'text-white' : 'text-slate-900')}>{user?.total_jobs_completed || 0}</p>
             <p className={clsx('text-xs', isDark ? 'text-dark-500' : 'text-slate-500')}>Jobs Done</p>
           </div>
-          <div className={clsx('flex-1 p-4 rounded-2xl text-center border', isDark ? 'bg-dark-900/50 border-white/5' : 'bg-white border-slate-200')}>
+          <div className={clsx('flex-1 p-4 rounded-2xl text-center border', isDark ? 'bg-dark-900/50 border-white/5' : 'bg-white border-slate-200 shadow-sm')}>
             <p className={clsx('text-2xl font-bold', isDark ? 'text-white' : 'text-slate-900')}>{payments.filter(p => p.status === 'pending').length}</p>
             <p className={clsx('text-xs', isDark ? 'text-dark-500' : 'text-slate-500')}>Pending</p>
           </div>
-          <div className={clsx('flex-1 p-4 rounded-2xl text-center border', isDark ? 'bg-dark-900/50 border-white/5' : 'bg-white border-slate-200')}>
+          <div className={clsx('flex-1 p-4 rounded-2xl text-center border', isDark ? 'bg-dark-900/50 border-white/5' : 'bg-white border-slate-200 shadow-sm')}>
             <p className={clsx('text-2xl font-bold', isDark ? 'text-white' : 'text-slate-900')}>${formatMoney(user?.total_incentives_earned || 0)}</p>
             <p className={clsx('text-xs', isDark ? 'text-dark-500' : 'text-slate-500')}>Bonuses</p>
           </div>
@@ -193,7 +190,7 @@ export default function Wallet() {
               className={clsx(
                 'px-4 py-2 rounded-full text-sm font-medium transition-colors',
                 filter === tab.id
-                  ? 'bg-primary-500/20 text-primary-400 border border-primary-500/30'
+                  ? 'bg-primary-500/20 text-primary-500 border border-primary-500/30'
                   : isDark
                     ? 'bg-dark-800/50 text-dark-400 border border-transparent'
                     : 'bg-slate-100 text-slate-500 border border-transparent'
@@ -209,14 +206,20 @@ export default function Wallet() {
             <div className="animate-spin h-8 w-8 border-2 border-primary-500 border-t-transparent rounded-full" />
           </div>
         ) : filteredPayments.length === 0 ? (
-          <div className="text-center py-12 rounded-2xl bg-dark-900/50 border border-white/5">
-            <WalletIcon className="h-12 w-12 text-dark-600 mx-auto mb-3" />
-            <p className="text-dark-400">No transactions yet</p>
+          <div className={clsx(
+            'text-center py-12 rounded-2xl border',
+            isDark ? 'bg-dark-900/50 border-white/5' : 'bg-white border-slate-200'
+          )}>
+            <WalletIcon className={clsx('h-12 w-12 mx-auto mb-3', isDark ? 'text-dark-600' : 'text-slate-300')} />
+            <p className={isDark ? 'text-dark-400' : 'text-slate-500'}>No transactions yet</p>
           </div>
         ) : (
-          <div className="rounded-2xl bg-dark-900/50 border border-white/5 divide-y divide-white/5 overflow-hidden">
+          <div className={clsx(
+            'rounded-2xl border divide-y overflow-hidden',
+            isDark ? 'bg-dark-900/50 border-white/5 divide-white/5' : 'bg-white border-slate-200 divide-slate-100'
+          )}>
             {filteredPayments.map(payment => (
-              <TransactionItem key={payment.id} payment={payment} />
+              <TransactionItem key={payment.id} payment={payment} isDark={isDark} />
             ))}
           </div>
         )}

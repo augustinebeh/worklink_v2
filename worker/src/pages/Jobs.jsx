@@ -1,8 +1,8 @@
 import { useState, useEffect } from 'react';
 import { Link } from 'react-router-dom';
-import { 
-  MapPinIcon, 
-  ClockIcon, 
+import {
+  MapPinIcon,
+  ClockIcon,
   ZapIcon,
   SearchIcon,
   FilterIcon,
@@ -12,12 +12,13 @@ import {
   BriefcaseIcon,
 } from 'lucide-react';
 import { useAuth } from '../contexts/AuthContext';
+import { useTheme } from '../contexts/ThemeContext';
 import { clsx } from 'clsx';
 
-function JobCard({ job, applied }) {
+function JobCard({ job, applied, isDark }) {
   const startTime = job.start_time || '09:00';
   const endTime = job.end_time || '17:00';
-  
+
   // Calculate hours
   const start = startTime.split(':').map(Number);
   let end = endTime.split(':').map(Number);
@@ -30,11 +31,17 @@ function JobCard({ job, applied }) {
   const isTomorrow = jobDate.toDateString() === new Date(Date.now() + 86400000).toDateString();
 
   return (
-    <Link 
+    <Link
       to={`/jobs/${job.id}`}
       className={clsx(
-        'block p-4 rounded-2xl bg-dark-900/50 border transition-all',
-        applied ? 'border-accent-500/30 bg-accent-900/10' : 'border-white/5 hover:border-primary-500/30'
+        'block p-4 rounded-2xl border transition-all',
+        isDark
+          ? applied
+            ? 'bg-accent-900/10 border-accent-500/30'
+            : 'bg-dark-900/50 border-white/5 hover:border-primary-500/30'
+          : applied
+            ? 'bg-emerald-50 border-emerald-200'
+            : 'bg-white border-slate-200 shadow-sm hover:border-primary-300'
       )}
     >
       {/* Status badges */}
@@ -58,30 +65,30 @@ function JobCard({ job, applied }) {
       </div>
 
       {/* Title & Company */}
-      <h3 className="font-semibold text-white text-lg">{job.title}</h3>
-      <p className="text-dark-400 text-sm">{job.company_name || job.location}</p>
+      <h3 className={clsx('font-semibold text-lg', isDark ? 'text-white' : 'text-slate-900')}>{job.title}</h3>
+      <p className={clsx('text-sm', isDark ? 'text-dark-400' : 'text-slate-500')}>{job.company_name || job.location}</p>
 
       {/* Details */}
-      <div className="flex flex-wrap items-center gap-3 mt-3 text-sm text-dark-300">
+      <div className={clsx('flex flex-wrap items-center gap-3 mt-3 text-sm', isDark ? 'text-dark-300' : 'text-slate-600')}>
         <div className="flex items-center gap-1">
-          <CalendarIcon className="h-4 w-4 text-dark-500" />
+          <CalendarIcon className={clsx('h-4 w-4', isDark ? 'text-dark-500' : 'text-slate-400')} />
           <span>{jobDate.toLocaleDateString('en-SG', { weekday: 'short', day: 'numeric', month: 'short' })}</span>
         </div>
         <div className="flex items-center gap-1">
-          <ClockIcon className="h-4 w-4 text-dark-500" />
+          <ClockIcon className={clsx('h-4 w-4', isDark ? 'text-dark-500' : 'text-slate-400')} />
           <span>{startTime} - {endTime}</span>
         </div>
         <div className="flex items-center gap-1">
-          <MapPinIcon className="h-4 w-4 text-dark-500" />
+          <MapPinIcon className={clsx('h-4 w-4', isDark ? 'text-dark-500' : 'text-slate-400')} />
           <span className="truncate max-w-[120px]">{job.location}</span>
         </div>
       </div>
 
       {/* Pay & Slots */}
-      <div className="flex items-center justify-between mt-4 pt-3 border-t border-white/5">
+      <div className={clsx('flex items-center justify-between mt-4 pt-3 border-t', isDark ? 'border-white/5' : 'border-slate-100')}>
         <div>
           <p className="text-xl font-bold text-accent-400">${totalPay.toFixed(2)}</p>
-          <p className="text-xs text-dark-500">${Number(job.pay_rate).toFixed(2)}/hr • {hours.toFixed(1)}h</p>
+          <p className={clsx('text-xs', isDark ? 'text-dark-500' : 'text-slate-400')}>${Number(job.pay_rate).toFixed(2)}/hr • {hours.toFixed(1)}h</p>
         </div>
         <div className="flex items-center gap-3">
           {job.xp_bonus > 0 && (
@@ -90,10 +97,10 @@ function JobCard({ job, applied }) {
               <span className="text-sm font-medium">+{job.xp_bonus} XP</span>
             </div>
           )}
-          <span className="text-sm text-dark-400">
+          <span className={clsx('text-sm', isDark ? 'text-dark-400' : 'text-slate-500')}>
             {job.total_slots - job.filled_slots} slots
           </span>
-          <ChevronRightIcon className="h-5 w-5 text-dark-500" />
+          <ChevronRightIcon className={clsx('h-5 w-5', isDark ? 'text-dark-500' : 'text-slate-400')} />
         </div>
       </div>
     </Link>
@@ -102,6 +109,7 @@ function JobCard({ job, applied }) {
 
 export default function Jobs() {
   const { user } = useAuth();
+  const { isDark } = useTheme();
   const [jobs, setJobs] = useState([]);
   const [myJobs, setMyJobs] = useState([]);
   const [loading, setLoading] = useState(true);
@@ -118,10 +126,10 @@ export default function Jobs() {
         fetch('/api/v1/jobs?status=open'),
         user ? fetch(`/api/v1/candidates/${user.id}/deployments`) : Promise.resolve({ json: () => ({ data: [] }) }),
       ]);
-      
+
       const jobsData = await jobsRes.json();
       const myJobsData = await myJobsRes.json();
-      
+
       if (jobsData.success) setJobs(jobsData.data);
       if (myJobsData.success) setMyJobs(myJobsData.data.map(d => d.job_id));
     } catch (error) {
@@ -135,13 +143,13 @@ export default function Jobs() {
     // Search filter
     if (search) {
       const query = search.toLowerCase();
-      if (!job.title.toLowerCase().includes(query) && 
+      if (!job.title.toLowerCase().includes(query) &&
           !job.location?.toLowerCase().includes(query) &&
           !job.company_name?.toLowerCase().includes(query)) {
         return false;
       }
     }
-    
+
     // Status filter
     if (filter === 'applied') return myJobs.includes(job.id);
     if (filter === 'available') return !myJobs.includes(job.id);
@@ -155,20 +163,28 @@ export default function Jobs() {
   });
 
   return (
-    <div className="min-h-screen bg-dark-950 pb-24">
+    <div className={clsx('min-h-screen pb-24', isDark ? 'bg-dark-950' : 'bg-slate-50')}>
       {/* Header */}
-      <div className="sticky top-0 z-10 bg-dark-950/95 backdrop-blur-lg px-4 pt-safe pb-4 border-b border-white/5">
-        <h1 className="text-2xl font-bold text-white mb-4">Find Jobs</h1>
-        
+      <div className={clsx(
+        'sticky top-0 z-10 backdrop-blur-lg px-4 pt-safe pb-4 border-b',
+        isDark ? 'bg-dark-950/95 border-white/5' : 'bg-white/95 border-slate-200'
+      )}>
+        <h1 className={clsx('text-2xl font-bold mb-4', isDark ? 'text-white' : 'text-slate-900')}>Find Jobs</h1>
+
         {/* Search */}
         <div className="relative mb-4">
-          <SearchIcon className="absolute left-3 top-1/2 -translate-y-1/2 h-5 w-5 text-dark-500" />
+          <SearchIcon className={clsx('absolute left-3 top-1/2 -translate-y-1/2 h-5 w-5', isDark ? 'text-dark-500' : 'text-slate-400')} />
           <input
             type="text"
             placeholder="Search jobs, locations..."
             value={search}
             onChange={(e) => setSearch(e.target.value)}
-            className="w-full pl-10 pr-4 py-3 rounded-xl bg-dark-800 border border-white/10 text-white placeholder-dark-500 focus:outline-none focus:border-primary-500"
+            className={clsx(
+              'w-full pl-10 pr-4 py-3 rounded-xl border focus:outline-none focus:border-primary-500',
+              isDark
+                ? 'bg-dark-800 border-white/10 text-white placeholder-dark-500'
+                : 'bg-slate-100 border-slate-200 text-slate-900 placeholder-slate-400'
+            )}
           />
         </div>
 
@@ -184,9 +200,11 @@ export default function Jobs() {
               onClick={() => setFilter(tab.id)}
               className={clsx(
                 'px-4 py-2 rounded-full text-sm font-medium transition-colors',
-                filter === tab.id 
-                  ? 'bg-primary-500 text-white' 
-                  : 'bg-dark-800 text-dark-400 hover:text-white'
+                filter === tab.id
+                  ? 'bg-primary-500 text-white'
+                  : isDark
+                    ? 'bg-dark-800 text-dark-400 hover:text-white'
+                    : 'bg-slate-100 text-slate-500 hover:text-slate-700'
               )}
             >
               {tab.label}
@@ -202,14 +220,17 @@ export default function Jobs() {
             <div className="animate-spin h-8 w-8 border-4 border-primary-500 border-t-transparent rounded-full" />
           </div>
         ) : sortedJobs.length === 0 ? (
-          <div className="text-center py-12">
-            <BriefcaseIcon className="h-12 w-12 text-dark-600 mx-auto mb-4" />
-            <p className="text-dark-400">No jobs found</p>
+          <div className={clsx(
+            'text-center py-12 rounded-2xl border',
+            isDark ? 'bg-dark-900/50 border-white/5' : 'bg-white border-slate-200'
+          )}>
+            <BriefcaseIcon className={clsx('h-12 w-12 mx-auto mb-4', isDark ? 'text-dark-600' : 'text-slate-300')} />
+            <p className={isDark ? 'text-dark-400' : 'text-slate-500'}>No jobs found</p>
           </div>
         ) : (
           <div className="space-y-4">
             {sortedJobs.map(job => (
-              <JobCard key={job.id} job={job} applied={myJobs.includes(job.id)} />
+              <JobCard key={job.id} job={job} applied={myJobs.includes(job.id)} isDark={isDark} />
             ))}
           </div>
         )}
