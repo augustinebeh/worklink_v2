@@ -34,9 +34,45 @@
 }
 
 @layer base {
+  /* ===== NATIVE APP FEEL ===== */
   html {
     @apply antialiased;
+    /* No tap highlight */
     -webkit-tap-highlight-color: transparent;
+    /* No horizontal scroll */
+    overflow-x: hidden;
+    /* Prevent text selection on UI */
+    -webkit-user-select: none;
+    user-select: none;
+    /* Faster touch response */
+    touch-action: manipulation;
+    /* No iOS callout on long press */
+    -webkit-touch-callout: none;
+  }
+
+  /* Allow text selection only in content areas */
+  p, span, h1, h2, h3, h4, h5, h6, input, textarea {
+    -webkit-user-select: text;
+    user-select: text;
+  }
+
+  /* No image dragging */
+  img, a, button {
+    -webkit-user-drag: none;
+    user-drag: none;
+    -khtml-user-drag: none;
+    -moz-user-drag: none;
+    -o-user-drag: none;
+  }
+
+  /* Prevent images from being saved on long press */
+  img {
+    pointer-events: none;
+  }
+
+  /* Re-enable pointer events for clickable images */
+  a img, button img {
+    pointer-events: auto;
   }
 
   /* Dark theme (default) */
@@ -68,13 +104,33 @@
   }
 
   body {
+    /* No pull-to-refresh, no rubber-banding, no swipe-back */
     overscroll-behavior: none;
+    overscroll-behavior-x: none;
+    overscroll-behavior-y: none;
+    /* No horizontal scroll */
+    overflow-x: hidden;
+    /* Full height */
     min-height: 100vh;
+    min-height: 100dvh;
+    /* Prevent body scroll issues */
+    position: fixed;
+    width: 100%;
+    height: 100%;
   }
 
   #root {
     min-height: 100vh;
+    min-height: 100dvh;
     min-height: -webkit-fill-available;
+    /* Enable scroll inside root */
+    overflow-y: auto;
+    overflow-x: hidden;
+    /* Smooth momentum scrolling */
+    -webkit-overflow-scrolling: touch;
+    /* Full dimensions when body is fixed */
+    height: 100%;
+    width: 100%;
   }
 
   /* Hide scrollbar but keep functionality */
