@@ -155,6 +155,7 @@ export default function Home() {
   const toast = useToast();
   const [jobs, setJobs] = useState([]);
   const [recentPayments, setRecentPayments] = useState([]);
+  const [thisMonthEarnings, setThisMonthEarnings] = useState(0);
   const [loading, setLoading] = useState(true);
   const [balanceHidden, setBalanceHidden] = useState(false);
 
@@ -214,6 +215,15 @@ export default function Home() {
 
       if (paymentsData.success) {
         setRecentPayments(paymentsData.data?.slice(0, 3) || []);
+        // Calculate this month's earnings
+        const now = new Date();
+        const monthlyTotal = (paymentsData.data || [])
+          .filter(p => {
+            const date = new Date(p.created_at);
+            return p.status === 'paid' && date.getMonth() === now.getMonth() && date.getFullYear() === now.getFullYear();
+          })
+          .reduce((sum, p) => sum + p.total_amount, 0);
+        setThisMonthEarnings(monthlyTotal);
       }
     } catch (error) {
       toast.error('Failed to load', 'Pull down to refresh');
@@ -291,10 +301,10 @@ export default function Home() {
           <div className="absolute bottom-0 left-0 w-48 h-48 bg-violet-500/10 rounded-full blur-3xl translate-y-1/2 -translate-x-1/2" />
 
           <div className="relative">
-            {/* Total Balance Label */}
+            {/* This Month Label */}
             <div className="flex items-center justify-between mb-2">
               <div className="flex items-center gap-2">
-                <span className="text-white/70 text-sm">Total Earned</span>
+                <span className="text-white/70 text-sm">This Month</span>
                 <button onClick={() => setBalanceHidden(!balanceHidden)} className="text-white/50">
                   {balanceHidden ? <EyeOffIcon className="h-4 w-4" /> : <EyeIcon className="h-4 w-4" />}
                 </button>
@@ -310,10 +320,10 @@ export default function Home() {
             {/* Balance Amount */}
             <div className="mb-6">
               <p className="text-4xl font-bold text-white tracking-tight">
-                {balanceHidden ? '••••••' : `$${formatMoney(totalEarnings)}`}
+                {balanceHidden ? '••••••' : `$${formatMoney(thisMonthEarnings)}`}
               </p>
               <p className="text-white/60 text-sm mt-1">
-                SGD • <span className="text-amber-400">${formatMoney(pendingPayment)} pending</span>
+                Total: ${formatMoney(totalEarnings)} • <span className="text-amber-400">${formatMoney(pendingPayment)} pending</span>
               </p>
             </div>
 
