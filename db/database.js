@@ -1,7 +1,7 @@
 /**
  * WorkLink v2 Database
  * - Production (Railway): Empty database, persists in volume
- * - Development (Local): Seeds with sample data
+ * - Development (Local): Seeds with comprehensive sample data
  */
 
 const Database = require('better-sqlite3');
@@ -212,6 +212,7 @@ function createSchema() {
       win_probability INTEGER,
       recommended_action TEXT,
       notes TEXT,
+      assigned_to TEXT,
       created_at DATETIME DEFAULT CURRENT_TIMESTAMP,
       updated_at DATETIME DEFAULT CURRENT_TIMESTAMP
     );
@@ -364,7 +365,7 @@ function createSchema() {
       created_at DATETIME DEFAULT CURRENT_TIMESTAMP
     );
 
-    -- Job matching scores (for smart recommendations)
+    -- Job matching scores
     CREATE TABLE IF NOT EXISTS job_match_scores (
       id INTEGER PRIMARY KEY AUTOINCREMENT,
       job_id TEXT,
@@ -403,11 +404,10 @@ function createSchema() {
 
 // Seed essential data (achievements, quests, tiers) - runs in both environments
 function seedEssentialData() {
-  // Check if already seeded
   const achievementCount = db.prepare('SELECT COUNT(*) as c FROM achievements').get().c;
   if (achievementCount > 0) return;
 
-  console.log('🌱 Seeding essential data (achievements, quests, referral tiers)...');
+  console.log('🌱 Seeding essential data...');
 
   // Referral tiers
   const tiers = [
@@ -450,7 +450,7 @@ function seedEssentialData() {
     db.prepare('INSERT OR IGNORE INTO quests VALUES (?,?,?,?,?,?,?,?)').run(...q);
   });
 
-  // Training modules
+  // Training
   const training = [
     ['TRN001', 'Server Basics', 'F&B service fundamentals', 45, 'Server Basics', 150],
     ['TRN002', 'Food Safety', 'Food handling certification', 60, 'Food Safety', 200],
@@ -473,35 +473,34 @@ function seedEssentialData() {
     db.prepare(`INSERT OR IGNORE INTO incentive_schemes VALUES (?,?,?,?,?,?,?,?,?,?,?,datetime('now'))`).run(...s);
   });
 
-  // Message templates with WhatsApp versions
+  // Message templates
   const templates = [
-    ['TPL001', 'Welcome', 'onboarding', 'Hi {name}! Welcome to WorkLink. Start browsing jobs now!', '👋 Hi {name}! Welcome to WorkLink!\n\nStart earning today:\n🔗 {app_link}', '["name","app_link"]'],
-    ['TPL002', 'Job Match', 'job', 'Great news! A job matching your profile is available: {job_title} at {location}', '🎯 *Perfect Match!*\n\n{job_title}\n📍 {location}\n💰 ${pay_rate}/hr\n\nApply now: {job_link}', '["job_title","location","pay_rate","job_link"]'],
-    ['TPL003', 'Job Reminder', 'reminder', 'Reminder: You have a job tomorrow at {location}. Arrive 15 mins early!', '⏰ *Reminder*\n\nYou have a job tomorrow!\n📍 {location}\n🕐 {time}\n\nDon\'t be late! 💪', '["location","time"]'],
-    ['TPL004', 'Payment', 'payment', 'Your payment of ${amount} has been processed.', '💰 *Payment Received!*\n\n${amount} is on the way to your bank.\n\nKeep up the great work! 🌟', '["amount"]'],
-    ['TPL005', 'Referral Success', 'referral', 'Your friend {friend_name} just signed up! Complete their first job to earn your bonus.', '🎉 *Referral Success!*\n\n{friend_name} just joined!\n\nYou\'ll earn ${bonus} when they complete their first job.\n\nShare more: {referral_link}', '["friend_name","bonus","referral_link"]'],
-    ['TPL006', 'Streak Alert', 'gamification', 'You\'re on a {streak}-day streak! Keep it going!', '🔥 *{streak}-Day Streak!*\n\nYou\'re on fire! Don\'t break the chain.\n\nFind your next job: {app_link}', '["streak","app_link"]'],
+    ['TPL001', 'Welcome', 'onboarding', 'Hi {name}! Welcome to WorkLink.', '👋 Hi {name}! Welcome to WorkLink!\n\n🔗 {app_link}', '["name","app_link"]'],
+    ['TPL002', 'Job Match', 'job', 'Job available: {job_title} at {location}', '🎯 *Perfect Match!*\n\n{job_title}\n📍 {location}\n💰 ${pay_rate}/hr', '["job_title","location","pay_rate"]'],
+    ['TPL003', 'Job Reminder', 'reminder', 'Reminder: Job tomorrow at {location}', '⏰ *Reminder*\n\n📍 {location}\n🕐 {time}', '["location","time"]'],
+    ['TPL004', 'Payment', 'payment', 'Payment of ${amount} processed.', '💰 *Payment Received!*\n\n${amount}', '["amount"]'],
+    ['TPL005', 'Referral Success', 'referral', '{friend_name} signed up!', '🎉 {friend_name} joined! Earn ${bonus} on first job.', '["friend_name","bonus"]'],
   ];
   templates.forEach(t => {
     db.prepare('INSERT OR IGNORE INTO message_templates (id, name, category, content, whatsapp_content, variables) VALUES (?,?,?,?,?,?)').run(...t);
   });
 
-  // Default tender alert keywords
+  // Default tender alerts
   const alerts = [
-    ['Supply of Manpower Services', 'gebiz', 1, 1],
-    ['Provision of Temporary Staff', 'gebiz', 1, 1],
-    ['Event Support', 'gebiz', 1, 1],
-    ['Admin Support', 'gebiz', 1, 1],
+    ['Supply of Manpower Services', 'gebiz'],
+    ['Provision of Temporary Staff', 'gebiz'],
+    ['Event Support', 'gebiz'],
+    ['Admin Support', 'gebiz'],
   ];
   alerts.forEach(a => {
-    db.prepare('INSERT OR IGNORE INTO tender_alerts (keyword, source, email_notify, active) VALUES (?,?,?,?)').run(...a);
+    db.prepare('INSERT OR IGNORE INTO tender_alerts (keyword, source, email_notify, active) VALUES (?, ?, 1, 1)').run(...a);
   });
 
   console.log('✅ Essential data seeded');
 }
 
 
-// Seed sample data - ONLY in development
+// Seed COMPREHENSIVE sample data - ONLY in development
 function seedSampleData() {
   if (IS_PRODUCTION) {
     console.log('⚠️ Production environment - skipping sample data');
@@ -514,52 +513,83 @@ function seedSampleData() {
     return;
   }
 
-  console.log('🌱 Seeding sample data for development...');
+  console.log('🌱 Seeding COMPREHENSIVE sample data for development...');
 
   const addDays = (d, n) => { const r = new Date(d); r.setDate(r.getDate() + n); return r.toISOString().split('T')[0]; };
   const today = new Date();
+  const todayStr = today.toISOString().split('T')[0];
 
-  // Sample clients
+  // 8 Clients (progressively onboarded from July 2024)
   const clients = [
-    ['CLT001', 'Marina Bay Sands', '200604327R', 'Hospitality', 'Jennifer Lim', 'events@mbs.com', '+65 6688 8888', 30, 'active'],
-    ['CLT002', 'Changi Airport Group', '200902638D', 'Aviation', 'David Tan', 'hr@changi.com', '+65 6595 6868', 30, 'active'],
-    ['CLT003', 'Resorts World Sentosa', '200601402R', 'Entertainment', 'Michelle Wong', 'events@rws.com', '+65 6577 8888', 30, 'active'],
-    ['CLT004', 'Grand Hyatt Singapore', '197100403R', 'Hospitality', 'Andrew Lee', 'hr@grandhyatt.sg', '+65 6738 1234', 30, 'active'],
-    ['CLT005', 'Singapore Expo', '199703626Z', 'Events', 'Sarah Chen', 'ops@expo.com', '+65 6403 2160', 30, 'active'],
+    ['CLT001', 'Marina Bay Sands', '200604327R', 'Hospitality', 'Jennifer Lim', 'events@mbs.com', '+65 6688 8888', 30, 'active', '2024-07-15'],
+    ['CLT002', 'Changi Airport Group', '200902638D', 'Aviation', 'David Tan', 'hr@changi.com', '+65 6595 6868', 30, 'active', '2024-08-01'],
+    ['CLT003', 'Resorts World Sentosa', '200601402R', 'Entertainment', 'Michelle Wong', 'events@rws.com', '+65 6577 8888', 30, 'active', '2024-08-20'],
+    ['CLT004', 'Grand Hyatt Singapore', '197100403R', 'Hospitality', 'Andrew Lee', 'hr@grandhyatt.sg', '+65 6738 1234', 30, 'active', '2024-09-10'],
+    ['CLT005', 'Singapore Expo', '199703626Z', 'Events', 'Sarah Chen', 'ops@expo.com', '+65 6403 2160', 30, 'active', '2024-10-01'],
+    ['CLT006', 'Mandarin Oriental', '198702333H', 'Hospitality', 'Patricia Goh', 'events@mo.com', '+65 6338 0066', 30, 'active', '2024-11-15'],
+    ['CLT007', 'CapitaLand Mall', '200208877K', 'Retail', 'Kenny Ong', 'retail@cland.com', '+65 6713 2888', 30, 'active', '2024-12-01'],
+    ['CLT008', 'Gardens by the Bay', '201110689R', 'Tourism', 'Linda Tay', 'events@gbtb.com', '+65 6420 6848', 30, 'active', '2025-01-10'],
   ];
   clients.forEach(c => {
-    db.prepare('INSERT INTO clients (id, company_name, uen, industry, contact_name, contact_email, contact_phone, payment_terms, status) VALUES (?,?,?,?,?,?,?,?,?)').run(...c);
+    db.prepare('INSERT INTO clients (id, company_name, uen, industry, contact_name, contact_email, contact_phone, payment_terms, status, created_at) VALUES (?,?,?,?,?,?,?,?,?,?)').run(c[0], c[1], c[2], c[3], c[4], c[5], c[6], c[7], c[8], c[9]);
   });
 
-  // Sample candidates with referral codes
+  // 20 Candidates (growing pool over time)
   const candidateData = [
-    { name: 'Sarah Tan', email: 'sarah.tan@email.com', phone: '+65 9123 4567', dob: '2005-03-15' },
-    { name: 'Muhammad Rizal', email: 'rizal.m@email.com', phone: '+65 9234 5678', dob: '2003-07-22' },
-    { name: 'Amanda Chen', email: 'amanda.c@email.com', phone: '+65 9567 8901', dob: '2004-05-12' },
-    { name: 'Ryan Ng', email: 'ryan.ng@email.com', phone: '+65 9678 9012', dob: '2005-09-25' },
-    { name: 'Nurul Aisyah', email: 'nurul.a@email.com', phone: '+65 9789 0123', dob: '2003-12-03' },
+    {name:'Sarah Tan',email:'sarah.tan@email.com',phone:'+65 9123 4567',dob:'2005-03-15',joined:'2024-07-20'},
+    {name:'Muhammad Rizal',email:'rizal.m@email.com',phone:'+65 9234 5678',dob:'2003-07-22',joined:'2024-07-25'},
+    {name:'Amanda Chen',email:'amanda.c@email.com',phone:'+65 9567 8901',dob:'2004-05-12',joined:'2024-08-05'},
+    {name:'Ryan Ng',email:'ryan.ng@email.com',phone:'+65 9678 9012',dob:'2005-09-25',joined:'2024-08-15'},
+    {name:'Nurul Aisyah',email:'nurul.a@email.com',phone:'+65 9789 0123',dob:'2003-12-03',joined:'2024-08-28'},
+    {name:'Kevin Teo',email:'kevin.t@email.com',phone:'+65 9890 1234',dob:'2004-04-18',joined:'2024-09-10'},
+    {name:'Jasmine Lim',email:'jasmine.l@email.com',phone:'+65 9901 2345',dob:'2005-08-07',joined:'2024-09-20'},
+    {name:'Ahmad Faris',email:'ahmad.f@email.com',phone:'+65 9012 3456',dob:'2004-02-14',joined:'2024-10-01'},
+    {name:'Priya Sharma',email:'priya.s@email.com',phone:'+65 9345 6789',dob:'2004-11-08',joined:'2024-10-15'},
+    {name:'Daniel Wong',email:'daniel.w@email.com',phone:'+65 9111 2222',dob:'2003-06-20',joined:'2024-10-28'},
+    {name:'Siti Aminah',email:'siti.a@email.com',phone:'+65 9222 3333',dob:'2005-01-30',joined:'2024-11-05'},
+    {name:'Marcus Lee',email:'marcus.l@email.com',phone:'+65 9333 4444',dob:'2004-08-12',joined:'2024-11-18'},
+    {name:'Rachel Koh',email:'rachel.k@email.com',phone:'+65 9444 5555',dob:'2003-04-25',joined:'2024-12-01'},
+    {name:'Hafiz Rahman',email:'hafiz.r@email.com',phone:'+65 9555 6666',dob:'2005-10-08',joined:'2024-12-10'},
+    {name:'Emily Tan',email:'emily.t@email.com',phone:'+65 9666 7777',dob:'2004-12-15',joined:'2024-12-20'},
+    {name:'Wei Jie',email:'weijie@email.com',phone:'+65 9777 8888',dob:'2003-09-03',joined:'2025-01-05'},
+    {name:'Aisha Binte',email:'aisha.b@email.com',phone:'+65 9888 9999',dob:'2005-07-18',joined:'2025-01-12'},
+    {name:'Jonathan Sim',email:'jonathan.s@email.com',phone:'+65 9999 0000',dob:'2004-03-22',joined:'2025-01-20'},
+    {name:'Mei Ling',email:'meiling@email.com',phone:'+65 9000 1111',dob:'2003-11-28',joined:'2025-01-25'},
+    {name:'Arjun Patel',email:'arjun.p@email.com',phone:'+65 8111 2222',dob:'2005-05-05',joined:'2025-01-28'},
   ];
 
-  const generateReferralCode = (name) => {
-    const prefix = name.split(' ')[0].toUpperCase().slice(0, 4);
-    const suffix = Math.random().toString(36).substring(2, 6).toUpperCase();
-    return `${prefix}${suffix}`;
-  };
-
+  const sources = ['direct', 'referral', 'social', 'walk-in', 'gebiz'];
+  const generateReferralCode = (name) => name.split(' ')[0].toUpperCase().slice(0, 4) + Math.random().toString(36).substring(2, 6).toUpperCase();
+  
+  const candidates = [];
   candidateData.forEach((c, i) => {
     const id = `CND${String(i + 1).padStart(3, '0')}`;
+    const monthsActive = Math.max(0, Math.floor((today - new Date(c.joined)) / (1000 * 60 * 60 * 24 * 30)));
+    const jobsCompleted = Math.max(0, Math.floor(monthsActive * 7 + Math.random() * 8 - 4));
+    const xp = jobsCompleted * 120 + Math.floor(Math.random() * 400);
+    const level = Math.min(10, Math.floor(xp / 1200) + 1);
+    const earnings = jobsCompleted * 85 + Math.random() * 200;
+    const incentives = Math.floor(jobsCompleted / 5) * 20;
+    const certs = [];
+    if (jobsCompleted >= 1) certs.push('Server Basics');
+    if (jobsCompleted >= 10) certs.push('Food Safety');
+    if (jobsCompleted >= 20) certs.push('Customer Service');
+    const status = i < 15 ? 'active' : (i < 18 ? 'onboarding' : 'screening');
+    const rating = jobsCompleted > 0 ? (4.2 + Math.random() * 0.8).toFixed(1) : 0;
     const referralCode = generateReferralCode(c.name);
-    const xp = Math.floor(Math.random() * 2000);
-    const level = Math.min(10, Math.floor(xp / 500) + 1);
-    const jobsCompleted = Math.floor(Math.random() * 30);
 
     db.prepare(`
       INSERT INTO candidates (id, name, email, phone, date_of_birth, status, source, xp, level, 
-        streak_days, total_jobs_completed, referral_code, rating, whatsapp_opted_in)
-      VALUES (?, ?, ?, ?, ?, 'active', 'direct', ?, ?, ?, ?, ?, ?, 1)
-    `).run(id, c.name, c.email, c.phone, c.dob, xp, level, Math.floor(Math.random() * 7), jobsCompleted, referralCode, (4 + Math.random()).toFixed(1));
+        streak_days, total_jobs_completed, certifications, referral_code, total_incentives_earned, 
+        total_earnings, rating, whatsapp_opted_in, created_at)
+      VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, 1, ?)
+    `).run(id, c.name, c.email, c.phone, c.dob, status, sources[i % 5], xp, level, 
+           Math.floor(Math.random() * 12), jobsCompleted, JSON.stringify(certs), referralCode, 
+           incentives, earnings, rating, c.joined);
+    
+    candidates.push({ id, joined: c.joined, status });
 
-    // Add some availability
+    // Add availability for next 14 days
     for (let d = 0; d < 14; d++) {
       if (Math.random() > 0.3) {
         const date = addDays(today, d);
@@ -568,59 +598,155 @@ function seedSampleData() {
     }
   });
 
-  // Sample jobs
+
+  // Job templates
   const jobTemplates = [
-    { title: 'Banquet Server', charge: 22, pay: 15 },
-    { title: 'Event Usher', charge: 18, pay: 12 },
-    { title: 'F&B Service Crew', charge: 20, pay: 14 },
-    { title: 'Registration Crew', charge: 15, pay: 10 },
+    {title:'Banquet Server',charge:22,pay:15,hours:5},
+    {title:'Event Usher',charge:18,pay:12,hours:6},
+    {title:'Customer Service Rep',charge:16,pay:11,hours:8},
+    {title:'Bartender',charge:25,pay:18,hours:5},
+    {title:'F&B Service Crew',charge:20,pay:14,hours:6},
+    {title:'Registration Crew',charge:15,pay:10,hours:8},
+    {title:'Room Service',charge:19,pay:13,hours:7},
+    {title:'Retail Assistant',charge:14,pay:10,hours:8},
   ];
 
-  for (let i = 0; i < 15; i++) {
-    const t = jobTemplates[i % jobTemplates.length];
-    const client = clients[i % clients.length];
-    const jobDate = addDays(today, Math.floor(Math.random() * 14) - 3);
-    const isPast = new Date(jobDate) < today;
-    const jobId = `JOB${String(i + 1).padStart(4, '0')}`;
+  const insertJob = db.prepare(`INSERT INTO jobs (id, client_id, title, description, job_date, start_time, end_time, break_minutes, location, charge_rate, pay_rate, total_slots, filled_slots, xp_bonus, status, featured, created_at) VALUES (?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?)`);
+  const insertDep = db.prepare(`INSERT INTO deployments (id, job_id, candidate_id, status, hours_worked, charge_rate, pay_rate, gross_revenue, candidate_pay, gross_profit, incentive_amount, rating, created_at) VALUES (?,?,?,?,?,?,?,?,?,?,?,?,?)`);
+  const insertPay = db.prepare(`INSERT INTO payments (id, candidate_id, deployment_id, base_amount, incentive_amount, total_amount, hours_worked, status, paid_at, created_at) VALUES (?,?,?,?,?,?,?,?,?,?)`);
 
-    db.prepare(`
-      INSERT INTO jobs (id, client_id, title, description, job_date, start_time, end_time, 
-        location, charge_rate, pay_rate, total_slots, filled_slots, status, featured)
-      VALUES (?, ?, ?, ?, ?, '18:00', '23:00', ?, ?, ?, 5, ?, ?, ?)
-    `).run(jobId, client[0], t.title, `${t.title} at ${client[1]}`, jobDate, client[1], t.charge, t.pay, isPast ? 5 : 2, isPast ? 'completed' : 'open', Math.random() > 0.7 ? 1 : 0);
+  let jobN = 1, depN = 1, payN = 1;
+
+  // Monthly job counts showing business growth from July 2024
+  const monthlyJobs = {
+    '2024-07': 3,
+    '2024-08': 8,
+    '2024-09': 15,
+    '2024-10': 22,
+    '2024-11': 30,
+    '2024-12': 45,
+    '2025-01': 38
+  };
+
+  Object.entries(monthlyJobs).forEach(([month, count]) => {
+    for (let i = 0; i < count; i++) {
+      const t = jobTemplates[Math.floor(Math.random() * jobTemplates.length)];
+      const day = Math.floor(Math.random() * 28) + 1;
+      const jobDate = `${month}-${String(day).padStart(2, '0')}`;
+      const jobId = `JOB${String(jobN++).padStart(4, '0')}`;
+
+      const availClients = clients.filter(c => c[9] <= jobDate);
+      if (availClients.length === 0) continue;
+      const client = availClients[Math.floor(Math.random() * availClients.length)];
+
+      const slots = Math.floor(Math.random() * 5) + 2;
+      const isPast = new Date(jobDate) < today;
+      const chargeRate = t.charge + Math.floor(Math.random() * 4) - 2;
+      const payRate = t.pay + Math.floor(Math.random() * 2) - 1;
+
+      insertJob.run(jobId, client[0], t.title, `${t.title} at ${client[1]}`, jobDate, '18:00', '23:00', 30, client[1], chargeRate, payRate, slots, isPast ? slots : Math.floor(slots * 0.5), Math.random() > 0.7 ? 50 : 0, isPast ? 'completed' : 'open', Math.random() > 0.8 ? 1 : 0, addDays(jobDate, -3));
+
+      if (isPast) {
+        const availCands = candidates.filter(c => c.joined <= jobDate && c.status === 'active');
+        const deployCands = availCands.sort(() => Math.random() - 0.5).slice(0, slots);
+
+        deployCands.forEach(cand => {
+          const hours = t.hours + (Math.random() - 0.5);
+          const revenue = hours * chargeRate;
+          const candPay = hours * payRate;
+          const profit = revenue - candPay;
+          const inc = Math.random() > 0.75 ? 5 : 0;
+          const rating = Math.floor(Math.random() * 2) + 4;
+          const depId = `DEP${String(depN++).padStart(5, '0')}`;
+
+          insertDep.run(depId, jobId, cand.id, 'completed', hours.toFixed(2), chargeRate, payRate, revenue.toFixed(2), candPay.toFixed(2), profit.toFixed(2), inc, rating, jobDate);
+          insertPay.run(`PAY${String(payN++).padStart(5, '0')}`, cand.id, depId, candPay.toFixed(2), inc, (candPay + inc).toFixed(2), hours.toFixed(2), 'paid', addDays(jobDate, 7), jobDate);
+        });
+      }
+    }
+  });
+
+  // Upcoming jobs (next 2 weeks)
+  for (let i = 1; i <= 15; i++) {
+    const t = jobTemplates[Math.floor(Math.random() * jobTemplates.length)];
+    const client = clients[Math.floor(Math.random() * clients.length)];
+    const jobDate = addDays(today, i + Math.floor(Math.random() * 5));
+    insertJob.run(`JOB${String(jobN++).padStart(4, '0')}`, client[0], t.title, `${t.title} at ${client[1]}`, jobDate, '18:00', '23:00', 30, client[1], t.charge, t.pay, 5, 2, 50, 'open', Math.random() > 0.6 ? 1 : 0, addDays(jobDate, -3));
   }
 
-  // Sample referral
-  db.prepare(`
-    INSERT INTO referrals (id, referrer_id, referred_id, status, tier, bonus_amount, jobs_completed_by_referred, total_bonus_paid)
-    VALUES ('REF001', 'CND001', 'CND003', 'bonus_paid', 1, 30, 1, 30)
-  `).run();
+  // Tenders
+  const tenders = [
+    ['TND001', 'gebiz', 'GBZ-2025-001234', 'Admin Support Staff', 'MOE', 'Manpower', 450000, addDays(today, 15), 'reviewing', 15, 12, 'Buona Vista', 22, 15, 37500, null, 65, 'STRONG BID'],
+    ['TND002', 'gebiz', 'GBZ-2025-001198', 'Event Support National Day', 'MCCY', 'Events', 280000, addDays(today, 10), 'bidding', 50, 3, 'Marina Bay', 20, 13, 93333, null, 55, 'HIGH PRIORITY'],
+    ['TND003', 'gebiz', 'GBZ-2025-001245', 'SingPass Customer Service', 'GovTech', 'Service', 620000, addDays(today, 20), 'new', 20, 24, 'Multiple', 18, 12, 25833, null, 40, 'EVALUATE'],
+    ['TND004', 'gebiz', 'GBZ-2025-001156', 'Warehouse Logistics', 'MOH', 'Logistics', 180000, addDays(today, 5), 'submitted', 8, 6, 'Tuas', 17, 11, null, 165000, 70, 'SUBMITTED'],
+    ['TND005', 'vendors-gov', 'VG-2025-0456', 'Reception Services', 'SLA', 'Admin', 95000, addDays(today, -5), 'won', 4, 12, 'Newton', 19, 13, null, 89000, 100, 'WON'],
+    ['TND006', 'gebiz', 'GBZ-2024-009876', 'F&B Government Event', 'MFA', 'F&B', 75000, addDays(today, -30), 'won', 12, 1, 'Shangri-La', 24, 16, null, 72000, 100, 'COMPLETED'],
+    ['TND007', 'gebiz', 'GBZ-2024-008765', 'IT Support Staff', 'IMDA', 'IT', 320000, addDays(today, -45), 'lost', 10, 12, 'Mapletree', 28, 20, null, 310000, 0, 'LOST'],
+  ];
+  tenders.forEach(t => {
+    db.prepare(`INSERT INTO tenders (id, source, external_id, title, agency, category, estimated_value, closing_date, status, manpower_required, duration_months, location, estimated_charge_rate, estimated_pay_rate, estimated_monthly_revenue, our_bid_amount, win_probability, recommended_action) VALUES (?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?)`).run(...t);
+  });
 
-  console.log('✅ Sample data seeded for development');
+  // Financial Projections (showing growth from zero)
+  const projections = [
+    ['2024-07', 2024, 2000, 1400, 600, 1850, 1295, 555],
+    ['2024-08', 2024, 5000, 3500, 1500, 5200, 3640, 1560],
+    ['2024-09', 2024, 9000, 6300, 2700, 9800, 6860, 2940],
+    ['2024-10', 2024, 14000, 9800, 4200, 15200, 10640, 4560],
+    ['2024-11', 2024, 20000, 14000, 6000, 22500, 15750, 6750],
+    ['2024-12', 2024, 30000, 21000, 9000, 35200, 24640, 10560],
+    ['2025-01', 2025, 28000, 19600, 8400, 26500, 18550, 7950],
+    ['2025-02', 2025, 35000, 24500, 10500, null, null, null],
+    ['2025-03', 2025, 42000, 29400, 12600, null, null, null],
+  ];
+  projections.forEach(p => {
+    db.prepare('INSERT INTO financial_projections (month, year, projected_revenue, projected_costs, projected_profit, actual_revenue, actual_costs, actual_profit) VALUES (?,?,?,?,?,?,?,?)').run(...p);
+  });
+
+  // Referrals
+  db.prepare('INSERT INTO referrals (id, referrer_id, referred_id, status, tier, bonus_amount, jobs_completed_by_referred, total_bonus_paid, created_at) VALUES (?,?,?,?,?,?,?,?,?)').run('REF001', 'CND001', 'CND003', 'bonus_paid', 1, 30, 5, 30, '2024-08-10');
+  db.prepare('INSERT INTO referrals (id, referrer_id, referred_id, status, tier, bonus_amount, jobs_completed_by_referred, total_bonus_paid, created_at) VALUES (?,?,?,?,?,?,?,?,?)').run('REF002', 'CND002', 'CND005', 'bonus_paid', 2, 50, 8, 80, '2024-09-01');
+  db.prepare('INSERT INTO referrals (id, referrer_id, referred_id, status, tier, bonus_amount, jobs_completed_by_referred, total_bonus_paid, created_at) VALUES (?,?,?,?,?,?,?,?,?)').run('REF003', 'CND001', 'CND015', 'registered', 1, 30, 0, 0, '2025-01-05');
+
+  // Candidate achievements
+  candidates.filter(c => c.status === 'active').slice(0, 12).forEach((c, i) => {
+    db.prepare(`INSERT OR IGNORE INTO candidate_achievements VALUES (?, 'ACH001', datetime('now'))`).run(c.id);
+    if (i < 8) db.prepare(`INSERT OR IGNORE INTO candidate_achievements VALUES (?, 'ACH002', datetime('now'))`).run(c.id);
+    if (i < 4) db.prepare(`INSERT OR IGNORE INTO candidate_achievements VALUES (?, 'ACH003', datetime('now'))`).run(c.id);
+  });
+
+  console.log(`✅ Comprehensive data seeded: ${candidates.length} candidates, ${clients.length} clients, ${jobN - 1} jobs, ${depN - 1} deployments, ${payN - 1} payments`);
 }
 
-// Reset database (for development only)
+
+// Reset database to fresh sample data (development only)
 function resetToSampleData() {
   if (IS_PRODUCTION) {
     console.log('❌ Cannot reset database in production');
     return;
   }
 
-  console.log('🔄 Resetting database...');
+  console.log('🔄 Resetting database to sample data...');
+  
   const tables = [
     'push_queue', 'job_match_scores', 'notifications', 'messages', 'tender_matches',
     'xp_transactions', 'candidate_quests', 'candidate_achievements', 'candidate_availability',
     'payments', 'deployments', 'jobs', 'referrals', 'candidates', 'clients',
-    'tenders', 'financial_projections'
+    'tenders', 'financial_projections', 'tender_alerts', 'referral_tiers',
+    'message_templates', 'incentive_schemes', 'training', 'quests', 'achievements'
   ];
-  tables.forEach(t => { try { db.exec(`DELETE FROM ${t}`); } catch (e) { } });
+  
+  tables.forEach(t => {
+    try { db.exec(`DELETE FROM ${t}`); } catch (e) { }
+  });
 
   seedEssentialData();
   seedSampleData();
   console.log('✅ Database reset complete');
 }
 
-// Initialize
+// Initialize database
 createSchema();
 seedEssentialData();
 seedSampleData();
