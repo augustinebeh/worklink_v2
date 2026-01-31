@@ -254,8 +254,54 @@ router.post('/:id/notifications/:notificationId/read', (req, res) => {
 router.post('/:id/notifications/read-all', (req, res) => {
   try {
     db.prepare(`
-      UPDATE notifications SET read = 1 
+      UPDATE notifications SET read = 1
       WHERE candidate_id = ? AND read = 0
+    `).run(req.params.id);
+
+    res.json({ success: true });
+  } catch (error) {
+    res.status(500).json({ success: false, error: error.message });
+  }
+});
+
+// Upload profile photo (base64)
+router.post('/:id/photo', (req, res) => {
+  try {
+    const { photo } = req.body;
+
+    if (!photo) {
+      return res.status(400).json({ success: false, error: 'No photo provided' });
+    }
+
+    // Validate it's a valid base64 image
+    if (!photo.startsWith('data:image/')) {
+      return res.status(400).json({ success: false, error: 'Invalid image format' });
+    }
+
+    // Limit size (roughly 5MB in base64)
+    if (photo.length > 7000000) {
+      return res.status(400).json({ success: false, error: 'Image too large. Max 5MB.' });
+    }
+
+    db.prepare(`
+      UPDATE candidates
+      SET profile_photo = ?, updated_at = CURRENT_TIMESTAMP
+      WHERE id = ?
+    `).run(photo, req.params.id);
+
+    res.json({ success: true, data: { profile_photo: photo } });
+  } catch (error) {
+    res.status(500).json({ success: false, error: error.message });
+  }
+});
+
+// Delete profile photo
+router.delete('/:id/photo', (req, res) => {
+  try {
+    db.prepare(`
+      UPDATE candidates
+      SET profile_photo = NULL, updated_at = CURRENT_TIMESTAMP
+      WHERE id = ?
     `).run(req.params.id);
 
     res.json({ success: true });

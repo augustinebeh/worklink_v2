@@ -18,7 +18,9 @@ import {
   SunIcon,
   MoonIcon,
   SettingsIcon,
+  CameraIcon,
 } from 'lucide-react';
+import { useToast } from '../components/ui/Toast';
 import { useAuth } from '../contexts/AuthContext';
 import { useTheme } from '../contexts/ThemeContext';
 import { clsx } from 'clsx';
@@ -187,9 +189,11 @@ export default function Profile() {
   const navigate = useNavigate();
   const { user, logout, refreshUser } = useAuth();
   const { isDark } = useTheme();
+  const toast = useToast();
   const [copied, setCopied] = useState(false);
   const [achievements, setAchievements] = useState([]);
   const [loading, setLoading] = useState(false);
+  const [uploadingPhoto, setUploadingPhoto] = useState(false);
 
   useEffect(() => {
     if (user?.id) {
@@ -220,6 +224,60 @@ export default function Profile() {
       navigator.clipboard.writeText(user.referral_code);
       setCopied(true);
       setTimeout(() => setCopied(false), 2000);
+    }
+  };
+
+  const handlePhotoUpload = async (e) => {
+    const file = e.target.files?.[0];
+    if (!file) return;
+
+    // Validate file type
+    if (!file.type.startsWith('image/')) {
+      toast.error('Invalid file', 'Please select an image file');
+      return;
+    }
+
+    // Validate file size (5MB max)
+    if (file.size > 5 * 1024 * 1024) {
+      toast.error('File too large', 'Please select an image under 5MB');
+      return;
+    }
+
+    setUploadingPhoto(true);
+
+    try {
+      // Convert to base64
+      const reader = new FileReader();
+      reader.onload = async (event) => {
+        const base64 = event.target?.result;
+
+        const res = await fetch(`/api/v1/candidates/${user.id}/photo`, {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ photo: base64 }),
+        });
+
+        const data = await res.json();
+
+        if (data.success) {
+          toast.success('Photo updated', 'Your profile picture has been changed');
+          refreshUser();
+        } else {
+          toast.error('Upload failed', data.error || 'Please try again');
+        }
+
+        setUploadingPhoto(false);
+      };
+
+      reader.onerror = () => {
+        toast.error('Upload failed', 'Could not read the image file');
+        setUploadingPhoto(false);
+      };
+
+      reader.readAsDataURL(file);
+    } catch (error) {
+      toast.error('Upload failed', 'Please try again');
+      setUploadingPhoto(false);
     }
   };
 
@@ -288,11 +346,30 @@ export default function Profile() {
 
         {/* Profile card */}
         <div className="flex items-center gap-4">
-          {/* Avatar */}
+          {/* Avatar with photo upload */}
           <div className="relative">
-            <div className="w-20 h-20 rounded-2xl bg-gradient-to-br from-primary-500 to-primary-700 flex items-center justify-center border-2 border-primary-400">
-              <span className="text-3xl font-bold text-white">{userName.charAt(0)}</span>
-            </div>
+            <label className="cursor-pointer block">
+              <input
+                type="file"
+                accept="image/*"
+                onChange={handlePhotoUpload}
+                className="hidden"
+                disabled={uploadingPhoto}
+              />
+              <div className="w-20 h-20 rounded-2xl bg-gradient-to-br from-primary-500 to-primary-700 flex items-center justify-center border-2 border-primary-400 overflow-hidden">
+                {uploadingPhoto ? (
+                  <div className="animate-spin h-8 w-8 border-3 border-white border-t-transparent rounded-full" />
+                ) : user.profile_photo ? (
+                  <img src={user.profile_photo} alt={userName} className="w-full h-full object-cover" />
+                ) : (
+                  <span className="text-3xl font-bold text-white">{userName.charAt(0)}</span>
+                )}
+              </div>
+              {/* Camera icon overlay */}
+              <div className="absolute bottom-0 right-0 w-7 h-7 rounded-full bg-primary-500 border-2 border-white flex items-center justify-center">
+                <CameraIcon className="h-3.5 w-3.5 text-white" />
+              </div>
+            </label>
             <div className="absolute -bottom-2 -right-2">
               <LevelBadgeSimple level={userLevel} />
             </div>

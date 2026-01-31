@@ -1,6 +1,6 @@
 /**
  * App Icon Generator for WorkLink PWA
- * Clean, simple design inspired by Crypto.com dark theme
+ * Crypto.com inspired design with depth
  */
 
 const fs = require('fs');
@@ -15,16 +15,14 @@ try {
   process.exit(1);
 }
 
-// Dark bluish theme colors (Crypto.com style)
+// Deep navy blue gradient (from Wallet card)
 const COLORS = {
-  bg: '#0a0f1a',
-  bgLight: '#0f1629',
-  primary: '#6366f1',      // Indigo
-  primaryLight: '#818cf8',
+  gradientStart: '#0a1628',
+  gradientMid: '#0d1f3c',
+  gradientEnd: '#1a1a3e',
   white: '#ffffff',
 };
 
-// Icon sizes to generate
 const ICON_SIZES = [
   { size: 16, name: 'favicon-16x16.png' },
   { size: 32, name: 'favicon-32x32.png' },
@@ -45,24 +43,53 @@ const ICON_SIZES = [
 const outputDir = path.join(__dirname, '../public');
 
 /**
- * Draw clean, simple WorkLink icon
+ * Draw Crypto.com style icon with gradient and depth
  */
 function drawIcon(ctx, size) {
   const center = size / 2;
-  const radius = size * 0.22;  // Rounded corner radius
+  const radius = size * 0.22;
 
-  // Dark bluish background
+  // Background gradient (diagonal)
+  const bgGradient = ctx.createLinearGradient(0, 0, size, size);
+  bgGradient.addColorStop(0, COLORS.gradientStart);
+  bgGradient.addColorStop(0.5, COLORS.gradientMid);
+  bgGradient.addColorStop(1, COLORS.gradientEnd);
+
+  // Draw rounded rect background
   ctx.beginPath();
   ctx.roundRect(0, 0, size, size, radius);
-  ctx.fillStyle = COLORS.bg;
+  ctx.fillStyle = bgGradient;
   ctx.fill();
 
-  // Simple "W" letter - clean and bold
-  const fontSize = size * 0.5;
-  ctx.fillStyle = COLORS.white;
-  ctx.font = `600 ${fontSize}px -apple-system, "SF Pro Display", "Segoe UI", sans-serif`;
+  // Subtle inner glow at top
+  const glowGradient = ctx.createLinearGradient(0, 0, 0, size * 0.6);
+  glowGradient.addColorStop(0, 'rgba(255, 255, 255, 0.08)');
+  glowGradient.addColorStop(1, 'rgba(255, 255, 255, 0)');
+  ctx.beginPath();
+  ctx.roundRect(0, 0, size, size, radius);
+  ctx.fillStyle = glowGradient;
+  ctx.fill();
+
+  // Draw "W" with depth effect
+  const fontSize = size * 0.52;
+  ctx.font = `bold ${fontSize}px -apple-system, "SF Pro Display", "Helvetica Neue", Arial, sans-serif`;
   ctx.textAlign = 'center';
   ctx.textBaseline = 'middle';
+
+  // Shadow layer (depth effect)
+  ctx.fillStyle = 'rgba(0, 0, 0, 0.3)';
+  ctx.fillText('W', center + size * 0.015, center + size * 0.04);
+
+  // Main white W
+  ctx.fillStyle = COLORS.white;
+  ctx.fillText('W', center, center + size * 0.02);
+
+  // Subtle highlight on top of W
+  const textGradient = ctx.createLinearGradient(0, center - fontSize/2, 0, center + fontSize/2);
+  textGradient.addColorStop(0, 'rgba(255, 255, 255, 1)');
+  textGradient.addColorStop(0.5, 'rgba(255, 255, 255, 0.95)');
+  textGradient.addColorStop(1, 'rgba(220, 220, 220, 0.9)');
+  ctx.fillStyle = textGradient;
   ctx.fillText('W', center, center + size * 0.02);
 }
 
@@ -72,13 +99,40 @@ function drawIcon(ctx, size) {
 function generateSVG() {
   const svg = `<?xml version="1.0" encoding="UTF-8"?>
 <svg width="512" height="512" viewBox="0 0 512 512" xmlns="http://www.w3.org/2000/svg">
-  <rect width="512" height="512" rx="112" fill="${COLORS.bg}"/>
-  <text x="256" y="270"
-        font-family="-apple-system, SF Pro Display, Segoe UI, sans-serif"
-        font-size="256"
-        font-weight="600"
-        fill="white"
-        text-anchor="middle">W</text>
+  <defs>
+    <linearGradient id="bgGrad" x1="0%" y1="0%" x2="100%" y2="100%">
+      <stop offset="0%" style="stop-color:#0a1628"/>
+      <stop offset="50%" style="stop-color:#0d1f3c"/>
+      <stop offset="100%" style="stop-color:#1a1a3e"/>
+    </linearGradient>
+    <linearGradient id="shine" x1="0%" y1="0%" x2="0%" y2="60%">
+      <stop offset="0%" style="stop-color:rgba(255,255,255,0.08)"/>
+      <stop offset="100%" style="stop-color:rgba(255,255,255,0)"/>
+    </linearGradient>
+    <linearGradient id="textGrad" x1="0%" y1="0%" x2="0%" y2="100%">
+      <stop offset="0%" style="stop-color:#ffffff"/>
+      <stop offset="50%" style="stop-color:#f8f8f8"/>
+      <stop offset="100%" style="stop-color:#e0e0e0"/>
+    </linearGradient>
+    <filter id="shadow" x="-20%" y="-20%" width="140%" height="140%">
+      <feDropShadow dx="4" dy="8" stdDeviation="4" flood-color="rgba(0,0,0,0.3)"/>
+    </filter>
+  </defs>
+
+  <!-- Background -->
+  <rect width="512" height="512" rx="112" fill="url(#bgGrad)"/>
+
+  <!-- Top shine -->
+  <rect width="512" height="512" rx="112" fill="url(#shine)"/>
+
+  <!-- W with shadow and gradient -->
+  <text x="256" y="276"
+        font-family="-apple-system, SF Pro Display, Helvetica Neue, Arial, sans-serif"
+        font-size="266"
+        font-weight="bold"
+        fill="url(#textGrad)"
+        text-anchor="middle"
+        filter="url(#shadow)">W</text>
 </svg>`;
 
   fs.writeFileSync(path.join(outputDir, 'favicon.svg'), svg);
@@ -99,7 +153,6 @@ async function generatePNGs() {
     console.log(`  Generated ${name}`);
   }
 
-  // Main favicon.png
   const mainCanvas = createCanvas(192, 192);
   drawIcon(mainCanvas.getContext('2d'), 192);
   fs.writeFileSync(path.join(outputDir, 'favicon.png'), mainCanvas.toBuffer('image/png'));
@@ -133,27 +186,37 @@ async function updateSplashScreens() {
     const canvas = createCanvas(width, height);
     const ctx = canvas.getContext('2d');
 
-    // Solid dark background
-    ctx.fillStyle = COLORS.bg;
+    // Background gradient
+    const bgGradient = ctx.createLinearGradient(0, 0, width, height);
+    bgGradient.addColorStop(0, COLORS.gradientStart);
+    bgGradient.addColorStop(0.5, COLORS.gradientMid);
+    bgGradient.addColorStop(1, COLORS.gradientEnd);
+    ctx.fillStyle = bgGradient;
     ctx.fillRect(0, 0, width, height);
 
     // Draw icon centered
-    const iconSize = Math.min(width, height) * 0.2;
+    const iconSize = Math.min(width, height) * 0.22;
     const iconCanvas = createCanvas(iconSize, iconSize);
     drawIcon(iconCanvas.getContext('2d'), iconSize);
     ctx.drawImage(iconCanvas, (width - iconSize) / 2, height * 0.38 - iconSize / 2);
 
-    // App name
-    const fontSize = Math.min(width, height) * 0.055;
-    ctx.fillStyle = COLORS.white;
-    ctx.font = `600 ${fontSize}px -apple-system, "SF Pro Display", "Segoe UI", sans-serif`;
+    // App name with shadow
+    const fontSize = Math.min(width, height) * 0.06;
+    ctx.font = `600 ${fontSize}px -apple-system, "SF Pro Display", "Helvetica Neue", Arial, sans-serif`;
     ctx.textAlign = 'center';
-    ctx.fillText('WorkLink', width / 2, height * 0.52);
+
+    // Shadow
+    ctx.fillStyle = 'rgba(0, 0, 0, 0.3)';
+    ctx.fillText('WorkLink', width / 2 + 2, height * 0.54 + 2);
+
+    // Text
+    ctx.fillStyle = COLORS.white;
+    ctx.fillText('WorkLink', width / 2, height * 0.54);
 
     // Tagline
-    ctx.fillStyle = '#64748b';
-    ctx.font = `400 ${fontSize * 0.5}px -apple-system, "SF Pro Display", "Segoe UI", sans-serif`;
-    ctx.fillText('Level Up Your Career', width / 2, height * 0.57);
+    ctx.fillStyle = 'rgba(255, 255, 255, 0.5)';
+    ctx.font = `400 ${fontSize * 0.45}px -apple-system, "SF Pro Display", "Helvetica Neue", Arial, sans-serif`;
+    ctx.fillText('Level Up Your Career', width / 2, height * 0.59);
 
     fs.writeFileSync(path.join(splashDir, `${name}.png`), canvas.toBuffer('image/png'));
     console.log(`  Generated ${name}.png`);
@@ -161,7 +224,7 @@ async function updateSplashScreens() {
 }
 
 async function main() {
-  console.log('WorkLink Icon Generator (Clean Design)\n');
+  console.log('WorkLink Icon Generator (Crypto.com Style)\n');
   generateSVG();
   await generatePNGs();
   await updateSplashScreens();
