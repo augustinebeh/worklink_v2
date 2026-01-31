@@ -22,7 +22,7 @@ import { useWebSocket } from '../contexts/WebSocketContext';
 import { useTheme } from '../contexts/ThemeContext';
 import { useToast } from '../components/ui/Toast';
 import { clsx } from 'clsx';
-import { XP_THRESHOLDS as xpThresholds, LEVEL_TITLES as levelTitles } from '../utils/gamification';
+import { XP_THRESHOLDS as xpThresholds, LEVEL_TITLES as levelTitles, calculateLevel } from '../utils/gamification';
 import { FloatingXP, LevelUpCelebration, AchievementUnlock } from '../components/gamification/Confetti';
 
 // Format money helper
@@ -220,19 +220,20 @@ export default function Home() {
 
   // Safe user data with defaults
   const userName = user?.name?.split(' ')[0] || 'Friend';
-  const userLevel = user?.level || 1;
   const userXP = user?.xp || 0;
+  const userLevel = calculateLevel(userXP);
   const userStreak = user?.streak_days || 0;
   const totalEarnings = user?.total_earnings || 0;
   const pendingPayment = user?.pending_payment || 0;
   const weeklyChange = 12.5; // Mock weekly change percentage
 
   // Level progress
+  const maxLevel = xpThresholds.length;
   const currentThreshold = xpThresholds[userLevel - 1] || 0;
-  const nextThreshold = xpThresholds[userLevel] || xpThresholds[xpThresholds.length - 1];
-  const xpInLevel = userXP - currentThreshold;
-  const xpNeeded = nextThreshold - currentThreshold;
-  const progress = userLevel >= 10 ? 100 : Math.min((xpInLevel / xpNeeded) * 100, 100);
+  const nextThreshold = xpThresholds[userLevel] || xpThresholds[maxLevel - 1];
+  const xpInLevel = Math.max(0, userXP - currentThreshold);
+  const xpNeeded = Math.max(1, nextThreshold - currentThreshold);
+  const progress = userLevel >= maxLevel ? 100 : Math.min((xpInLevel / xpNeeded) * 100, 100);
 
   return (
     <div className={clsx('min-h-screen pb-24', isDark ? 'bg-dark-950' : 'bg-slate-50')}>

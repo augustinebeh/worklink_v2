@@ -55,6 +55,8 @@ router.post('/worker/login', (req, res) => {
     // Auto-create demo account if it doesn't exist
     if (!candidate && email === 'sarah.tan@email.com') {
       console.log('🎭 Auto-creating demo account: Sarah Tan');
+      // XP 15500 = Level 14 (Specialist) in new 50-level system
+      // Total earnings calculated from payments below: 120+128+160+125+128 = 661
       db.prepare(`
         INSERT INTO candidates (
           id, name, email, phone, status, source,
@@ -65,11 +67,11 @@ router.post('/worker/login', (req, res) => {
           profile_photo, online_status, whatsapp_opted_in, created_at, updated_at
         ) VALUES (
           'CND_DEMO_001', 'Sarah Tan', 'sarah.tan@email.com', '+6591234567',
-          'active', 'direct', 15383, 10, 5, 42,
+          'active', 'direct', 15500, 14, 5, 42,
           '["Food Safety", "First Aid", "Customer Service"]',
           '["Customer Service", "Cash Handling", "Event Support", "F&B Service"]',
           '["Central", "East", "West"]',
-          'SARAH001', 2, 180.00, 250.00, 8750.00, 4.8,
+          'SARAH001', 2, 180.00, 250.00, 661.00, 4.8,
           'https://api.dicebear.com/7.x/avataaars/svg?seed=Sarah%20Tan',
           'online', 1, datetime('now', '-180 days'), datetime('now')
         )

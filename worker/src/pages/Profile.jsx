@@ -22,7 +22,7 @@ import {
 import { useAuth } from '../contexts/AuthContext';
 import { useTheme } from '../contexts/ThemeContext';
 import { clsx } from 'clsx';
-import { XP_THRESHOLDS as xpThresholds, LEVEL_TITLES as levelTitles } from '../utils/gamification';
+import { XP_THRESHOLDS as xpThresholds, LEVEL_TITLES as levelTitles, calculateLevel } from '../utils/gamification';
 
 function StatItem({ icon: Icon, label, value, color = 'primary' }) {
   const { isDark } = useTheme();
@@ -80,54 +80,47 @@ function MenuLink({ icon: Icon, label, sublabel, onClick, danger, rightElement }
   );
 }
 
-function ThemeToggle() {
-  const { theme, toggleTheme, isDark } = useTheme();
+function ThemeToggleButton() {
+  const { toggleTheme, isDark } = useTheme();
 
   return (
-    <div className={clsx(
-      'flex items-center justify-between p-4 rounded-xl',
-      isDark ? 'bg-dark-800/50' : 'bg-white border border-slate-200'
-    )}>
-      <div className="flex items-center gap-3">
-        {isDark ? (
-          <MoonIcon className={clsx('h-5 w-5', isDark ? 'text-dark-400' : 'text-slate-500')} />
-        ) : (
-          <SunIcon className="h-5 w-5 text-amber-500" />
-        )}
-        <div>
-          <span className={isDark ? 'text-white' : 'text-slate-900'}>Appearance</span>
-          <p className={clsx('text-xs', isDark ? 'text-dark-500' : 'text-slate-500')}>
-            {isDark ? 'Dark mode' : 'Light mode'}
-          </p>
-        </div>
-      </div>
-      <button
-        onClick={toggleTheme}
-        className={clsx(
-          'relative w-14 h-8 rounded-full transition-colors',
-          isDark ? 'bg-primary-500' : 'bg-slate-300'
-        )}
-      >
-        <div
-          className={clsx(
-            'absolute top-1 w-6 h-6 rounded-full bg-white shadow-md transition-transform',
-            isDark ? 'translate-x-7' : 'translate-x-1'
-          )}
-        />
-      </button>
-    </div>
+    <button
+      onClick={toggleTheme}
+      className={clsx(
+        'p-2 rounded-xl transition-colors',
+        isDark ? 'bg-dark-800 hover:bg-dark-700' : 'bg-slate-100 hover:bg-slate-200'
+      )}
+      aria-label={isDark ? 'Switch to light mode' : 'Switch to dark mode'}
+    >
+      {isDark ? (
+        <SunIcon className="h-5 w-5 text-amber-400" />
+      ) : (
+        <MoonIcon className="h-5 w-5 text-slate-600" />
+      )}
+    </button>
   );
 }
 
-function XPProgressBar({ currentXP, level }) {
+function XPProgressBar({ currentXP }) {
   const { isDark } = useTheme();
-  const safeLevel = level || 1;
   const safeXP = currentXP || 0;
+  const safeLevel = calculateLevel(safeXP);
+  const maxLevel = xpThresholds.length;
   const currentThreshold = xpThresholds[safeLevel - 1] || 0;
-  const nextThreshold = xpThresholds[safeLevel] || xpThresholds[xpThresholds.length - 1];
-  const xpInLevel = safeXP - currentThreshold;
-  const xpNeeded = nextThreshold - currentThreshold;
-  const progress = safeLevel >= 10 ? 100 : Math.min((xpInLevel / xpNeeded) * 100, 100);
+  const nextThreshold = xpThresholds[safeLevel] || xpThresholds[maxLevel - 1];
+  const xpInLevel = Math.max(0, safeXP - currentThreshold);
+  const xpNeeded = Math.max(1, nextThreshold - currentThreshold);
+  const progress = safeLevel >= maxLevel ? 100 : Math.min((xpInLevel / xpNeeded) * 100, 100);
+  const isMaxLevel = safeLevel >= maxLevel;
+
+  // Level tier styling
+  const getLevelStyle = (level) => {
+    if (level >= 40) return 'bg-violet-900/50 text-violet-300 border border-violet-500/30';
+    if (level >= 30) return 'bg-cyan-900/50 text-cyan-300 border border-cyan-500/30';
+    if (level >= 20) return 'bg-yellow-900/50 text-yellow-300 border border-yellow-500/30';
+    if (level >= 10) return 'bg-slate-700/50 text-slate-300 border border-slate-500/30';
+    return isDark ? 'bg-dark-700 text-dark-300' : 'bg-slate-200 text-slate-600';
+  };
 
   return (
     <div className="w-full">
@@ -135,9 +128,7 @@ function XPProgressBar({ currentXP, level }) {
         <div className="flex items-center gap-2">
           <span className={clsx(
             'inline-flex items-center justify-center px-3 py-1 rounded-full font-bold text-sm',
-            safeLevel >= 8 ? 'bg-gold-900/50 text-gold-300 border border-gold-500/30' :
-            safeLevel >= 5 ? 'bg-primary-900/50 text-primary-300 border border-primary-500/30' :
-            isDark ? 'bg-dark-700 text-dark-300' : 'bg-slate-200 text-slate-600'
+            getLevelStyle(safeLevel)
           )}>
             Lv.{safeLevel}
           </span>
@@ -158,9 +149,9 @@ function XPProgressBar({ currentXP, level }) {
         />
       </div>
 
-      {safeLevel < 10 && (
+      {!isMaxLevel && (
         <p className={clsx('text-xs mt-1.5 text-right', isDark ? 'text-dark-500' : 'text-slate-500')}>
-          {(xpNeeded - xpInLevel).toLocaleString()} XP to {levelTitles[safeLevel + 1]}
+          {(xpNeeded - xpInLevel).toLocaleString()} XP to {levelTitles[safeLevel + 1] || 'Next Level'}
         </p>
       )}
     </div>
@@ -169,16 +160,21 @@ function XPProgressBar({ currentXP, level }) {
 
 function LevelBadgeSimple({ level }) {
   const safeLevel = level || 1;
-  const isElite = safeLevel >= 8;
-  const isPro = safeLevel >= 5;
+
+  // Tier-based styling
+  const getBadgeStyle = () => {
+    if (safeLevel >= 40) return 'bg-gradient-to-br from-violet-400 via-violet-500 to-violet-600 text-white'; // Diamond
+    if (safeLevel >= 30) return 'bg-gradient-to-br from-cyan-400 via-cyan-500 to-cyan-600 text-white'; // Platinum
+    if (safeLevel >= 20) return 'bg-gradient-to-br from-yellow-400 via-yellow-500 to-yellow-600 text-dark-900'; // Gold
+    if (safeLevel >= 10) return 'bg-gradient-to-br from-slate-300 via-slate-400 to-slate-500 text-dark-900'; // Silver
+    return 'bg-gradient-to-br from-amber-600 via-amber-700 to-amber-800 text-white'; // Bronze
+  };
 
   return (
     <div
       className={clsx(
         'flex items-center justify-center rounded-full font-bold h-10 w-10 text-sm',
-        isElite ? 'bg-gradient-to-br from-gold-400 via-gold-500 to-gold-600 text-dark-900' :
-        isPro ? 'bg-gradient-to-br from-primary-600 via-primary-700 to-primary-900 text-white' :
-        'bg-dark-700 text-dark-300',
+        getBadgeStyle()
       )}
     >
       {safeLevel}
@@ -254,8 +250,8 @@ export default function Profile() {
 
   // Safe data extraction
   const userName = user.name || 'User';
-  const userLevel = user.level || 1;
   const userXP = user.xp || 0;
+  const userLevel = calculateLevel(userXP);
   const userRating = user.rating || 0;
   const userEmail = user.email || '';
   const userPhone = user.phone || 'Not set';
@@ -286,6 +282,7 @@ export default function Profile() {
       )}>
         <div className="flex items-center justify-between mb-6">
           <h1 className={clsx('text-2xl font-bold', isDark ? 'text-white' : 'text-slate-900')}>Profile</h1>
+          <ThemeToggleButton />
         </div>
 
         {/* Profile card */}
@@ -313,7 +310,7 @@ export default function Profile() {
 
         {/* XP Progress */}
         <div className="mt-6">
-          <XPProgressBar currentXP={userXP} level={userLevel} />
+          <XPProgressBar currentXP={userXP} />
         </div>
       </div>
 
@@ -324,12 +321,6 @@ export default function Profile() {
           <StatItem icon={ZapIcon} label="Total XP" value={userXP.toLocaleString()} color="accent" />
           <StatItem icon={TrophyIcon} label="Achievements" value={achievements.length} color="gold" />
           <StatItem icon={ClockIcon} label="Streak" value={`${streakDays} days`} color="primary" />
-        </div>
-
-        {/* Theme Toggle */}
-        <div>
-          <h3 className={clsx('text-lg font-semibold mb-3', isDark ? 'text-white' : 'text-slate-900')}>Settings</h3>
-          <ThemeToggle />
         </div>
 
         {/* Referral Code */}

@@ -446,6 +446,8 @@ function ensureDemoAccount() {
   console.log('🎭 Creating demo account: Sarah Tan');
 
   // Create Sarah Tan demo candidate
+  // XP 15500 = Level 14 (Specialist) in new 50-level system
+  // Total earnings = sum of payments: 120+128+160+125+128 = 661
   db.prepare(`
     INSERT INTO candidates (
       id, name, email, phone, status, source,
@@ -461,8 +463,8 @@ function ensureDemoAccount() {
       '+6591234567',
       'active',
       'direct',
-      15383,
-      10,
+      15500,
+      14,
       5,
       42,
       '["Food Safety", "First Aid", "Customer Service"]',
@@ -472,7 +474,7 @@ function ensureDemoAccount() {
       2,
       180.00,
       250.00,
-      8750.00,
+      661.00,
       4.8,
       'https://api.dicebear.com/7.x/avataaars/svg?seed=Sarah%20Tan',
       'online',
