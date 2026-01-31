@@ -6,6 +6,7 @@
 const express = require('express');
 const router = express.Router();
 const { db } = require('../../../db/database');
+const { formatDateSG } = require('../../../shared/constants');
 const {
   generateJobPostings,
   generateOutreachMessage,
@@ -613,7 +614,7 @@ DM us or click link in bio to apply ✨
 
 function generatePersonalizedOutreach(candidate, job) {
   const firstName = candidate.name.split(' ')[0];
-  const jobDate = new Date(job.job_date).toLocaleDateString('en-SG', { weekday: 'short', day: 'numeric', month: 'short' });
+  const jobDate = formatDateSG(job.job_date, { weekday: 'short', day: 'numeric', month: 'short' });
   
   return `Hi ${firstName}! 👋
 

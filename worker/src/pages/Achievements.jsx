@@ -10,7 +10,7 @@ import {
 import { useAuth } from '../contexts/AuthContext';
 import { useTheme } from '../contexts/ThemeContext';
 import { clsx } from 'clsx';
-import { DEFAULT_LOCALE, RARITY_LABELS } from '../utils/constants';
+import { DEFAULT_LOCALE, TIMEZONE, RARITY_LABELS } from '../utils/constants';
 
 const rarityConfig = {
   common: { color: 'text-slate-400', bg: 'bg-slate-500/20', border: 'border-slate-500/30', glow: '' },
@@ -95,7 +95,8 @@ function AchievementCard({ achievement, unlocked, isDark }) {
           Earned {new Date(achievement.unlocked_at).toLocaleDateString(DEFAULT_LOCALE, {
             day: 'numeric',
             month: 'short',
-            year: 'numeric'
+            year: 'numeric',
+            timeZone: TIMEZONE
           })}
         </p>
       )}

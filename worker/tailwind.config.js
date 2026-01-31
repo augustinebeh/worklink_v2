@@ -8,18 +8,19 @@ export default {
   theme: {
     extend: {
       colors: {
+        // Crypto.com inspired blue theme
         primary: {
-          50: '#faf5ff',
-          100: '#f3e8ff',
-          200: '#e9d5ff',
-          300: '#d8b4fe',
-          400: '#c084fc',
-          500: '#a855f7',
-          600: '#9333ea',
-          700: '#7c3aed',
-          800: '#6b21a8',
-          900: '#581c87',
-          950: '#3b0764',
+          50: '#e6f4ff',
+          100: '#b3e0ff',
+          200: '#80ccff',
+          300: '#4db8ff',
+          400: '#1aa3ff',
+          500: '#1199fa',
+          600: '#0d7fd4',
+          700: '#0a66ad',
+          800: '#074d87',
+          900: '#043360',
+          950: '#021a3a',
         },
         secondary: {
           50: '#eff6ff',
@@ -79,8 +80,8 @@ export default {
         '2xs': ['0.625rem', { lineHeight: '0.875rem' }],
       },
       boxShadow: {
-        'glow': '0 0 20px rgba(168, 85, 247, 0.4)',
-        'glow-lg': '0 0 40px rgba(168, 85, 247, 0.5)',
+        'glow': '0 0 20px rgba(17, 153, 250, 0.4)',
+        'glow-lg': '0 0 40px rgba(17, 153, 250, 0.5)',
         'glow-gold': '0 0 20px rgba(251, 191, 36, 0.5)',
       },
       animation: {
@@ -96,8 +97,8 @@ export default {
           '50%': { transform: 'translateY(-10px)' },
         },
         pulseGlow: {
-          '0%, 100%': { boxShadow: '0 0 20px rgba(168, 85, 247, 0.4)' },
-          '50%': { boxShadow: '0 0 40px rgba(168, 85, 247, 0.6)' },
+          '0%, 100%': { boxShadow: '0 0 20px rgba(17, 153, 250, 0.4)' },
+          '50%': { boxShadow: '0 0 40px rgba(17, 153, 250, 0.6)' },
         },
         shake: {
           '0%, 100%': { transform: 'translateX(0)' },

@@ -5,6 +5,7 @@
 const express = require('express');
 const router = express.Router();
 const { db } = require('../../../db/database');
+const { getSGDateString } = require('../../../shared/constants');
 
 // Initialize web-push if keys are available
 let webpush = null;
@@ -237,8 +238,8 @@ router.post('/notify-matches', async (req, res) => {
 // Send streak reminder notifications
 router.post('/streak-reminders', async (req, res) => {
   try {
-    // Find candidates with active streaks who haven't logged in today
-    const today = new Date().toISOString().split('T')[0];
+    // Find candidates with active streaks who haven't logged in today (Singapore timezone)
+    const today = getSGDateString();
     const candidates = db.prepare(`
       SELECT id, name, push_token, streak_days, streak_last_date
       FROM candidates
@@ -269,8 +270,8 @@ router.post('/streak-reminders', async (req, res) => {
 // Send incentive progress notifications
 router.post('/incentive-progress', async (req, res) => {
   try {
-    // Find candidates close to consistency bonus (5 jobs/month)
-    const thisMonth = new Date().toISOString().slice(0, 7);
+    // Find candidates close to consistency bonus (5 jobs/month) - Singapore timezone
+    const thisMonth = getSGDateString().substring(0, 7);
     const candidates = db.prepare(`
       SELECT c.id, c.name, c.push_token, COUNT(d.id) as jobs_this_month
       FROM candidates c
@@ -368,10 +369,10 @@ function calculateMatchScore(candidate, job) {
   return { score: Math.min(100, score), factors };
 }
 
-// Helper: Format date
+// Helper: Format date (Singapore timezone)
 function formatDate(dateStr) {
   const d = new Date(dateStr);
-  return d.toLocaleDateString('en-SG', { weekday: 'short', day: 'numeric', month: 'short' });
+  return d.toLocaleDateString('en-SG', { weekday: 'short', day: 'numeric', month: 'short', timeZone: 'Asia/Singapore' });
 }
 
 module.exports = router;

@@ -286,8 +286,10 @@ function createSchema() {
       progress INTEGER DEFAULT 0,
       target INTEGER DEFAULT 1,
       completed INTEGER DEFAULT 0,
+      claimed INTEGER DEFAULT 0,
       started_at DATETIME DEFAULT CURRENT_TIMESTAMP,
       completed_at DATETIME,
+      claimed_at DATETIME,
       UNIQUE(candidate_id, quest_id),
       FOREIGN KEY (candidate_id) REFERENCES candidates(id),
       FOREIGN KEY (quest_id) REFERENCES quests(id)
@@ -510,51 +512,67 @@ function ensureDemoAccount() {
 
 // Seed essential data (achievements, quests, tiers) - runs in both environments
 function seedEssentialData() {
-  const achievementCount = db.prepare('SELECT COUNT(*) as c FROM achievements').get().c;
-  if (achievementCount > 0) return;
-
   console.log('🌱 Seeding essential data...');
 
+  const achievementCount = db.prepare('SELECT COUNT(*) as c FROM achievements').get().c;
+
   // Referral tiers
-  const tiers = [
-    [1, 1, 30, 'Bronze - First job completed by referral'],
-    [2, 5, 50, 'Silver - 5 jobs completed by referral'],
-    [3, 15, 100, 'Gold - 15 jobs completed by referral'],
-    [4, 30, 150, 'Platinum - 30 jobs completed by referral'],
-  ];
-  tiers.forEach(t => {
-    db.prepare('INSERT OR IGNORE INTO referral_tiers (tier_level, jobs_required, bonus_amount, description) VALUES (?,?,?,?)').run(...t);
-  });
+  const tierCount = db.prepare('SELECT COUNT(*) as c FROM referral_tiers').get().c;
+  if (tierCount === 0) {
+    const tiers = [
+      [1, 1, 30, 'Bronze - First job completed by referral'],
+      [2, 5, 50, 'Silver - 5 jobs completed by referral'],
+      [3, 15, 100, 'Gold - 15 jobs completed by referral'],
+      [4, 30, 150, 'Platinum - 30 jobs completed by referral'],
+    ];
+    tiers.forEach(t => {
+      db.prepare('INSERT OR IGNORE INTO referral_tiers (tier_level, jobs_required, bonus_amount, description) VALUES (?,?,?,?)').run(...t);
+    });
+  }
 
   // Achievements
-  const achievements = [
-    ['ACH001', 'First Steps', 'Complete your first job', '🎯', 'jobs', 'jobs_completed', 1, 100, 'common'],
-    ['ACH002', 'Getting Started', 'Complete 5 jobs', '⭐', 'jobs', 'jobs_completed', 5, 250, 'common'],
-    ['ACH003', 'Dedicated Worker', 'Complete 25 jobs', '💪', 'jobs', 'jobs_completed', 25, 500, 'rare'],
-    ['ACH004', 'Job Master', 'Complete 100 jobs', '🏆', 'milestone', 'jobs_completed', 100, 1500, 'epic'],
-    ['ACH005', 'Week Warrior', '7-day streak', '🔥', 'streak', 'streak', 7, 200, 'rare'],
-    ['ACH006', 'Month Champion', '30-day streak', '👑', 'streak', 'streak', 30, 1000, 'epic'],
-    ['ACH007', 'First Cert', 'Complete first training', '📚', 'training', 'training', 1, 150, 'common'],
-    ['ACH008', 'Recruiter', 'Refer your first friend', '🤝', 'referral', 'referrals', 1, 200, 'common'],
-    ['ACH009', 'Super Recruiter', 'Refer 5 friends', '🌟', 'referral', 'referrals', 5, 500, 'rare'],
-    ['ACH010', 'Perfect Score', 'Get 5-star rating 10 times', '⭐', 'rating', 'five_star', 10, 300, 'rare'],
-  ];
-  achievements.forEach(a => {
-    db.prepare('INSERT OR IGNORE INTO achievements VALUES (?,?,?,?,?,?,?,?,?)').run(...a);
-  });
+  if (achievementCount === 0) {
+    const achievements = [
+      ['ACH001', 'First Steps', 'Complete your first job', '🎯', 'jobs', 'jobs_completed', 1, 100, 'common'],
+      ['ACH002', 'Getting Started', 'Complete 5 jobs', '⭐', 'jobs', 'jobs_completed', 5, 250, 'common'],
+      ['ACH003', 'Dedicated Worker', 'Complete 25 jobs', '💪', 'jobs', 'jobs_completed', 25, 500, 'rare'],
+      ['ACH004', 'Job Master', 'Complete 100 jobs', '🏆', 'milestone', 'jobs_completed', 100, 1500, 'epic'],
+      ['ACH005', 'Week Warrior', '7-day streak', '🔥', 'streak', 'streak', 7, 200, 'rare'],
+      ['ACH011', 'Fort Knight!', '14-day streak', '⚔️', 'streak', 'streak', 14, 500, 'epic'],
+      ['ACH006', 'MONTH-STER!', '30-day streak', '👑', 'streak', 'streak', 30, 1000, 'legendary'],
+      ['ACH007', 'First Cert', 'Complete first training', '📚', 'training', 'training', 1, 150, 'common'],
+      ['ACH008', 'Recruiter', 'Refer your first friend', '🤝', 'referral', 'referrals', 1, 200, 'common'],
+      ['ACH009', 'Super Recruiter', 'Refer 5 friends', '🌟', 'referral', 'referrals', 5, 500, 'rare'],
+      ['ACH010', 'Perfect Score', 'Get 5-star rating 10 times', '⭐', 'rating', 'five_star', 10, 300, 'rare'],
+    ];
+    achievements.forEach(a => {
+      db.prepare('INSERT OR IGNORE INTO achievements VALUES (?,?,?,?,?,?,?,?,?)').run(...a);
+    });
+  }
 
-  // Quests
-  const quests = [
-    ['QST001', 'Daily Check-in', 'Log in today', 'daily', '{"type":"login","count":1}', 10, 0, 1],
-    ['QST002', 'Complete a Job', 'Finish any job this week', 'weekly', '{"type":"job","count":1}', 150, 0, 1],
-    ['QST003', 'Refer a Friend', 'Invite someone to join', 'special', '{"type":"referral","count":1}', 300, 30, 1],
-    ['QST004', 'Perfect Week', 'Work 5 jobs in a week', 'weekly', '{"type":"job","count":5}', 500, 25, 1],
-    ['QST005', 'Early Bird', 'Apply to 3 jobs before they fill', 'weekly', '{"type":"apply","count":3}', 100, 0, 1],
-    ['QST006', 'Five Star Service', 'Get a 5-star rating', 'repeatable', '{"type":"rating","value":5}', 50, 5, 1],
-  ];
-  quests.forEach(q => {
-    db.prepare('INSERT OR IGNORE INTO quests VALUES (?,?,?,?,?,?,?,?)').run(...q);
-  });
+  // Quests - seed independently
+  const questCount = db.prepare('SELECT COUNT(*) as c FROM quests').get().c;
+  if (questCount === 0) {
+    const quests = [
+      // Daily quests
+      ['QST001', 'Daily Check-in', 'Open the app today to earn XP', 'daily', '{"type":"streak","count":1}', 10, 0, 1],
+      ['QST002', 'Apply for a Job', 'Submit an application for any available job', 'daily', '{"type":"accept_job","count":1}', 25, 0, 1],
+      // Weekly quests
+      ['QST003', 'Complete a Job', 'Successfully finish any job this week', 'weekly', '{"type":"jobs_completed","count":1}', 150, 0, 1],
+      ['QST004', 'Perfect Week', 'Complete 5 jobs in a single week', 'weekly', '{"type":"jobs_completed","count":5}', 500, 25, 1],
+      ['QST005', 'Apply to 3 Jobs', 'Apply to 3 different jobs this week', 'weekly', '{"type":"accept_job","count":3}', 100, 0, 1],
+      // Special quests
+      ['QST006', 'Refer a Friend', 'Invite someone to join WorkLink', 'special', '{"type":"referral","count":1}', 300, 30, 1],
+      ['QST007', 'Complete Training', 'Finish any training course', 'special', '{"type":"training_completed","count":1}', 200, 0, 1],
+      ['QST008', 'Complete Your Profile', 'Fill in all your profile details', 'special', '{"type":"profile_complete","count":1}', 100, 0, 1],
+      // Repeatable quests
+      ['QST009', 'Five Star Service', 'Receive a 5-star rating from a client', 'repeatable', '{"type":"rating","value":5}', 50, 5, 1],
+    ];
+    quests.forEach(q => {
+      db.prepare('INSERT OR IGNORE INTO quests VALUES (?,?,?,?,?,?,?,?)').run(...q);
+    });
+    console.log('  ✅ Seeded quests');
+  }
 
   // Training
   const training = [

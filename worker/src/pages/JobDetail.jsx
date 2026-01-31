@@ -19,6 +19,7 @@ import {
   DEFAULT_START_TIME,
   DEFAULT_END_TIME,
   DEFAULT_LOCALE,
+  TIMEZONE,
   calculateJobHours,
 } from '../utils/constants';
 
@@ -154,7 +155,7 @@ export default function JobDetail() {
           )}>
             <CalendarIcon className="h-5 w-5 text-primary-400 mb-2" />
             <p className={clsx('text-xs', isDark ? 'text-dark-500' : 'text-slate-400')}>Date</p>
-            <p className={clsx('font-medium', isDark ? 'text-white' : 'text-slate-900')}>{jobDate.toLocaleDateString(DEFAULT_LOCALE, { weekday: 'long', day: 'numeric', month: 'long' })}</p>
+            <p className={clsx('font-medium', isDark ? 'text-white' : 'text-slate-900')}>{jobDate.toLocaleDateString(DEFAULT_LOCALE, { weekday: 'long', day: 'numeric', month: 'long', timeZone: TIMEZONE })}</p>
           </div>
           <div className={clsx(
             'p-4 rounded-xl border',
@@ -217,11 +218,11 @@ export default function JobDetail() {
         )}
 
         {/* Requirements */}
-        {job.required_certifications && JSON.parse(job.required_certifications || '[]').length > 0 && (
+        {job.required_certifications && job.required_certifications.length > 0 && (
           <div>
             <h2 className={clsx('text-lg font-semibold mb-2', isDark ? 'text-white' : 'text-slate-900')}>Requirements</h2>
             <div className="flex flex-wrap gap-2">
-              {JSON.parse(job.required_certifications).map((cert, idx) => (
+              {job.required_certifications.map((cert, idx) => (
                 <span
                   key={idx}
                   className={clsx(

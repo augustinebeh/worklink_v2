@@ -10,14 +10,17 @@ export const MS_PER_DAY = 24 * 60 * 60 * 1000; // 86400000
 export const DEFAULT_START_TIME = '09:00';
 export const DEFAULT_END_TIME = '17:00';
 
-// Locale
+// Singapore timezone (GMT+8)
+export const TIMEZONE = 'Asia/Singapore';
 export const DEFAULT_LOCALE = 'en-SG';
 
-// Date format options
-export const DATE_FORMAT_SHORT = { day: 'numeric', month: 'short' };
-export const DATE_FORMAT_MEDIUM = { weekday: 'short', day: 'numeric', month: 'short' };
-export const DATE_FORMAT_LONG = { weekday: 'long', day: 'numeric', month: 'long' };
-export const DATE_FORMAT_FULL = { weekday: 'long', day: 'numeric', month: 'long', year: 'numeric' };
+// Date format options (all include timezone for consistency)
+export const DATE_FORMAT_SHORT = { day: 'numeric', month: 'short', timeZone: TIMEZONE };
+export const DATE_FORMAT_MEDIUM = { weekday: 'short', day: 'numeric', month: 'short', timeZone: TIMEZONE };
+export const DATE_FORMAT_LONG = { weekday: 'long', day: 'numeric', month: 'long', timeZone: TIMEZONE };
+export const DATE_FORMAT_FULL = { weekday: 'long', day: 'numeric', month: 'long', year: 'numeric', timeZone: TIMEZONE };
+export const TIME_FORMAT_SHORT = { hour: '2-digit', minute: '2-digit', timeZone: TIMEZONE };
+export const TIME_FORMAT_FULL = { hour: '2-digit', minute: '2-digit', second: '2-digit', timeZone: TIMEZONE };
 
 // Payment status labels
 export const PAYMENT_STATUS_LABELS = {
@@ -40,6 +43,7 @@ export const QUEST_TYPE_LABELS = {
   weekly: 'Weekly',
   special: 'Special',
   repeatable: 'Repeatable',
+  challenge: 'Challenge',
 };
 
 // Achievement rarity labels
@@ -72,19 +76,56 @@ export const formatNumber = (num) => {
   return num.toString();
 };
 
-// Format date with locale
+// Get current date/time in Singapore timezone
+export const getSGDate = () => {
+  return new Date(new Date().toLocaleString('en-US', { timeZone: TIMEZONE }));
+};
+
+// Get date string in Singapore timezone (YYYY-MM-DD)
+export const getSGDateString = (date = new Date()) => {
+  const d = new Date(date);
+  return d.toLocaleDateString('en-CA', { timeZone: TIMEZONE }); // en-CA gives YYYY-MM-DD format
+};
+
+// Get current hour in Singapore timezone (0-23)
+export const getSGHour = () => {
+  return parseInt(new Date().toLocaleString('en-US', { hour: 'numeric', hour12: false, timeZone: TIMEZONE }));
+};
+
+// Format date with locale and Singapore timezone
 export const formatDate = (date, format = DATE_FORMAT_MEDIUM) => {
-  return new Date(date).toLocaleDateString(DEFAULT_LOCALE, format);
+  const options = { ...format, timeZone: TIMEZONE };
+  return new Date(date).toLocaleDateString(DEFAULT_LOCALE, options);
 };
 
-// Check if date is today
+// Format time with Singapore timezone
+export const formatTime = (date, format = TIME_FORMAT_SHORT) => {
+  const options = { ...format, timeZone: TIMEZONE };
+  return new Date(date).toLocaleTimeString(DEFAULT_LOCALE, options);
+};
+
+// Format datetime with Singapore timezone
+export const formatDateTime = (date, dateFormat = DATE_FORMAT_SHORT, timeFormat = TIME_FORMAT_SHORT) => {
+  const d = new Date(date);
+  const dateStr = d.toLocaleDateString(DEFAULT_LOCALE, { ...dateFormat, timeZone: TIMEZONE });
+  const timeStr = d.toLocaleTimeString(DEFAULT_LOCALE, { ...timeFormat, timeZone: TIMEZONE });
+  return `${dateStr}, ${timeStr}`;
+};
+
+// Check if date is today in Singapore timezone
 export const isToday = (date) => {
-  return new Date(date).toDateString() === new Date().toDateString();
+  return getSGDateString(date) === getSGDateString();
 };
 
-// Check if date is tomorrow
+// Check if date is tomorrow in Singapore timezone
 export const isTomorrow = (date) => {
-  return new Date(date).toDateString() === new Date(Date.now() + MS_PER_DAY).toDateString();
+  const tomorrow = new Date(Date.now() + MS_PER_DAY);
+  return getSGDateString(date) === getSGDateString(tomorrow);
+};
+
+// Check if date is in the past (Singapore timezone)
+export const isPast = (date) => {
+  return getSGDateString(date) < getSGDateString();
 };
 
 // Calculate job hours from start/end time

@@ -50,6 +50,10 @@ function runMigrations() {
   // Quests table migrations
   addColumn('quests', 'bonus_reward', 'REAL', '0');
 
+  // Candidate quests table migrations (for claim tracking)
+  addColumn('candidate_quests', 'claimed', 'INTEGER', '0');
+  addColumn('candidate_quests', 'claimed_at', 'DATETIME');
+
   // Message templates migrations
   addColumn('message_templates', 'whatsapp_content', 'TEXT');
 
@@ -218,6 +222,32 @@ function runMigrations() {
       updateStmt.run(code, c.id);
     }
     console.log(`  ✅ Generated referral codes for ${candidatesWithoutCode.length} candidates`);
+  }
+
+  // Seed quests if empty
+  const questCount = db.prepare('SELECT COUNT(*) as c FROM quests').get().c;
+  if (questCount === 0) {
+    const quests = [
+      // Daily quests
+      ['QST001', 'Daily Check-in', 'Open the app today to earn XP', 'daily', '{"type":"streak","count":1}', 10, 0, 1],
+      ['QST002', 'Apply for a Job', 'Submit an application for any available job', 'daily', '{"type":"accept_job","count":1}', 25, 0, 1],
+      // Weekly quests
+      ['QST003', 'Complete a Job', 'Successfully finish any job this week', 'weekly', '{"type":"jobs_completed","count":1}', 150, 0, 1],
+      ['QST004', 'Perfect Week', 'Complete 5 jobs in a single week', 'weekly', '{"type":"jobs_completed","count":5}', 500, 25, 1],
+      ['QST005', 'Apply to 3 Jobs', 'Apply to 3 different jobs this week', 'weekly', '{"type":"accept_job","count":3}', 100, 0, 1],
+      // Special quests
+      ['QST006', 'Refer a Friend', 'Invite someone to join WorkLink', 'special', '{"type":"referral","count":1}', 300, 30, 1],
+      ['QST007', 'Complete Training', 'Finish any training course', 'special', '{"type":"training_completed","count":1}', 200, 0, 1],
+      ['QST008', 'Complete Your Profile', 'Fill in all your profile details', 'special', '{"type":"profile_complete","count":1}', 100, 0, 1],
+      // Repeatable quests
+      ['QST009', 'Five Star Service', 'Receive a 5-star rating from a client', 'repeatable', '{"type":"rating","value":5}', 50, 5, 1],
+    ];
+    quests.forEach(q => {
+      try {
+        db.prepare('INSERT OR IGNORE INTO quests (id, title, description, type, requirement, xp_reward, bonus_reward, active) VALUES (?,?,?,?,?,?,?,?)').run(...q);
+      } catch (e) { }
+    });
+    console.log('  ✅ Seeded quests');
   }
 
   console.log('✅ Migrations complete');

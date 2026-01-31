@@ -1,7 +1,7 @@
 const express = require('express');
 const router = express.Router();
 const { db } = require('../../../db/database');
-const { XP_THRESHOLDS, calculateLevel } = require('../../../shared/constants');
+const { XP_THRESHOLDS, calculateLevel, getSGDateString } = require('../../../shared/constants');
 
 // Get candidate gamification profile
 router.get('/profile/:candidateId', (req, res) => {
@@ -196,30 +196,139 @@ router.post('/quests/:questId/start', (req, res) => {
   }
 });
 
-// Complete quest
+// Complete quest (mark progress as complete, not yet claimed)
 router.post('/quests/:questId/complete', (req, res) => {
   try {
     const { candidate_id } = req.body;
-    const quest = db.prepare('SELECT * FROM quests WHERE id = ?').get(req.params.questId);
 
-    // Mark as completed
+    // Mark as completed (ready to claim)
     db.prepare(`
-      UPDATE candidate_quests 
-      SET completed = 1, completed_at = CURRENT_TIMESTAMP 
+      UPDATE candidate_quests
+      SET completed = 1, completed_at = CURRENT_TIMESTAMP
       WHERE candidate_id = ? AND quest_id = ?
     `).run(candidate_id, req.params.questId);
+
+    res.json({ success: true });
+  } catch (error) {
+    res.status(500).json({ success: false, error: error.message });
+  }
+});
+
+// Claim quest reward (award XP)
+router.post('/quests/:questId/claim', (req, res) => {
+  try {
+    const { candidate_id } = req.body;
+    const questId = req.params.questId;
+
+    // Check if quest exists
+    const quest = db.prepare('SELECT * FROM quests WHERE id = ?').get(questId);
+    if (!quest) {
+      return res.status(404).json({ success: false, error: 'Quest not found' });
+    }
+
+    // Check candidate's quest progress
+    const candidateQuest = db.prepare(`
+      SELECT * FROM candidate_quests
+      WHERE candidate_id = ? AND quest_id = ?
+    `).get(candidate_id, questId);
+
+    if (!candidateQuest) {
+      return res.status(400).json({ success: false, error: 'Quest not started' });
+    }
+
+    if (candidateQuest.claimed) {
+      return res.status(400).json({ success: false, error: 'Quest already claimed' });
+    }
+
+    const requirement = JSON.parse(quest.requirement || '{}');
+    const target = requirement.count || 1;
+
+    if (candidateQuest.progress < target) {
+      return res.status(400).json({ success: false, error: 'Quest not completed yet' });
+    }
+
+    // Mark as claimed
+    db.prepare(`
+      UPDATE candidate_quests
+      SET claimed = 1, claimed_at = CURRENT_TIMESTAMP
+      WHERE candidate_id = ? AND quest_id = ?
+    `).run(candidate_id, questId);
 
     // Award XP
     db.prepare('UPDATE candidates SET xp = xp + ? WHERE id = ?').run(quest.xp_reward, candidate_id);
     db.prepare(`
       INSERT INTO xp_transactions (candidate_id, amount, reason, reference_id)
-      VALUES (?, ?, 'quest', ?)
-    `).run(candidate_id, quest.xp_reward, req.params.questId);
+      VALUES (?, ?, 'quest_claim', ?)
+    `).run(candidate_id, quest.xp_reward, questId);
+
+    // Check for level up
+    const candidate = db.prepare('SELECT xp, level FROM candidates WHERE id = ?').get(candidate_id);
+    const newLevel = calculateLevel(candidate.xp);
+
+    if (newLevel > candidate.level) {
+      db.prepare('UPDATE candidates SET level = ? WHERE id = ?').run(newLevel, candidate_id);
+    }
 
     res.json({
       success: true,
-      data: { xp_awarded: quest.xp_reward },
+      data: {
+        xp_awarded: quest.xp_reward,
+        new_xp: candidate.xp,
+        new_level: newLevel,
+        leveled_up: newLevel > candidate.level,
+      },
     });
+  } catch (error) {
+    res.status(500).json({ success: false, error: error.message });
+  }
+});
+
+// Get user's quests with progress
+router.get('/quests/user/:candidateId', (req, res) => {
+  try {
+    const candidateId = req.params.candidateId;
+
+    // Query handles case where claimed column might not exist yet
+    const quests = db.prepare(`
+      SELECT q.*,
+        COALESCE(cq.progress, 0) as progress,
+        COALESCE(cq.completed, 0) as completed,
+        cq.started_at,
+        cq.completed_at
+      FROM quests q
+      LEFT JOIN candidate_quests cq ON q.id = cq.quest_id AND cq.candidate_id = ?
+      WHERE q.active = 1
+      ORDER BY q.type, q.xp_reward DESC
+    `).all(candidateId);
+
+    // Check if claimed column exists and get claimed status
+    let claimedQuests = new Set();
+    try {
+      const claimed = db.prepare(`
+        SELECT quest_id FROM candidate_quests
+        WHERE candidate_id = ? AND claimed = 1
+      `).all(candidateId);
+      claimedQuests = new Set(claimed.map(c => c.quest_id));
+    } catch (e) {
+      // claimed column doesn't exist yet, that's ok
+    }
+
+    const parsed = quests.map(q => {
+      const requirement = JSON.parse(q.requirement || '{}');
+      const target = requirement.count || 1;
+      const isCompleted = q.progress >= target;
+      const isClaimed = claimedQuests.has(q.id);
+
+      return {
+        ...q,
+        requirement,
+        target,
+        claimed: isClaimed ? 1 : 0,
+        status: isClaimed ? 'claimed' : isCompleted ? 'claimable' : q.progress > 0 ? 'in_progress' : 'available',
+      };
+    });
+
+    res.json({ success: true, data: parsed });
   } catch (error) {
     res.status(500).json({ success: false, error: error.message });
   }
@@ -229,7 +338,7 @@ router.post('/quests/:questId/complete', (req, res) => {
 router.post('/streak/update', (req, res) => {
   try {
     const { candidate_id } = req.body;
-    const today = new Date().toISOString().split('T')[0];
+    const today = getSGDateString(); // Singapore timezone
 
     const candidate = db.prepare('SELECT streak_days, streak_last_date FROM candidates WHERE id = ?').get(candidate_id);
 

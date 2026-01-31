@@ -11,14 +11,14 @@ import {
 import { useAuth } from '../contexts/AuthContext';
 import { useTheme } from '../contexts/ThemeContext';
 import { clsx } from 'clsx';
-import { formatMoney, DEFAULT_LOCALE, PAYMENT_STATUS_LABELS } from '../utils/constants';
+import { formatMoney, DEFAULT_LOCALE, TIMEZONE, PAYMENT_STATUS_LABELS, getSGDateString } from '../utils/constants';
 
 function TransactionItem({ payment, isDark }) {
   const statusConfig = {
     pending: { color: 'text-amber-400', bg: 'bg-amber-500/20' },
     approved: { color: 'text-blue-400', bg: 'bg-blue-500/20' },
     processing: { color: 'text-purple-400', bg: 'bg-purple-500/20' },
-    paid: { color: 'text-emerald-400', bg: 'bg-emerald-500/20' },
+    paid: { color: 'text-cyan-400', bg: 'bg-cyan-500/20' },
   };
 
   const config = statusConfig[payment.status] || statusConfig.pending;
@@ -37,11 +37,11 @@ function TransactionItem({ payment, isDark }) {
       <div className="flex-1 min-w-0">
         <p className={clsx('font-medium truncate', isDark ? 'text-white' : 'text-slate-900')}>{payment.job_title || 'Job Payment'}</p>
         <p className={clsx('text-sm', isDark ? 'text-dark-500' : 'text-slate-500')}>
-          {new Date(payment.created_at).toLocaleDateString(DEFAULT_LOCALE, { day: 'numeric', month: 'short', year: 'numeric' })}
+          {new Date(payment.created_at).toLocaleDateString(DEFAULT_LOCALE, { day: 'numeric', month: 'short', year: 'numeric', timeZone: TIMEZONE })}
         </p>
       </div>
       <div className="text-right">
-        <p className={clsx('font-semibold', isPaid ? 'text-emerald-400' : isDark ? 'text-white' : 'text-slate-900')}>
+        <p className={clsx('font-semibold', isPaid ? 'text-cyan-400' : isDark ? 'text-white' : 'text-slate-900')}>
           {isPaid ? '+' : ''}${formatMoney(payment.total_amount)}
         </p>
         <p className={clsx('text-xs', config.color)}>{statusLabel}</p>
@@ -70,13 +70,13 @@ export default function Wallet() {
       if (data.success) {
         setPayments(data.data);
 
-        // Calculate stats
+        // Calculate stats (Singapore timezone)
         const total = data.data.filter(p => p.status === 'paid').reduce((sum, p) => sum + p.total_amount, 0);
         const pending = data.data.filter(p => p.status === 'pending' || p.status === 'approved').reduce((sum, p) => sum + p.total_amount, 0);
+        const currentMonth = getSGDateString().substring(0, 7); // YYYY-MM
         const thisMonth = data.data.filter(p => {
-          const date = new Date(p.created_at);
-          const now = new Date();
-          return p.status === 'paid' && date.getMonth() === now.getMonth() && date.getFullYear() === now.getFullYear();
+          const paymentMonth = getSGDateString(p.created_at).substring(0, 7);
+          return p.status === 'paid' && paymentMonth === currentMonth;
         }).reduce((sum, p) => sum + p.total_amount, 0);
 
         setStats({ total, pending, thisMonth });
@@ -99,13 +99,20 @@ export default function Wallet() {
       {/* Balance Card */}
       <div className="px-4 py-4">
         <div className={clsx(
-          'relative overflow-hidden rounded-3xl p-6 border',
+          'relative overflow-hidden rounded-3xl p-6 border backdrop-blur-xl',
           isDark
             ? 'bg-gradient-to-br from-[#0a1628] via-[#0d1f3c] to-[#1a1a3e] border-white/5'
-            : 'bg-gradient-to-br from-emerald-600 via-emerald-700 to-teal-700 border-emerald-500/20'
+            : 'bg-gradient-to-br from-primary-600 via-primary-700 to-cyan-700 border-primary-500/20 shadow-lg shadow-primary-500/20'
         )}>
           {/* Background decoration */}
-          <div className="absolute top-0 right-0 w-64 h-64 bg-emerald-500/10 rounded-full blur-3xl -translate-y-1/2 translate-x-1/2" />
+          <div className={clsx(
+            'absolute top-0 right-0 w-64 h-64 rounded-full blur-3xl -translate-y-1/2 translate-x-1/2',
+            isDark ? 'bg-blue-500/10' : 'bg-cyan-400/20'
+          )} />
+          <div className={clsx(
+            'absolute bottom-0 left-0 w-48 h-48 rounded-full blur-3xl translate-y-1/2 -translate-x-1/2',
+            isDark ? 'bg-cyan-500/10' : 'bg-white/10'
+          )} />
 
           <div className="relative">
             {/* Balance Label */}
@@ -135,10 +142,10 @@ export default function Wallet() {
               </div>
               <div className="p-4 rounded-2xl bg-white/10 border border-white/10">
                 <div className="flex items-center gap-2 mb-1">
-                  <CheckCircleIcon className="h-4 w-4 text-emerald-400" />
+                  <CheckCircleIcon className="h-4 w-4 text-cyan-400" />
                   <span className="text-xs text-white/70">Total Earned</span>
                 </div>
-                <p className="text-xl font-bold text-emerald-400">
+                <p className="text-xl font-bold text-cyan-400">
                   {balanceHidden ? '••••' : `$${formatMoney(stats.total)}`}
                 </p>
               </div>

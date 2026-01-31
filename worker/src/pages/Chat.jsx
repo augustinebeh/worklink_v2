@@ -1,29 +1,33 @@
-import { useState, useEffect, useRef } from 'react';
+import { useState, useEffect, useRef, useCallback } from 'react';
+import { useNavigate } from 'react-router-dom';
 import {
   SendIcon,
   SmileIcon,
   CheckIcon,
   CheckCheckIcon,
+  ChevronLeftIcon,
 } from 'lucide-react';
 import { useAuth } from '../contexts/AuthContext';
 import { useWebSocket } from '../contexts/WebSocketContext';
 import { clsx } from 'clsx';
 import EmojiPicker from 'emoji-picker-react';
 import { LogoIcon } from '../components/ui/Logo';
+import { DEFAULT_LOCALE, TIMEZONE, getSGDateString, MS_PER_DAY } from '../utils/constants';
 
 function MessageBubble({ message, isOwn }) {
-  const time = new Date(message.created_at).toLocaleTimeString('en-SG', { 
-    hour: '2-digit', 
+  const time = new Date(message.created_at).toLocaleTimeString(DEFAULT_LOCALE, {
+    hour: '2-digit',
     minute: '2-digit',
-    hour12: true 
+    hour12: true,
+    timeZone: TIMEZONE
   });
 
   return (
     <div className={clsx('flex', isOwn ? 'justify-end' : 'justify-start')}>
       <div className={clsx(
         'max-w-[80%] px-4 py-2.5 rounded-2xl relative',
-        isOwn 
-          ? 'bg-primary-500 text-white rounded-br-md' 
+        isOwn
+          ? 'bg-primary-500 text-white rounded-br-md'
           : 'bg-dark-800 text-white rounded-bl-md'
       )}>
         <p className="whitespace-pre-wrap break-words">{message.content}</p>
@@ -35,7 +39,7 @@ function MessageBubble({ message, isOwn }) {
             {time}
           </span>
           {isOwn && (
-            message.read 
+            message.read
               ? <CheckCheckIcon className="h-3 w-3 text-white/60" />
               : <CheckIcon className="h-3 w-3 text-white/60" />
           )}
@@ -46,16 +50,17 @@ function MessageBubble({ message, isOwn }) {
 }
 
 function DateDivider({ date }) {
-  const today = new Date();
-  const msgDate = new Date(date);
-  
+  const todaySG = getSGDateString();
+  const yesterdaySG = getSGDateString(new Date(Date.now() - MS_PER_DAY));
+  const msgDateSG = getSGDateString(date);
+
   let label;
-  if (msgDate.toDateString() === today.toDateString()) {
+  if (msgDateSG === todaySG) {
     label = 'Today';
-  } else if (msgDate.toDateString() === new Date(today - 86400000).toDateString()) {
+  } else if (msgDateSG === yesterdaySG) {
     label = 'Yesterday';
   } else {
-    label = msgDate.toLocaleDateString('en-SG', { day: 'numeric', month: 'short', year: 'numeric' });
+    label = new Date(date).toLocaleDateString(DEFAULT_LOCALE, { day: 'numeric', month: 'short', year: 'numeric', timeZone: TIMEZONE });
   }
 
   return (
@@ -70,15 +75,51 @@ function DateDivider({ date }) {
 export default function Chat() {
   const { user } = useAuth();
   const ws = useWebSocket();
+  const navigate = useNavigate();
   const [messages, setMessages] = useState([]);
   const [newMessage, setNewMessage] = useState('');
   const [loading, setLoading] = useState(true);
   const [sending, setSending] = useState(false);
   const [showEmoji, setShowEmoji] = useState(false);
   const [isTyping, setIsTyping] = useState(false);
+  const [keyboardVisible, setKeyboardVisible] = useState(false);
   const messagesEndRef = useRef(null);
+  const messagesContainerRef = useRef(null);
   const inputRef = useRef(null);
   const typingTimeoutRef = useRef(null);
+  const containerRef = useRef(null);
+
+  // Handle visual viewport changes (keyboard open/close)
+  useEffect(() => {
+    if (!window.visualViewport) return;
+
+    const handleResize = () => {
+      const viewport = window.visualViewport;
+      const isKeyboard = viewport.height < window.innerHeight * 0.75;
+      setKeyboardVisible(isKeyboard);
+
+      // Adjust container height to match visual viewport
+      if (containerRef.current) {
+        containerRef.current.style.height = `${viewport.height}px`;
+      }
+
+      // Scroll to bottom when keyboard opens
+      if (isKeyboard) {
+        setTimeout(() => scrollToBottom(), 100);
+      }
+    };
+
+    // Initial setup
+    handleResize();
+
+    window.visualViewport.addEventListener('resize', handleResize);
+    window.visualViewport.addEventListener('scroll', handleResize);
+
+    return () => {
+      window.visualViewport.removeEventListener('resize', handleResize);
+      window.visualViewport.removeEventListener('scroll', handleResize);
+    };
+  }, []);
 
   useEffect(() => {
     if (user) {
@@ -135,7 +176,7 @@ export default function Chat() {
 
   const fetchMessages = async () => {
     if (!user?.id) return;
-    
+
     try {
       const res = await fetch(`/api/v1/chat/${user.id}/messages`);
       const data = await res.json();
@@ -151,19 +192,19 @@ export default function Chat() {
     }
   };
 
-  const scrollToBottom = () => {
+  const scrollToBottom = useCallback(() => {
     messagesEndRef.current?.scrollIntoView({ behavior: 'smooth' });
-  };
+  }, []);
 
   const handleTyping = () => {
     if (ws) {
       ws.sendTyping(true);
-      
+
       // Clear existing timeout
       if (typingTimeoutRef.current) {
         clearTimeout(typingTimeoutRef.current);
       }
-      
+
       // Stop typing indicator after 2 seconds
       typingTimeoutRef.current = setTimeout(() => {
         ws.sendTyping(false);
@@ -226,9 +267,16 @@ export default function Chat() {
     inputRef.current?.focus();
   };
 
-  // Group messages by date
+  const handleInputFocus = () => {
+    // Close emoji picker when focusing input
+    setShowEmoji(false);
+    // Scroll to bottom after a short delay for keyboard animation
+    setTimeout(() => scrollToBottom(), 300);
+  };
+
+  // Group messages by date (Singapore timezone)
   const groupedMessages = messages.reduce((acc, msg) => {
-    const date = new Date(msg.created_at).toDateString();
+    const date = getSGDateString(msg.created_at);
     if (!acc[date]) acc[date] = [];
     acc[date].push(msg);
     return acc;
@@ -236,21 +284,33 @@ export default function Chat() {
 
   if (!user) {
     return (
-      <div className="min-h-screen bg-dark-950 flex items-center justify-center pb-24">
+      <div className="h-screen bg-dark-950 flex items-center justify-center">
         <p className="text-dark-400">Please log in to chat</p>
       </div>
     );
   }
 
   return (
-    <div className="min-h-screen bg-dark-950 flex flex-col pb-16">
-      {/* Header */}
-      <div className="sticky top-0 z-10 bg-dark-900 px-4 pt-safe pb-4 border-b border-white/5">
+    <div
+      ref={containerRef}
+      className="fixed inset-0 bg-dark-950 flex flex-col"
+      style={{ height: '100dvh' }}
+    >
+      {/* Fixed Header */}
+      <div className="flex-shrink-0 bg-dark-900 px-4 pt-safe pb-3 border-b border-white/5 z-10">
         <div className="flex items-center gap-3">
-          <LogoIcon size={40} />
-          <div>
+          {/* Back button */}
+          <button
+            onClick={() => navigate(-1)}
+            className="p-2 -ml-2 rounded-full hover:bg-dark-800 transition-colors"
+          >
+            <ChevronLeftIcon className="h-6 w-6 text-white" />
+          </button>
+
+          <LogoIcon size={36} />
+          <div className="flex-1">
             <h1 className="font-semibold text-white">WorkLink Support</h1>
-            <div className="flex items-center gap-1">
+            <div className="flex items-center gap-1.5">
               <span className={clsx(
                 'w-2 h-2 rounded-full',
                 ws?.isConnected ? 'bg-accent-400' : 'bg-dark-500'
@@ -263,8 +323,11 @@ export default function Chat() {
         </div>
       </div>
 
-      {/* Messages */}
-      <div className="flex-1 overflow-y-auto px-4 py-4">
+      {/* Messages Area - Scrollable */}
+      <div
+        ref={messagesContainerRef}
+        className="flex-1 overflow-y-auto overscroll-contain px-4 py-4"
+      >
         {loading ? (
           <div className="flex items-center justify-center h-full">
             <div className="animate-spin h-6 w-6 border-2 border-primary-500 border-t-transparent rounded-full" />
@@ -284,10 +347,10 @@ export default function Chat() {
                 <DateDivider date={date} />
                 <div className="space-y-3">
                   {msgs.map(msg => (
-                    <MessageBubble 
-                      key={msg.id} 
-                      message={msg} 
-                      isOwn={msg.sender === 'candidate'} 
+                    <MessageBubble
+                      key={msg.id}
+                      message={msg}
+                      isOwn={msg.sender === 'candidate'}
                     />
                   ))}
                 </div>
@@ -298,13 +361,13 @@ export default function Chat() {
         )}
       </div>
 
-      {/* Emoji picker */}
+      {/* Emoji picker - positioned above input */}
       {showEmoji && (
-        <div className="absolute bottom-24 left-4 right-4 z-20">
-          <EmojiPicker 
+        <div className="flex-shrink-0 border-t border-white/5">
+          <EmojiPicker
             onEmojiClick={handleEmojiClick}
             width="100%"
-            height={350}
+            height={280}
             theme="dark"
             searchPlaceHolder="Search emoji..."
             previewConfig={{ showPreview: false }}
@@ -312,19 +375,19 @@ export default function Chat() {
         </div>
       )}
 
-      {/* Input */}
-      <div className="sticky bottom-16 bg-dark-950 px-4 py-3 border-t border-white/5">
+      {/* Fixed Input Area */}
+      <div className="flex-shrink-0 bg-dark-950 px-4 py-3 pb-safe border-t border-white/5">
         <div className="flex items-end gap-2">
-          <button 
+          <button
             onClick={() => setShowEmoji(!showEmoji)}
             className={clsx(
-              'p-3 rounded-xl transition-colors',
+              'p-3 rounded-xl transition-colors flex-shrink-0',
               showEmoji ? 'bg-primary-500 text-white' : 'bg-dark-800 text-dark-400 hover:text-white'
             )}
           >
             <SmileIcon className="h-5 w-5" />
           </button>
-          
+
           <div className="flex-1 relative">
             <textarea
               ref={inputRef}
@@ -334,20 +397,21 @@ export default function Chat() {
                 handleTyping();
               }}
               onKeyPress={handleKeyPress}
+              onFocus={handleInputFocus}
               placeholder="Type a message..."
               rows={1}
-              className="w-full px-4 py-3 rounded-xl bg-dark-800 border border-white/10 text-white placeholder-dark-500 focus:outline-none focus:border-primary-500 resize-none max-h-32"
+              className="w-full px-4 py-3 rounded-xl bg-dark-800 border border-white/10 text-white placeholder-dark-500 focus:outline-none focus:border-primary-500 resize-none max-h-24"
               style={{ minHeight: '48px' }}
             />
           </div>
-          
+
           <button
             onClick={handleSend}
             disabled={!newMessage.trim() || sending}
             className={clsx(
-              'p-3 rounded-xl transition-colors',
-              newMessage.trim() 
-                ? 'bg-primary-500 text-white' 
+              'p-3 rounded-xl transition-colors flex-shrink-0',
+              newMessage.trim()
+                ? 'bg-primary-500 text-white'
                 : 'bg-dark-800 text-dark-500'
             )}
           >

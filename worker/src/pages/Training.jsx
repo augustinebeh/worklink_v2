@@ -12,6 +12,7 @@ import {
 } from 'lucide-react';
 import { useAuth } from '../contexts/AuthContext';
 import { clsx } from 'clsx';
+import { DEFAULT_LOCALE, TIMEZONE } from '../utils/constants';
 
 function TrainingCard({ training, completed, onStart }) {
   const isLocked = training.prerequisite && !training.prerequisiteCompleted;
@@ -94,7 +95,7 @@ function TrainingCard({ training, completed, onStart }) {
               <span>Completed</span>
               {training.completed_at && (
                 <span className="text-dark-500">
-                  • {new Date(training.completed_at).toLocaleDateString('en-SG', { day: 'numeric', month: 'short' })}
+                  • {new Date(training.completed_at).toLocaleDateString(DEFAULT_LOCALE, { day: 'numeric', month: 'short', timeZone: TIMEZONE })}
                 </span>
               )}
             </div>
@@ -115,11 +116,15 @@ function CertificationCard({ certification }) {
         <div className="flex-1">
           <h4 className="font-semibold text-white">{certification.name}</h4>
           <p className="text-xs text-dark-400">
-            Earned {new Date(certification.earned_at).toLocaleDateString('en-SG', { 
-              day: 'numeric', 
-              month: 'short',
-              year: 'numeric'
-            })}
+            {certification.earned_at
+              ? `Earned ${new Date(certification.earned_at).toLocaleDateString(DEFAULT_LOCALE, {
+                  day: 'numeric',
+                  month: 'short',
+                  year: 'numeric',
+                  timeZone: TIMEZONE
+                })}`
+              : 'Certified'
+            }
           </p>
         </div>
         <div className="flex items-center gap-1 text-gold-400">
@@ -152,17 +157,19 @@ export default function Training() {
         
         // Get user's completed trainings from certifications
         if (user?.certifications) {
-          const certs = Array.isArray(user.certifications) 
-            ? user.certifications 
+          const certs = Array.isArray(user.certifications)
+            ? user.certifications
             : JSON.parse(user.certifications || '[]');
-          
+
           const completed = data.data.filter(t => certs.includes(t.certification_name)).map(t => t.id);
           setCompletedIds(completed);
-          
+
+          // Set certifications - earned_at will be null if not tracked
+          // The display component will handle missing dates gracefully
           setCertifications(certs.map((name, idx) => ({
-            id: idx,
+            id: `cert-${idx}`,
             name,
-            earned_at: new Date(Date.now() - idx * 86400000 * 30).toISOString(),
+            earned_at: null, // Date not tracked - would need DB schema update to store
           })));
         }
       }

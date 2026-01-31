@@ -13,6 +13,7 @@ import {
 import { useAuth } from '../contexts/AuthContext';
 import { useTheme } from '../contexts/ThemeContext';
 import { clsx } from 'clsx';
+import ProfileAvatar from '../components/ui/ProfileAvatar';
 
 const rankConfig = {
   1: { icon: CrownIcon, color: 'text-gold-400', bg: 'bg-gold-500/20', border: 'border-gold-500/30' },
@@ -50,12 +51,14 @@ function LeaderboardRow({ entry, rank, isCurrentUser, isDark }) {
 
       {/* Avatar & Name */}
       <div className="flex items-center gap-3 flex-1">
-        <div className={clsx(
-          'w-12 h-12 rounded-full flex items-center justify-center text-lg font-bold',
-          isCurrentUser ? 'bg-primary-500 text-white' : isDark ? 'bg-dark-700 text-dark-300' : 'bg-slate-200 text-slate-600'
-        )}>
-          {entry.name?.charAt(0)}
-        </div>
+        <ProfileAvatar
+          name={entry.name}
+          photoUrl={entry.profile_photo}
+          level={entry.level || 1}
+          size="md"
+          showLevel={false}
+          isCurrentUser={isCurrentUser}
+        />
         <div>
           <div className="flex items-center gap-2">
             <span className={clsx('font-semibold', isCurrentUser ? 'text-primary-300' : isDark ? 'text-white' : 'text-slate-900')}>
@@ -119,18 +122,20 @@ function TopThree({ entries, currentUserId, isDark }) {
               <CrownIcon className="h-8 w-8 text-gold-400 mb-2 animate-bounce" />
             )}
 
-            {/* Avatar */}
-            <div className={clsx(
-              'relative rounded-full flex items-center justify-center font-bold border-4',
-              isFirst ? 'w-24 h-24 text-2xl' : 'w-20 h-20 text-xl',
-              isCurrentUser ? 'bg-primary-500 border-primary-400 text-white' : isDark ? 'bg-dark-700 border-dark-600 text-dark-300' : 'bg-slate-200 border-slate-300 text-slate-600',
-              config.border
-            )}>
-              {entry.name?.charAt(0)}
+            {/* Avatar with level-based border */}
+            <div className="relative">
+              <ProfileAvatar
+                name={entry.name}
+                photoUrl={entry.profile_photo}
+                level={entry.level || 1}
+                size={isFirst ? '2xl' : 'xl'}
+                showLevel={true}
+                isCurrentUser={isCurrentUser}
+              />
 
               {/* Rank badge */}
               <div className={clsx(
-                'absolute -bottom-2 px-3 py-1 rounded-full font-bold text-sm',
+                'absolute -top-1 -right-1 px-2 py-0.5 rounded-full font-bold text-xs z-10',
                 config.bg, config.color, config.border, 'border'
               )}>
                 #{actualRank}
@@ -172,15 +177,15 @@ export default function Leaderboard() {
       const res = await fetch(`/api/v1/gamification/leaderboard?period=${period}`);
       const data = await res.json();
       if (data.success) {
-        // Add mock change data
-        const withChanges = data.data.map((entry, idx) => ({
+        // Use rank change from API if available, otherwise 0
+        const entries = data.data.map(entry => ({
           ...entry,
-          change: Math.floor(Math.random() * 5) - 2,
+          change: entry.rank_change ?? 0, // Will be 0 until API provides rank_change
         }));
-        setLeaderboard(withChanges);
-        
+        setLeaderboard(entries);
+
         // Find user's rank
-        const userIdx = withChanges.findIndex(e => e.id === user?.id);
+        const userIdx = entries.findIndex(e => e.id === user?.id);
         setUserRank(userIdx >= 0 ? userIdx + 1 : null);
       }
     } catch (error) {

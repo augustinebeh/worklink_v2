@@ -6,6 +6,7 @@
 const express = require('express');
 const router = express.Router();
 const { db } = require('../../../db/database');
+const { getSGDateString } = require('../../../shared/constants');
 
 // Get candidate availability for a date range
 router.get('/:candidateId', (req, res) => {
@@ -19,8 +20,8 @@ router.get('/:candidateId', (req, res) => {
       return res.status(404).json({ success: false, error: 'Candidate not found' });
     }
 
-    // Calculate date range
-    const startDate = start_date || new Date().toISOString().split('T')[0];
+    // Calculate date range (Singapore timezone)
+    const startDate = start_date || getSGDateString();
     const endDate = end_date || addDays(startDate, parseInt(days));
 
     // Get availability

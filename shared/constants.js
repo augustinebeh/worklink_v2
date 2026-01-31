@@ -3,6 +3,21 @@
  * Used by both server and frontend
  */
 
+// Singapore timezone (GMT+8)
+const TIMEZONE = 'Asia/Singapore';
+const DEFAULT_LOCALE = 'en-SG';
+
+// Get date string in Singapore timezone (YYYY-MM-DD)
+function getSGDateString(date = new Date()) {
+  const d = new Date(date);
+  return d.toLocaleDateString('en-CA', { timeZone: TIMEZONE }); // en-CA gives YYYY-MM-DD format
+}
+
+// Format date with Singapore timezone
+function formatDateSG(date, options = { day: 'numeric', month: 'short' }) {
+  return new Date(date).toLocaleDateString(DEFAULT_LOCALE, { ...options, timeZone: TIMEZONE });
+}
+
 const XP_THRESHOLDS = [0, 500, 1200, 2500, 5000, 8000, 12000, 18000, 25000, 35000];
 
 const LEVEL_TITLES = {
@@ -39,5 +54,15 @@ function getLevelTitle(level) {
 
 // CommonJS export for Node.js backend
 if (typeof module !== 'undefined' && module.exports) {
-  module.exports = { XP_THRESHOLDS, LEVEL_TITLES, calculateLevel, calculateLevelProgress, getLevelTitle };
+  module.exports = {
+    TIMEZONE,
+    DEFAULT_LOCALE,
+    getSGDateString,
+    formatDateSG,
+    XP_THRESHOLDS,
+    LEVEL_TITLES,
+    calculateLevel,
+    calculateLevelProgress,
+    getLevelTitle
+  };
 }

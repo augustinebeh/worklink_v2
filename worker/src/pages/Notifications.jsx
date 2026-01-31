@@ -1,7 +1,7 @@
 import { useState, useEffect } from 'react';
 import { Link, useNavigate } from 'react-router-dom';
-import { 
-  BellIcon, 
+import {
+  BellIcon,
   CheckIcon,
   CheckCheckIcon,
   BriefcaseIcon,
@@ -15,6 +15,7 @@ import {
 import { useAuth } from '../contexts/AuthContext';
 import { useWebSocket } from '../contexts/WebSocketContext';
 import { clsx } from 'clsx';
+import { DEFAULT_LOCALE, TIMEZONE } from '../utils/constants';
 
 const notificationTypeConfig = {
   job: { icon: BriefcaseIcon, color: 'text-blue-400', bg: 'bg-blue-500/20', link: '/jobs' },
@@ -41,7 +42,7 @@ function NotificationItem({ notification, onRead }) {
     if (hours < 24) return `${hours}h ago`;
     const days = Math.floor(hours / 24);
     if (days < 7) return `${days}d ago`;
-    return new Date(date).toLocaleDateString('en-SG', { day: 'numeric', month: 'short' });
+    return new Date(date).toLocaleDateString(DEFAULT_LOCALE, { day: 'numeric', month: 'short', timeZone: TIMEZONE });
   };
 
   const handleClick = () => {

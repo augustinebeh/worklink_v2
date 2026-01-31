@@ -17,9 +17,11 @@ import {
   formatMoney,
   DEFAULT_START_TIME,
   DEFAULT_END_TIME,
-  MS_PER_DAY,
   DEFAULT_LOCALE,
+  TIMEZONE,
   calculateJobHours,
+  isToday as checkIsToday,
+  isTomorrow as checkIsTomorrow,
 } from '../utils/constants';
 
 function JobCard({ job, applied, isDark }) {
@@ -29,8 +31,8 @@ function JobCard({ job, applied, isDark }) {
   const totalPay = hours * job.pay_rate;
 
   const jobDate = new Date(job.job_date);
-  const isToday = jobDate.toDateString() === new Date().toDateString();
-  const isTomorrow = jobDate.toDateString() === new Date(Date.now() + MS_PER_DAY).toDateString();
+  const isToday = checkIsToday(job.job_date);
+  const isTomorrow = checkIsTomorrow(job.job_date);
 
   return (
     <Link
@@ -74,7 +76,7 @@ function JobCard({ job, applied, isDark }) {
       <div className={clsx('flex flex-wrap items-center gap-3 mt-3 text-sm', isDark ? 'text-dark-300' : 'text-slate-600')}>
         <div className="flex items-center gap-1">
           <CalendarIcon className={clsx('h-4 w-4', isDark ? 'text-dark-500' : 'text-slate-400')} />
-          <span>{jobDate.toLocaleDateString(DEFAULT_LOCALE, { weekday: 'short', day: 'numeric', month: 'short' })}</span>
+          <span>{jobDate.toLocaleDateString(DEFAULT_LOCALE, { weekday: 'short', day: 'numeric', month: 'short', timeZone: TIMEZONE })}</span>
         </div>
         <div className="flex items-center gap-1">
           <ClockIcon className={clsx('h-4 w-4', isDark ? 'text-dark-500' : 'text-slate-400')} />

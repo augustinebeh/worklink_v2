@@ -27,16 +27,19 @@ import Referrals from './pages/Referrals';
 function AppLayout({ children }) {
   const location = useLocation();
 
+  // Hide header and bottom nav on chat page for full-screen messenger experience
+  const isChatPage = location.pathname === '/chat';
+
   return (
-    <div className="flex flex-col min-h-screen">
-      <Header />
-      <main className="flex-1">
+    <>
+      {!isChatPage && <Header />}
+      <main className="flex-1 min-h-screen">
         <PageTransition key={location.pathname}>
           {children}
         </PageTransition>
       </main>
-      <BottomNav />
-    </div>
+      {!isChatPage && <BottomNav />}
+    </>
   );
 }
 

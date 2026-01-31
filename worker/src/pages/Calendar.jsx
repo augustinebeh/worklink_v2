@@ -13,7 +13,7 @@ import {
 import { useAuth } from '../contexts/AuthContext';
 import { useTheme } from '../contexts/ThemeContext';
 import { clsx } from 'clsx';
-import { DEFAULT_LOCALE } from '../utils/constants';
+import { DEFAULT_LOCALE, TIMEZONE, getSGDateString } from '../utils/constants';
 
 const DAYS = ['Sun', 'Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat'];
 const MONTHS = ['January', 'February', 'March', 'April', 'May', 'June', 'July', 'August', 'September', 'October', 'November', 'December'];
@@ -80,7 +80,7 @@ export default function Calendar() {
   };
 
   const getDeploymentsForDate = (date) => {
-    const dateStr = date.toISOString().split('T')[0];
+    const dateStr = getSGDateString(date);
     return deployments.filter(d => d.job_date === dateStr);
   };
 
@@ -94,7 +94,7 @@ export default function Calendar() {
   };
 
   const selectedDeployments = getDeploymentsForDate(selectedDate);
-  const selectedDateStr = selectedDate.toISOString().split('T')[0];
+  const selectedDateStr = getSGDateString(selectedDate);
   const selectedAvailability = getAvailabilityForDate(selectedDateStr);
 
   const hasJobs = (day) => {
@@ -103,8 +103,9 @@ export default function Calendar() {
   };
 
   const isToday = (day) => {
-    const today = new Date();
-    return day === today.getDate() && month === today.getMonth() && year === today.getFullYear();
+    const todaySG = getSGDateString();
+    const dateStr = getDateString(day);
+    return dateStr === todaySG;
   };
 
   const isSelected = (day) => {
@@ -112,10 +113,9 @@ export default function Calendar() {
   };
 
   const isPast = (day) => {
-    const date = new Date(year, month, day);
-    const today = new Date();
-    today.setHours(0, 0, 0, 0);
-    return date < today;
+    const dateStr = getDateString(day);
+    const todaySG = getSGDateString();
+    return dateStr < todaySG;
   };
 
   const handleDayClick = (day) => {
@@ -158,7 +158,7 @@ export default function Calendar() {
   };
 
   const handleSetAvailability = async (status) => {
-    const dateStr = selectedDate.toISOString().split('T')[0];
+    const dateStr = getSGDateString(selectedDate);
     try {
       await fetch(`/api/v1/availability/${user.id}`, {
         method: 'POST',
@@ -344,7 +344,7 @@ export default function Calendar() {
           <div className="mt-6">
             <div className="flex items-center justify-between mb-3">
               <h3 className={clsx('text-lg font-semibold', isDark ? 'text-white' : 'text-slate-900')}>
-                {selectedDate.toLocaleDateString(DEFAULT_LOCALE, { weekday: 'long', day: 'numeric', month: 'long' })}
+                {selectedDate.toLocaleDateString(DEFAULT_LOCALE, { weekday: 'long', day: 'numeric', month: 'long', timeZone: TIMEZONE })}
               </h3>
             </div>
 

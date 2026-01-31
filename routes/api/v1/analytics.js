@@ -1,13 +1,17 @@
 const express = require('express');
 const router = express.Router();
 const { db } = require('../../../db/database');
+const { getSGDateString } = require('../../../shared/constants');
 
 // Comprehensive financial dashboard
 router.get('/financial/dashboard', (req, res) => {
   try {
-    const today = new Date().toISOString().split('T')[0];
+    const today = getSGDateString(); // Singapore timezone
     const thisMonth = today.substring(0, 7);
-    const lastMonth = new Date(new Date().setMonth(new Date().getMonth() - 1)).toISOString().substring(0, 7);
+    // Get last month in Singapore timezone
+    const lastMonthDate = new Date();
+    lastMonthDate.setMonth(lastMonthDate.getMonth() - 1);
+    const lastMonth = getSGDateString(lastMonthDate).substring(0, 7);
 
     // ===== CURRENT EARNINGS (Completed deployments) =====
     const currentEarnings = db.prepare(`
@@ -436,7 +440,7 @@ router.post('/calculate-job-profit', (req, res) => {
 // Get dashboard analytics (original endpoint updated)
 router.get('/dashboard', (req, res) => {
   try {
-    const today = new Date().toISOString().split('T')[0];
+    const today = getSGDateString(); // Singapore timezone
     
     const analytics = {
       candidates: {

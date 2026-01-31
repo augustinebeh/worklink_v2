@@ -13,12 +13,14 @@ import {
   CalendarIcon,
   GraduationCapIcon,
   BellIcon,
+  ZapIcon,
 } from 'lucide-react';
 import { useAuth } from '../../contexts/AuthContext';
 import { useTheme } from '../../contexts/ThemeContext';
 import { clsx } from 'clsx';
 import { LogoIcon } from '../ui/Logo';
 import { haptic } from '../../hooks/useHaptic';
+import { XP_THRESHOLDS, calculateLevel } from '../../utils/gamification';
 
 const menuSections = [
   {
@@ -94,12 +96,15 @@ export default function Sidebar({ isOpen, onClose }) {
         className={clsx(
           'fixed top-0 left-0 bottom-0 w-72 z-[100] transform transition-transform duration-300 ease-out',
           isOpen ? 'translate-x-0' : '-translate-x-full',
-          isDark ? 'bg-[#0a0f1a]' : 'bg-white'
+          isDark ? 'bg-[#0b1426]' : 'bg-white shadow-xl'
         )}
         style={{ paddingTop: 'env(safe-area-inset-top, 0px)' }}
       >
         {/* Header */}
-        <div className="flex items-center justify-between px-4 h-14 border-b border-white/5">
+        <div className={clsx(
+          'flex items-center justify-between px-4 h-14 border-b',
+          isDark ? 'border-white/5' : 'border-slate-100'
+        )}>
           <div className="flex items-center gap-3">
             <LogoIcon size={28} />
             <span className={clsx('font-bold', isDark ? 'text-white' : 'text-slate-900')}>
@@ -110,7 +115,7 @@ export default function Sidebar({ isOpen, onClose }) {
             onClick={onClose}
             className={clsx(
               'p-2 rounded-full transition-colors',
-              isDark ? 'text-dark-400 hover:bg-white/5' : 'text-slate-500 hover:bg-slate-100'
+              isDark ? 'text-slate-400 hover:bg-white/5' : 'text-slate-500 hover:bg-slate-100'
             )}
           >
             <XIcon className="h-5 w-5" />
@@ -118,25 +123,54 @@ export default function Sidebar({ isOpen, onClose }) {
         </div>
 
         {/* User Info */}
-        {user && (
-          <div className="px-4 py-4 border-b border-white/5">
-            <div className="flex items-center gap-3">
-              <div className="w-12 h-12 rounded-full bg-gradient-to-br from-primary-500 to-violet-500 flex items-center justify-center text-white font-bold overflow-hidden">
-                {user.profile_photo ? (
-                  <img src={user.profile_photo} alt="" className="w-full h-full object-cover" />
-                ) : (
-                  user.name?.charAt(0) || 'U'
-                )}
+        {user && (() => {
+          const userXP = user.xp || 0;
+          const userLevel = calculateLevel(userXP);
+          const currentThreshold = XP_THRESHOLDS[userLevel - 1] || 0;
+          const nextThreshold = XP_THRESHOLDS[userLevel] || XP_THRESHOLDS[XP_THRESHOLDS.length - 1];
+          const xpInLevel = Math.max(0, userXP - currentThreshold);
+          const xpNeeded = Math.max(1, nextThreshold - currentThreshold);
+          const progress = userLevel >= XP_THRESHOLDS.length ? 100 : Math.min((xpInLevel / xpNeeded) * 100, 100);
+
+          return (
+            <div className={clsx(
+              'px-4 py-4 border-b',
+              isDark ? 'border-white/5' : 'border-slate-100'
+            )}>
+              <div className="flex items-center gap-3">
+                <div className="w-12 h-12 rounded-full bg-gradient-to-br from-blue-500 to-cyan-500 flex items-center justify-center text-white font-bold overflow-hidden">
+                  {user.profile_photo ? (
+                    <img src={user.profile_photo} alt="" className="w-full h-full object-cover" />
+                  ) : (
+                    user.name?.charAt(0) || 'U'
+                  )}
+                </div>
+                <div className="flex-1">
+                  <p className={clsx('font-semibold', isDark ? 'text-white' : 'text-slate-900')}>
+                    {user.name || 'User'}
+                  </p>
+                  <p className="text-sm text-blue-400">Level {userLevel}</p>
+                </div>
               </div>
-              <div>
-                <p className={clsx('font-semibold', isDark ? 'text-white' : 'text-slate-900')}>
-                  {user.name || 'User'}
-                </p>
-                <p className="text-sm text-primary-400">Level {user.level || 1}</p>
+              {/* XP Progress Bar */}
+              <div className="mt-3">
+                <div className="flex items-center justify-between text-xs mb-1">
+                  <span className={clsx('flex items-center gap-1', isDark ? 'text-slate-400' : 'text-slate-500')}>
+                    <ZapIcon className="h-3 w-3 text-cyan-400" />
+                    {xpInLevel.toLocaleString()} / {xpNeeded.toLocaleString()} XP
+                  </span>
+                  <span className="text-cyan-400 font-medium">{Math.round(progress)}%</span>
+                </div>
+                <div className={clsx('h-1.5 rounded-full overflow-hidden', isDark ? 'bg-white/10' : 'bg-slate-200')}>
+                  <div
+                    className="h-full bg-gradient-to-r from-blue-500 to-cyan-400 rounded-full transition-all duration-500"
+                    style={{ width: `${progress}%` }}
+                  />
+                </div>
               </div>
             </div>
-          </div>
-        )}
+          );
+        })()}
 
         {/* Menu Sections */}
         <div className="flex-1 overflow-y-auto py-4">
@@ -144,7 +178,7 @@ export default function Sidebar({ isOpen, onClose }) {
             <div key={section.title} className="mb-4">
               <p className={clsx(
                 'px-4 mb-2 text-xs font-semibold uppercase tracking-wider',
-                isDark ? 'text-dark-500' : 'text-slate-400'
+                isDark ? 'text-slate-500' : 'text-slate-400'
               )}>
                 {section.title}
               </p>
@@ -160,10 +194,10 @@ export default function Sidebar({ isOpen, onClose }) {
                       'w-full flex items-center gap-3 px-4 py-3 transition-colors',
                       isActive
                         ? isDark
-                          ? 'bg-primary-500/20 text-primary-400 border-r-2 border-primary-500'
-                          : 'bg-primary-50 text-primary-600 border-r-2 border-primary-500'
+                          ? 'bg-blue-500/20 text-blue-400 border-r-2 border-blue-500'
+                          : 'bg-blue-50 text-blue-600 border-r-2 border-blue-500'
                         : isDark
-                          ? 'text-dark-300 hover:bg-white/5'
+                          ? 'text-slate-300 hover:bg-white/5'
                           : 'text-slate-600 hover:bg-slate-50'
                     )}
                   >
@@ -178,10 +212,13 @@ export default function Sidebar({ isOpen, onClose }) {
 
         {/* Footer */}
         <div
-          className="px-4 py-4 border-t border-white/5"
+          className={clsx(
+            'px-4 py-4 border-t',
+            isDark ? 'border-white/5' : 'border-slate-100'
+          )}
           style={{ paddingBottom: 'env(safe-area-inset-bottom, 16px)' }}
         >
-          <p className={clsx('text-xs', isDark ? 'text-dark-600' : 'text-slate-400')}>
+          <p className={clsx('text-xs', isDark ? 'text-slate-600' : 'text-slate-400')}>
             WorkLink v2.0
           </p>
         </div>
