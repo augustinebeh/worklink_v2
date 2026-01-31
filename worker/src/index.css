@@ -120,20 +120,14 @@
   }
 
   #root {
-    min-height: 100vh;
-    min-height: 100dvh;
-    min-height: -webkit-fill-available;
-    /* Enable scroll inside root */
-    overflow-y: auto;
-    overflow-x: hidden;
-    /* Smooth momentum scrolling */
-    -webkit-overflow-scrolling: touch;
     /* Full dimensions when body is fixed */
     height: 100%;
     width: 100%;
     /* Flex layout for sticky footer */
     display: flex;
     flex-direction: column;
+    /* No overflow here - handled by content wrapper */
+    overflow: hidden;
   }
 
   /* Hide scrollbar but keep functionality */
@@ -295,6 +289,12 @@
 }
 
 @layer utilities {
+  /* Smooth scrolling container for iOS */
+  .scroll-container {
+    -webkit-overflow-scrolling: touch;
+    overscroll-behavior: none;
+  }
+
   /* Safe area padding for notched phones */
   .pb-safe {
     padding-bottom: max(0.75rem, env(safe-area-inset-bottom));

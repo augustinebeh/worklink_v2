@@ -27,12 +27,14 @@ function AppLayout({ children }) {
   const location = useLocation();
 
   return (
-    <div className="flex flex-col min-h-screen min-h-[100dvh]">
-      <main className="flex-1 flex flex-col">
+    <div className="flex flex-col h-full">
+      {/* Scrollable content area */}
+      <div className="flex-1 overflow-y-auto overflow-x-hidden scroll-container">
         <PageTransition key={location.pathname}>
           {children}
         </PageTransition>
-      </main>
+      </div>
+      {/* Sticky footer - not scrollable */}
       <BottomNav />
     </div>
   );

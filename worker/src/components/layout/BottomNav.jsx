@@ -21,10 +21,10 @@ export default function BottomNav() {
   return (
     <nav
       className={clsx(
-        'fixed bottom-0 left-0 right-0 backdrop-blur-xl border-t z-50',
-        isDark ? 'bg-[#0a0f1a]/98 border-white/5' : 'bg-white/98 border-slate-200'
+        'flex-shrink-0 backdrop-blur-xl border-t z-50',
+        isDark ? 'bg-[#0a0f1a] border-white/5' : 'bg-white border-slate-200'
       )}
-      style={{ paddingBottom: 'max(0.75rem, env(safe-area-inset-bottom))' }}
+      style={{ paddingBottom: 'env(safe-area-inset-bottom, 0px)' }}
     >
       <div className="flex items-center justify-around px-2 h-16 max-w-md mx-auto">
         {navItems.map(({ path, icon: Icon, label }) => {
