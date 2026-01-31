@@ -1,5 +1,6 @@
 import { NavLink, useLocation, useNavigate } from 'react-router-dom';
 import { HomeIcon, BriefcaseIcon, WalletIcon, UserIcon, SearchIcon, GridIcon } from 'lucide-react';
+import { useTheme } from '../../contexts/ThemeContext';
 import { clsx } from 'clsx';
 
 const navItems = [
@@ -11,12 +12,16 @@ const navItems = [
 
 export default function BottomNav() {
   const location = useLocation();
+  const { isDark } = useTheme();
 
   // Hide on login page
   if (location.pathname === '/login') return null;
 
   return (
-    <nav className="fixed bottom-0 left-0 right-0 bg-[#0a0f1a]/98 backdrop-blur-xl border-t border-white/5 pb-safe z-50">
+    <nav className={clsx(
+      'fixed bottom-0 left-0 right-0 backdrop-blur-xl border-t pb-safe z-50',
+      isDark ? 'bg-[#0a0f1a]/98 border-white/5' : 'bg-white/98 border-slate-200'
+    )}>
       <div className="flex items-center justify-around px-2 h-16 max-w-md mx-auto">
         {navItems.map(({ path, icon: Icon, label }) => {
           const isActive = location.pathname === path ||

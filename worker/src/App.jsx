@@ -1,6 +1,7 @@
 import { BrowserRouter, Routes, Route, Navigate, useLocation } from 'react-router-dom';
 import { AuthProvider, useAuth } from './contexts/AuthContext';
 import { WebSocketProvider } from './contexts/WebSocketContext';
+import { ThemeProvider } from './contexts/ThemeContext';
 import { ToastProvider } from './components/ui/Toast';
 import BottomNav from './components/layout/BottomNav';
 import { PageTransition } from './components/layout/PageTransition';
@@ -184,13 +185,15 @@ function AppRoutes() {
 export default function App() {
   return (
     <BrowserRouter>
-      <AuthProvider>
-        <WebSocketProvider>
-          <ToastProvider>
-            <AppRoutes />
-          </ToastProvider>
-        </WebSocketProvider>
-      </AuthProvider>
+      <ThemeProvider>
+        <AuthProvider>
+          <WebSocketProvider>
+            <ToastProvider>
+              <AppRoutes />
+            </ToastProvider>
+          </WebSocketProvider>
+        </AuthProvider>
+      </ThemeProvider>
     </BrowserRouter>
   );
 }

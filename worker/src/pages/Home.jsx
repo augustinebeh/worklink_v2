@@ -24,6 +24,7 @@ import {
 } from 'lucide-react';
 import { useAuth } from '../contexts/AuthContext';
 import { useWebSocket } from '../contexts/WebSocketContext';
+import { useTheme } from '../contexts/ThemeContext';
 import { useToast } from '../components/ui/Toast';
 import { clsx } from 'clsx';
 import { XP_THRESHOLDS as xpThresholds, LEVEL_TITLES as levelTitles } from '../utils/gamification';
@@ -146,6 +147,7 @@ export default function Home() {
   const { user } = useAuth();
   const navigate = useNavigate();
   const ws = useWebSocket();
+  const { isDark } = useTheme();
   const toast = useToast();
   const [jobs, setJobs] = useState([]);
   const [recentPayments, setRecentPayments] = useState([]);
@@ -233,7 +235,7 @@ export default function Home() {
   const progress = userLevel >= 10 ? 100 : Math.min((xpInLevel / xpNeeded) * 100, 100);
 
   return (
-    <div className="min-h-screen bg-dark-950 pb-24">
+    <div className={clsx('min-h-screen pb-24', isDark ? 'bg-dark-950' : 'bg-slate-50')}>
       {/* Header */}
       <div className="px-4 pt-safe pb-2">
         <div className="flex items-center justify-between">
@@ -243,8 +245,8 @@ export default function Home() {
               {userName.charAt(0)}
             </div>
             <div>
-              <p className="text-sm text-dark-400">Welcome back</p>
-              <p className="font-semibold text-white">{userName}</p>
+              <p className={clsx('text-sm', isDark ? 'text-dark-400' : 'text-slate-500')}>Welcome back</p>
+              <p className={clsx('font-semibold', isDark ? 'text-white' : 'text-slate-900')}>{userName}</p>
             </div>
           </div>
 
@@ -258,7 +260,10 @@ export default function Home() {
             {/* Notifications */}
             <button
               onClick={() => navigate('/notifications')}
-              className="relative p-2.5 rounded-full bg-dark-800/80 text-dark-400 hover:text-white transition-colors"
+              className={clsx(
+                'relative p-2.5 rounded-full transition-colors',
+                isDark ? 'bg-dark-800/80 text-dark-400 hover:text-white' : 'bg-white text-slate-500 hover:text-slate-900 shadow-sm'
+              )}
             >
               <BellIcon className="h-5 w-5" />
               {ws?.unreadNotifications > 0 && (
@@ -271,7 +276,12 @@ export default function Home() {
 
       {/* Balance Card - Crypto.com style */}
       <div className="px-4 py-6">
-        <div className="relative overflow-hidden rounded-3xl bg-gradient-to-br from-[#0a1628] via-[#0d1f3c] to-[#1a1a3e] p-6 border border-white/5">
+        <div className={clsx(
+          'relative overflow-hidden rounded-3xl p-6 border',
+          isDark
+            ? 'bg-gradient-to-br from-[#0a1628] via-[#0d1f3c] to-[#1a1a3e] border-white/5'
+            : 'bg-gradient-to-br from-primary-600 via-primary-700 to-violet-700 border-primary-500/20'
+        )}>
           {/* Background decoration */}
           <div className="absolute top-0 right-0 w-64 h-64 bg-primary-500/10 rounded-full blur-3xl -translate-y-1/2 translate-x-1/2" />
           <div className="absolute bottom-0 left-0 w-48 h-48 bg-violet-500/10 rounded-full blur-3xl translate-y-1/2 -translate-x-1/2" />
@@ -365,7 +375,7 @@ export default function Home() {
       {/* Available Jobs Section */}
       <div className="px-4 mb-6">
         <div className="flex items-center justify-between mb-4">
-          <h2 className="text-lg font-semibold text-white">Available Jobs</h2>
+          <h2 className={clsx('text-lg font-semibold', isDark ? 'text-white' : 'text-slate-900')}>Available Jobs</h2>
           <Link to="/jobs" className="flex items-center gap-1 text-sm text-primary-400">
             View all
             <ChevronRightIcon className="h-4 w-4" />

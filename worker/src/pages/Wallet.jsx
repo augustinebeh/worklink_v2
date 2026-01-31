@@ -12,6 +12,7 @@ import {
   FilterIcon,
 } from 'lucide-react';
 import { useAuth } from '../contexts/AuthContext';
+import { useTheme } from '../contexts/ThemeContext';
 import { clsx } from 'clsx';
 
 // Format money helper
@@ -55,6 +56,7 @@ function TransactionItem({ payment }) {
 
 export default function Wallet() {
   const { user } = useAuth();
+  const { isDark } = useTheme();
   const [payments, setPayments] = useState([]);
   const [stats, setStats] = useState({ total: 0, pending: 0, thisMonth: 0 });
   const [loading, setLoading] = useState(true);
@@ -97,15 +99,20 @@ export default function Wallet() {
   });
 
   return (
-    <div className="min-h-screen bg-dark-950 pb-24">
+    <div className={clsx('min-h-screen pb-24', isDark ? 'bg-dark-950' : 'bg-slate-50')}>
       {/* Header */}
       <div className="px-4 pt-safe pb-2">
-        <h1 className="text-2xl font-bold text-white">Wallet</h1>
+        <h1 className={clsx('text-2xl font-bold', isDark ? 'text-white' : 'text-slate-900')}>Wallet</h1>
       </div>
 
       {/* Balance Card */}
       <div className="px-4 py-4">
-        <div className="relative overflow-hidden rounded-3xl bg-gradient-to-br from-[#0a1628] via-[#0d1f3c] to-[#1a1a3e] p-6 border border-white/5">
+        <div className={clsx(
+          'relative overflow-hidden rounded-3xl p-6 border',
+          isDark
+            ? 'bg-gradient-to-br from-[#0a1628] via-[#0d1f3c] to-[#1a1a3e] border-white/5'
+            : 'bg-gradient-to-br from-emerald-600 via-emerald-700 to-teal-700 border-emerald-500/20'
+        )}>
           {/* Background decoration */}
           <div className="absolute top-0 right-0 w-64 h-64 bg-emerald-500/10 rounded-full blur-3xl -translate-y-1/2 translate-x-1/2" />
 
@@ -152,17 +159,17 @@ export default function Wallet() {
       {/* Quick Stats */}
       <div className="px-4 mb-4">
         <div className="flex gap-3">
-          <div className="flex-1 p-4 rounded-2xl bg-dark-900/50 border border-white/5 text-center">
-            <p className="text-2xl font-bold text-white">{user?.total_jobs_completed || 0}</p>
-            <p className="text-xs text-dark-500">Jobs Done</p>
+          <div className={clsx('flex-1 p-4 rounded-2xl text-center border', isDark ? 'bg-dark-900/50 border-white/5' : 'bg-white border-slate-200')}>
+            <p className={clsx('text-2xl font-bold', isDark ? 'text-white' : 'text-slate-900')}>{user?.total_jobs_completed || 0}</p>
+            <p className={clsx('text-xs', isDark ? 'text-dark-500' : 'text-slate-500')}>Jobs Done</p>
           </div>
-          <div className="flex-1 p-4 rounded-2xl bg-dark-900/50 border border-white/5 text-center">
-            <p className="text-2xl font-bold text-white">{payments.filter(p => p.status === 'pending').length}</p>
-            <p className="text-xs text-dark-500">Pending</p>
+          <div className={clsx('flex-1 p-4 rounded-2xl text-center border', isDark ? 'bg-dark-900/50 border-white/5' : 'bg-white border-slate-200')}>
+            <p className={clsx('text-2xl font-bold', isDark ? 'text-white' : 'text-slate-900')}>{payments.filter(p => p.status === 'pending').length}</p>
+            <p className={clsx('text-xs', isDark ? 'text-dark-500' : 'text-slate-500')}>Pending</p>
           </div>
-          <div className="flex-1 p-4 rounded-2xl bg-dark-900/50 border border-white/5 text-center">
-            <p className="text-2xl font-bold text-white">${formatMoney(user?.total_incentives_earned || 0)}</p>
-            <p className="text-xs text-dark-500">Bonuses</p>
+          <div className={clsx('flex-1 p-4 rounded-2xl text-center border', isDark ? 'bg-dark-900/50 border-white/5' : 'bg-white border-slate-200')}>
+            <p className={clsx('text-2xl font-bold', isDark ? 'text-white' : 'text-slate-900')}>${formatMoney(user?.total_incentives_earned || 0)}</p>
+            <p className={clsx('text-xs', isDark ? 'text-dark-500' : 'text-slate-500')}>Bonuses</p>
           </div>
         </div>
       </div>
@@ -170,7 +177,7 @@ export default function Wallet() {
       {/* Transactions */}
       <div className="px-4">
         <div className="flex items-center justify-between mb-4">
-          <h2 className="text-lg font-semibold text-white">Transactions</h2>
+          <h2 className={clsx('text-lg font-semibold', isDark ? 'text-white' : 'text-slate-900')}>Transactions</h2>
         </div>
 
         {/* Filter tabs */}
@@ -187,7 +194,9 @@ export default function Wallet() {
                 'px-4 py-2 rounded-full text-sm font-medium transition-colors',
                 filter === tab.id
                   ? 'bg-primary-500/20 text-primary-400 border border-primary-500/30'
-                  : 'bg-dark-800/50 text-dark-400 border border-transparent'
+                  : isDark
+                    ? 'bg-dark-800/50 text-dark-400 border border-transparent'
+                    : 'bg-slate-100 text-slate-500 border border-transparent'
               )}
             >
               {tab.label}
