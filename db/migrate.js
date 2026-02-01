@@ -61,6 +61,8 @@ function runMigrations() {
   addColumn('messages', 'channel', 'TEXT', "'app'");
   addColumn('messages', 'external_id', 'TEXT');
   addColumn('messages', 'external_status', 'TEXT');
+  addColumn('messages', 'ai_generated', 'INTEGER', '0');
+  addColumn('messages', 'ai_source', 'TEXT');
 
   // Create new tables if they don't exist
   const createTables = `

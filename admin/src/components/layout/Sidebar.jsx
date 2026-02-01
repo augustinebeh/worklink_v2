@@ -12,8 +12,7 @@ import {
   SettingsIcon,
   Building2Icon,
   ChevronDownIcon,
-  ChevronLeftIcon,
-  ChevronRightIcon,
+  PanelLeftCloseIcon,
   XIcon,
   DollarSignIcon,
   TargetIcon,
@@ -112,7 +111,7 @@ const navigation = [
   },
 ];
 
-function NavItem({ item, collapsed, unreadTotal = 0 }) {
+function NavItem({ item, collapsed, unreadTotal = 0, onExpand }) {
   const location = useLocation();
   const [isOpen, setIsOpen] = useState(true);
   const hasChildren = item.children && item.children.length > 0;
@@ -120,11 +119,24 @@ function NavItem({ item, collapsed, unreadTotal = 0 }) {
   const isChildActive = hasChildren && item.children.some(child => location.pathname === child.href);
   const isActive = location.pathname === item.href;
 
+  // Handle click when collapsed - expand sidebar
+  const handleCollapsedClick = () => {
+    if (collapsed && onExpand) {
+      onExpand();
+    }
+  };
+
   if (hasChildren) {
     return (
       <div className="space-y-1">
         <button
-          onClick={() => setIsOpen(!isOpen)}
+          onClick={() => {
+            if (collapsed) {
+              handleCollapsedClick();
+            } else {
+              setIsOpen(!isOpen);
+            }
+          }}
           aria-expanded={isOpen}
           aria-controls={`nav-section-${item.name.toLowerCase().replace(/\s+/g, '-')}`}
           className={clsx(
@@ -217,6 +229,7 @@ function NavItem({ item, collapsed, unreadTotal = 0 }) {
     <NavLink
       to={item.href}
       aria-current={isActive ? 'page' : undefined}
+      onClick={handleCollapsedClick}
       className={({ isActive }) =>
         clsx(
           'flex items-center gap-3 px-3 py-2.5 min-h-[44px] text-sm font-medium rounded-xl transition-all focus:outline-none focus:ring-2 focus:ring-primary-500/50',
@@ -260,8 +273,20 @@ export default function Sidebar({ collapsed, onCollapse, mobileOpen, onMobileClo
     >
       {/* Logo */}
       <div className="h-16 flex items-center justify-between px-4 border-b border-slate-200 dark:border-slate-800">
-        {!collapsed && <Logo size="md" />}
-        {collapsed && <LogoIcon size={40} className="mx-auto" />}
+        {!collapsed ? (
+          <>
+            <Logo size="md" />
+            <button
+              onClick={() => onCollapse?.(true)}
+              aria-label="Collapse sidebar"
+              className="hidden lg:flex p-2 min-h-[40px] min-w-[40px] rounded-lg text-slate-400 hover:text-slate-600 hover:bg-slate-100 dark:hover:text-slate-300 dark:hover:bg-slate-800 focus:outline-none focus:ring-2 focus:ring-primary-500/50 transition-colors"
+            >
+              <PanelLeftCloseIcon className="h-5 w-5" aria-hidden="true" />
+            </button>
+          </>
+        ) : (
+          <LogoIcon size={40} className="mx-auto cursor-pointer" onClick={() => onCollapse?.(false)} />
+        )}
         {mobileOpen && onMobileClose && (
           <button
             onClick={onMobileClose}
@@ -276,7 +301,13 @@ export default function Sidebar({ collapsed, onCollapse, mobileOpen, onMobileClo
       {/* Navigation */}
       <nav className="flex-1 overflow-y-auto p-4 space-y-2" aria-label="Main navigation">
         {navigation.map((item) => (
-          <NavItem key={item.name} item={item} collapsed={collapsed} unreadTotal={unreadTotal} />
+          <NavItem
+            key={item.name}
+            item={item}
+            collapsed={collapsed}
+            unreadTotal={unreadTotal}
+            onExpand={() => onCollapse?.(false)}
+          />
         ))}
       </nav>
 
