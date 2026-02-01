@@ -69,19 +69,6 @@ export default function Login() {
     setLoading(false);
   };
 
-  // Quick login with test accounts
-  const quickLogin = async (testEmail) => {
-    setEmail(testEmail);
-    setLoading(true);
-    const result = await login(testEmail);
-    if (result.success) {
-      navigate(from, { replace: true });
-    } else {
-      setError(result.error);
-    }
-    setLoading(false);
-  };
-
   return (
     <div className="min-h-screen bg-dark-950 flex flex-col pt-safe">
       {/* Main content */}
@@ -158,27 +145,6 @@ export default function Login() {
               )}
             </button>
           </form>
-
-          {/* Demo account */}
-          <div className="mt-8">
-            <p className="text-center text-dark-500 text-sm mb-4">Or try a demo account</p>
-            <button
-              onClick={() => quickLogin('sarah.tan@email.com')}
-              disabled={loading}
-              aria-label="Login as Sarah Tan"
-              className="w-full p-4 min-h-[60px] rounded-xl bg-gradient-to-r from-primary-900/50 to-violet-900/50 border border-primary-500/30 text-sm hover:border-primary-500/50 active:scale-[0.98] transition-all focus:outline-none focus:ring-2 focus:ring-primary-500/50 disabled:opacity-50"
-            >
-              <div className="flex items-center justify-between">
-                <div className="text-left">
-                  <p className="text-white font-semibold">Sarah Tan</p>
-                  <p className="text-primary-400 text-xs">Level 10 Elite Worker</p>
-                </div>
-                <div className="text-right">
-                  <p className="text-xs text-dark-400">sarah.tan@email.com</p>
-                </div>
-              </div>
-            </button>
-          </div>
         </div>
       </div>
 
