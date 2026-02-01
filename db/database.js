@@ -943,6 +943,7 @@ function seedEssentialData() {
     ['ai_enabled', 'true', 'Master switch for AI auto-reply'],
     ['default_mode', 'auto', 'Default AI mode: off | auto | suggest'],
     ['response_delay_ms', '1500', 'Delay before AI responds (ms) for natural feel'],
+    ['typing_delay_enabled', 'true', 'Show typing indicator with 3-5s delay before AI responds'],
     ['max_context_messages', '10', 'Number of previous messages to include in context'],
     ['include_candidate_profile', 'true', 'Include candidate info in AI context'],
     ['include_job_suggestions', 'true', 'Allow AI to suggest relevant jobs'],

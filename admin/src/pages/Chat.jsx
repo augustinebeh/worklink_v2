@@ -24,6 +24,8 @@ import {
   Brain,
   Volume2,
   VolumeX,
+  Timer,
+  TimerOff,
 } from 'lucide-react';
 import EmojiPicker from 'emoji-picker-react';
 import Card from '../components/ui/Card';
@@ -440,6 +442,7 @@ export default function AdminChat() {
   const [aiMode, setAiMode] = useState('off');
   const [aiSuggestion, setAiSuggestion] = useState(null);
   const [aiLoading, setAiLoading] = useState(false);
+  const [typingDelayEnabled, setTypingDelayEnabled] = useState(true);
 
   // Toggle sound and save preference
   const toggleSound = useCallback(() => {
@@ -451,6 +454,35 @@ export default function AdminChat() {
       return newValue;
     });
   }, []);
+
+  // Fetch AI settings including typing delay
+  const fetchAISettings = useCallback(async () => {
+    try {
+      const res = await fetch('/api/v1/ai-chat/settings');
+      const data = await res.json();
+      if (data.success) {
+        setTypingDelayEnabled(data.data.typing_delay_enabled !== false);
+      }
+    } catch (error) {
+      console.error('Failed to fetch AI settings:', error);
+    }
+  }, []);
+
+  // Toggle typing delay setting
+  const toggleTypingDelay = useCallback(async () => {
+    const newValue = !typingDelayEnabled;
+    setTypingDelayEnabled(newValue);
+    try {
+      await fetch('/api/v1/ai-chat/settings', {
+        method: 'PUT',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ key: 'typing_delay_enabled', value: newValue }),
+      });
+    } catch (error) {
+      console.error('Failed to update typing delay setting:', error);
+      setTypingDelayEnabled(!newValue); // Revert on error
+    }
+  }, [typingDelayEnabled]);
 
   const messagesEndRef = useRef(null);
   const inputRef = useRef(null);
@@ -470,6 +502,7 @@ export default function AdminChat() {
     fetchConversations();
     fetchCandidates();
     fetchTemplates();
+    fetchAISettings();
   }, []);
 
   // Subscribe to WebSocket messages using shared context
@@ -936,6 +969,18 @@ export default function AdminChat() {
                       onChange={handleAIModeChange}
                       candidateId={selectedConversation.candidate_id}
                     />
+                    <button
+                      onClick={toggleTypingDelay}
+                      className={clsx(
+                        'p-2 rounded-lg transition-colors',
+                        typingDelayEnabled
+                          ? 'text-emerald-500 hover:bg-emerald-50 dark:hover:bg-emerald-900/20'
+                          : 'text-slate-400 hover:text-slate-600 hover:bg-slate-100 dark:hover:bg-slate-800'
+                      )}
+                      title={typingDelayEnabled ? 'Typing delay ON (3-5s) - Click to disable' : 'Typing delay OFF - Click to enable'}
+                    >
+                      {typingDelayEnabled ? <Timer className="h-5 w-5" /> : <TimerOff className="h-5 w-5" />}
+                    </button>
                     <button
                       onClick={toggleSound}
                       className={clsx(

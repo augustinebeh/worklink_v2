@@ -282,44 +282,63 @@ async function processIncomingMessage(candidateId, content, channel = 'app') {
     // Auto mode: Simulate human-like response with typing indicator
     const { broadcastToCandidate } = require('../../websocket');
 
-    // Random delay between 3-5 seconds to simulate real person typing
-    const typingDelay = 3000 + Math.random() * 2000; // 3000-5000ms
-    console.log(`🤖 [AI] AUTO mode: Showing typing for ${Math.round(typingDelay)}ms`);
+    // Check if typing delay is enabled
+    const typingDelayEnabled = settings.typing_delay_enabled !== false;
 
-    // Send typing indicator after 1 second
-    setTimeout(() => {
-      console.log(`🤖 [AI] Sending typing indicator to ${candidateId}`);
-      broadcastToCandidate(candidateId, {
-        type: 'typing',
-        typing: true,
-        sender: 'admin',
-      });
-    }, 1000);
+    if (typingDelayEnabled) {
+      // Random delay between 3-5 seconds to simulate real person typing
+      const typingDelay = 3000 + Math.random() * 2000; // 3000-5000ms
+      console.log(`🤖 [AI] AUTO mode: Showing typing for ${Math.round(typingDelay)}ms`);
 
-    // Send actual response after typing delay
-    setTimeout(async () => {
-      // Stop typing indicator
-      broadcastToCandidate(candidateId, {
-        type: 'typing',
-        typing: false,
-        sender: 'admin',
-      });
+      // Send typing indicator after 1 second
+      setTimeout(() => {
+        console.log(`🤖 [AI] Sending typing indicator to ${candidateId}`);
+        broadcastToCandidate(candidateId, {
+          type: 'typing',
+          typing: true,
+          sender: 'admin',
+        });
+      }, 1000);
 
-      // Pass original question for implicit feedback tracking
-      console.log(`🤖 [AI] Sending AI response now...`);
+      // Send actual response after typing delay
+      setTimeout(async () => {
+        // Stop typing indicator
+        broadcastToCandidate(candidateId, {
+          type: 'typing',
+          typing: false,
+          sender: 'admin',
+        });
+
+        // Pass original question for implicit feedback tracking
+        console.log(`🤖 [AI] Sending AI response now...`);
+        try {
+          await sendAIResponse(candidateId, response, channel, content);
+          console.log(`🤖 [AI] AI response sent successfully`);
+        } catch (err) {
+          console.error(`🤖 [AI] Failed to send AI response:`, err.message);
+        }
+      }, 1000 + typingDelay);
+
+      return {
+        mode: 'auto',
+        response,
+        willSendIn: 1000 + typingDelay,
+      };
+    } else {
+      // No delay - send immediately
+      console.log(`🤖 [AI] AUTO mode: Typing delay disabled, sending immediately`);
       try {
         await sendAIResponse(candidateId, response, channel, content);
         console.log(`🤖 [AI] AI response sent successfully`);
       } catch (err) {
         console.error(`🤖 [AI] Failed to send AI response:`, err.message);
       }
-    }, 1000 + typingDelay);
-
-    return {
-      mode: 'auto',
-      response,
-      willSendIn: 1000 + typingDelay,
-    };
+      return {
+        mode: 'auto',
+        response,
+        willSendIn: 0,
+      };
+    }
   } else if (mode === 'suggest') {
     // Suggest mode: Broadcast suggestion to admins
     const { broadcastToAdmins } = require('../../websocket');
