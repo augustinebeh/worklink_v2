@@ -8,10 +8,10 @@
     "npm": ">=10.0.0"
   },
   "scripts": {
-    "start": "npm run build && node server.js",
-    "dev": "concurrently -n server,admin,worker -c blue,green,magenta \"nodemon --ignore data/ server.js\" \"cd admin && npm run dev\" \"cd worker && npm start\"",
+    "start": "npm run build && PORT=8080 node server.js",
+    "dev": "concurrently -n server,admin,worker -c blue,green,magenta \"cross-env PORT=3000 nodemon --ignore data/ server.js\" \"cd admin && npm run dev\" \"cd worker && npm start\"",
     "dev:fresh": "npm run clean && npm run dev",
-    "dev:server": "nodemon --ignore data/ server.js",
+    "dev:server": "cross-env PORT=3000 nodemon --ignore data/ server.js",
     "dev:admin": "cd admin && npm run dev",
     "dev:worker": "cd worker && npm start",
     "build": "npm run clean && npm run build:admin && npm run build:worker",
@@ -44,6 +44,7 @@
   },
   "devDependencies": {
     "concurrently": "^8.2.2",
+    "cross-env": "^7.0.3",
     "nodemon": "^3.0.1"
   }
 }

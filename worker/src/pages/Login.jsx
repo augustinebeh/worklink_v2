@@ -145,17 +145,22 @@ export default function Login() {
   const [botUsername, setBotUsername] = useState('');
   const [googleClientId, setGoogleClientId] = useState('');
 
+  // Check if running on localhost (Telegram doesn't work on localhost)
+  const isLocalhost = window.location.hostname === 'localhost' || window.location.hostname === '127.0.0.1';
+
   // Fetch auth configs on mount
   useEffect(() => {
-    // Fetch Telegram config
-    fetch('/api/v1/auth/telegram/config')
-      .then(res => res.json())
-      .then(data => {
-        if (data.success) {
-          setBotUsername(data.botUsername);
-        }
-      })
-      .catch(err => console.error('Failed to fetch Telegram config:', err));
+    // Fetch Telegram config (skip on localhost - Telegram requires HTTPS + real domain)
+    if (!isLocalhost) {
+      fetch('/api/v1/auth/telegram/config')
+        .then(res => res.json())
+        .then(data => {
+          if (data.success) {
+            setBotUsername(data.botUsername);
+          }
+        })
+        .catch(err => console.error('Failed to fetch Telegram config:', err));
+    }
 
     // Fetch Google config
     fetch('/api/v1/auth/google/config')
@@ -194,7 +199,7 @@ export default function Login() {
 
       if (data.success) {
         localStorage.setItem('token', data.token);
-        localStorage.setItem('user', JSON.stringify(data.data));
+        localStorage.setItem('worker_user', JSON.stringify(data.data));
         
         if (data.isNewUser) {
           setSuccess('Welcome! Your account is pending approval.');
@@ -230,7 +235,7 @@ export default function Login() {
 
       if (data.success) {
         localStorage.setItem('token', data.token);
-        localStorage.setItem('user', JSON.stringify(data.data));
+        localStorage.setItem('worker_user', JSON.stringify(data.data));
         
         if (data.isNewUser) {
           setSuccess('Welcome! Your account is pending approval.');
