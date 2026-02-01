@@ -104,9 +104,6 @@ app.get('/favicon.png', (req, res) => {
 app.get('/favicon-32x32.png', (req, res) => {
   res.sendFile(path.join(__dirname, 'favicon-32x32.png'));
 });
-app.get('/worklink.png', (req, res) => {
-  res.sendFile(path.join(__dirname, 'worklink.png'));
-});
 app.get('/logo.svg', (req, res) => {
   res.type('image/svg+xml');
   res.sendFile(path.join(__dirname, 'logo.svg'));
