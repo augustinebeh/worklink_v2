@@ -26,6 +26,8 @@ import {
   VolumeX,
   Timer,
   TimerOff,
+  AlignLeft,
+  AlignJustify,
 } from 'lucide-react';
 import EmojiPicker from 'emoji-picker-react';
 import Card from '../components/ui/Card';
@@ -443,6 +445,7 @@ export default function AdminChat() {
   const [aiSuggestion, setAiSuggestion] = useState(null);
   const [aiLoading, setAiLoading] = useState(false);
   const [typingDelayEnabled, setTypingDelayEnabled] = useState(true);
+  const [responseStyle, setResponseStyle] = useState('concise'); // 'concise' or 'normal'
 
   // Toggle sound and save preference
   const toggleSound = useCallback(() => {
@@ -455,13 +458,14 @@ export default function AdminChat() {
     });
   }, []);
 
-  // Fetch AI settings including typing delay
+  // Fetch AI settings including typing delay and response style
   const fetchAISettings = useCallback(async () => {
     try {
       const res = await fetch('/api/v1/ai-chat/settings');
       const data = await res.json();
       if (data.success) {
         setTypingDelayEnabled(data.data.typing_delay_enabled !== false);
+        setResponseStyle(data.data.response_style || 'concise');
       }
     } catch (error) {
       console.error('Failed to fetch AI settings:', error);
@@ -483,6 +487,22 @@ export default function AdminChat() {
       setTypingDelayEnabled(!newValue); // Revert on error
     }
   }, [typingDelayEnabled]);
+
+  // Toggle response style (concise <-> normal)
+  const toggleResponseStyle = useCallback(async () => {
+    const newValue = responseStyle === 'concise' ? 'normal' : 'concise';
+    setResponseStyle(newValue);
+    try {
+      await fetch('/api/v1/ai-chat/settings', {
+        method: 'PUT',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ key: 'response_style', value: newValue }),
+      });
+    } catch (error) {
+      console.error('Failed to update response style:', error);
+      setResponseStyle(responseStyle); // Revert on error
+    }
+  }, [responseStyle]);
 
   const messagesEndRef = useRef(null);
   const inputRef = useRef(null);
@@ -980,6 +1000,18 @@ export default function AdminChat() {
                       title={typingDelayEnabled ? 'Typing delay ON (3-5s) - Click to disable' : 'Typing delay OFF - Click to enable'}
                     >
                       {typingDelayEnabled ? <Timer className="h-5 w-5" /> : <TimerOff className="h-5 w-5" />}
+                    </button>
+                    <button
+                      onClick={toggleResponseStyle}
+                      className={clsx(
+                        'p-2 rounded-lg transition-colors',
+                        responseStyle === 'normal'
+                          ? 'text-blue-500 hover:bg-blue-50 dark:hover:bg-blue-900/20'
+                          : 'text-slate-400 hover:text-slate-600 hover:bg-slate-100 dark:hover:bg-slate-800'
+                      )}
+                      title={responseStyle === 'normal' ? 'Normal replies (detailed) - Click for concise' : 'Concise replies (short) - Click for normal'}
+                    >
+                      {responseStyle === 'normal' ? <AlignJustify className="h-5 w-5" /> : <AlignLeft className="h-5 w-5" />}
                     </button>
                     <button
                       onClick={toggleSound}

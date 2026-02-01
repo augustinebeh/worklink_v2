@@ -192,10 +192,12 @@ async function generateResponse(candidateId, message, options = {}) {
     const candidateContext = prompts.buildCandidateContext(candidate);
     const jobsContext = prompts.buildJobsContext(jobs);
     const conversationContext = prompts.buildConversationContext(history);
+    const responseStyle = settings.response_style || 'concise';
 
     const systemPrompt = prompts.buildSystemPrompt(
       candidateContext + conversationContext,
-      jobsContext
+      jobsContext,
+      responseStyle
     );
 
     // Detect intent for logging
@@ -203,9 +205,10 @@ async function generateResponse(candidateId, message, options = {}) {
     const intentResult = await detectIntent(message);
     console.log(`🤖 [AI] Intent: ${intentResult.intent}`);
 
-    // Generate response
-    console.log(`🤖 [AI] Calling askClaude...`);
-    const response = await askClaude(message, systemPrompt, { maxTokens: 150 });
+    // Generate response - use more tokens for normal style
+    const maxTokens = responseStyle === 'normal' ? 300 : 150;
+    console.log(`🤖 [AI] Calling askClaude (style: ${responseStyle}, maxTokens: ${maxTokens})...`);
+    const response = await askClaude(message, systemPrompt, { maxTokens });
     console.log(`🤖 [AI] LLM response received: "${response.substring(0, 50)}..."`)
 
     const responseTime = Date.now() - startTime;
