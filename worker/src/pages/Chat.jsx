@@ -80,6 +80,21 @@ function DateDivider({ date }) {
   );
 }
 
+// Typing indicator bubble like WhatsApp
+function TypingIndicator() {
+  return (
+    <div className="flex justify-start">
+      <div className="bg-slate-200 dark:bg-dark-800 px-4 py-3 rounded-2xl rounded-bl-md">
+        <div className="flex gap-1 items-center">
+          <span className="w-2 h-2 bg-slate-400 dark:bg-dark-500 rounded-full animate-bounce" style={{ animationDelay: '0ms' }} />
+          <span className="w-2 h-2 bg-slate-400 dark:bg-dark-500 rounded-full animate-bounce" style={{ animationDelay: '150ms' }} />
+          <span className="w-2 h-2 bg-slate-400 dark:bg-dark-500 rounded-full animate-bounce" style={{ animationDelay: '300ms' }} />
+        </div>
+      </div>
+    </div>
+  );
+}
+
 export default function Chat() {
   const { user } = useAuth();
   const ws = useWebSocket();
@@ -234,11 +249,6 @@ export default function Chat() {
     setSending(true);
     setShowEmoji(false);
 
-    // Reset textarea height
-    if (inputRef.current) {
-      inputRef.current.style.height = '44px';
-    }
-
     // Stop typing indicator
     if (ws) {
       ws.sendTyping(false);
@@ -280,23 +290,6 @@ export default function Chat() {
       e.preventDefault();
       handleSend();
     }
-  };
-
-  const handleInputChange = (e) => {
-    const textarea = e.target;
-    setNewMessage(textarea.value);
-    handleTyping();
-
-    // Auto-expand textarea like Telegram
-    // Reset height to get accurate scrollHeight
-    textarea.style.height = '44px';
-
-    // Calculate new height based on content
-    const scrollHeight = textarea.scrollHeight;
-    const maxHeight = 120; // Max height before scrolling
-    const newHeight = Math.min(scrollHeight, maxHeight);
-
-    textarea.style.height = `${newHeight}px`;
   };
 
   const handleEmojiClick = (emojiData) => {
@@ -393,6 +386,8 @@ export default function Chat() {
                 </div>
               </div>
             ))}
+            {/* Typing indicator - shows when admin is typing */}
+            {isTyping && <TypingIndicator />}
             <div ref={messagesEndRef} />
           </div>
         )}
@@ -412,41 +407,41 @@ export default function Chat() {
         </div>
       )}
 
-      {/* Fixed Input Area */}
-      <div className="flex-shrink-0 bg-white dark:bg-dark-950 px-4 py-3 pb-safe border-t border-slate-200 dark:border-white/5">
-        <div className="flex items-end gap-2">
+      {/* Fixed Input Area - Single line PWA-optimized */}
+      <div className="flex-shrink-0 bg-white dark:bg-dark-950 px-3 py-2 pb-safe border-t border-slate-200 dark:border-white/5">
+        <div className="flex items-center gap-2">
           <button
             onClick={() => setShowEmoji(!showEmoji)}
             className={clsx(
-              'p-3 rounded-xl transition-colors flex-shrink-0',
-              showEmoji ? 'bg-primary-500 text-white' : 'bg-slate-200 dark:bg-dark-800 text-slate-500 dark:text-dark-400 hover:text-slate-700 dark:hover:text-white'
+              'p-2.5 rounded-full transition-colors flex-shrink-0',
+              showEmoji ? 'bg-primary-500 text-white' : 'text-slate-500 dark:text-dark-400 hover:text-slate-700 dark:hover:text-white'
             )}
           >
             <SmileIcon className="h-5 w-5" />
           </button>
 
-          <div className="flex-1 relative">
-            <textarea
-              ref={inputRef}
-              value={newMessage}
-              onChange={handleInputChange}
-              onKeyPress={handleKeyPress}
-              onFocus={handleInputFocus}
-              placeholder="Message"
-              rows={1}
-              className="w-full px-4 py-3 rounded-xl bg-slate-100 dark:bg-dark-800 border border-slate-300 dark:border-white/10 text-slate-900 dark:text-white placeholder-slate-500 dark:placeholder-dark-500 focus:outline-none focus:border-primary-500 resize-none overflow-hidden"
-              style={{ height: '44px', maxHeight: '120px' }}
-            />
-          </div>
+          <input
+            ref={inputRef}
+            type="text"
+            value={newMessage}
+            onChange={(e) => {
+              setNewMessage(e.target.value);
+              handleTyping();
+            }}
+            onKeyPress={handleKeyPress}
+            onFocus={handleInputFocus}
+            placeholder="Message"
+            className="flex-1 h-10 px-4 rounded-full bg-slate-100 dark:bg-dark-800 border border-slate-300 dark:border-white/10 text-slate-900 dark:text-white placeholder-slate-500 dark:placeholder-dark-500 focus:outline-none focus:border-primary-500 text-sm"
+          />
 
           <button
             onClick={handleSend}
             disabled={!newMessage.trim() || sending}
             className={clsx(
-              'p-3 rounded-xl transition-colors flex-shrink-0',
+              'p-2.5 rounded-full transition-colors flex-shrink-0',
               newMessage.trim()
                 ? 'bg-primary-500 text-white'
-                : 'bg-slate-200 dark:bg-dark-800 text-slate-400 dark:text-dark-500'
+                : 'text-slate-400 dark:text-dark-500'
             )}
           >
             <SendIcon className="h-5 w-5" />
