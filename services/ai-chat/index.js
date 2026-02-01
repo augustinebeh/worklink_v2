@@ -129,12 +129,15 @@ async function detectIntent(message) {
  * @returns {object} Response object with content, source, confidence, etc.
  */
 async function generateResponse(candidateId, message, options = {}) {
+  console.log(`🤖 [AI] generateResponse called for ${candidateId}: "${message.substring(0, 50)}..."`);
   const startTime = Date.now();
   const settings = getSettings();
 
   // 1. Try knowledge base first (FREE!)
+  console.log(`🤖 [AI] Checking knowledge base (kb_enabled=${settings.kb_enabled})`);
   if (settings.kb_enabled !== false) {
     const kbAnswer = await ml.findAnswer(message);
+    console.log(`🤖 [AI] KB answer:`, kbAnswer ? 'Found' : 'Not found');
 
     if (kbAnswer) {
       ml.recordKBHit();
@@ -165,11 +168,13 @@ async function generateResponse(candidateId, message, options = {}) {
   }
 
   // 2. Fall back to Claude LLM
+  console.log(`🤖 [AI] No KB answer, calling LLM...`);
   ml.recordLLMCall();
 
   try {
     // Get context
     const candidate = getCandidate(candidateId);
+    console.log(`🤖 [AI] Candidate found:`, candidate ? candidate.name : 'NOT FOUND');
     const history = getConversationHistory(candidateId, settings.max_context_messages || 10);
     const jobs = settings.include_job_suggestions ? getAvailableJobs(5) : [];
 
@@ -184,10 +189,14 @@ async function generateResponse(candidateId, message, options = {}) {
     );
 
     // Detect intent for logging
+    console.log(`🤖 [AI] Detecting intent...`);
     const intentResult = await detectIntent(message);
+    console.log(`🤖 [AI] Intent: ${intentResult.intent}`);
 
     // Generate response
+    console.log(`🤖 [AI] Calling askClaude...`);
     const response = await askClaude(message, systemPrompt, { maxTokens: 150 });
+    console.log(`🤖 [AI] LLM response received: "${response.substring(0, 50)}..."`)
 
     const responseTime = Date.now() - startTime;
 
@@ -255,15 +264,24 @@ async function processIncomingMessage(candidateId, content, channel = 'app') {
   }
 
   // Generate AI response
+  console.log(`🤖 [AI] Generating response...`);
   const response = await generateResponse(candidateId, content, { mode });
+  console.log(`🤖 [AI] Response generated:`, response ? `"${response.content?.substring(0, 50)}..."` : 'NULL');
 
   if (mode === 'auto') {
     // Auto mode: Send response after delay
     const delay = settings.response_delay_ms || 1500;
+    console.log(`🤖 [AI] AUTO mode: Will send in ${delay}ms`);
 
     setTimeout(async () => {
       // Pass original question for implicit feedback tracking
-      await sendAIResponse(candidateId, response, channel, content);
+      console.log(`🤖 [AI] Sending AI response now...`);
+      try {
+        await sendAIResponse(candidateId, response, channel, content);
+        console.log(`🤖 [AI] AI response sent successfully`);
+      } catch (err) {
+        console.error(`🤖 [AI] Failed to send AI response:`, err.message);
+      }
     }, delay);
 
     return {

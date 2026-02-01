@@ -16,17 +16,23 @@ const GEMINI_API_URL = 'https://generativelanguage.googleapis.com/v1beta/models'
 async function askClaude(prompt, systemPrompt = '', options = {}) {
   // Try Groq first (faster and more free tokens)
   const groqKey = process.env.GROQ_API_KEY;
+  console.log(`🧠 [LLM] askClaude called, GROQ_API_KEY exists: ${!!groqKey}`);
 
   if (groqKey) {
     try {
+      console.log(`🧠 [LLM] Trying Groq...`);
       const response = await askGroq(prompt, systemPrompt, options);
+      console.log(`🧠 [LLM] Groq succeeded`);
       return response;
     } catch (error) {
-      console.error('Groq failed, trying Gemini fallback:', error.message);
+      console.error('🧠 [LLM] Groq failed, trying Gemini fallback:', error.message);
     }
+  } else {
+    console.log(`🧠 [LLM] No GROQ_API_KEY, skipping to Gemini`);
   }
 
   // Fallback to Gemini
+  console.log(`🧠 [LLM] Trying Gemini fallback...`);
   return await askGemini(prompt, systemPrompt, options);
 }
 
