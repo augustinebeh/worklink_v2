@@ -3,21 +3,29 @@
  * Provides offline support and caching
  */
 
-const CACHE_NAME = 'worklink-v10';
-const STATIC_CACHE = 'worklink-static-v10';
-const DYNAMIC_CACHE = 'worklink-dynamic-v10';
+const CACHE_NAME = 'worklink-v11';
+const STATIC_CACHE = 'worklink-static-v11';
+const DYNAMIC_CACHE = 'worklink-dynamic-v11';
 
 // Static assets to cache immediately
 const STATIC_ASSETS = [
   '/',
   '/index.html',
   '/manifest.json',
-  '/favicon.svg',
   '/favicon.png',
   '/favicon-16x16.png',
   '/favicon-32x32.png',
+  '/favicon-48x48.png',
+  '/favicon-64x64.png',
   '/apple-touch-icon.png',
+  '/icon-72x72.png',
+  '/icon-96x96.png',
+  '/icon-128x128.png',
+  '/icon-144x144.png',
+  '/icon-152x152.png',
   '/icon-192x192.png',
+  '/icon-256x256.png',
+  '/icon-384x384.png',
   '/icon-512x512.png',
 ];
 
