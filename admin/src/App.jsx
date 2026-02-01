@@ -26,6 +26,9 @@ import Gamification from './pages/Gamification';
 import TenderMonitor from './pages/TenderMonitor';
 import AIAutomation from './pages/AIAutomation';
 import AISourcing from './pages/AISourcing';
+import MLDashboard from './pages/MLDashboard';
+import TelegramGroups from './pages/TelegramGroups';
+import AdOptimization from './pages/AdOptimization';
 
 // Protected Route wrapper
 function ProtectedRoute({ children }) {
@@ -92,6 +95,9 @@ function AppRoutes() {
         {/* AI & Automation */}
         <Route path="ai-automation" element={<AIAutomation />} />
         <Route path="ai-sourcing" element={<AISourcing />} />
+        <Route path="ml-dashboard" element={<MLDashboard />} />
+        <Route path="telegram-groups" element={<TelegramGroups />} />
+        <Route path="ad-optimization" element={<AdOptimization />} />
 
         {/* Redirects for removed/consolidated pages */}
         <Route path="analytics" element={<Navigate to="/financials" replace />} />

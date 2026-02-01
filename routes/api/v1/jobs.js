@@ -2,6 +2,19 @@ const express = require('express');
 const router = express.Router();
 const { db } = require('../../../db/database');
 
+// Lazy-load telegram posting to avoid circular dependencies
+let telegramPostingService = null;
+function getTelegramPosting() {
+  if (!telegramPostingService) {
+    try {
+      telegramPostingService = require('../../../services/telegram-posting');
+    } catch (error) {
+      console.error('Failed to load telegram-posting service:', error.message);
+    }
+  }
+  return telegramPostingService;
+}
+
 // Get all jobs
 router.get('/', (req, res) => {
   try {
@@ -97,12 +110,12 @@ router.get('/:id/deployments', (req, res) => {
 });
 
 // Create job
-router.post('/', (req, res) => {
+router.post('/', async (req, res) => {
   try {
     const {
       client_id, title, description, job_date, start_time, end_time,
       location, address, pay_rate, total_slots, required_certifications,
-      xp_bonus, featured
+      xp_bonus, featured, auto_post_telegram = false
     } = req.body;
 
     const id = 'JOB' + Date.now().toString(36).toUpperCase();
@@ -118,7 +131,29 @@ router.post('/', (req, res) => {
     );
 
     const job = db.prepare('SELECT * FROM jobs WHERE id = ?').get(id);
-    res.status(201).json({ success: true, data: job });
+
+    // Auto-post to Telegram if enabled
+    let telegramResult = null;
+    const telegramPosting = getTelegramPosting();
+    if (telegramPosting) {
+      const settings = telegramPosting.getSettings();
+      if ((auto_post_telegram || settings.post_on_job_create) && settings.enabled) {
+        try {
+          telegramResult = await telegramPosting.postJobToAllGroups(job, {
+            useABTesting: true,
+          });
+        } catch (error) {
+          console.error('Auto-post to Telegram failed:', error.message);
+          telegramResult = { success: false, error: error.message };
+        }
+      }
+    }
+
+    res.status(201).json({
+      success: true,
+      data: job,
+      telegramPost: telegramResult,
+    });
   } catch (error) {
     res.status(500).json({ success: false, error: error.message });
   }

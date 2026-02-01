@@ -22,6 +22,8 @@ import {
   FileTextIcon,
   SendIcon,
   SearchIcon,
+  BrainIcon,
+  ZapIcon,
 } from 'lucide-react';
 import { clsx } from 'clsx';
 import Logo, { LogoIcon } from '../ui/Logo';
@@ -59,7 +61,20 @@ const navigation = [
       { name: 'Candidates', href: '/candidates', icon: UsersIcon, description: 'Talent pool' },
       { name: 'Jobs', href: '/jobs', icon: BriefcaseIcon, description: 'Job postings' },
       { name: 'Sourcing AI', href: '/ai-sourcing', icon: SearchIcon, description: 'Posting & outreach' },
+      { name: 'Telegram Groups', href: '/telegram-groups', icon: SendIcon, description: 'Group posting' },
       { name: 'Chat', href: '/chat', icon: MessageCircleIcon, description: 'Message workers' },
+    ],
+  },
+
+  // === AI & MACHINE LEARNING ===
+  {
+    name: 'AI & ML',
+    icon: BrainIcon,
+    description: 'Intelligence & learning',
+    badge: 'AI',
+    children: [
+      { name: 'ML Dashboard', href: '/ml-dashboard', icon: BrainIcon, highlight: true, description: 'Knowledge base' },
+      { name: 'Ad Optimization', href: '/ad-optimization', icon: ZapIcon, highlight: true, description: 'A/B testing' },
     ],
   },
 

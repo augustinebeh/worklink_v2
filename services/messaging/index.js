@@ -205,6 +205,16 @@ async function handleIncomingMessage(channel, data) {
     channel,
   });
 
+  // Trigger AI processing for incoming messages (non-blocking)
+  try {
+    const aiChat = require('../ai-chat');
+    aiChat.processIncomingMessage(candidateId, content, channel).catch(err => {
+      console.error('AI processing error for incoming message:', err.message);
+    });
+  } catch (error) {
+    console.error('Failed to load AI chat service:', error.message);
+  }
+
   return { success: true, message, candidateId };
 }
 

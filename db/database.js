@@ -388,6 +388,276 @@ function createSchema() {
       FOREIGN KEY (candidate_id) REFERENCES candidates(id)
     );
 
+    -- =====================================================
+    -- AI CHAT AUTO-REPLY SYSTEM
+    -- =====================================================
+
+    -- Global AI settings
+    CREATE TABLE IF NOT EXISTS ai_settings (
+      id INTEGER PRIMARY KEY AUTOINCREMENT,
+      key TEXT UNIQUE NOT NULL,
+      value TEXT NOT NULL,
+      description TEXT,
+      updated_at DATETIME DEFAULT CURRENT_TIMESTAMP
+    );
+
+    -- Per-conversation AI settings (overrides global)
+    CREATE TABLE IF NOT EXISTS conversation_ai_settings (
+      id INTEGER PRIMARY KEY AUTOINCREMENT,
+      candidate_id TEXT NOT NULL UNIQUE,
+      mode TEXT DEFAULT 'inherit', -- inherit | off | auto | suggest
+      custom_instructions TEXT,
+      created_at DATETIME DEFAULT CURRENT_TIMESTAMP,
+      updated_at DATETIME DEFAULT CURRENT_TIMESTAMP,
+      FOREIGN KEY (candidate_id) REFERENCES candidates(id)
+    );
+
+    -- AI response logs for quality monitoring
+    CREATE TABLE IF NOT EXISTS ai_response_logs (
+      id INTEGER PRIMARY KEY AUTOINCREMENT,
+      candidate_id TEXT NOT NULL,
+      message_id INTEGER,
+      incoming_message TEXT,
+      ai_response TEXT NOT NULL,
+      mode TEXT NOT NULL, -- auto | suggest
+      status TEXT DEFAULT 'generated', -- generated | sent | edited | rejected | dismissed
+      edited_response TEXT,
+      admin_action TEXT, -- sent_as_is | edited | rejected | dismissed
+      response_time_ms INTEGER,
+      tokens_used INTEGER,
+      intent_detected TEXT,
+      source TEXT DEFAULT 'llm', -- llm | knowledge_base
+      kb_entry_id INTEGER,
+      confidence REAL,
+      created_at DATETIME DEFAULT CURRENT_TIMESTAMP,
+      FOREIGN KEY (candidate_id) REFERENCES candidates(id)
+    );
+
+    -- FAQ knowledge base (manually curated)
+    CREATE TABLE IF NOT EXISTS ai_faq (
+      id INTEGER PRIMARY KEY AUTOINCREMENT,
+      category TEXT NOT NULL, -- pay | schedule | availability | general | onboarding | jobs
+      question TEXT NOT NULL,
+      answer TEXT NOT NULL,
+      keywords TEXT, -- JSON array of trigger keywords
+      priority INTEGER DEFAULT 0,
+      use_count INTEGER DEFAULT 0,
+      active INTEGER DEFAULT 1,
+      created_at DATETIME DEFAULT CURRENT_TIMESTAMP,
+      updated_at DATETIME DEFAULT CURRENT_TIMESTAMP
+    );
+
+    -- =====================================================
+    -- CHAT ML LEARNING SYSTEM (Path to SLM)
+    -- =====================================================
+
+    -- Knowledge base of learned Q&A pairs
+    CREATE TABLE IF NOT EXISTS ml_knowledge_base (
+      id INTEGER PRIMARY KEY AUTOINCREMENT,
+      question TEXT NOT NULL,
+      question_normalized TEXT, -- Lowercase, stripped punctuation for matching
+      question_tokens TEXT, -- JSON array of tokens for TF-IDF
+      answer TEXT NOT NULL,
+      intent TEXT,
+      category TEXT,
+      confidence REAL DEFAULT 0.5,
+      use_count INTEGER DEFAULT 0,
+      success_count INTEGER DEFAULT 0, -- Times admin approved as-is
+      edit_count INTEGER DEFAULT 0, -- Times admin edited before sending
+      reject_count INTEGER DEFAULT 0, -- Times admin rejected
+      source TEXT DEFAULT 'llm', -- llm | admin | faq
+      last_used_at DATETIME,
+      created_at DATETIME DEFAULT CURRENT_TIMESTAMP,
+      updated_at DATETIME DEFAULT CURRENT_TIMESTAMP
+    );
+
+    -- Store all interactions for training data export
+    CREATE TABLE IF NOT EXISTS ml_training_data (
+      id INTEGER PRIMARY KEY AUTOINCREMENT,
+      input_text TEXT NOT NULL,
+      output_text TEXT NOT NULL,
+      context TEXT, -- JSON: conversation history, candidate info
+      intent TEXT,
+      category TEXT,
+      quality_score REAL DEFAULT 0.5, -- 0-1 based on admin feedback
+      was_edited INTEGER DEFAULT 0,
+      edited_output TEXT,
+      admin_approved INTEGER DEFAULT 0,
+      source TEXT DEFAULT 'production', -- production | synthetic | faq
+      exported INTEGER DEFAULT 0, -- Whether included in training export
+      created_at DATETIME DEFAULT CURRENT_TIMESTAMP
+    );
+
+    -- Track ML system performance daily
+    CREATE TABLE IF NOT EXISTS ml_metrics (
+      id INTEGER PRIMARY KEY AUTOINCREMENT,
+      date TEXT NOT NULL UNIQUE,
+      total_queries INTEGER DEFAULT 0,
+      kb_hits INTEGER DEFAULT 0, -- Answered from knowledge base
+      llm_calls INTEGER DEFAULT 0, -- Had to call Claude
+      auto_replies_sent INTEGER DEFAULT 0,
+      suggestions_shown INTEGER DEFAULT 0,
+      suggestions_accepted INTEGER DEFAULT 0,
+      suggestions_edited INTEGER DEFAULT 0,
+      suggestions_rejected INTEGER DEFAULT 0,
+      avg_confidence REAL,
+      avg_response_time_ms INTEGER,
+      estimated_cost_saved REAL, -- Estimated $ saved from KB hits
+      created_at DATETIME DEFAULT CURRENT_TIMESTAMP
+    );
+
+    -- ML system settings
+    CREATE TABLE IF NOT EXISTS ml_settings (
+      id INTEGER PRIMARY KEY AUTOINCREMENT,
+      key TEXT UNIQUE NOT NULL,
+      value TEXT NOT NULL,
+      description TEXT,
+      updated_at DATETIME DEFAULT CURRENT_TIMESTAMP
+    );
+
+    -- =====================================================
+    -- TELEGRAM GROUP POSTING
+    -- =====================================================
+
+    -- Telegram groups for job posting
+    CREATE TABLE IF NOT EXISTS telegram_groups (
+      id INTEGER PRIMARY KEY AUTOINCREMENT,
+      chat_id TEXT UNIQUE NOT NULL,
+      name TEXT NOT NULL,
+      description TEXT,
+      type TEXT DEFAULT 'job_posting', -- job_posting | announcement | general
+      member_count INTEGER,
+      active INTEGER DEFAULT 1,
+      last_post_at DATETIME,
+      created_at DATETIME DEFAULT CURRENT_TIMESTAMP,
+      updated_at DATETIME DEFAULT CURRENT_TIMESTAMP
+    );
+
+    -- Track job posts to groups
+    CREATE TABLE IF NOT EXISTS telegram_job_posts (
+      id INTEGER PRIMARY KEY AUTOINCREMENT,
+      job_id TEXT NOT NULL,
+      group_id INTEGER NOT NULL,
+      variant_id INTEGER, -- Links to ad_variants for A/B testing
+      message_id TEXT, -- Telegram message ID
+      content TEXT, -- The actual ad content posted
+      posted_at DATETIME DEFAULT CURRENT_TIMESTAMP,
+      post_hour INTEGER, -- 0-23 for timing analysis
+      post_day INTEGER, -- 0=Sun, 6=Sat
+      status TEXT DEFAULT 'sent', -- sent | deleted | failed
+      views INTEGER DEFAULT 0,
+      responses INTEGER DEFAULT 0, -- Candidate applications from this post
+      FOREIGN KEY (job_id) REFERENCES jobs(id),
+      FOREIGN KEY (group_id) REFERENCES telegram_groups(id)
+    );
+
+    -- Auto-post settings
+    CREATE TABLE IF NOT EXISTS telegram_post_settings (
+      id INTEGER PRIMARY KEY AUTOINCREMENT,
+      key TEXT UNIQUE NOT NULL,
+      value TEXT NOT NULL,
+      updated_at DATETIME DEFAULT CURRENT_TIMESTAMP
+    );
+
+    -- =====================================================
+    -- AD OPTIMIZATION ML (A/B Testing + Learning)
+    -- =====================================================
+
+    -- Ad variants generated for A/B testing
+    CREATE TABLE IF NOT EXISTS ad_variants (
+      id INTEGER PRIMARY KEY AUTOINCREMENT,
+      job_id TEXT NOT NULL,
+      variant_key TEXT NOT NULL, -- 'A', 'B', 'C'
+      content TEXT NOT NULL,
+      variables TEXT, -- JSON: {"tone": "casual", "emoji_count": 3, "length": "short", "cta_style": "urgent"}
+      variable_tested TEXT, -- The specific variable being tested in this A/B test
+      variable_value TEXT, -- The value of that variable for this variant
+      source TEXT DEFAULT 'llm', -- llm | optimized | manual
+      created_at DATETIME DEFAULT CURRENT_TIMESTAMP,
+      FOREIGN KEY (job_id) REFERENCES jobs(id)
+    );
+
+    -- Track ad performance for each variant
+    CREATE TABLE IF NOT EXISTS ad_performance (
+      id INTEGER PRIMARY KEY AUTOINCREMENT,
+      variant_id INTEGER NOT NULL,
+      job_id TEXT NOT NULL,
+      group_id INTEGER,
+      message_id TEXT,
+      posted_at DATETIME,
+      post_hour INTEGER, -- 0-23
+      post_day INTEGER, -- 0=Sun, 6=Sat
+      impressions INTEGER DEFAULT 0, -- Estimated views
+      clicks INTEGER DEFAULT 0, -- Link clicks if trackable
+      responses INTEGER DEFAULT 0, -- Candidate applications/replies
+      response_rate REAL, -- responses / impressions
+      is_winner INTEGER DEFAULT 0, -- Won the A/B test
+      measured_at DATETIME,
+      created_at DATETIME DEFAULT CURRENT_TIMESTAMP,
+      FOREIGN KEY (variant_id) REFERENCES ad_variants(id),
+      FOREIGN KEY (group_id) REFERENCES telegram_groups(id)
+    );
+
+    -- Learned variable preferences (updated after each A/B test)
+    CREATE TABLE IF NOT EXISTS ad_variable_scores (
+      id INTEGER PRIMARY KEY AUTOINCREMENT,
+      variable_name TEXT NOT NULL, -- 'tone', 'emoji_count', 'length', 'cta_style', etc.
+      variable_value TEXT NOT NULL, -- 'casual', '3', 'short', 'urgent', etc.
+      job_category TEXT, -- Optional: different preferences per job type (null = global)
+      win_count INTEGER DEFAULT 0,
+      lose_count INTEGER DEFAULT 0,
+      total_tests INTEGER DEFAULT 0,
+      total_responses INTEGER DEFAULT 0,
+      avg_response_rate REAL DEFAULT 0,
+      confidence REAL DEFAULT 0.5, -- 0-1, higher = more confident
+      last_tested_at DATETIME,
+      created_at DATETIME DEFAULT CURRENT_TIMESTAMP,
+      updated_at DATETIME DEFAULT CURRENT_TIMESTAMP,
+      UNIQUE(variable_name, variable_value, job_category)
+    );
+
+    -- Optimal posting times learned from data
+    CREATE TABLE IF NOT EXISTS ad_timing_scores (
+      id INTEGER PRIMARY KEY AUTOINCREMENT,
+      hour INTEGER NOT NULL, -- 0-23
+      day_of_week INTEGER, -- 0=Sun, 6=Sat (NULL = any day)
+      job_category TEXT, -- Optional: different times for different job types
+      post_count INTEGER DEFAULT 0,
+      total_responses INTEGER DEFAULT 0,
+      avg_response_rate REAL DEFAULT 0,
+      score REAL DEFAULT 0.5, -- 0-1, higher = better time to post
+      last_updated DATETIME,
+      created_at DATETIME DEFAULT CURRENT_TIMESTAMP,
+      UNIQUE(hour, day_of_week, job_category)
+    );
+
+    -- Training data for Ad-generation SLM
+    CREATE TABLE IF NOT EXISTS ad_training_data (
+      id INTEGER PRIMARY KEY AUTOINCREMENT,
+      job_details TEXT NOT NULL, -- JSON: job title, pay, location, requirements, slots
+      ad_content TEXT NOT NULL, -- The ad text
+      variables TEXT, -- JSON: what variables were used
+      response_rate REAL, -- Performance score
+      is_winner INTEGER DEFAULT 0, -- Won A/B test
+      quality_score REAL DEFAULT 0.5, -- Calculated from response_rate + other factors
+      job_category TEXT,
+      exported INTEGER DEFAULT 0, -- Whether included in training export
+      created_at DATETIME DEFAULT CURRENT_TIMESTAMP
+    );
+
+    -- Ad ML settings
+    CREATE TABLE IF NOT EXISTS ad_ml_settings (
+      id INTEGER PRIMARY KEY AUTOINCREMENT,
+      key TEXT UNIQUE NOT NULL,
+      value TEXT NOT NULL,
+      description TEXT,
+      updated_at DATETIME DEFAULT CURRENT_TIMESTAMP
+    );
+
+    -- =====================================================
+    -- END OF AI/ML TABLES
+    -- =====================================================
+
     -- Admin onboarding progress
     CREATE TABLE IF NOT EXISTS admin_onboarding (
       id INTEGER PRIMARY KEY AUTOINCREMENT,
@@ -433,7 +703,35 @@ function createSchema() {
     CREATE INDEX IF NOT EXISTS idx_candidates_email ON candidates(email);
     CREATE INDEX IF NOT EXISTS idx_xp_transactions_candidate ON xp_transactions(candidate_id);
     CREATE INDEX IF NOT EXISTS idx_messages_candidate_created ON messages(candidate_id, created_at);
+
+    -- AI/ML indexes for performance
+    CREATE INDEX IF NOT EXISTS idx_ai_response_logs_candidate ON ai_response_logs(candidate_id, created_at);
+    CREATE INDEX IF NOT EXISTS idx_ai_response_logs_status ON ai_response_logs(status);
+    CREATE INDEX IF NOT EXISTS idx_ml_knowledge_base_confidence ON ml_knowledge_base(confidence);
+    CREATE INDEX IF NOT EXISTS idx_ml_knowledge_base_category ON ml_knowledge_base(category);
+    CREATE INDEX IF NOT EXISTS idx_ml_training_data_quality ON ml_training_data(quality_score);
+    CREATE INDEX IF NOT EXISTS idx_ml_metrics_date ON ml_metrics(date);
+    CREATE INDEX IF NOT EXISTS idx_telegram_job_posts_job ON telegram_job_posts(job_id);
+    CREATE INDEX IF NOT EXISTS idx_telegram_job_posts_group ON telegram_job_posts(group_id);
+    CREATE INDEX IF NOT EXISTS idx_ad_variants_job ON ad_variants(job_id);
+    CREATE INDEX IF NOT EXISTS idx_ad_performance_variant ON ad_performance(variant_id);
+    CREATE INDEX IF NOT EXISTS idx_ad_performance_job ON ad_performance(job_id);
+    CREATE INDEX IF NOT EXISTS idx_ad_variable_scores_variable ON ad_variable_scores(variable_name, variable_value);
+    CREATE INDEX IF NOT EXISTS idx_ad_timing_scores_hour ON ad_timing_scores(hour, day_of_week);
   `);
+
+  // Add ai_generated column to messages if not exists
+  try {
+    db.exec(`ALTER TABLE messages ADD COLUMN ai_generated INTEGER DEFAULT 0`);
+  } catch (e) {
+    // Column already exists, ignore
+  }
+
+  try {
+    db.exec(`ALTER TABLE messages ADD COLUMN ai_log_id INTEGER`);
+  } catch (e) {
+    // Column already exists, ignore
+  }
   console.log('✅ Schema created successfully');
 }
 
@@ -620,7 +918,78 @@ function seedEssentialData() {
     db.prepare('INSERT OR IGNORE INTO tender_alerts (keyword, source, email_notify, active) VALUES (?, ?, 1, 1)').run(...a);
   });
 
-  console.log('✅ Essential data seeded');
+  // =====================================================
+  // AI/ML DEFAULT SETTINGS
+  // =====================================================
+
+  // AI Chat Settings
+  const aiSettings = [
+    ['ai_enabled', 'true', 'Master switch for AI auto-reply'],
+    ['default_mode', 'suggest', 'Default AI mode: off | auto | suggest'],
+    ['response_delay_ms', '1500', 'Delay before AI responds (ms) for natural feel'],
+    ['max_context_messages', '10', 'Number of previous messages to include in context'],
+    ['include_candidate_profile', 'true', 'Include candidate info in AI context'],
+    ['include_job_suggestions', 'true', 'Allow AI to suggest relevant jobs'],
+  ];
+  aiSettings.forEach(s => {
+    db.prepare('INSERT OR IGNORE INTO ai_settings (key, value, description) VALUES (?, ?, ?)').run(...s);
+  });
+
+  // ML Settings
+  const mlSettings = [
+    ['kb_enabled', 'true', 'Use knowledge base before calling LLM'],
+    ['min_confidence', '0.75', 'Minimum confidence to use KB answer (0-1)'],
+    ['learn_from_llm', 'true', 'Auto-add LLM responses to KB'],
+    ['learn_from_edits', 'true', 'Learn from admin corrections'],
+    ['learn_from_approvals', 'true', 'Boost confidence when admin approves'],
+    ['confidence_boost_approve', '0.1', 'Confidence increase on approval'],
+    ['confidence_boost_edit', '0.05', 'Confidence increase when edited (learns edited version)'],
+    ['confidence_penalty_reject', '0.15', 'Confidence decrease on rejection'],
+  ];
+  mlSettings.forEach(s => {
+    db.prepare('INSERT OR IGNORE INTO ml_settings (key, value, description) VALUES (?, ?, ?)').run(...s);
+  });
+
+  // Telegram Post Settings
+  const telegramSettings = [
+    ['auto_post_enabled', 'false', 'Auto-post jobs when created'],
+    ['ab_testing_enabled', 'true', 'Enable A/B testing for ads'],
+    ['variants_per_job', '2', 'Number of ad variants to generate'],
+    ['measurement_hours', '48', 'Hours to wait before evaluating A/B test'],
+    ['use_optimal_timing', 'true', 'Schedule posts at optimal times'],
+  ];
+  telegramSettings.forEach(s => {
+    db.prepare('INSERT OR IGNORE INTO telegram_post_settings (key, value) VALUES (?, ?)').run(s[0], s[1]);
+  });
+
+  // Ad ML Settings
+  const adMlSettings = [
+    ['use_learned_preferences', 'true', 'Apply learned variable preferences to new ads'],
+    ['min_tests_for_confidence', '5', 'Minimum A/B tests before considering variable confident'],
+    ['exploration_rate', '0.2', 'Probability of testing low-confidence variables (exploration vs exploitation)'],
+    ['auto_optimize', 'true', 'Automatically use best-performing variables'],
+  ];
+  adMlSettings.forEach(s => {
+    db.prepare('INSERT OR IGNORE INTO ad_ml_settings (key, value, description) VALUES (?, ?, ?)').run(s[0], s[1], s[2] || null);
+  });
+
+  // Default FAQ entries
+  const faqs = [
+    ['pay', 'When will I get paid?', 'Payments are processed every Friday for jobs completed the previous week. You should receive the payment in your bank account by Monday. 💰', '["pay","paid","payment","salary","money","when"]', 10],
+    ['pay', 'How is my pay calculated?', 'Your pay is calculated based on hours worked × hourly rate. Any bonuses (streak bonus, referral bonus, XP bonus) are added on top. You can see the breakdown in your Wallet section. 📊', '["calculate","how much","rate","hourly","breakdown"]', 9],
+    ['schedule', 'How do I update my availability?', 'You can update your availability in the WorkLink app! Go to the Calendar tab, tap on the dates you want to change, and mark them as Available or Unavailable. Easy! 📅', '["availability","available","schedule","calendar","update","free"]', 10],
+    ['schedule', 'Can I cancel a job?', "Please let us know at least 24 hours before the job if you need to cancel. Contact us immediately if there's an emergency. Last-minute cancellations may affect your rating, so try to give us as much notice as possible! 🙏", '["cancel","cancellation","cannot make it","emergency","cant go"]', 9],
+    ['jobs', 'Are there any jobs available?', 'Yes! Check the Jobs tab in your app to see all available opportunities. You can filter by date, location, and job type. New jobs are posted regularly, so keep checking! 🎯', '["job","jobs","work","opportunity","available","opening"]', 10],
+    ['jobs', 'How do I apply for a job?', 'To apply for a job, open the Jobs tab, find a job you like, and tap "Apply". Make sure your availability is updated so you can see jobs that match your schedule! ✅', '["apply","application","how to","sign up","register"]', 9],
+    ['onboarding', 'How do I start working?', "Great that you want to start! Make sure your profile is complete (photo, bank details, contact info), then browse available jobs in the Jobs tab. Apply to ones that interest you and we'll confirm your assignment! 🚀", '["start","begin","first job","new","getting started"]', 10],
+    ['general', 'What is XP and levels?', 'XP (experience points) rewards you for completing jobs and activities! As you earn XP, you level up and unlock benefits like priority job access and bonus multipliers. Keep working to climb the ranks! ⚡', '["xp","level","points","experience","rank","tier"]', 8],
+    ['general', 'How does the referral program work?', 'Refer friends using your unique referral code (find it in your Profile). When they complete their first job, you both earn a bonus! The more friends you refer, the higher your referral tier and rewards. 🤝', '["referral","refer","friend","invite","bonus","code"]', 8],
+  ];
+  faqs.forEach(f => {
+    db.prepare('INSERT OR IGNORE INTO ai_faq (category, question, answer, keywords, priority) VALUES (?, ?, ?, ?, ?)').run(...f);
+  });
+
+  console.log('✅ Essential data seeded (including AI/ML settings)');
 }
 
 // Seed COMPREHENSIVE sample data - ONLY in development

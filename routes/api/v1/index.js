@@ -31,6 +31,12 @@ const tenderMonitorRoutes = require('./tender-monitor');
 const telegramWebhookRoutes = require('./webhooks/telegram');
 const messagingRoutes = require('./messaging');
 
+// AI & ML Routes
+const aiChatRoutes = require('./ai-chat');
+const mlRoutes = require('./ml');
+const adMlRoutes = require('./ad-ml');
+const telegramGroupsRoutes = require('./telegram-groups');
+
 // Mount routes
 router.use('/auth', authRoutes);
 router.use('/candidates', candidateRoutes);
@@ -55,6 +61,12 @@ router.use('/tender-monitor', tenderMonitorRoutes);
 // Messaging & Webhooks
 router.use('/webhooks/telegram', telegramWebhookRoutes);
 router.use('/messaging', messagingRoutes);
+
+// AI & ML Routes
+router.use('/ai-chat', aiChatRoutes);
+router.use('/ml', mlRoutes);
+router.use('/ad-ml', adMlRoutes);
+router.use('/telegram-groups', telegramGroupsRoutes);
 
 // API info endpoint
 router.get('/', (req, res) => {
@@ -85,6 +97,11 @@ router.get('/', (req, res) => {
       webhooks: {
         telegram: '/api/v1/webhooks/telegram',
       },
+      // AI & ML
+      aiChat: '/api/v1/ai-chat',
+      ml: '/api/v1/ml',
+      adMl: '/api/v1/ad-ml',
+      telegramGroups: '/api/v1/telegram-groups',
     },
   });
 });

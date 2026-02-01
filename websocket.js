@@ -15,6 +15,15 @@ function getMessaging() {
   return messagingService;
 }
 
+// Lazy-loaded AI chat service
+let aiChatService = null;
+function getAIChat() {
+  if (!aiChatService) {
+    aiChatService = require('./services/ai-chat');
+  }
+  return aiChatService;
+}
+
 // Store connected clients
 const candidateClients = new Map(); // candidateId -> WebSocket
 const adminClients = new Set(); // Set of admin WebSocket connections
@@ -214,6 +223,31 @@ function handleMessage(ws, message, candidateId, isAdmin) {
       ws.send(JSON.stringify({ type: 'pong', timestamp: Date.now() }));
       break;
 
+    // AI Chat controls (admin only)
+    case 'ai_suggestion_accept':
+      if (isAdmin && message.suggestionId && message.candidateId) {
+        handleAISuggestionAccept(message.suggestionId, message.candidateId, ws);
+      }
+      break;
+
+    case 'ai_suggestion_edit':
+      if (isAdmin && message.suggestionId && message.candidateId && message.content) {
+        handleAISuggestionEdit(message.suggestionId, message.candidateId, message.content, ws);
+      }
+      break;
+
+    case 'ai_suggestion_dismiss':
+      if (isAdmin && message.suggestionId) {
+        handleAISuggestionDismiss(message.suggestionId, ws);
+      }
+      break;
+
+    case 'ai_mode_update':
+      if (isAdmin && message.candidateId && message.mode) {
+        handleAIModeUpdate(message.candidateId, message.mode, ws);
+      }
+      break;
+
     default:
       console.log('Unknown message type:', message.type);
   }
@@ -265,7 +299,7 @@ function sendMessageToCandidate(candidateId, content, templateId = null, channel
   broadcastToAdmins({ type: 'message_sent', message, candidateId, channel });
 }
 
-function sendMessageFromCandidate(candidateId, content, channel = 'app') {
+async function sendMessageFromCandidate(candidateId, content, channel = 'app') {
   const id = Date.now();
   db.prepare(`
     INSERT INTO messages (id, candidate_id, sender, content, channel, read, created_at)
@@ -283,6 +317,16 @@ function sendMessageFromCandidate(candidateId, content, channel = 'app') {
     if (clientWs?.readyState === WebSocket.OPEN) {
       clientWs.send(JSON.stringify({ type: 'message_sent', message }));
     }
+  }
+
+  // Trigger AI processing (non-blocking)
+  try {
+    const aiChat = getAIChat();
+    aiChat.processIncomingMessage(candidateId, content, channel).catch(err => {
+      console.error('AI processing error:', err.message);
+    });
+  } catch (error) {
+    console.error('Failed to load AI chat service:', error.message);
   }
 }
 
@@ -494,6 +538,106 @@ function handleJobApplication(candidateId, jobId) {
         error: error.message 
       }));
     }
+  }
+}
+
+// ==================== AI CHAT FUNCTIONS ====================
+
+async function handleAISuggestionAccept(suggestionId, candidateId, ws) {
+  try {
+    const aiChat = getAIChat();
+    const result = await aiChat.acceptSuggestion(suggestionId, candidateId);
+
+    ws.send(JSON.stringify({
+      type: 'ai_suggestion_accepted',
+      suggestionId,
+      candidateId,
+      message: result.message,
+    }));
+
+    broadcastToAdmins({
+      type: 'ai_suggestion_accepted',
+      suggestionId,
+      candidateId,
+    });
+  } catch (error) {
+    ws.send(JSON.stringify({
+      type: 'ai_error',
+      error: error.message,
+    }));
+  }
+}
+
+async function handleAISuggestionEdit(suggestionId, candidateId, content, ws) {
+  try {
+    const aiChat = getAIChat();
+    const result = await aiChat.editAndSendSuggestion(suggestionId, candidateId, content);
+
+    ws.send(JSON.stringify({
+      type: 'ai_suggestion_sent',
+      suggestionId,
+      candidateId,
+      message: result.message,
+      edited: true,
+    }));
+
+    broadcastToAdmins({
+      type: 'ai_suggestion_sent',
+      suggestionId,
+      candidateId,
+      edited: true,
+    });
+  } catch (error) {
+    ws.send(JSON.stringify({
+      type: 'ai_error',
+      error: error.message,
+    }));
+  }
+}
+
+async function handleAISuggestionDismiss(suggestionId, ws) {
+  try {
+    const aiChat = getAIChat();
+    await aiChat.dismissSuggestion(suggestionId);
+
+    ws.send(JSON.stringify({
+      type: 'ai_suggestion_dismissed',
+      suggestionId,
+    }));
+
+    broadcastToAdmins({
+      type: 'ai_suggestion_dismissed',
+      suggestionId,
+    });
+  } catch (error) {
+    ws.send(JSON.stringify({
+      type: 'ai_error',
+      error: error.message,
+    }));
+  }
+}
+
+async function handleAIModeUpdate(candidateId, mode, ws) {
+  try {
+    const aiChat = getAIChat();
+    aiChat.setConversationMode(candidateId, mode);
+
+    ws.send(JSON.stringify({
+      type: 'ai_mode_updated',
+      candidateId,
+      mode,
+    }));
+
+    broadcastToAdmins({
+      type: 'ai_mode_updated',
+      candidateId,
+      mode,
+    });
+  } catch (error) {
+    ws.send(JSON.stringify({
+      type: 'ai_error',
+      error: error.message,
+    }));
   }
 }
 

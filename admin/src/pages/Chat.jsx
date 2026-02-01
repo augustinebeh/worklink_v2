@@ -15,6 +15,12 @@ import {
   Mail,
   User,
   Clock,
+  Bot,
+  Sparkles,
+  Power,
+  Edit3,
+  ThumbsUp,
+  Brain,
 } from 'lucide-react';
 import EmojiPicker from 'emoji-picker-react';
 import Card from '../components/ui/Card';
@@ -30,6 +36,8 @@ function MessageBubble({ message, isOwn }) {
     timeZone: 'Asia/Singapore'
   });
 
+  const isAIGenerated = message.ai_generated === 1;
+
   return (
     <div className={clsx('flex', isOwn ? 'justify-end' : 'justify-start', 'mb-3')}>
       <div className={clsx(
@@ -38,6 +46,12 @@ function MessageBubble({ message, isOwn }) {
           ? 'bg-primary-700 text-white rounded-br-sm'
           : 'bg-slate-200 dark:bg-slate-700 text-slate-900 dark:text-white rounded-bl-sm'
       )}>
+        {isAIGenerated && isOwn && (
+          <div className="flex items-center gap-1 mb-1 text-white/70">
+            <Bot className="h-3 w-3" />
+            <span className="text-xs">AI Generated</span>
+          </div>
+        )}
         <p className="whitespace-pre-wrap break-words text-sm">{message.content}</p>
         <div className={clsx('flex items-center gap-1.5 mt-1', isOwn ? 'justify-end' : 'justify-start')}>
           <span className={clsx('text-xs', isOwn ? 'text-white/70' : 'text-slate-400')}>
@@ -55,6 +69,115 @@ function MessageBubble({ message, isOwn }) {
           )}
         </div>
       </div>
+    </div>
+  );
+}
+
+// AI Suggestion bubble component
+function AISuggestionBubble({ suggestion, onAccept, onEdit, onDismiss }) {
+  const [editMode, setEditMode] = useState(false);
+  const [editedContent, setEditedContent] = useState(suggestion.content);
+
+  const handleEdit = () => {
+    if (editMode) {
+      onEdit(editedContent);
+      setEditMode(false);
+    } else {
+      setEditMode(true);
+    }
+  };
+
+  return (
+    <div className="mx-4 mb-3 p-4 rounded-xl bg-gradient-to-r from-violet-500/10 to-purple-500/10 border border-violet-200 dark:border-violet-800">
+      <div className="flex items-center gap-2 mb-2">
+        <Sparkles className="h-4 w-4 text-violet-500" />
+        <span className="text-sm font-medium text-violet-700 dark:text-violet-300">AI Suggestion</span>
+        {suggestion.source && (
+          <span className={clsx(
+            'text-xs px-2 py-0.5 rounded-full',
+            suggestion.fromKB
+              ? 'bg-emerald-100 text-emerald-700 dark:bg-emerald-900/50 dark:text-emerald-300'
+              : 'bg-violet-100 text-violet-700 dark:bg-violet-900/50 dark:text-violet-300'
+          )}>
+            {suggestion.fromKB ? 'Knowledge Base' : 'AI'}
+          </span>
+        )}
+        {suggestion.confidence && (
+          <span className="text-xs text-slate-500">
+            {Math.round(suggestion.confidence * 100)}% confidence
+          </span>
+        )}
+      </div>
+
+      {editMode ? (
+        <textarea
+          value={editedContent}
+          onChange={(e) => setEditedContent(e.target.value)}
+          className="w-full px-3 py-2 rounded-lg bg-white dark:bg-slate-800 border border-slate-200 dark:border-slate-700 text-slate-900 dark:text-white text-sm resize-none focus:outline-none focus:ring-2 focus:ring-violet-500"
+          rows={3}
+        />
+      ) : (
+        <p className="text-sm text-slate-700 dark:text-slate-300 whitespace-pre-wrap">
+          {suggestion.content}
+        </p>
+      )}
+
+      <div className="flex items-center gap-2 mt-3">
+        <button
+          onClick={() => onAccept(suggestion)}
+          className="flex items-center gap-1.5 px-3 py-1.5 rounded-lg bg-emerald-500 text-white text-sm font-medium hover:bg-emerald-600 transition-colors"
+        >
+          <ThumbsUp className="h-3.5 w-3.5" />
+          {editMode ? 'Send Edited' : 'Accept & Send'}
+        </button>
+        <button
+          onClick={handleEdit}
+          className="flex items-center gap-1.5 px-3 py-1.5 rounded-lg bg-slate-200 dark:bg-slate-700 text-slate-700 dark:text-slate-300 text-sm font-medium hover:bg-slate-300 dark:hover:bg-slate-600 transition-colors"
+        >
+          <Edit3 className="h-3.5 w-3.5" />
+          {editMode ? 'Cancel' : 'Edit'}
+        </button>
+        <button
+          onClick={() => onDismiss(suggestion)}
+          className="flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-slate-500 dark:text-slate-400 text-sm hover:bg-slate-100 dark:hover:bg-slate-800 transition-colors"
+        >
+          <X className="h-3.5 w-3.5" />
+          Dismiss
+        </button>
+      </div>
+    </div>
+  );
+}
+
+// AI Mode selector component
+function AIModeSelector({ mode, onChange, candidateId }) {
+  const modes = [
+    { value: 'off', label: 'Off', icon: Power, color: 'slate' },
+    { value: 'suggest', label: 'Suggest', icon: Sparkles, color: 'violet' },
+    { value: 'auto', label: 'Auto', icon: Bot, color: 'emerald' },
+  ];
+
+  return (
+    <div className="flex items-center gap-1 p-1 rounded-lg bg-slate-100 dark:bg-slate-800">
+      {modes.map(({ value, label, icon: Icon, color }) => (
+        <button
+          key={value}
+          onClick={() => onChange(value)}
+          className={clsx(
+            'flex items-center gap-1.5 px-3 py-1.5 rounded-md text-sm font-medium transition-colors',
+            mode === value
+              ? color === 'slate'
+                ? 'bg-slate-600 text-white'
+                : color === 'violet'
+                  ? 'bg-violet-500 text-white'
+                  : 'bg-emerald-500 text-white'
+              : 'text-slate-600 dark:text-slate-400 hover:bg-slate-200 dark:hover:bg-slate-700'
+          )}
+        >
+          <Icon className="h-3.5 w-3.5" />
+          {label}
+        </button>
+      ))}
     </div>
   );
 }
@@ -185,6 +308,11 @@ export default function AdminChat() {
   const [isConnected, setIsConnected] = useState(false);
   const [sidebarCollapsed, setSidebarCollapsed] = useState(false);
 
+  // AI Chat state
+  const [aiMode, setAiMode] = useState('off');
+  const [aiSuggestion, setAiSuggestion] = useState(null);
+  const [aiLoading, setAiLoading] = useState(false);
+
   const messagesEndRef = useRef(null);
   const wsRef = useRef(null);
   const inputRef = useRef(null);
@@ -212,6 +340,8 @@ export default function AdminChat() {
   useEffect(() => {
     if (selectedConversation) {
       fetchMessages(selectedConversation.candidate_id);
+      fetchAIMode(selectedConversation.candidate_id);
+      setAiSuggestion(null); // Clear suggestion when switching conversations
     }
   }, [selectedConversation]);
 
@@ -297,6 +427,32 @@ export default function AdminChat() {
       case 'typing':
         break;
 
+      // AI Chat events
+      case 'ai_suggestion':
+        console.log('AI suggestion received:', data);
+        const currentConv = selectedConversationRef.current;
+        if (currentConv?.candidate_id === data.candidateId) {
+          setAiSuggestion(data.suggestion);
+        }
+        break;
+
+      case 'ai_suggestion_accepted':
+      case 'ai_suggestion_sent':
+      case 'ai_suggestion_dismissed':
+        setAiSuggestion(null);
+        break;
+
+      case 'ai_message_sent':
+        console.log('AI message sent:', data);
+        fetchMessages(data.candidateId);
+        break;
+
+      case 'ai_mode_updated':
+        if (selectedConversationRef.current?.candidate_id === data.candidateId) {
+          setAiMode(data.mode);
+        }
+        break;
+
       default:
         console.log('Unknown WebSocket message type:', data.type);
     }
@@ -344,6 +500,94 @@ export default function AdminChat() {
       }
     } catch (error) {
       console.error('Failed to fetch messages:', error);
+    }
+  };
+
+  const fetchAIMode = async (candidateId) => {
+    try {
+      const res = await fetch(`/api/v1/ai-chat/conversations/${candidateId}/mode`);
+      const data = await res.json();
+      if (data.success) {
+        setAiMode(data.data.mode);
+      }
+    } catch (error) {
+      console.error('Failed to fetch AI mode:', error);
+      setAiMode('off');
+    }
+  };
+
+  const handleAIModeChange = async (newMode) => {
+    if (!selectedConversation) return;
+
+    try {
+      const res = await fetch(`/api/v1/ai-chat/conversations/${selectedConversation.candidate_id}/mode`, {
+        method: 'PUT',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ mode: newMode }),
+      });
+      const data = await res.json();
+      if (data.success) {
+        setAiMode(newMode);
+        if (newMode === 'off') {
+          setAiSuggestion(null);
+        }
+      }
+    } catch (error) {
+      console.error('Failed to update AI mode:', error);
+    }
+  };
+
+  const handleAcceptSuggestion = async (suggestion) => {
+    if (!selectedConversation || !suggestion) return;
+
+    try {
+      const res = await fetch(`/api/v1/ai-chat/suggestions/${suggestion.id}/accept`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ candidateId: selectedConversation.candidate_id }),
+      });
+      const data = await res.json();
+      if (data.success) {
+        setAiSuggestion(null);
+        fetchMessages(selectedConversation.candidate_id);
+      }
+    } catch (error) {
+      console.error('Failed to accept suggestion:', error);
+    }
+  };
+
+  const handleEditSuggestion = async (editedContent) => {
+    if (!selectedConversation || !aiSuggestion) return;
+
+    try {
+      const res = await fetch(`/api/v1/ai-chat/suggestions/${aiSuggestion.id}/edit`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          candidateId: selectedConversation.candidate_id,
+          content: editedContent,
+        }),
+      });
+      const data = await res.json();
+      if (data.success) {
+        setAiSuggestion(null);
+        fetchMessages(selectedConversation.candidate_id);
+      }
+    } catch (error) {
+      console.error('Failed to edit suggestion:', error);
+    }
+  };
+
+  const handleDismissSuggestion = async (suggestion) => {
+    if (!suggestion) return;
+
+    try {
+      await fetch(`/api/v1/ai-chat/suggestions/${suggestion.id}/dismiss`, {
+        method: 'POST',
+      });
+      setAiSuggestion(null);
+    } catch (error) {
+      console.error('Failed to dismiss suggestion:', error);
     }
   };
 
@@ -555,7 +799,12 @@ export default function AdminChat() {
                       </p>
                     </div>
                   </div>
-                  <div className="flex items-center gap-2">
+                  <div className="flex items-center gap-3">
+                    <AIModeSelector
+                      mode={aiMode}
+                      onChange={handleAIModeChange}
+                      candidateId={selectedConversation.candidate_id}
+                    />
                     {selectedConversation.email && (
                       <a
                         href={`mailto:${selectedConversation.email}`}
@@ -608,6 +857,16 @@ export default function AdminChat() {
                 )}
                 <div ref={messagesEndRef} />
               </div>
+
+              {/* AI Suggestion */}
+              {aiSuggestion && aiMode === 'suggest' && (
+                <AISuggestionBubble
+                  suggestion={aiSuggestion}
+                  onAccept={handleAcceptSuggestion}
+                  onEdit={handleEditSuggestion}
+                  onDismiss={handleDismissSuggestion}
+                />
+              )}
 
               {/* Input area */}
               <div className="flex-shrink-0 p-4 bg-white dark:bg-slate-900 border-t border-slate-200 dark:border-slate-800">
