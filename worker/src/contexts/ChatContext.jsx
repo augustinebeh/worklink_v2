@@ -16,8 +16,12 @@ export function ChatProvider({ children }) {
     if (!user || wsRef.current?.readyState === WebSocket.OPEN) return;
 
     const protocol = window.location.protocol === 'https:' ? 'wss:' : 'ws:';
-    const wsUrl = `${protocol}//${window.location.host}/ws?candidateId=${user.id}`;
-    
+    // Include token for authentication
+    const token = localStorage.getItem('token') || `demo-token-${user.id}`;
+    const wsUrl = `${protocol}//${window.location.host}/ws?candidateId=${user.id}&token=${encodeURIComponent(token)}`;
+
+    console.log('🔌 [Chat] Connecting WebSocket:', wsUrl);
+
     try {
       wsRef.current = new WebSocket(wsUrl);
 

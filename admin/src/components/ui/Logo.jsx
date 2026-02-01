@@ -15,9 +15,8 @@ export default function Logo({ size = 'md', showText = true, className }) {
       <img
         src="/worklinkv2_vector_logo.png"
         alt="WorkLink"
-        width={icon}
-        height={icon}
-        className="flex-shrink-0 rounded-lg"
+        style={{ height: icon, width: 'auto' }}
+        className="flex-shrink-0"
       />
 
       {showText && (
@@ -40,9 +39,8 @@ export function LogoIcon({ size = 32, className }) {
     <img
       src="/worklinkv2_vector_logo.png"
       alt="WorkLink"
-      width={size}
-      height={size}
-      className={clsx('rounded-lg', className)}
+      style={{ height: size, width: 'auto' }}
+      className={clsx(className)}
     />
   );
 }

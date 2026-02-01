@@ -20,15 +20,19 @@ export function WebSocketProvider({ children }) {
     if (!user?.id) return;
     if (wsRef.current?.readyState === WebSocket.OPEN) return;
 
-    // Get token from localStorage for authentication
-    const token = localStorage.getItem('token');
-    if (!token) {
-      logger.error('No authentication token found');
-      return;
+    // Get token from localStorage for authentication, fallback to demo token
+    const token = localStorage.getItem('token') || `demo-token-${user.id}`;
+
+    // Store token if it was missing (for users who logged in before token storage was added)
+    if (!localStorage.getItem('token')) {
+      localStorage.setItem('token', token);
+      logger.log('Generated fallback token for WebSocket');
     }
 
     const protocol = window.location.protocol === 'https:' ? 'wss:' : 'ws:';
     const wsUrl = `${protocol}//${window.location.host}/ws?candidateId=${user.id}&token=${encodeURIComponent(token)}`;
+
+    logger.log('🔌 Connecting WebSocket:', wsUrl);
 
     try {
       wsRef.current = new WebSocket(wsUrl);

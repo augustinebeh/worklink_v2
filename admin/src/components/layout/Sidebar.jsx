@@ -244,26 +244,29 @@ function NavItem({ item, collapsed, unreadTotal = 0 }) {
   );
 }
 
-export default function Sidebar({ collapsed, onClose, isMobile }) {
+export default function Sidebar({ collapsed, onCollapse, mobileOpen, onMobileClose }) {
   const { unreadTotal } = useAdminWebSocket();
+  const isMobile = mobileOpen !== undefined;
 
   return (
     <aside
       className={clsx(
         'fixed inset-y-0 left-0 z-50 flex flex-col bg-white dark:bg-slate-900 border-r border-slate-200 dark:border-slate-800 transition-all duration-300',
         collapsed ? 'w-[72px]' : 'w-72',
-        isMobile && 'shadow-xl'
+        // On mobile: hidden by default, shown when mobileOpen is true
+        isMobile && !mobileOpen && 'max-lg:-translate-x-full',
+        isMobile && mobileOpen && 'shadow-xl'
       )}
     >
       {/* Logo */}
       <div className="h-16 flex items-center justify-between px-4 border-b border-slate-200 dark:border-slate-800">
         {!collapsed && <Logo size="md" />}
         {collapsed && <LogoIcon size={40} className="mx-auto" />}
-        {isMobile && onClose && (
+        {mobileOpen && onMobileClose && (
           <button
-            onClick={onClose}
+            onClick={onMobileClose}
             aria-label="Close sidebar"
-            className="p-2 min-h-[40px] min-w-[40px] rounded-lg hover:bg-slate-100 dark:hover:bg-slate-800 focus:outline-none focus:ring-2 focus:ring-primary-500/50"
+            className="p-2 min-h-[40px] min-w-[40px] rounded-lg hover:bg-slate-100 dark:hover:bg-slate-800 focus:outline-none focus:ring-2 focus:ring-primary-500/50 lg:hidden"
           >
             <XIcon className="h-5 w-5 text-slate-500" aria-hidden="true" />
           </button>
@@ -294,6 +297,21 @@ export default function Sidebar({ collapsed, onClose, isMobile }) {
           </p>
         </div>
       )}
+
+      {/* Collapse Toggle Button - Desktop only */}
+      <button
+        onClick={() => onCollapse?.(!collapsed)}
+        aria-label={collapsed ? 'Expand sidebar' : 'Collapse sidebar'}
+        className={clsx(
+          'hidden lg:flex absolute -right-3 top-20 h-6 w-6 items-center justify-center rounded-full border border-slate-200 dark:border-slate-700 bg-white dark:bg-slate-800 text-slate-400 hover:text-slate-600 dark:hover:text-slate-300 shadow-sm hover:shadow transition-all focus:outline-none focus:ring-2 focus:ring-primary-500/50'
+        )}
+      >
+        {collapsed ? (
+          <ChevronRightIcon className="h-4 w-4" />
+        ) : (
+          <ChevronLeftIcon className="h-4 w-4" />
+        )}
+      </button>
     </aside>
   );
 }
