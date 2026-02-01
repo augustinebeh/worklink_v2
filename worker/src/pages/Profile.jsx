@@ -135,6 +135,7 @@ export default function Profile() {
   }, [user?.id]);
 
   const fetchUserData = async () => {
+    if (!user?.id) return;
     try {
       const res = await fetch(`/api/v1/candidates/${user.id}`);
       const data = await res.json();
@@ -215,7 +216,8 @@ export default function Profile() {
 
   const handleLogout = () => {
     logout();
-    navigate('/login');
+    // Defer navigation to let React process the state change
+    setTimeout(() => navigate('/login'), 0);
   };
 
   if (!user) {

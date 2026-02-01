@@ -161,48 +161,6 @@ function QuickReplyChip({ text, onClick }) {
   );
 }
 
-// Generate context-aware quick replies based on last message
-function generateQuickReplies(lastMessage) {
-  if (!lastMessage || lastMessage.sender === 'candidate') {
-    return ['Hi there!', 'I have a question', 'Help me with jobs'];
-  }
-
-  const content = (lastMessage.content || '').toLowerCase();
-  
-  // Job-related questions
-  if (content.includes('job') || content.includes('work') || content.includes('shift')) {
-    return ['Yes, I can work', "I'm available", 'What are the details?', 'Not available'];
-  }
-  
-  // Schedule/availability questions
-  if (content.includes('available') || content.includes('schedule') || content.includes('when')) {
-    return ['Yes, I am', 'Let me check', 'This week works', 'Not this week'];
-  }
-  
-  // Confirmation requests
-  if (content.includes('confirm') || content.includes('accept')) {
-    return ['Yes, confirmed', 'Need more info', 'Can we reschedule?'];
-  }
-  
-  // Questions
-  if (content.includes('?')) {
-    return ['Yes', 'No', 'Maybe', 'Let me check'];
-  }
-  
-  // Payment related
-  if (content.includes('pay') || content.includes('salary') || content.includes('money')) {
-    return ['Thanks!', 'When will I receive?', 'Got it'];
-  }
-  
-  // Greetings
-  if (content.includes('hi') || content.includes('hello') || content.includes('hey')) {
-    return ['Hi! How can I help?', "I'm doing well", 'Need assistance'];
-  }
-  
-  // Default responses
-  return ['Thanks!', 'Okay, noted', 'Got it', 'Need more info'];
-}
-
 export default function Chat() {
   const { user } = useAuth();
   const ws = useWebSocket();
@@ -227,13 +185,31 @@ export default function Chat() {
     if (user) fetchMessages();
   }, [user]);
 
-  // Update quick replies when messages change
+  // Fetch AI-generated quick replies when messages change
   useEffect(() => {
-    if (messages.length > 0) {
-      const lastAdminMessage = [...messages].reverse().find(m => m.sender !== 'candidate');
-      setQuickReplies(generateQuickReplies(lastAdminMessage));
+    if (!user?.id || messages.length === 0) return;
+    
+    const lastAdminMessage = [...messages].reverse().find(m => m.sender !== 'candidate');
+    if (!lastAdminMessage) {
+      setQuickReplies(['Hi there!', 'I have a question', 'Help me with jobs']);
+      return;
     }
-  }, [messages]);
+
+    // Fetch AI-generated quick replies
+    const fetchQuickReplies = async () => {
+      try {
+        const res = await fetch(`/api/v1/chat/${user.id}/quick-replies`);
+        const data = await res.json();
+        if (data.success && data.data?.length > 0) {
+          setQuickReplies(data.data);
+        }
+      } catch (error) {
+        console.error('Failed to fetch quick replies:', error);
+      }
+    };
+
+    fetchQuickReplies();
+  }, [messages, user?.id]);
 
   useEffect(() => {
     if (!ws) return;

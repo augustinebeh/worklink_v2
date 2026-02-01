@@ -1,4 +1,5 @@
 import { useState, useEffect, useRef, useCallback } from 'react';
+import { useSearchParams } from 'react-router-dom';
 import {
   Search,
   Send,
@@ -757,6 +758,7 @@ function QuickReplyChip({ template, onClick }) {
 }
 
 export default function AdminChat() {
+  const [searchParams, setSearchParams] = useSearchParams();
   const { fetchUnreadTotal, subscribe, send, isConnected, markMessagesRead } = useAdminWebSocket();
   const toast = useToast();
   const [conversations, setConversations] = useState([]);
@@ -886,6 +888,38 @@ export default function AdminChat() {
     fetchTemplates();
     fetchAISettings();
   }, []);
+
+  // Handle URL parameter to pre-select candidate
+  useEffect(() => {
+    const candidateId = searchParams.get('candidate');
+    if (candidateId && !loading && (conversations.length > 0 || candidates.length > 0)) {
+      // Check if candidate is in existing conversations
+      const existingConv = conversations.find(c => c.candidate_id === candidateId);
+      if (existingConv) {
+        setSelectedConversation(existingConv);
+      } else {
+        // Check if candidate exists in candidates list
+        const candidate = candidates.find(c => c.id === candidateId);
+        if (candidate) {
+          // Create a new conversation entry
+          setSelectedConversation({
+            candidate_id: candidate.id,
+            name: candidate.name,
+            email: candidate.email,
+            profile_photo: candidate.profile_photo,
+            online_status: candidate.online_status,
+            last_seen: candidate.last_seen,
+            telegram_chat_id: candidate.telegram_chat_id,
+            channels: candidate.channels,
+            status: candidate.status,
+            level: candidate.level,
+          });
+        }
+      }
+      // Clear the URL parameter after handling
+      setSearchParams({}, { replace: true });
+    }
+  }, [searchParams, conversations, candidates, loading, setSearchParams]);
 
   // Subscribe to WebSocket messages using shared context
   useEffect(() => {

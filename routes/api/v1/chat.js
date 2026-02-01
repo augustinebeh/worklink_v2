@@ -3,6 +3,150 @@ const router = express.Router();
 const { db } = require('../../../db/database');
 const { broadcastToCandidate, broadcastToAdmins, EventTypes } = require('../../../websocket');
 const messaging = require('../../../services/messaging');
+const logger = require('../../../utils/logger');
+
+// Groq API for generating quick replies
+const GROQ_API_KEY = process.env.GROQ_API_KEY;
+const GROQ_API_URL = 'https://api.groq.com/openai/v1/chat/completions';
+
+async function generateAIQuickReplies(lastMessage, conversationContext = []) {
+  if (!GROQ_API_KEY || !lastMessage) {
+    return null;
+  }
+
+  try {
+    // Build context from recent messages
+    const contextMessages = conversationContext.slice(-5).map(m => 
+      `${m.sender === 'candidate' ? 'Worker' : 'Support'}: ${m.content}`
+    ).join('\n');
+
+    const prompt = `You are helping a gig worker generate quick reply suggestions for a chat with their employer/support team.
+
+Recent conversation:
+${contextMessages}
+
+Last message from support: "${lastMessage}"
+
+Generate exactly 3-4 short, natural reply options the worker might want to send. Each reply should be:
+- Brief (2-6 words max)
+- Natural and conversational
+- Relevant to the last message
+- Different from each other (cover different intents like confirm, ask question, decline, etc.)
+
+If the support is asking about jobs/shifts, include options like availability confirmation.
+If asking about payments, include acknowledgment options.
+If asking a yes/no question, include both yes and no options.
+If it's a greeting, include friendly responses.
+
+Return ONLY a JSON array of strings, nothing else. Example: ["Yes, I can", "What time?", "Not available", "Tell me more"]`;
+
+    const response = await fetch(GROQ_API_URL, {
+      method: 'POST',
+      headers: {
+        'Authorization': `Bearer ${GROQ_API_KEY}`,
+        'Content-Type': 'application/json',
+      },
+      body: JSON.stringify({
+        model: 'llama-3.1-8b-instant',
+        messages: [{ role: 'user', content: prompt }],
+        temperature: 0.7,
+        max_tokens: 100,
+      }),
+    });
+
+    if (!response.ok) {
+      logger.error('Groq API error:', response.status);
+      return null;
+    }
+
+    const data = await response.json();
+    const content = data.choices?.[0]?.message?.content?.trim();
+    
+    // Parse JSON array from response
+    const jsonMatch = content.match(/\[[\s\S]*\]/);
+    if (jsonMatch) {
+      const replies = JSON.parse(jsonMatch[0]);
+      if (Array.isArray(replies) && replies.length > 0) {
+        return replies.slice(0, 4); // Max 4 replies
+      }
+    }
+    
+    return null;
+  } catch (error) {
+    logger.error('Failed to generate AI quick replies:', error);
+    return null;
+  }
+}
+
+// Fallback rule-based quick replies
+function generateFallbackReplies(lastMessage) {
+  if (!lastMessage) {
+    return ['Hi there!', 'I have a question', 'Help me with jobs'];
+  }
+
+  const content = (lastMessage.content || '').toLowerCase();
+  
+  if (content.includes('job') || content.includes('work') || content.includes('shift')) {
+    return ['Yes, I can work', "I'm available", 'What are the details?', 'Not available'];
+  }
+  if (content.includes('available') || content.includes('schedule') || content.includes('when')) {
+    return ['Yes, I am', 'Let me check', 'This week works', 'Not this week'];
+  }
+  if (content.includes('confirm') || content.includes('accept')) {
+    return ['Yes, confirmed', 'Need more info', 'Can we reschedule?'];
+  }
+  if (content.includes('?')) {
+    return ['Yes', 'No', 'Maybe', 'Let me check'];
+  }
+  if (content.includes('pay') || content.includes('salary') || content.includes('money')) {
+    return ['Thanks!', 'When will I receive?', 'Got it'];
+  }
+  if (content.includes('hi') || content.includes('hello') || content.includes('hey')) {
+    return ['Hi! How can I help?', "I'm doing well", 'Need assistance'];
+  }
+  
+  return ['Thanks!', 'Okay, noted', 'Got it', 'Need more info'];
+}
+
+// Generate AI-powered quick reply suggestions
+router.get('/:candidateId/quick-replies', async (req, res) => {
+  try {
+    const { candidateId } = req.params;
+    
+    // Get recent messages for context
+    const messages = db.prepare(`
+      SELECT content, sender, created_at FROM messages 
+      WHERE candidate_id = ?
+      ORDER BY created_at DESC
+      LIMIT 10
+    `).all(candidateId).reverse();
+
+    // Find the last admin message
+    const lastAdminMessage = [...messages].reverse().find(m => m.sender === 'admin');
+    
+    if (!lastAdminMessage) {
+      return res.json({ 
+        success: true, 
+        data: ['Hi there!', 'I have a question', 'Help me with jobs'],
+        source: 'default'
+      });
+    }
+
+    // Try AI-generated replies first
+    const aiReplies = await generateAIQuickReplies(lastAdminMessage.content, messages);
+    
+    if (aiReplies && aiReplies.length > 0) {
+      return res.json({ success: true, data: aiReplies, source: 'ai' });
+    }
+
+    // Fallback to rule-based
+    const fallbackReplies = generateFallbackReplies(lastAdminMessage);
+    res.json({ success: true, data: fallbackReplies, source: 'rules' });
+  } catch (error) {
+    logger.error('Quick replies error:', error);
+    res.status(500).json({ success: false, error: error.message });
+  }
+});
 
 // Get messages for a candidate
 router.get('/:candidateId/messages', (req, res) => {
@@ -109,7 +253,7 @@ router.get('/admin/candidates', (req, res) => {
         id, name, email, phone, profile_photo, status, level, online_status, last_seen,
         telegram_chat_id, preferred_contact
       FROM candidates
-      WHERE status IN ('active', 'onboarding')
+      WHERE status IN ('active', 'onboarding', 'pending', 'screening', 'lead')
       ORDER BY name ASC
     `).all();
 

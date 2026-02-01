@@ -304,7 +304,7 @@ export default function CandidateProfile() {
 
             {/* Action Buttons */}
             <div className="md:ml-auto flex items-center gap-2">
-              <Button variant="secondary" size="sm" icon={SendIcon}>
+              <Button variant="secondary" size="sm" icon={SendIcon} onClick={() => navigate(`/chat?candidate=${candidate.id}`)}>
                 Message
               </Button>
               <Button size="sm" icon={EditIcon} onClick={() => setShowEditModal(true)}>
