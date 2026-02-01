@@ -547,7 +547,24 @@ export default function AdminChat() {
 
     const unsubMessageSent = subscribe('message_sent', (data) => {
       setMessages(prev => {
+        // Check if message already exists by ID
         if (prev.some(m => m.id === data.message.id)) return prev;
+
+        // Check for optimistic message (same content from admin within last 10 seconds)
+        // and replace it with the real message
+        const optimisticIndex = prev.findIndex(m =>
+          m.sender === 'admin' &&
+          m.content === data.message.content &&
+          typeof m.id === 'number' && m.id > Date.now() - 10000
+        );
+
+        if (optimisticIndex !== -1) {
+          // Replace optimistic message with real one
+          const updated = [...prev];
+          updated[optimisticIndex] = data.message;
+          return updated;
+        }
+
         return [...prev, data.message];
       });
       fetchConversations();
