@@ -3,9 +3,9 @@
  * Provides offline support and caching
  */
 
-const CACHE_NAME = 'worklink-v12';
-const STATIC_CACHE = 'worklink-static-v12';
-const DYNAMIC_CACHE = 'worklink-dynamic-v12';
+const CACHE_NAME = 'worklink-v13';
+const STATIC_CACHE = 'worklink-static-v13';
+const DYNAMIC_CACHE = 'worklink-dynamic-v13';
 
 // Static assets to cache immediately
 const STATIC_ASSETS = [
