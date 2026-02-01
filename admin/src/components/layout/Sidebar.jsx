@@ -12,6 +12,8 @@ import {
   SettingsIcon,
   Building2Icon,
   ChevronDownIcon,
+  ChevronLeftIcon,
+  ChevronRightIcon,
   XIcon,
   DollarSignIcon,
   TargetIcon,

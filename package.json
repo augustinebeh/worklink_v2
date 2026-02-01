@@ -1,6 +1,6 @@
 {
   "name": "worklink-v2",
-  "version": "2.0.0",
+  "version": "2.0.1",
   "description": "WorkLink recruitment platform - Admin portal and worker PWA",
   "main": "server.js",
   "engines": {
@@ -17,7 +17,7 @@
     "build": "npm run clean && npm run build:admin && npm run build:worker",
     "build:admin": "cd admin && npm install && npm run build",
     "build:worker": "cd worker && npm install && npm run build",
-    "clean": "rm -rf admin/node_modules/.vite worker/node_modules/.vite admin/dist worker/dist 2>/dev/null; echo 'Cache cleared'",
+    "clean": "rm -rf admin/node_modules/.vite worker/node_modules/.vite admin/dist worker/dist admin/node_modules/.cache worker/node_modules/.cache 2>/dev/null; echo 'Cache cleared'",
     "postinstall": "echo 'Main dependencies installed'",
     "install:all": "npm install && cd admin && npm install && cd ../worker && npm install",
     "db:reset": "node -e \"require('./db/database').resetToSampleData()\""

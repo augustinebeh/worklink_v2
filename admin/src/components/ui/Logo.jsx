@@ -13,7 +13,7 @@ export default function Logo({ size = 'md', showText = true, className }) {
   return (
     <div className={clsx('flex items-center gap-3', className)}>
       <img
-        src="/favicon.png"
+        src="/worklinkv2_vector_logo.png"
         alt="WorkLink"
         width={icon}
         height={icon}
@@ -38,7 +38,7 @@ export default function Logo({ size = 'md', showText = true, className }) {
 export function LogoIcon({ size = 32, className }) {
   return (
     <img
-      src="/favicon.png"
+      src="/worklinkv2_vector_logo.png"
       alt="WorkLink"
       width={size}
       height={size}
