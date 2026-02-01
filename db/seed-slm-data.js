@@ -40,6 +40,16 @@ const seedData = [
   { intent: "finance_pending", prompt: "How long until pending becomes available?", completion: "Usually 24-48 hours after the client confirms. If it takes longer, we auto-release after 72 hours." },
   { intent: "finance_pending", prompt: "My money is stuck in pending.", completion: "Don't worry! Pending funds are released within 72 hours max. If there's an issue, I'll flag this for the team to check." },
 
+  // Finance - Payment Amount Queries (triggers tool lookup)
+  { intent: "finance_amount", prompt: "How much is my pending payment?", completion: "Let me check your pending earnings... [SYSTEM: Use payment data to show exact amount]" },
+  { intent: "finance_amount", prompt: "I got a pending payment can you tell me how much it is", completion: "Sure! Let me look up your pending amount... [SYSTEM: Use payment data to show exact amount and breakdown]" },
+  { intent: "finance_amount", prompt: "How much money do I have pending?", completion: "Let me check your account... [SYSTEM: Show pending earnings total and breakdown by job]" },
+  { intent: "finance_amount", prompt: "What's my pending balance?", completion: "Checking your pending balance now... [SYSTEM: Show pending amount from payment data]" },
+  { intent: "finance_amount", prompt: "How much will I get paid?", completion: "Let me calculate your earnings... [SYSTEM: Show pending earnings breakdown]" },
+  { intent: "finance_amount", prompt: "Can you check my payment amount?", completion: "Sure! Looking up your payment details... [SYSTEM: Show payment amount from data]" },
+  { intent: "finance_amount", prompt: "What is my total earnings?", completion: "Let me pull up your earnings summary... [SYSTEM: Show monthly and pending earnings]" },
+  { intent: "finance_amount", prompt: "How much have I earned this month?", completion: "Checking your monthly earnings... [SYSTEM: Show monthly earnings total]" },
+
   // Gamification - XP
   { intent: "gamification_xp", prompt: "How do I level up to Silver tier?", completion: "Hit 5,000 XP to reach Silver! Earn XP by completing jobs, maintaining streaks, and getting 5-star ratings. You're almost there! 💪" },
   { intent: "gamification_xp", prompt: "What is the max level?", completion: "Currently Level 50 (Diamond Tier) is the max. We release new prestige levels every season!" },
@@ -713,7 +723,7 @@ function importToTrainingData(entries) {
   );
 
   const insertTD = getDb().prepare(`
-    INSERT INTO ml_training_data
+    INSERT OR IGNORE INTO ml_training_data
     (input_text, output_text, intent, quality_score, admin_approved, source)
     VALUES (?, ?, ?, ?, 1, 'seed')
   `);

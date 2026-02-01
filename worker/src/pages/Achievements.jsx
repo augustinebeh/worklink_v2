@@ -2,157 +2,68 @@ import { useState, useEffect } from 'react';
 import {
   TrophyIcon,
   StarIcon,
-  LockIcon,
   ZapIcon,
+  FlameIcon,
+  AwardIcon,
+  GiftIcon,
+  LockIcon,
   CheckCircleIcon,
-  SparklesIcon,
 } from 'lucide-react';
 import { useAuth } from '../contexts/AuthContext';
-import { useTheme } from '../contexts/ThemeContext';
 import { clsx } from 'clsx';
-import { DEFAULT_LOCALE, TIMEZONE, RARITY_LABELS } from '../utils/constants';
 
-const rarityConfig = {
-  common: { color: 'text-slate-400', bg: 'bg-slate-500/20', border: 'border-slate-500/30', glow: '', glowColor: 'rgba(148,163,184,0.2)' },
-  uncommon: { color: 'text-green-400', bg: 'bg-green-500/20', border: 'border-green-500/30', glow: 'shadow-lg shadow-green-500/20', glowColor: 'rgba(34,197,94,0.3)' },
-  rare: { color: 'text-blue-400', bg: 'bg-blue-500/20', border: 'border-blue-500/30', glow: 'shadow-lg shadow-blue-500/20', glowColor: 'rgba(59,130,246,0.3)' },
-  epic: { color: 'text-purple-400', bg: 'bg-purple-500/20', border: 'border-purple-500/30', glow: 'shadow-lg shadow-purple-500/30', glowColor: 'rgba(168,85,247,0.4)' },
-  legendary: { color: 'text-gold-400', bg: 'bg-gold-500/20', border: 'border-gold-500/30', glow: 'shadow-xl shadow-gold-500/40', glowColor: 'rgba(251,191,36,0.4)' },
+const achievementCategories = {
+  milestones: { icon: TrophyIcon, label: 'Milestones', color: 'amber' },
+  performance: { icon: StarIcon, label: 'Performance', color: 'violet' },
+  streaks: { icon: FlameIcon, label: 'Streaks', color: 'red' },
+  social: { icon: GiftIcon, label: 'Social', color: 'cyan' },
+  special: { icon: AwardIcon, label: 'Special', color: 'emerald' },
 };
 
-const categoryIcons = {
-  jobs: '💼',
-  streak: '🔥',
-  training: '📚',
-  social: '👥',
-  special: '⭐',
-  milestone: '🏆',
-};
-
-function AchievementCard({ achievement, unlocked, isDark }) {
-  const rarity = rarityConfig[achievement.rarity] || rarityConfig.common;
-  const rarityLabel = RARITY_LABELS[achievement.rarity] || RARITY_LABELS.common;
-  const isLegendary = achievement.rarity === 'legendary';
-  const isEpic = achievement.rarity === 'epic';
+function AchievementCard({ achievement, unlocked }) {
+  const category = achievementCategories[achievement.category] || achievementCategories.milestones;
+  const Icon = category.icon;
+  
+  const colorClasses = {
+    amber: { bg: 'bg-amber-500/20', border: 'border-amber-500/30', text: 'text-amber-400' },
+    violet: { bg: 'bg-violet-500/20', border: 'border-violet-500/30', text: 'text-violet-400' },
+    red: { bg: 'bg-red-500/20', border: 'border-red-500/30', text: 'text-red-400' },
+    cyan: { bg: 'bg-cyan-500/20', border: 'border-cyan-500/30', text: 'text-cyan-400' },
+    emerald: { bg: 'bg-emerald-500/20', border: 'border-emerald-500/30', text: 'text-emerald-400' },
+  };
+  
+  const colors = colorClasses[category.color];
 
   return (
     <div className={clsx(
-      'relative p-4 rounded-2xl backdrop-blur-md transition-all duration-300 border overflow-hidden',
-      unlocked
-        ? isDark
-          ? `bg-white/[0.03] ${rarity.border} ${rarity.glow}`
-          : `bg-white ${rarity.border} shadow-[0_4px_20px_rgba(0,0,0,0.05)]`
-        : isDark
-          ? 'bg-dark-800/20 border-white/5 opacity-50 grayscale'
-          : 'bg-slate-50 border-slate-200 opacity-50 grayscale'
+      'p-4 rounded-2xl border transition-all',
+      unlocked ? `bg-[#0a1628]/80 ${colors.border}` : 'bg-white/[0.02] border-white/[0.03] opacity-50'
     )}>
-      {/* Glow effect for epic/legendary */}
-      {unlocked && isDark && (isLegendary || isEpic) && (
-        <div
-          className="absolute inset-0 rounded-2xl opacity-30 blur-xl -z-10"
-          style={{ background: rarity.glowColor }}
-        />
-      )}
-
-      {/* Top border highlight */}
-      {unlocked && isDark && (
-        <div className="absolute top-0 left-0 right-0 h-px bg-gradient-to-r from-transparent via-white/20 to-transparent" />
-      )}
-
-      {/* Rarity badge */}
-      <div className="absolute top-3 right-3">
-        <span className={clsx(
-          'px-2 py-0.5 rounded-full text-2xs font-bold uppercase tracking-wide border',
-          rarity.bg, rarity.color, rarity.border
-        )}>
-          {rarityLabel}
-        </span>
-      </div>
-
-      {/* Icon */}
-      <div className={clsx(
-        'w-14 h-14 rounded-xl flex items-center justify-center text-2xl mb-3 border',
-        unlocked
-          ? `${rarity.bg} ${rarity.border}`
-          : isDark ? 'bg-dark-700 border-dark-600' : 'bg-slate-200 border-slate-300'
-      )}>
-        {unlocked ? (
-          <span className={isLegendary ? 'animate-pulse' : ''}>
-            {achievement.icon || categoryIcons[achievement.category] || '🏅'}
-          </span>
-        ) : (
-          <LockIcon className={clsx('h-6 w-6', isDark ? 'text-dark-500' : 'text-slate-400')} />
-        )}
-      </div>
-
-      {/* Title & Description */}
-      <h3 className={clsx(
-        'font-semibold text-sm',
-        unlocked ? (isDark ? 'text-white' : 'text-slate-900') : (isDark ? 'text-dark-500' : 'text-slate-400')
-      )}>
-        {achievement.name}
-      </h3>
-      <p className={clsx('text-xs mt-1 line-clamp-2', isDark ? 'text-dark-400' : 'text-slate-500')}>
-        {achievement.description}
-      </p>
-
-      {/* XP Reward */}
-      <div className={clsx(
-        'flex items-center justify-between mt-3 pt-3 border-t',
-        isDark ? 'border-white/5' : 'border-slate-100'
-      )}>
+      <div className="flex items-start gap-4">
         <div className={clsx(
-          'flex items-center gap-1.5 px-2 py-1 rounded-lg',
-          unlocked
-            ? 'bg-amber-500/20 text-amber-400'
-            : isDark ? 'bg-dark-700 text-dark-500' : 'bg-slate-100 text-slate-400'
+          'w-14 h-14 rounded-2xl flex items-center justify-center flex-shrink-0',
+          unlocked ? colors.bg : 'bg-white/5'
         )}>
-          <ZapIcon className="h-3.5 w-3.5" />
-          <span className="text-xs font-bold">+{achievement.xp_reward}</span>
+          {unlocked ? <Icon className={clsx('h-7 w-7', colors.text)} /> : <LockIcon className="h-6 w-6 text-white/20" />}
         </div>
 
-        {unlocked && (
-          <div className="flex items-center gap-1 text-emerald-400">
-            <CheckCircleIcon className="h-4 w-4" />
+        <div className="flex-1 min-w-0">
+          <div className="flex items-center gap-2 mb-1">
+            <h3 className={clsx('font-semibold', unlocked ? 'text-white' : 'text-white/40')}>{achievement.name}</h3>
+            {unlocked && <CheckCircleIcon className="h-4 w-4 text-emerald-400" />}
           </div>
-        )}
-      </div>
+          <p className={clsx('text-sm', unlocked ? 'text-white/50' : 'text-white/30')}>{achievement.description}</p>
+        </div>
 
-      {/* Unlocked date */}
-      {unlocked && achievement.unlocked_at && (
-        <p className={clsx('text-2xs mt-2', isDark ? 'text-dark-500' : 'text-slate-400')}>
-          {new Date(achievement.unlocked_at).toLocaleDateString(DEFAULT_LOCALE, {
-            day: 'numeric',
-            month: 'short',
-            timeZone: TIMEZONE
-          })}
-        </p>
-      )}
-    </div>
-  );
-}
-
-function CategorySection({ title, emoji, achievements, unlockedIds, isDark }) {
-  const unlocked = achievements.filter(a => unlockedIds.includes(a.id));
-  const locked = achievements.filter(a => !unlockedIds.includes(a.id));
-
-  return (
-    <div>
-      <div className="flex items-center gap-2 mb-4">
-        <span className="text-2xl">{emoji}</span>
-        <h2 className={clsx('text-lg font-semibold', isDark ? 'text-white' : 'text-slate-900')}>{title}</h2>
-        <span className={clsx('text-sm', isDark ? 'text-dark-400' : 'text-slate-500')}>({unlocked.length}/{achievements.length})</span>
-      </div>
-
-      <div className="grid grid-cols-2 gap-3">
-        {[...unlocked, ...locked].map(achievement => (
-          <AchievementCard
-            key={achievement.id}
-            achievement={achievement}
-            unlocked={unlockedIds.includes(achievement.id)}
-            isDark={isDark}
-          />
-        ))}
+        <div className={clsx(
+          'flex items-center gap-1 px-2 py-1 rounded-lg',
+          unlocked ? 'bg-violet-500/20' : 'bg-white/5'
+        )}>
+          <ZapIcon className={clsx('h-3.5 w-3.5', unlocked ? 'text-violet-400' : 'text-white/30')} />
+          <span className={clsx('text-sm font-bold', unlocked ? 'text-violet-400' : 'text-white/30')}>
+            +{achievement.xp_reward || 0}
+          </span>
+        </div>
       </div>
     </div>
   );
@@ -160,28 +71,25 @@ function CategorySection({ title, emoji, achievements, unlockedIds, isDark }) {
 
 export default function Achievements() {
   const { user } = useAuth();
-  const { isDark } = useTheme();
   const [achievements, setAchievements] = useState([]);
   const [userAchievements, setUserAchievements] = useState([]);
   const [loading, setLoading] = useState(true);
   const [filter, setFilter] = useState('all');
 
   useEffect(() => {
-    fetchAchievements();
+    if (user) fetchAchievements();
   }, [user]);
 
   const fetchAchievements = async () => {
     try {
       const [allRes, userRes] = await Promise.all([
         fetch('/api/v1/gamification/achievements'),
-        user ? fetch(`/api/v1/candidates/${user.id}/achievements`) : Promise.resolve({ json: () => ({ data: [] }) }),
+        fetch(`/api/v1/gamification/achievements/user/${user.id}`),
       ]);
-      
       const allData = await allRes.json();
       const userData = await userRes.json();
-      
-      if (allData.success) setAchievements(allData.data);
-      if (userData.success) setUserAchievements(userData.data || []);
+      if (allData.success) setAchievements(allData.data || []);
+      if (userData.success) setUserAchievements(userData.data?.map(a => a.achievement_id) || []);
     } catch (error) {
       console.error('Failed to fetch achievements:', error);
     } finally {
@@ -189,140 +97,104 @@ export default function Achievements() {
     }
   };
 
-  const unlockedIds = userAchievements.map(a => a.achievement_id || a.id);
-  const totalXP = achievements.filter(a => unlockedIds.includes(a.id)).reduce((sum, a) => sum + a.xp_reward, 0);
+  const unlockedCount = userAchievements.length;
+  const totalCount = achievements.length;
+  const progress = totalCount > 0 ? (unlockedCount / totalCount) * 100 : 0;
 
-  // Group by category
-  const categories = {
-    jobs: { title: 'Job Mastery', emoji: '💼', achievements: achievements.filter(a => a.category === 'jobs') },
-    streak: { title: 'Consistency', emoji: '🔥', achievements: achievements.filter(a => a.category === 'streak') },
-    training: { title: 'Learning', emoji: '📚', achievements: achievements.filter(a => a.category === 'training') },
-    milestone: { title: 'Milestones', emoji: '🏆', achievements: achievements.filter(a => a.category === 'milestone') },
-    special: { title: 'Special', emoji: '⭐', achievements: achievements.filter(a => !['jobs', 'streak', 'training', 'milestone'].includes(a.category)) },
-  };
+  const filteredAchievements = achievements.filter(a => {
+    const unlocked = userAchievements.includes(a.id);
+    if (filter === 'unlocked') return unlocked;
+    if (filter === 'locked') return !unlocked;
+    return true;
+  });
 
-  const filteredCategories = filter === 'all' 
-    ? categories 
-    : { [filter]: categories[filter] };
+  const sortedAchievements = [...filteredAchievements].sort((a, b) => {
+    const aUnlocked = userAchievements.includes(a.id);
+    const bUnlocked = userAchievements.includes(b.id);
+    if (aUnlocked !== bUnlocked) return bUnlocked ? 1 : -1;
+    return 0;
+  });
 
   return (
-    <div className={clsx('min-h-screen pb-24', isDark ? 'bg-dark-950' : 'bg-transparent')}>
-      {/* Header */}
-      <div className={clsx(
-        'sticky top-0 z-10 backdrop-blur-xl px-4 pt-safe pb-4',
-        isDark
-          ? 'bg-gradient-to-b from-dark-950/98 to-dark-950/95 border-b border-white/5'
-          : 'bg-white/95 shadow-[0_1px_3px_rgba(0,0,0,0.03)]'
-      )}>
-        <div className="flex items-center gap-2">
-          <TrophyIcon className={clsx('h-6 w-6', isDark ? 'text-amber-400' : 'text-amber-500')} />
-          <h1 className={clsx('text-2xl font-bold', isDark ? 'text-white' : 'text-slate-900')}>Achievements</h1>
-        </div>
-        <p className={clsx('text-sm mt-1', isDark ? 'text-dark-400' : 'text-slate-500')}>
-          Collect badges and earn rewards
-        </p>
-      </div>
-
-      <div className="px-4 py-6 space-y-6">
-        {/* Progress summary - Glassmorphism */}
-        <div className={clsx(
-          'relative p-5 rounded-2xl backdrop-blur-md border overflow-hidden',
-          isDark
-            ? 'bg-white/[0.03] border-white/[0.08]'
-            : 'bg-white border-amber-200 shadow-[0_4px_20px_rgba(0,0,0,0.05)]'
-        )}>
-          {/* Background glow */}
-          {isDark && (
-            <>
-              <div className="absolute top-0 right-0 w-40 h-40 bg-amber-500/15 rounded-full blur-3xl -translate-y-1/2 translate-x-1/4" />
-              <div className="absolute bottom-0 left-0 w-32 h-32 bg-violet-500/10 rounded-full blur-3xl translate-y-1/2 -translate-x-1/4" />
-            </>
-          )}
-
-          <div className="relative flex items-center justify-between">
-            <div className="flex items-center gap-4">
-              <div className={clsx(
-                'p-4 rounded-2xl border',
-                isDark
-                  ? 'bg-amber-500/20 border-amber-500/30 shadow-lg shadow-amber-500/20'
-                  : 'bg-amber-100 border-amber-200'
-              )}>
-                <TrophyIcon className={clsx('h-8 w-8', isDark ? 'text-amber-400' : 'text-amber-600')} />
+    <div className="min-h-screen bg-[#020817] pb-24">
+      {/* Header Card */}
+      <div className="px-4 pt-4">
+        <div className="relative rounded-3xl overflow-hidden">
+          <div className="absolute inset-0 bg-gradient-to-br from-[#0a1628] via-[#0d1f3c] to-[#0f2847]" />
+          <div className="absolute top-0 right-0 w-64 h-64 bg-amber-500/20 rounded-full blur-[80px] -translate-y-1/2 translate-x-1/4" />
+          <div className="absolute inset-0 rounded-3xl border border-white/[0.08]" />
+          
+          <div className="relative p-6">
+            <div className="flex items-center gap-4 mb-6">
+              <div className="w-16 h-16 rounded-2xl bg-amber-500/20 border border-amber-500/30 flex items-center justify-center">
+                <TrophyIcon className="h-8 w-8 text-amber-400" />
               </div>
               <div>
-                <p className={clsx('text-3xl font-bold', isDark ? 'text-white' : 'text-slate-900')}>
-                  {unlockedIds.length}<span className={isDark ? 'text-dark-400' : 'text-slate-400'}>/{achievements.length}</span>
-                </p>
-                <p className={clsx('text-sm', isDark ? 'text-dark-400' : 'text-slate-500')}>Achievements Unlocked</p>
+                <h1 className="text-2xl font-bold text-white">Achievements</h1>
+                <p className="text-white/50">Collect badges & earn XP</p>
               </div>
             </div>
-            <div className="text-right">
-              <div className="flex items-center gap-1.5 px-3 py-1.5 rounded-xl bg-violet-500/20 border border-violet-500/30">
-                <ZapIcon className="h-5 w-5 text-amber-400" />
-                <span className="text-xl font-bold text-violet-400">+{totalXP}</span>
-              </div>
-              <p className={clsx('text-xs mt-1', isDark ? 'text-dark-500' : 'text-slate-400')}>XP earned</p>
-            </div>
-          </div>
 
-          {/* Progress bar - glow track */}
-          <div className="mt-5">
-            <div className={clsx('h-3 rounded-full overflow-hidden', isDark ? 'bg-dark-700' : 'bg-slate-200')}>
+            <div className="mb-2 flex items-center justify-between text-sm">
+              <span className="text-white/50">Progress</span>
+              <span className="text-amber-400 font-bold">{unlockedCount} / {totalCount}</span>
+            </div>
+            <div className="h-3 rounded-full bg-white/5 overflow-hidden">
               <div
-                className="h-full rounded-full transition-all duration-700 bg-gradient-to-r from-amber-500 via-yellow-400 to-amber-500"
-                style={{
-                  width: `${(unlockedIds.length / Math.max(achievements.length, 1)) * 100}%`,
-                  boxShadow: isDark ? '0 0 12px rgba(251,191,36,0.5)' : undefined
-                }}
+                className="h-full rounded-full bg-gradient-to-r from-amber-500 to-orange-500 transition-all duration-500"
+                style={{ width: `${progress}%` }}
               />
             </div>
           </div>
         </div>
+      </div>
 
-        {/* Filter tabs - Glass style */}
-        <div className="flex gap-2 overflow-x-auto pb-2 -mx-4 px-4 scrollbar-hide">
+      {/* Filter Tabs */}
+      <div className="px-4 mt-4">
+        <div className="flex gap-2">
           {[
             { id: 'all', label: 'All' },
-            { id: 'jobs', label: '💼 Jobs' },
-            { id: 'streak', label: '🔥 Streak' },
-            { id: 'training', label: '📚 Training' },
-            { id: 'milestone', label: '🏆 Milestones' },
+            { id: 'unlocked', label: `Unlocked (${unlockedCount})` },
+            { id: 'locked', label: `Locked (${totalCount - unlockedCount})` },
           ].map(tab => (
             <button
               key={tab.id}
               onClick={() => setFilter(tab.id)}
               className={clsx(
-                'px-4 py-2 rounded-xl text-sm font-medium whitespace-nowrap transition-all border',
+                'px-4 py-2 rounded-xl text-sm font-medium transition-all',
                 filter === tab.id
-                  ? 'bg-gradient-to-r from-amber-500 to-yellow-500 text-dark-900 border-transparent shadow-lg shadow-amber-500/25'
-                  : isDark
-                    ? 'bg-white/5 border-white/10 text-dark-400 hover:bg-white/10 hover:text-white'
-                    : 'bg-white border-slate-200 text-slate-500 hover:text-slate-700 shadow-sm'
+                  ? 'bg-gradient-to-r from-amber-500 to-orange-500 text-white shadow-lg shadow-amber-500/25'
+                  : 'bg-[#0a1628] border border-white/[0.05] text-white/50 hover:text-white'
               )}
             >
               {tab.label}
             </button>
           ))}
         </div>
+      </div>
 
-        {/* Achievements by category */}
+      {/* Achievements List */}
+      <div className="px-4 py-4">
         {loading ? (
-          <div className="flex items-center justify-center py-12">
-            <div className="animate-spin h-8 w-8 border-4 border-primary-500 border-t-transparent rounded-full" />
+          <div className="space-y-3">
+            {[1, 2, 3, 4].map(i => (
+              <div key={i} className="h-24 rounded-2xl bg-[#0a1628] animate-pulse" />
+            ))}
+          </div>
+        ) : sortedAchievements.length === 0 ? (
+          <div className="text-center py-16 rounded-2xl bg-[#0a1628]/50 border border-white/[0.05]">
+            <TrophyIcon className="h-16 w-16 mx-auto mb-4 text-white/10" />
+            <h3 className="text-white font-semibold mb-2">No achievements found</h3>
+            <p className="text-white/40 text-sm">Keep working to unlock achievements</p>
           </div>
         ) : (
-          <div className="space-y-8">
-            {Object.entries(filteredCategories).map(([key, category]) => (
-              category.achievements.length > 0 && (
-                <CategorySection
-                  key={key}
-                  title={category.title}
-                  emoji={category.emoji}
-                  achievements={category.achievements}
-                  unlockedIds={unlockedIds}
-                  isDark={isDark}
-                />
-              )
+          <div className="space-y-3">
+            {sortedAchievements.map(achievement => (
+              <AchievementCard
+                key={achievement.id}
+                achievement={achievement}
+                unlocked={userAchievements.includes(achievement.id)}
+              />
             ))}
           </div>
         )}

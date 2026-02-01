@@ -393,10 +393,11 @@ async function handleAdminMessage(candidateId, content, templateId = null) {
 
 function sendMessageToCandidate(candidateId, content, templateId = null, channel = 'app') {
   const id = Date.now();
+  const timestamp = new Date().toISOString(); // Millisecond precision
   db.prepare(`
     INSERT INTO messages (id, candidate_id, sender, content, template_id, channel, read, created_at)
-    VALUES (?, ?, 'admin', ?, ?, ?, 0, datetime('now'))
-  `).run(id, candidateId, content, templateId, channel);
+    VALUES (?, ?, 'admin', ?, ?, ?, 0, ?)
+  `).run(id, candidateId, content, templateId, channel, timestamp);
 
   const message = db.prepare('SELECT * FROM messages WHERE id = ?').get(id);
 
@@ -418,10 +419,11 @@ function sendMessageToCandidate(candidateId, content, templateId = null, channel
 async function sendMessageFromCandidate(candidateId, content, channel = 'app') {
   console.log(`📨 Candidate ${candidateId} sent message: "${content.substring(0, 50)}..."`);
   const id = Date.now();
+  const timestamp = new Date().toISOString(); // Millisecond precision
   db.prepare(`
     INSERT INTO messages (id, candidate_id, sender, content, channel, read, created_at)
-    VALUES (?, ?, 'candidate', ?, ?, 0, datetime('now'))
-  `).run(id, candidateId, content, channel);
+    VALUES (?, ?, 'candidate', ?, ?, 0, ?)
+  `).run(id, candidateId, content, channel, timestamp);
 
   const message = db.prepare('SELECT * FROM messages WHERE id = ?').get(id);
 

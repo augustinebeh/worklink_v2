@@ -100,16 +100,24 @@ function getWorkerPaymentStatus(candidateId) {
       LIMIT 5
     `).all(candidateId);
 
-    // Get pending earnings (completed jobs not yet paid)
-    const pendingEarnings = db.prepare(`
+    // Get pending earnings breakdown by job (completed jobs not yet paid)
+    const pendingJobs = db.prepare(`
       SELECT
-        SUM(j.pay_rate * COALESCE(d.hours_worked, 0)) as total
+        j.title as job_title,
+        j.job_date,
+        j.pay_rate,
+        COALESCE(d.hours_worked, 0) as hours_worked,
+        (j.pay_rate * COALESCE(d.hours_worked, 0)) as earnings
       FROM deployments d
       JOIN jobs j ON d.job_id = j.id
       WHERE d.candidate_id = ?
         AND d.status = 'completed'
         AND d.id NOT IN (SELECT deployment_id FROM payments WHERE deployment_id IS NOT NULL)
-    `).get(candidateId);
+      ORDER BY j.job_date DESC
+    `).all(candidateId);
+
+    // Calculate total pending
+    const pendingEarnings = pendingJobs.reduce((sum, job) => sum + (job.earnings || 0), 0);
 
     // Get total earnings this month
     const monthlyEarnings = db.prepare(`
@@ -120,6 +128,9 @@ function getWorkerPaymentStatus(candidateId) {
         AND payment_date >= date('now', 'start of month')
     `).get(candidateId);
 
+    // Get pending payments (status = 'pending')
+    const pendingPayments = payments.filter(p => p.status === 'pending');
+
     return {
       found: true,
       recentPayments: payments.map(p => ({
@@ -128,7 +139,18 @@ function getWorkerPaymentStatus(candidateId) {
         date: p.payment_date,
         method: p.payment_method
       })),
-      pendingEarnings: pendingEarnings?.total || 0,
+      pendingPayments: pendingPayments.map(p => ({
+        amount: p.amount,
+        date: p.payment_date
+      })),
+      pendingJobs: pendingJobs.map(j => ({
+        job: j.job_title,
+        date: j.job_date,
+        hours: j.hours_worked,
+        rate: j.pay_rate,
+        earnings: j.earnings
+      })),
+      pendingEarnings: pendingEarnings || 0,
       monthlyEarnings: monthlyEarnings?.total || 0,
       nextPaymentInfo: 'Payments are processed every Friday for completed jobs.'
     };
@@ -351,7 +373,27 @@ function getUpcomingJobs(candidateId) {
 function executeToolForIntent(candidateId, intent, message) {
   const lowerMessage = message.toLowerCase();
 
-  // Job status related
+  // Payment related - check FIRST (higher priority for money questions)
+  // Triggers on: "how much", "payment", "pay", "salary", "money", "earning", "pending payment"
+  const isPaymentQuery = intent === 'pay_inquiry' ||
+      lowerMessage.includes('how much') ||
+      lowerMessage.includes('payment') ||
+      lowerMessage.includes('pay') ||
+      lowerMessage.includes('salary') ||
+      lowerMessage.includes('money') ||
+      lowerMessage.includes('earning') ||
+      lowerMessage.includes('withdraw') ||
+      lowerMessage.includes('balance') ||
+      (lowerMessage.includes('pending') && (lowerMessage.includes('amount') || lowerMessage.includes('much')));
+
+  if (isPaymentQuery) {
+    return {
+      tool: 'getWorkerPaymentStatus',
+      result: getWorkerPaymentStatus(candidateId)
+    };
+  }
+
+  // Job status related (only if not a payment query)
   if (intent === 'schedule_question' ||
       lowerMessage.includes('status') ||
       lowerMessage.includes('pending') ||
@@ -361,18 +403,6 @@ function executeToolForIntent(candidateId, intent, message) {
     return {
       tool: 'getWorkerJobStatus',
       result: getWorkerJobStatus(candidateId)
-    };
-  }
-
-  // Payment related
-  if (intent === 'pay_inquiry' ||
-      lowerMessage.includes('pay') ||
-      lowerMessage.includes('salary') ||
-      lowerMessage.includes('money') ||
-      lowerMessage.includes('earning')) {
-    return {
-      tool: 'getWorkerPaymentStatus',
-      result: getWorkerPaymentStatus(candidateId)
     };
   }
 
@@ -478,13 +508,30 @@ function formatToolResultAsContext(toolResult) {
 
     case 'getWorkerPaymentStatus':
       context += `Payment Info:\n`;
-      context += `  - Pending Earnings: $${result.pendingEarnings?.toFixed(2) || '0.00'}\n`;
-      context += `  - This Month's Earnings: $${result.monthlyEarnings?.toFixed(2) || '0.00'}\n`;
+      context += `  - TOTAL PENDING EARNINGS: $${result.pendingEarnings?.toFixed(2) || '0.00'}\n`;
+      context += `  - This Month's Paid Earnings: $${result.monthlyEarnings?.toFixed(2) || '0.00'}\n`;
       context += `  - ${result.nextPaymentInfo}\n`;
+
+      // Show pending payments being processed
+      if (result.pendingPayments?.length > 0) {
+        context += `\nPayments Being Processed:\n`;
+        result.pendingPayments.forEach(p => {
+          context += `  - $${p.amount?.toFixed(2)} (processing, expected ${p.date || 'this Friday'})\n`;
+        });
+      }
+
+      // Show breakdown of pending earnings by job
+      if (result.pendingJobs?.length > 0) {
+        context += `\nPending Earnings Breakdown:\n`;
+        result.pendingJobs.forEach(j => {
+          context += `  - ${j.job} (${j.date}): ${j.hours}hrs × $${j.rate}/hr = $${j.earnings?.toFixed(2)}\n`;
+        });
+      }
+
       if (result.recentPayments?.length > 0) {
-        context += `Recent Payments:\n`;
+        context += `\nRecent Payment History:\n`;
         result.recentPayments.forEach(p => {
-          context += `  - $${p.amount} (${p.status}) on ${p.date}\n`;
+          context += `  - $${p.amount} (${p.status}) on ${p.date || 'N/A'}\n`;
         });
       }
       break;

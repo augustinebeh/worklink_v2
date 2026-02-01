@@ -1,132 +1,73 @@
 import { useState, useEffect } from 'react';
-import { Link, useNavigate } from 'react-router-dom';
 import {
   BellIcon,
   CheckIcon,
-  CheckCheckIcon,
-  BriefcaseIcon,
-  WalletIcon,
-  TrophyIcon,
-  ZapIcon,
-  GiftIcon,
   TrashIcon,
+  BriefcaseIcon,
+  DollarSignIcon,
+  ZapIcon,
+  MessageCircleIcon,
+  CalendarIcon,
 } from 'lucide-react';
 import { useAuth } from '../contexts/AuthContext';
-import { useWebSocket } from '../contexts/WebSocketContext';
 import { clsx } from 'clsx';
-import { DEFAULT_LOCALE, TIMEZONE } from '../utils/constants';
 
-const notificationTypeConfig = {
-  job: { icon: BriefcaseIcon, color: 'text-blue-400', bg: 'bg-blue-500/20', link: '/jobs' },
-  payment: { icon: WalletIcon, color: 'text-accent-400', bg: 'bg-accent-500/20', link: '/wallet' },
-  gamification: { icon: TrophyIcon, color: 'text-gold-400', bg: 'bg-gold-500/20', link: '/achievements' },
-  xp: { icon: ZapIcon, color: 'text-purple-400', bg: 'bg-purple-500/20', link: '/profile' },
-  bonus: { icon: GiftIcon, color: 'text-pink-400', bg: 'bg-pink-500/20', link: '/wallet' },
-  system: { icon: BellIcon, color: 'text-slate-400', bg: 'bg-slate-500/20', link: null },
+const typeConfig = {
+  job: { icon: BriefcaseIcon, color: 'text-cyan-400', bg: 'bg-cyan-500/20' },
+  payment: { icon: DollarSignIcon, color: 'text-emerald-400', bg: 'bg-emerald-500/20' },
+  xp: { icon: ZapIcon, color: 'text-violet-400', bg: 'bg-violet-500/20' },
+  message: { icon: MessageCircleIcon, color: 'text-blue-400', bg: 'bg-blue-500/20' },
+  reminder: { icon: CalendarIcon, color: 'text-amber-400', bg: 'bg-amber-500/20' },
+  default: { icon: BellIcon, color: 'text-white/50', bg: 'bg-white/5' },
 };
 
-function NotificationItem({ notification, onRead }) {
-  const navigate = useNavigate();
-  const config = notificationTypeConfig[notification.type] || notificationTypeConfig.system;
+function NotificationItem({ notification, onMarkRead }) {
+  const config = typeConfig[notification.type] || typeConfig.default;
   const Icon = config.icon;
-  const isRead = notification.read === 1;
-
-  const timeAgo = (date) => {
-    const seconds = Math.floor((new Date() - new Date(date)) / 1000);
-    if (seconds < 60) return 'Just now';
-    const minutes = Math.floor(seconds / 60);
-    if (minutes < 60) return `${minutes}m ago`;
-    const hours = Math.floor(minutes / 60);
-    if (hours < 24) return `${hours}h ago`;
-    const days = Math.floor(hours / 24);
-    if (days < 7) return `${days}d ago`;
-    return new Date(date).toLocaleDateString(DEFAULT_LOCALE, { day: 'numeric', month: 'short', timeZone: TIMEZONE });
-  };
-
-  const handleClick = () => {
-    if (!isRead) {
-      onRead(notification.id);
-    }
-    if (config.link) {
-      navigate(config.link);
-    }
-  };
+  const isUnread = !notification.read_at;
 
   return (
-    <button
-      onClick={handleClick}
+    <div
+      onClick={() => !notification.read_at && onMarkRead(notification.id)}
       className={clsx(
-        'w-full flex items-start gap-3 p-4 rounded-xl text-left transition-all backdrop-blur-md border',
-        isRead
-          ? 'bg-slate-50/50 dark:bg-white/[0.02] border-transparent dark:border-white/[0.05]'
-          : 'bg-white dark:bg-white/[0.05] border-slate-200 dark:border-primary-500/30 shadow-sm dark:shadow-lg dark:shadow-primary-500/5'
+        'flex items-start gap-4 p-4 transition-colors cursor-pointer',
+        isUnread ? 'bg-white/[0.02]' : 'hover:bg-white/[0.02]'
       )}
     >
-      {/* Icon */}
-      <div className={clsx('p-2 rounded-lg flex-shrink-0', config.bg)}>
+      <div className={clsx('w-10 h-10 rounded-xl flex items-center justify-center flex-shrink-0', config.bg)}>
         <Icon className={clsx('h-5 w-5', config.color)} />
       </div>
-
-      {/* Content */}
       <div className="flex-1 min-w-0">
         <div className="flex items-start justify-between gap-2">
-          <h4 className={clsx(
-            'font-medium',
-            isRead ? 'text-slate-500 dark:text-dark-300' : 'text-slate-900 dark:text-white'
-          )}>
+          <h3 className={clsx('font-medium', isUnread ? 'text-white' : 'text-white/70')}>
             {notification.title}
-          </h4>
-          {!isRead && (
-            <span className="w-2 h-2 rounded-full bg-primary-500 flex-shrink-0 mt-2" />
-          )}
+          </h3>
+          {isUnread && <span className="w-2 h-2 rounded-full bg-emerald-400 flex-shrink-0 mt-2" />}
         </div>
-        <p className={clsx(
-          'text-sm mt-0.5 line-clamp-2',
-          isRead ? 'text-slate-400 dark:text-dark-500' : 'text-slate-600 dark:text-dark-400'
-        )}>
-          {notification.message}
+        <p className="text-white/40 text-sm mt-0.5">{notification.message}</p>
+        <p className="text-white/30 text-xs mt-1">
+          {new Date(notification.created_at).toLocaleDateString()}
         </p>
-        <p className="text-xs text-slate-400 dark:text-dark-500 mt-2">{timeAgo(notification.created_at)}</p>
       </div>
-    </button>
+    </div>
   );
 }
 
 export default function Notifications() {
   const { user } = useAuth();
-  const { notifications: wsNotifications, unreadNotifications, markNotificationRead, markAllNotificationsRead } = useWebSocket() || {};
-  const navigate = useNavigate();
   const [notifications, setNotifications] = useState([]);
   const [loading, setLoading] = useState(true);
   const [filter, setFilter] = useState('all');
 
   useEffect(() => {
-    fetchNotifications();
+    if (user) fetchNotifications();
   }, [user]);
 
-  // Merge WebSocket notifications with fetched ones
-  useEffect(() => {
-    if (wsNotifications?.length > 0) {
-      setNotifications(prev => {
-        const existingIds = new Set(prev.map(n => n.id));
-        const newNotifications = wsNotifications.filter(n => !existingIds.has(n.id));
-        return [...newNotifications, ...prev];
-      });
-    }
-  }, [wsNotifications]);
-
   const fetchNotifications = async () => {
-    if (!user?.id) {
-      setLoading(false);
-      return;
-    }
-
     try {
-      const res = await fetch(`/api/v1/candidates/${user.id}/notifications`);
+      const res = await fetch(`/api/v1/notifications?candidate_id=${user.id}`);
       const data = await res.json();
-      if (data.success) {
-        setNotifications(data.data || []);
-      }
+      if (data.success) setNotifications(data.data || []);
     } catch (error) {
       console.error('Failed to fetch notifications:', error);
     } finally {
@@ -134,86 +75,56 @@ export default function Notifications() {
     }
   };
 
-  const handleRead = async (notificationId) => {
-    // Update local state
-    setNotifications(prev => prev.map(n =>
-      n.id === notificationId ? { ...n, read: 1 } : n
-    ));
-
-    // Update via WebSocket if available
-    if (markNotificationRead) {
-      markNotificationRead(notificationId);
-    } else {
-      // Fallback to REST
-      await fetch(`/api/v1/candidates/${user.id}/notifications/${notificationId}/read`, {
-        method: 'POST'
-      });
+  const handleMarkRead = async (id) => {
+    try {
+      await fetch(`/api/v1/notifications/${id}/read`, { method: 'POST' });
+      setNotifications(prev =>
+        prev.map(n => (n.id === id ? { ...n, read_at: new Date().toISOString() } : n))
+      );
+    } catch (error) {
+      console.error('Failed to mark as read:', error);
     }
   };
 
   const handleMarkAllRead = async () => {
-    setNotifications(prev => prev.map(n => ({ ...n, read: 1 })));
-
-    if (markAllNotificationsRead) {
-      markAllNotificationsRead();
-    } else {
-      await fetch(`/api/v1/candidates/${user.id}/notifications/read-all`, {
-        method: 'POST'
-      });
+    try {
+      await fetch(`/api/v1/notifications/read-all?candidate_id=${user.id}`, { method: 'POST' });
+      setNotifications(prev => prev.map(n => ({ ...n, read_at: new Date().toISOString() })));
+    } catch (error) {
+      console.error('Failed to mark all as read:', error);
     }
   };
 
-  // Filter out chat notifications (admin messages shown on chat bubble instead)
-  const nonChatNotifications = notifications.filter(n => n.type !== 'chat');
-
-  const filteredNotifications = nonChatNotifications.filter(n => {
-    if (filter === 'unread') return n.read === 0;
+  const unreadCount = notifications.filter(n => !n.read_at).length;
+  const filteredNotifications = notifications.filter(n => {
+    if (filter === 'unread') return !n.read_at;
     return true;
   });
 
-  const unreadCount = nonChatNotifications.filter(n => n.read === 0).length;
-
-  if (!user) {
-    return (
-      <div className="min-h-screen bg-white dark:bg-dark-950 flex items-center justify-center pb-24">
-        <div className="text-center">
-          <BellIcon className="h-12 w-12 text-slate-300 dark:text-dark-600 mx-auto mb-4" />
-          <p className="text-slate-500 dark:text-dark-400">Please log in to view notifications</p>
-          <button
-            onClick={() => navigate('/login')}
-            className="mt-4 px-6 py-2 rounded-xl bg-primary-500 text-white font-medium"
-          >
-            Log In
-          </button>
-        </div>
-      </div>
-    );
-  }
-
   return (
-    <div className="min-h-screen bg-transparent dark:bg-dark-950 pb-24">
-      {/* Header - Glassmorphism */}
-      <div className="sticky top-0 z-10 bg-white/90 dark:bg-dark-950/90 backdrop-blur-xl px-4 pt-safe pb-4 shadow-[0_1px_3px_rgba(0,0,0,0.03)] dark:shadow-none dark:border-b dark:border-white/[0.08]">
-        <div className="flex items-center justify-between">
+    <div className="min-h-screen bg-[#020817] pb-24">
+      {/* Header */}
+      <div className="px-4 pt-4 pb-4">
+        <div className="flex items-center justify-between mb-4">
           <div>
-            <h1 className="text-2xl font-bold text-slate-900 dark:text-white">Notifications</h1>
-            {unreadCount > 0 && (
-              <p className="text-slate-500 dark:text-dark-400 text-sm mt-1">{unreadCount} unread</p>
-            )}
+            <h1 className="text-2xl font-bold text-white flex items-center gap-2">
+              Notifications <span className="text-2xl">🔔</span>
+            </h1>
+            <p className="text-white/40 text-sm">{unreadCount} unread</p>
           </div>
           {unreadCount > 0 && (
             <button
               onClick={handleMarkAllRead}
-              className="flex items-center gap-2 px-4 py-2 rounded-xl bg-white dark:bg-white/[0.05] border border-slate-200 dark:border-white/[0.1] text-slate-600 dark:text-dark-400 hover:text-slate-900 dark:hover:text-white text-sm backdrop-blur-md transition-all"
+              className="flex items-center gap-2 px-4 py-2 rounded-xl bg-emerald-500/20 border border-emerald-500/30 text-emerald-400 text-sm font-medium"
             >
-              <CheckCheckIcon className="h-4 w-4" />
+              <CheckIcon className="h-4 w-4" />
               Mark all read
             </button>
           )}
         </div>
 
-        {/* Filter tabs - Glass style */}
-        <div className="flex gap-2 mt-4">
+        {/* Filter Tabs */}
+        <div className="flex gap-2">
           {[
             { id: 'all', label: 'All' },
             { id: 'unread', label: `Unread (${unreadCount})` },
@@ -222,10 +133,10 @@ export default function Notifications() {
               key={tab.id}
               onClick={() => setFilter(tab.id)}
               className={clsx(
-                'px-4 py-2 rounded-xl text-sm font-medium transition-all border',
+                'px-4 py-2 rounded-xl text-sm font-medium transition-all',
                 filter === tab.id
-                  ? 'bg-gradient-to-r from-primary-500 to-blue-500 text-white border-transparent shadow-lg shadow-primary-500/25'
-                  : 'bg-white dark:bg-white/[0.05] border-slate-200 dark:border-white/[0.1] text-slate-600 dark:text-dark-400'
+                  ? 'bg-gradient-to-r from-emerald-500 to-cyan-500 text-white'
+                  : 'bg-[#0a1628] border border-white/[0.05] text-white/50'
               )}
             >
               {tab.label}
@@ -234,26 +145,27 @@ export default function Notifications() {
         </div>
       </div>
 
-      {/* Notifications list */}
-      <div className="px-4 py-6">
+      {/* Notifications List */}
+      <div className="px-4">
         {loading ? (
-          <div className="flex items-center justify-center py-12">
-            <div className="animate-spin h-8 w-8 border-4 border-primary-500 border-t-transparent rounded-full" />
+          <div className="space-y-3">
+            {[1, 2, 3, 4].map(i => (
+              <div key={i} className="h-20 rounded-2xl bg-[#0a1628] animate-pulse" />
+            ))}
           </div>
         ) : filteredNotifications.length === 0 ? (
-          <div className="text-center py-12 rounded-2xl bg-white dark:bg-white/[0.03] border border-slate-200 dark:border-white/[0.08] backdrop-blur-md shadow-[0_4px_20px_rgba(0,0,0,0.05)] dark:shadow-none">
-            <BellIcon className="h-12 w-12 text-slate-300 dark:text-dark-500 mx-auto mb-4" />
-            <p className="text-slate-500 dark:text-dark-400">
-              {filter === 'unread' ? 'No unread notifications' : 'No notifications yet'}
-            </p>
+          <div className="text-center py-16 rounded-2xl bg-[#0a1628]/50 border border-white/[0.05]">
+            <BellIcon className="h-16 w-16 mx-auto mb-4 text-white/10" />
+            <h3 className="text-white font-semibold mb-2">No notifications</h3>
+            <p className="text-white/40 text-sm">You're all caught up!</p>
           </div>
         ) : (
-          <div className="space-y-3">
+          <div className="rounded-2xl bg-[#0a1628]/50 border border-white/[0.05] divide-y divide-white/[0.05] overflow-hidden">
             {filteredNotifications.map(notification => (
               <NotificationItem
                 key={notification.id}
                 notification={notification}
-                onRead={handleRead}
+                onMarkRead={handleMarkRead}
               />
             ))}
           </div>

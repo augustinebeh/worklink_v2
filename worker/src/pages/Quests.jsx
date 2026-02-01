@@ -1,7 +1,6 @@
 import { useState, useEffect, useCallback } from 'react';
 import { useNavigate } from 'react-router-dom';
 import {
-  SwordIcon,
   ZapIcon,
   CheckCircleIcon,
   ClockIcon,
@@ -11,213 +10,138 @@ import {
   FlameIcon,
   TargetIcon,
   RefreshCwIcon,
-  Loader2Icon,
   SparklesIcon,
+  ChevronRightIcon,
 } from 'lucide-react';
 import { useAuth } from '../contexts/AuthContext';
-import { useTheme } from '../contexts/ThemeContext';
 import { useToast } from '../components/ui/Toast';
 import { clsx } from 'clsx';
 import { QUEST_TYPE_LABELS, TIMEZONE } from '../utils/constants';
 
 const questTypeConfig = {
-  daily: { color: 'text-blue-400', bg: 'bg-blue-500/20', border: 'border-blue-500/30' },
-  weekly: { color: 'text-purple-400', bg: 'bg-purple-500/20', border: 'border-purple-500/30' },
-  special: { color: 'text-gold-400', bg: 'bg-gold-500/20', border: 'border-gold-500/30' },
-  repeatable: { color: 'text-green-400', bg: 'bg-green-500/20', border: 'border-green-500/30' },
-  challenge: { color: 'text-red-400', bg: 'bg-red-500/20', border: 'border-red-500/30' },
+  daily: { color: 'text-cyan-400', bg: 'bg-cyan-500/20', border: 'border-cyan-500/30', icon: ClockIcon },
+  weekly: { color: 'text-violet-400', bg: 'bg-violet-500/20', border: 'border-violet-500/30', icon: StarIcon },
+  special: { color: 'text-amber-400', bg: 'bg-amber-500/20', border: 'border-amber-500/30', icon: SparklesIcon },
+  repeatable: { color: 'text-emerald-400', bg: 'bg-emerald-500/20', border: 'border-emerald-500/30', icon: RefreshCwIcon },
+  challenge: { color: 'text-red-400', bg: 'bg-red-500/20', border: 'border-red-500/30', icon: FlameIcon },
 };
 
-function QuestCard({ quest, onClaim, claiming, isDark }) {
+function QuestCard({ quest, onClaim, claiming }) {
   const navigate = useNavigate();
   const config = questTypeConfig[quest.type] || questTypeConfig.daily;
   const typeLabel = QUEST_TYPE_LABELS[quest.type] || QUEST_TYPE_LABELS.daily;
   const progress = quest.target > 0 ? (quest.progress / quest.target) * 100 : 0;
+  const Icon = config.icon;
 
-  // Status logic:
-  // - 'claimed': XP has been claimed, show strikethrough
-  // - 'claimable': progress >= target, ready to claim
-  // - 'in_progress': started but not complete
-  // - 'available': not started
   const isClaimed = quest.status === 'claimed';
   const isClaimable = quest.status === 'claimable';
-  const isInProgress = quest.status === 'in_progress';
 
-  // Navigate to related page based on quest type
   const handleQuestClick = () => {
     if (isClaimed || isClaimable) return;
-
-    const requirement = quest.requirement || {};
-    const reqType = requirement.type || '';
-
-    if (reqType === 'jobs_completed' || reqType === 'accept_job') {
-      navigate('/jobs');
-    } else if (reqType === 'training_completed') {
-      navigate('/training');
-    } else if (reqType === 'referral') {
-      navigate('/referrals');
-    } else if (reqType === 'streak' || reqType === 'daily_check_in' || reqType === 'check_in') {
-      return;
-    } else if (reqType === 'profile_complete') {
-      navigate('/complete-profile');
-    } else if (reqType === 'rating' || reqType === 'five_star' || reqType === 'review' || reqType === 'five_star_rating') {
-      return;
-    } else if (reqType === 'hours_worked') {
-      navigate('/wallet');
-    }
+    const reqType = quest.requirement?.type || '';
+    if (reqType.includes('job')) navigate('/jobs');
+    else if (reqType.includes('training')) navigate('/training');
+    else if (reqType.includes('referral')) navigate('/referrals');
+    else if (reqType.includes('profile')) navigate('/complete-profile');
   };
 
   return (
     <div
       onClick={handleQuestClick}
       className={clsx(
-        'relative p-4 rounded-2xl backdrop-blur-md transition-all duration-300',
+        'relative p-4 rounded-2xl transition-all',
         isClaimed
-          ? (isDark ? 'bg-dark-800/20 border border-white/5 opacity-50' : 'bg-slate-100/50 border border-slate-200 opacity-50')
+          ? 'bg-white/[0.02] border border-white/[0.03] opacity-40'
           : isClaimable
-            ? 'quest-card-glow quest-card-claimable cursor-default'
-            : isDark
-              ? 'quest-card-glow cursor-pointer'
-              : 'bg-white border border-slate-200 shadow-[0_4px_20px_rgba(0,0,0,0.05)] hover:shadow-[0_8px_30px_rgba(0,0,0,0.08)] cursor-pointer'
+            ? 'bg-emerald-500/10 border border-emerald-500/30 animate-pulse cursor-default'
+            : 'bg-[#0a1628]/80 border border-white/[0.05] hover:border-white/10 cursor-pointer'
       )}
     >
-      {/* Glow effect for claimable */}
-      {isClaimable && isDark && (
-        <div className="absolute inset-0 rounded-2xl bg-emerald-500/10 blur-xl -z-10" />
-      )}
-
-      <div className="flex items-start justify-between gap-4">
-        {/* Left: Icon + Content */}
-        <div className="flex items-start gap-3 flex-1">
-          {/* Quest Icon */}
-          <div className={clsx(
-            'w-12 h-12 rounded-xl flex items-center justify-center flex-shrink-0 border',
-            isClaimed
-              ? (isDark ? 'bg-dark-700 border-dark-600' : 'bg-slate-100 border-slate-200')
-              : isClaimable
-                ? 'bg-emerald-500/20 border-emerald-500/30'
-                : `${config.bg} ${config.border}`
-          )}>
-            {isClaimed ? (
-              <CheckCircleIcon className={clsx('h-6 w-6', isDark ? 'text-dark-500' : 'text-slate-400')} />
-            ) : isClaimable ? (
-              <GiftIcon className="h-6 w-6 text-emerald-400" />
-            ) : (
-              <TargetIcon className={clsx('h-6 w-6', config.color)} />
-            )}
-          </div>
-
-          <div className="flex-1 min-w-0">
-            {/* Type badge */}
-            <div className="flex items-center gap-2 mb-1.5">
-              <span className={clsx(
-                'px-2 py-0.5 rounded-full text-2xs font-semibold uppercase tracking-wide',
-                config.bg, config.color
-              )}>
-                {typeLabel}
-              </span>
-              {isClaimable && (
-                <span className="flex items-center gap-1 px-2 py-0.5 rounded-full bg-emerald-500/20 text-emerald-400 text-2xs font-semibold">
-                  <SparklesIcon className="h-3 w-3" />
-                  Ready!
-                </span>
-              )}
-            </div>
-
-            {/* Title */}
-            <h3 className={clsx(
-              'font-semibold',
-              isClaimed
-                ? (isDark ? 'text-dark-500' : 'text-slate-400') + ' line-through'
-                : (isDark ? 'text-white' : 'text-slate-900')
-            )}>
-              {quest.title}
-            </h3>
-            <p className={clsx('text-sm mt-0.5 line-clamp-2', isDark ? 'text-dark-400' : 'text-slate-500')}>
-              {quest.description}
-            </p>
-
-            {/* Progress bar */}
-            {!isClaimed && quest.target > 1 && (
-              <div className="mt-3">
-                <div className={clsx(
-                  'h-2 rounded-full overflow-hidden',
-                  isDark ? 'bg-dark-700' : 'bg-slate-200'
-                )}>
-                  <div
-                    className={clsx(
-                      'h-full rounded-full transition-all duration-500',
-                      isClaimable
-                        ? 'bg-gradient-to-r from-emerald-500 to-emerald-400'
-                        : 'bg-gradient-to-r from-violet-500 via-primary-500 to-cyan-400'
-                    )}
-                    style={{ width: `${Math.min(progress, 100)}%` }}
-                  />
-                </div>
-                <p className={clsx('text-xs mt-1', isDark ? 'text-dark-400' : 'text-slate-500')}>
-                  {quest.progress} / {quest.target}
-                </p>
-              </div>
-            )}
-
-            {/* Tap hint */}
-            {!isClaimed && !isClaimable && quest.requirement?.type && (
-              <p className={clsx('text-xs mt-2 font-medium', isDark ? 'text-primary-400' : 'text-primary-600')}>
-                Tap to start →
-              </p>
-            )}
-          </div>
+      <div className="flex items-start gap-4">
+        {/* Icon */}
+        <div className={clsx(
+          'w-12 h-12 rounded-2xl flex items-center justify-center flex-shrink-0',
+          isClaimed ? 'bg-white/5' : isClaimable ? 'bg-emerald-500/20' : config.bg
+        )}>
+          {isClaimed ? (
+            <CheckCircleIcon className="h-6 w-6 text-white/30" />
+          ) : (
+            <Icon className={clsx('h-6 w-6', isClaimable ? 'text-emerald-400' : config.color)} />
+          )}
         </div>
 
-        {/* Right: XP Reward + Action */}
-        <div className="flex flex-col items-end gap-2 flex-shrink-0">
-          {/* XP Display */}
-          <div className={clsx(
-            'flex items-center gap-1.5 px-3 py-2 rounded-xl border',
-            isClaimed
-              ? (isDark ? 'bg-dark-700 border-dark-600 text-dark-500' : 'bg-slate-100 border-slate-200 text-slate-400')
-              : isClaimable
-                ? 'bg-emerald-500/20 border-emerald-500/30'
-                : 'bg-gradient-to-r from-violet-500/20 to-primary-500/20 border-violet-500/30'
-          )}>
-            <ZapIcon className={clsx(
-              'h-5 w-5',
-              isClaimed ? '' : 'text-amber-400'
-            )} />
+        {/* Content */}
+        <div className="flex-1 min-w-0">
+          <div className="flex items-center gap-2 mb-1">
             <span className={clsx(
-              'text-lg font-bold',
-              isClaimed
-                ? ''
-                : isClaimable
-                  ? 'text-emerald-400'
-                  : 'text-violet-400'
+              'px-2 py-0.5 rounded-md text-xs font-medium',
+              isClaimed ? 'bg-white/5 text-white/30' : `${config.bg} ${config.color}`
             )}>
+              {typeLabel}
+            </span>
+            {isClaimable && (
+              <span className="px-2 py-0.5 rounded-md bg-emerald-500/20 text-emerald-400 text-xs font-medium animate-pulse">
+                Ready!
+              </span>
+            )}
+          </div>
+          
+          <h3 className={clsx(
+            'font-semibold',
+            isClaimed ? 'text-white/30 line-through' : 'text-white'
+          )}>
+            {quest.title}
+          </h3>
+          
+          <p className={clsx('text-sm mt-0.5', isClaimed ? 'text-white/20' : 'text-white/40')}>
+            {quest.description}
+          </p>
+
+          {/* Progress Bar */}
+          {!isClaimed && (
+            <div className="mt-3">
+              <div className="flex items-center justify-between text-xs mb-1">
+                <span className="text-white/40">Progress</span>
+                <span className={isClaimable ? 'text-emerald-400 font-medium' : 'text-white/60'}>
+                  {quest.progress}/{quest.target}
+                </span>
+              </div>
+              <div className="h-2 rounded-full bg-white/5 overflow-hidden">
+                <div
+                  className={clsx(
+                    'h-full rounded-full transition-all duration-500',
+                    isClaimable
+                      ? 'bg-gradient-to-r from-emerald-500 to-cyan-500'
+                      : 'bg-gradient-to-r from-violet-500 to-cyan-500'
+                  )}
+                  style={{ width: `${Math.min(progress, 100)}%` }}
+                />
+              </div>
+            </div>
+          )}
+        </div>
+
+        {/* Reward & Action */}
+        <div className="flex flex-col items-end gap-2">
+          <div className="flex items-center gap-1 px-2 py-1 rounded-lg bg-violet-500/20">
+            <ZapIcon className="h-3.5 w-3.5 text-violet-400" />
+            <span className={clsx('text-sm font-bold', isClaimed ? 'text-white/30' : 'text-violet-400')}>
               +{quest.xp_reward}
             </span>
           </div>
-
-          {/* Claim Button */}
+          
           {isClaimable && (
             <button
-              onClick={(e) => {
-                e.stopPropagation();
-                onClaim(quest.id, quest.xp_reward);
-              }}
-              disabled={claiming === quest.id}
-              className="btn-neon-claim flex items-center gap-2"
+              onClick={(e) => { e.stopPropagation(); onClaim(quest); }}
+              disabled={claiming}
+              className="px-4 py-2 rounded-xl bg-gradient-to-r from-emerald-500 to-cyan-500 text-white text-sm font-semibold shadow-lg shadow-emerald-500/25 disabled:opacity-50 active:scale-95 transition-transform"
             >
-              {claiming === quest.id ? (
-                <>
-                  <Loader2Icon className="h-4 w-4 animate-spin" />
-                  <span>Claiming...</span>
-                </>
-              ) : (
-                <>
-                  <GiftIcon className="h-4 w-4" />
-                  <span>Claim!</span>
-                </>
-              )}
+              {claiming ? 'Claiming...' : 'Claim'}
             </button>
+          )}
+          
+          {!isClaimed && !isClaimable && (
+            <ChevronRightIcon className="h-5 w-5 text-white/20" />
           )}
         </div>
       </div>
@@ -225,334 +149,156 @@ function QuestCard({ quest, onClaim, claiming, isDark }) {
   );
 }
 
-function StatCard({ icon: Icon, label, value, color, isDark }) {
-  const colorMap = {
-    'text-primary-400': { bg: 'bg-primary-500/20', border: 'border-primary-500/30', glow: 'shadow-primary-500/20' },
-    'text-accent-400': { bg: 'bg-emerald-500/20', border: 'border-emerald-500/30', glow: 'shadow-emerald-500/20' },
-    'text-gold-400': { bg: 'bg-amber-500/20', border: 'border-amber-500/30', glow: 'shadow-amber-500/20' },
-  };
-  const styles = colorMap[color] || colorMap['text-primary-400'];
-
-  return (
-    <div className={clsx(
-      'glass-stat-pod flex flex-col items-center text-center',
-      isDark && `shadow-lg ${styles.glow}`
-    )}>
-      <div className={clsx(
-        'w-10 h-10 rounded-xl flex items-center justify-center mb-2 border',
-        styles.bg, styles.border
-      )}>
-        <Icon className={clsx('h-5 w-5', color)} />
-      </div>
-      <p className={clsx(
-        'text-2xl font-bold',
-        isDark ? 'text-white' : 'text-slate-900'
-      )}>
-        {value}
-      </p>
-      <p className={clsx('text-xs', isDark ? 'text-dark-400' : 'text-slate-500')}>{label}</p>
-    </div>
-  );
-}
-
-// Calculate time until midnight Singapore time
-function getTimeUntilReset() {
-  const now = new Date();
-  // Get current time in Singapore
-  const sgTime = new Date(now.toLocaleString('en-US', { timeZone: TIMEZONE }));
-
-  // Get midnight Singapore time tomorrow
-  const midnight = new Date(sgTime);
-  midnight.setDate(midnight.getDate() + 1);
-  midnight.setHours(0, 0, 0, 0);
-
-  // Calculate difference
-  const diff = midnight - sgTime;
-  const hours = Math.floor(diff / (1000 * 60 * 60));
-  const minutes = Math.floor((diff % (1000 * 60 * 60)) / (1000 * 60));
-  const seconds = Math.floor((diff % (1000 * 60)) / 1000);
-
-  return {
-    hours: String(hours).padStart(2, '0'),
-    minutes: String(minutes).padStart(2, '0'),
-    seconds: String(seconds).padStart(2, '0'),
-  };
-}
-
 export default function Quests() {
   const { user, refreshUser } = useAuth();
-  const { isDark } = useTheme();
   const toast = useToast();
   const [quests, setQuests] = useState([]);
-  const [stats, setStats] = useState({ completed: 0, available: 0, totalXP: 0 });
   const [loading, setLoading] = useState(true);
   const [claiming, setClaiming] = useState(null);
   const [filter, setFilter] = useState('all');
-  const [resetTimer, setResetTimer] = useState(getTimeUntilReset());
+  const [refreshing, setRefreshing] = useState(false);
 
-  // Update reset timer every second
   useEffect(() => {
-    const interval = setInterval(() => {
-      setResetTimer(getTimeUntilReset());
-    }, 1000);
-    return () => clearInterval(interval);
-  }, []);
+    if (user) fetchQuests();
+  }, [user]);
 
-  // Record daily check-in when visiting quests page
-  const recordDailyCheckIn = useCallback(async () => {
-    if (!user?.id) return;
-
+  const fetchQuests = async () => {
     try {
-      await fetch(`/api/v1/gamification/quests/check-in`, {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ candidate_id: user.id }),
-      });
-    } catch (error) {
-      console.error('Failed to record check-in:', error);
-    }
-  }, [user?.id]);
-
-  const fetchQuests = useCallback(async () => {
-    if (!user?.id) {
-      setLoading(false);
-      return;
-    }
-
-    try {
-      // Record daily check-in first
-      await recordDailyCheckIn();
-
       const res = await fetch(`/api/v1/gamification/quests/user/${user.id}`);
       const data = await res.json();
-
       if (data.success) {
-        setQuests(data.data);
-
-        // Calculate stats from real data
-        const claimed = data.data.filter(q => q.status === 'claimed').length;
-        const claimable = data.data.filter(q => q.status === 'claimable').length;
-        const available = data.data.filter(q => q.status === 'available' || q.status === 'in_progress').length;
-        const totalXP = data.data.filter(q => q.status === 'claimed').reduce((sum, q) => sum + q.xp_reward, 0);
-
-        setStats({
-          completed: claimed,
-          available: available + claimable,
-          totalXP
+        const sorted = [...(data.data || [])].sort((a, b) => {
+          const order = { claimable: 0, in_progress: 1, available: 2, claimed: 3 };
+          return (order[a.status] ?? 4) - (order[b.status] ?? 4);
         });
+        setQuests(sorted);
       }
     } catch (error) {
       console.error('Failed to fetch quests:', error);
-      toast.error('Failed to load quests');
     } finally {
       setLoading(false);
+      setRefreshing(false);
     }
-  }, [user?.id, toast]);
+  };
 
-  useEffect(() => {
+  const handleRefresh = () => {
+    setRefreshing(true);
     fetchQuests();
-  }, [fetchQuests]);
+  };
 
-  const handleClaim = async (questId, xpReward) => {
-    if (!user?.id) return;
-
-    setClaiming(questId);
+  const handleClaim = async (quest) => {
+    setClaiming(quest.id);
     try {
-      const res = await fetch(`/api/v1/gamification/quests/${questId}/claim`, {
+      const res = await fetch(`/api/v1/gamification/quests/${quest.id}/claim`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ candidate_id: user.id }),
+        body: JSON.stringify({ candidateId: user.id }),
       });
-
       const data = await res.json();
-
       if (data.success) {
-        // Update local state immediately
-        setQuests(prev => prev.map(q =>
-          q.id === questId ? { ...q, status: 'claimed', claimed: 1 } : q
-        ));
-
-        // Update stats
-        setStats(prev => ({
-          ...prev,
-          completed: prev.completed + 1,
-          available: prev.available - 1,
-          totalXP: prev.totalXP + xpReward,
-        }));
-
-        // Show success toast
-        toast.success(`+${xpReward} XP Earned!`, data.data.leveled_up ? `Level Up! You're now Level ${data.data.new_level}!` : undefined);
-
-        // Refresh user data to update XP bar across the app
-        if (refreshUser) {
-          await refreshUser();
-        }
+        toast.success('Quest Completed!', `+${quest.xp_reward} XP earned`);
+        fetchQuests();
+        refreshUser();
       } else {
-        toast.error('Failed to claim', data.error);
+        toast.error('Failed', data.error || 'Could not claim reward');
       }
     } catch (error) {
-      console.error('Failed to claim quest:', error);
-      toast.error('Failed to claim reward');
+      toast.error('Error', 'Please try again');
     } finally {
       setClaiming(null);
     }
   };
 
   const filteredQuests = quests.filter(q => {
+    if (filter === 'active') return q.status !== 'claimed';
     if (filter === 'completed') return q.status === 'claimed';
-    if (filter === 'available') return q.status === 'available' || q.status === 'in_progress' || q.status === 'claimable';
-    if (filter === 'daily') return q.type === 'daily';
-    if (filter === 'weekly') return q.type === 'weekly';
-    if (filter === 'special') return q.type === 'special';
     return true;
   });
 
-  // Sort: claimable first, then in_progress, then available, then claimed
-  const sortedQuests = [...filteredQuests].sort((a, b) => {
-    const statusOrder = { claimable: 0, in_progress: 1, available: 2, claimed: 3 };
-    return (statusOrder[a.status] || 4) - (statusOrder[b.status] || 4);
-  });
+  const claimableCount = quests.filter(q => q.status === 'claimable').length;
+  const completedCount = quests.filter(q => q.status === 'claimed').length;
 
   return (
-    <div className={clsx('min-h-screen pb-24', isDark ? 'bg-dark-950' : 'bg-transparent')}>
-      {/* Header with gradient background */}
-      <div className={clsx(
-        'sticky top-0 z-10 backdrop-blur-xl px-4 pt-safe pb-4',
-        isDark
-          ? 'bg-gradient-to-b from-dark-950/98 to-dark-950/95 border-b border-white/5'
-          : 'bg-white/95 shadow-[0_1px_3px_rgba(0,0,0,0.03)]'
-      )}>
-        <div className="flex items-center justify-between">
+    <div className="min-h-screen bg-[#020817] pb-24">
+      {/* Header */}
+      <div className="px-4 pt-4 pb-2">
+        <div className="flex items-center justify-between mb-4">
           <div>
-            <div className="flex items-center gap-2">
-              <SwordIcon className={clsx('h-6 w-6', isDark ? 'text-violet-400' : 'text-violet-500')} />
-              <h1 className={clsx('text-2xl font-bold', isDark ? 'text-white' : 'text-slate-900')}>Quests</h1>
-            </div>
-            <p className={clsx('text-sm mt-1', isDark ? 'text-dark-400' : 'text-slate-500')}>
-              Complete quests to earn XP rewards
-            </p>
+            <h1 className="text-2xl font-bold text-white flex items-center gap-2">
+              Quests <span className="text-2xl">🎯</span>
+            </h1>
+            <p className="text-white/40 text-sm">Complete quests to earn XP</p>
           </div>
           <button
-            onClick={fetchQuests}
-            disabled={loading}
-            className={clsx(
-              'p-2.5 rounded-xl transition-all border',
-              isDark
-                ? 'bg-white/5 border-white/10 text-dark-400 hover:bg-white/10 hover:text-white'
-                : 'bg-slate-100 border-slate-200 text-slate-500 hover:text-slate-700'
-            )}
+            onClick={handleRefresh}
+            disabled={refreshing}
+            className="p-3 rounded-xl bg-white/5 border border-white/10 hover:bg-white/10 transition-colors disabled:opacity-50"
           >
-            <RefreshCwIcon className={clsx('h-5 w-5', loading && 'animate-spin')} />
+            <RefreshCwIcon className={clsx('h-5 w-5 text-white/50', refreshing && 'animate-spin')} />
           </button>
         </div>
-      </div>
 
-      <div className="px-4 py-6 space-y-6">
-        {/* Stats - Glass Pods */}
-        <div className="grid grid-cols-3 gap-3">
-          <StatCard icon={TargetIcon} label="Available" value={stats.available} color="text-primary-400" isDark={isDark} />
-          <StatCard icon={CheckCircleIcon} label="Claimed" value={stats.completed} color="text-accent-400" isDark={isDark} />
-          <StatCard icon={ZapIcon} label="XP Earned" value={stats.totalXP} color="text-gold-400" isDark={isDark} />
-        </div>
-
-        {/* Daily Reset Timer - Glassmorphism */}
-        <div className={clsx(
-          'relative p-4 rounded-2xl backdrop-blur-md border overflow-hidden',
-          isDark
-            ? 'bg-white/[0.03] border-white/[0.08]'
-            : 'bg-white border-slate-200 shadow-[0_4px_20px_rgba(0,0,0,0.05)]'
-        )}>
-          {/* Background glow */}
-          {isDark && (
-            <>
-              <div className="absolute top-0 right-0 w-32 h-32 bg-violet-500/10 rounded-full blur-3xl -translate-y-1/2 translate-x-1/2" />
-              <div className="absolute bottom-0 left-0 w-24 h-24 bg-emerald-500/10 rounded-full blur-3xl translate-y-1/2 -translate-x-1/2" />
-            </>
-          )}
-
-          <div className="relative flex items-center justify-between">
-            <div className="flex items-center gap-3">
-              <div className={clsx(
-                'p-3 rounded-xl border',
-                isDark
-                  ? 'bg-violet-500/20 border-violet-500/30'
-                  : 'bg-violet-100 border-violet-200'
-              )}>
-                <ClockIcon className={clsx('h-5 w-5', isDark ? 'text-violet-400' : 'text-violet-600')} />
-              </div>
-              <div>
-                <p className={clsx('font-semibold', isDark ? 'text-white' : 'text-slate-900')}>Daily Reset</p>
-                <p className={clsx('text-sm', isDark ? 'text-dark-400' : 'text-slate-500')}>New quests at midnight</p>
-              </div>
-            </div>
-            <div className="text-right">
-              <p className={clsx(
-                'text-2xl font-bold font-mono tracking-wider',
-                isDark ? 'text-emerald-400' : 'text-emerald-600'
-              )}>
-                {resetTimer.hours}:{resetTimer.minutes}:{resetTimer.seconds}
-              </p>
-              <p className={clsx('text-xs', isDark ? 'text-dark-500' : 'text-slate-400')}>remaining</p>
-            </div>
+        {/* Stats Cards */}
+        <div className="grid grid-cols-3 gap-3 mb-4">
+          <div className="p-3 rounded-2xl bg-emerald-500/10 border border-emerald-500/20 text-center">
+            <p className="text-2xl font-bold text-emerald-400">{claimableCount}</p>
+            <p className="text-xs text-white/40">Ready to Claim</p>
+          </div>
+          <div className="p-3 rounded-2xl bg-violet-500/10 border border-violet-500/20 text-center">
+            <p className="text-2xl font-bold text-violet-400">{quests.length - completedCount}</p>
+            <p className="text-xs text-white/40">Active</p>
+          </div>
+          <div className="p-3 rounded-2xl bg-cyan-500/10 border border-cyan-500/20 text-center">
+            <p className="text-2xl font-bold text-cyan-400">{completedCount}</p>
+            <p className="text-xs text-white/40">Completed</p>
           </div>
         </div>
 
-        {/* Filter tabs - Glass style */}
-        <div className="flex gap-2 overflow-x-auto pb-2 -mx-4 px-4 scrollbar-hide">
+        {/* Filter Tabs */}
+        <div className="flex gap-2">
           {[
             { id: 'all', label: 'All' },
-            { id: 'available', label: 'Available' },
-            { id: 'daily', label: 'Daily' },
-            { id: 'weekly', label: 'Weekly' },
-            { id: 'special', label: 'Special' },
-            { id: 'completed', label: 'Claimed' },
+            { id: 'active', label: 'Active' },
+            { id: 'completed', label: 'Completed' },
           ].map(tab => (
             <button
               key={tab.id}
               onClick={() => setFilter(tab.id)}
               className={clsx(
-                'px-4 py-2 rounded-xl text-sm font-medium whitespace-nowrap transition-all border',
+                'px-4 py-2 rounded-xl text-sm font-medium transition-all',
                 filter === tab.id
-                  ? 'bg-gradient-to-r from-violet-500 to-primary-500 text-white border-transparent shadow-lg shadow-violet-500/25'
-                  : isDark
-                    ? 'bg-white/5 border-white/10 text-dark-400 hover:bg-white/10 hover:text-white'
-                    : 'bg-white border-slate-200 text-slate-500 hover:text-slate-700 shadow-sm'
+                  ? 'bg-gradient-to-r from-violet-500 to-cyan-500 text-white shadow-lg shadow-violet-500/25'
+                  : 'bg-[#0a1628] border border-white/[0.05] text-white/50 hover:text-white'
               )}
             >
               {tab.label}
             </button>
           ))}
         </div>
+      </div>
 
-        {/* Quest list */}
+      {/* Quests List */}
+      <div className="px-4 py-4">
         {loading ? (
-          <div className="flex items-center justify-center py-12">
-            <div className="animate-spin h-8 w-8 border-4 border-primary-500 border-t-transparent rounded-full" />
+          <div className="space-y-3">
+            {[1, 2, 3, 4].map(i => (
+              <div key={i} className="h-32 rounded-2xl bg-[#0a1628] animate-pulse" />
+            ))}
           </div>
-        ) : sortedQuests.length === 0 ? (
-          <div className="text-center py-12">
-            <SwordIcon className={clsx('h-12 w-12 mx-auto mb-4', isDark ? 'text-dark-600' : 'text-slate-300')} />
-            <p className={isDark ? 'text-dark-400' : 'text-slate-500'}>
-              {filter === 'completed' ? 'No quests claimed yet' : 'No quests available'}
-            </p>
-            {filter !== 'all' && (
-              <button
-                onClick={() => setFilter('all')}
-                className="mt-4 text-primary-500 text-sm font-medium"
-              >
-                View all quests
-              </button>
-            )}
+        ) : filteredQuests.length === 0 ? (
+          <div className="text-center py-16 rounded-2xl bg-[#0a1628]/50 border border-white/[0.05]">
+            <TargetIcon className="h-16 w-16 mx-auto mb-4 text-white/10" />
+            <h3 className="text-white font-semibold mb-2">No quests found</h3>
+            <p className="text-white/40 text-sm">Check back later for new quests</p>
           </div>
         ) : (
-          <div className="space-y-4">
-            {sortedQuests.map(quest => (
+          <div className="space-y-3">
+            {filteredQuests.map(quest => (
               <QuestCard
                 key={quest.id}
                 quest={quest}
                 onClaim={handleClaim}
-                claiming={claiming}
-                isDark={isDark}
+                claiming={claiming === quest.id}
               />
             ))}
           </div>

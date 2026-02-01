@@ -3,66 +3,86 @@ import {
   WalletIcon,
   ArrowDownLeftIcon,
   ClockIcon,
-  CheckCircleIcon,
   TrendingUpIcon,
   EyeIcon,
   EyeOffIcon,
+  ChevronRightIcon,
+  SparklesIcon,
+  CalendarIcon,
 } from 'lucide-react';
 import { useAuth } from '../contexts/AuthContext';
-import { useTheme } from '../contexts/ThemeContext';
 import { clsx } from 'clsx';
 import { formatMoney, DEFAULT_LOCALE, TIMEZONE, PAYMENT_STATUS_LABELS, getSGDateString } from '../utils/constants';
 
-function TransactionItem({ payment, isDark }) {
+function TransactionItem({ payment }) {
   const statusConfig = {
-    pending: { color: 'text-amber-400', bg: 'bg-amber-500/20', border: 'border-amber-500/30' },
-    approved: { color: 'text-blue-400', bg: 'bg-blue-500/20', border: 'border-blue-500/30' },
-    processing: { color: 'text-purple-400', bg: 'bg-purple-500/20', border: 'border-purple-500/30' },
-    paid: { color: 'text-emerald-400', bg: 'bg-emerald-500/20', border: 'border-emerald-500/30' },
+    pending: { color: 'text-amber-400', bg: 'bg-amber-500/20', border: 'border-amber-500/30', icon: ClockIcon },
+    approved: { color: 'text-blue-400', bg: 'bg-blue-500/20', border: 'border-blue-500/30', icon: ClockIcon },
+    processing: { color: 'text-violet-400', bg: 'bg-violet-500/20', border: 'border-violet-500/30', icon: ClockIcon },
+    paid: { color: 'text-emerald-400', bg: 'bg-emerald-500/20', border: 'border-emerald-500/30', icon: ArrowDownLeftIcon },
   };
 
   const config = statusConfig[payment.status] || statusConfig.pending;
   const statusLabel = PAYMENT_STATUS_LABELS[payment.status] || PAYMENT_STATUS_LABELS.pending;
   const isPaid = payment.status === 'paid';
+  const Icon = config.icon;
 
   return (
-    <div className="flex items-center gap-4 p-4">
+    <div className="flex items-center gap-4 p-4 hover:bg-white/[0.02] transition-colors">
       <div className={clsx(
-        'w-11 h-11 rounded-xl flex items-center justify-center border',
-        config.bg, config.border
+        'w-12 h-12 rounded-2xl flex items-center justify-center',
+        config.bg, 'border', config.border
       )}>
-        {isPaid ? (
-          <ArrowDownLeftIcon className={clsx('h-5 w-5', config.color)} />
-        ) : (
-          <ClockIcon className={clsx('h-5 w-5', config.color)} />
-        )}
+        <Icon className={clsx('h-5 w-5', config.color)} />
       </div>
       <div className="flex-1 min-w-0">
-        <p className={clsx('font-medium truncate', isDark ? 'text-white' : 'text-slate-900')}>
+        <p className="font-medium text-white truncate">
           {payment.job_title || 'Job Payment'}
         </p>
-        <p className={clsx('text-sm', isDark ? 'text-dark-500' : 'text-slate-500')}>
-          {new Date(payment.created_at).toLocaleDateString(DEFAULT_LOCALE, { day: 'numeric', month: 'short', year: 'numeric', timeZone: TIMEZONE })}
-        </p>
+        <div className="flex items-center gap-2 mt-0.5">
+          <span className="text-white/40 text-sm">
+            {new Date(payment.created_at).toLocaleDateString(DEFAULT_LOCALE, { day: 'numeric', month: 'short', timeZone: TIMEZONE })}
+          </span>
+          <span className={clsx('px-2 py-0.5 rounded-full text-xs font-medium', config.bg, config.color, 'border', config.border)}>
+            {statusLabel}
+          </span>
+        </div>
       </div>
       <div className="text-right">
-        <p className={clsx(
-          'font-bold text-lg',
-          isPaid ? 'text-emerald-400' : isDark ? 'text-white' : 'text-slate-900'
-        )}
-        style={isPaid && isDark ? { textShadow: '0 0 20px rgba(52,211,153,0.3)' } : undefined}
-        >
+        <p className={clsx('font-bold text-lg', isPaid ? 'text-emerald-400' : 'text-white')}>
           {isPaid ? '+' : ''}${formatMoney(payment.total_amount)}
         </p>
-        <p className={clsx('text-xs font-medium', config.color)}>{statusLabel}</p>
       </div>
+    </div>
+  );
+}
+
+function StatPod({ label, value, icon: Icon, color = 'emerald', hidden = false }) {
+  const colorClasses = {
+    emerald: 'from-emerald-500/20 to-emerald-500/5 border-emerald-500/20 text-emerald-400',
+    amber: 'from-amber-500/20 to-amber-500/5 border-amber-500/20 text-amber-400',
+    violet: 'from-violet-500/20 to-violet-500/5 border-violet-500/20 text-violet-400',
+    cyan: 'from-cyan-500/20 to-cyan-500/5 border-cyan-500/20 text-cyan-400',
+  };
+
+  return (
+    <div className={clsx(
+      'flex-1 p-4 rounded-2xl border bg-gradient-to-br',
+      colorClasses[color].split(' ').slice(0, 3).join(' ')
+    )}>
+      <div className="flex items-center gap-2 mb-2">
+        <Icon className={clsx('h-4 w-4', colorClasses[color].split(' ').slice(-1))} />
+        <span className="text-white/50 text-xs">{label}</span>
+      </div>
+      <p className={clsx('text-2xl font-bold', colorClasses[color].split(' ').slice(-1))}>
+        {hidden ? '••••' : value}
+      </p>
     </div>
   );
 }
 
 export default function Wallet() {
   const { user } = useAuth();
-  const { isDark } = useTheme();
   const [payments, setPayments] = useState([]);
   const [stats, setStats] = useState({ total: 0, pending: 0, thisMonth: 0 });
   const [loading, setLoading] = useState(true);
@@ -80,10 +100,9 @@ export default function Wallet() {
       if (data.success) {
         setPayments(data.data);
 
-        // Calculate stats (Singapore timezone)
         const total = data.data.filter(p => p.status === 'paid').reduce((sum, p) => sum + p.total_amount, 0);
         const pending = data.data.filter(p => p.status === 'pending' || p.status === 'approved').reduce((sum, p) => sum + p.total_amount, 0);
-        const currentMonth = getSGDateString().substring(0, 7); // YYYY-MM
+        const currentMonth = getSGDateString().substring(0, 7);
         const thisMonth = data.data.filter(p => {
           const paymentMonth = getSGDateString(p.created_at).substring(0, 7);
           return p.status === 'paid' && paymentMonth === currentMonth;
@@ -105,132 +124,99 @@ export default function Wallet() {
   });
 
   return (
-    <div className={clsx('min-h-screen pb-24', isDark ? 'bg-dark-950' : 'bg-transparent')}>
-      {/* Balance Card - Glassmorphism */}
-      <div className="px-4 py-4">
-        <div className={clsx(
-          'relative overflow-hidden rounded-3xl p-6 backdrop-blur-xl border',
-          isDark
-            ? 'bg-gradient-to-br from-[#080810] via-[#0c0d1a] to-[#0f1020] border-white/[0.08]'
-            : 'bg-gradient-to-br from-[#007AFF] via-[#0062FF] to-[#0055EB] border-transparent shadow-[0_15px_50px_rgba(0,122,255,0.25)]'
-        )}>
-          {/* Background gradient blobs */}
-          <div className={clsx(
-            'absolute top-0 right-0 w-80 h-80 rounded-full blur-[100px] -translate-y-1/3 translate-x-1/4',
-            isDark ? 'bg-emerald-500/15' : 'bg-white/30'
-          )} />
-          <div className={clsx(
-            'absolute bottom-0 left-0 w-64 h-64 rounded-full blur-[100px] translate-y-1/3 -translate-x-1/4',
-            isDark ? 'bg-violet-500/15' : 'bg-white/20'
-          )} />
-
-          {/* Content container */}
-          <div className="relative">
-            {/* Balance Label */}
-            <div className="flex items-center gap-2 mb-2">
-              <WalletIcon className={clsx('h-5 w-5', isDark ? 'text-emerald-400' : 'text-white/80')} />
-              <span className="text-white/70 text-sm font-medium">This Month</span>
-              <button onClick={() => setBalanceHidden(!balanceHidden)} className="text-white/50 hover:text-white/70 transition-colors">
-                {balanceHidden ? <EyeOffIcon className="h-4 w-4" /> : <EyeIcon className="h-4 w-4" />}
+    <div className="min-h-screen bg-[#020817] pb-24">
+      {/* Main Balance Card */}
+      <div className="px-4 pt-4">
+        <div className="relative rounded-3xl overflow-hidden">
+          {/* Background */}
+          <div className="absolute inset-0 bg-gradient-to-br from-[#0a1628] via-[#0d1f3c] to-[#0f2847]" />
+          
+          {/* Glow orbs */}
+          <div className="absolute top-0 right-0 w-64 h-64 bg-emerald-500/20 rounded-full blur-[80px] -translate-y-1/2 translate-x-1/4" />
+          <div className="absolute bottom-0 left-0 w-48 h-48 bg-violet-500/15 rounded-full blur-[60px] translate-y-1/3 -translate-x-1/4" />
+          
+          {/* Border */}
+          <div className="absolute inset-0 rounded-3xl border border-white/[0.08]" />
+          
+          {/* Content */}
+          <div className="relative p-6">
+            {/* Header */}
+            <div className="flex items-center justify-between mb-6">
+              <div className="flex items-center gap-3">
+                <div className="w-10 h-10 rounded-xl bg-emerald-500/20 border border-emerald-500/30 flex items-center justify-center">
+                  <WalletIcon className="h-5 w-5 text-emerald-400" />
+                </div>
+                <div>
+                  <p className="text-white/50 text-sm">My Wallet</p>
+                  <p className="text-white font-medium">This Month</p>
+                </div>
+              </div>
+              <button 
+                onClick={() => setBalanceHidden(!balanceHidden)}
+                className="p-2 rounded-xl bg-white/5 border border-white/10 hover:bg-white/10 transition-colors"
+              >
+                {balanceHidden ? <EyeOffIcon className="h-5 w-5 text-white/50" /> : <EyeIcon className="h-5 w-5 text-white/50" />}
               </button>
             </div>
 
-            {/* Balance Amount - High contrast */}
-            <p
-              className="text-4xl font-bold text-white tracking-tight mb-1"
-              style={isDark ? { textShadow: '0 0 30px rgba(52,211,153,0.3)' } : undefined}
-            >
-              {balanceHidden ? '••••••' : `$${formatMoney(stats.thisMonth)}`}
-            </p>
-            <p className="text-white/50 text-sm">SGD</p>
+            {/* Main Balance */}
+            <div className="text-center mb-6">
+              <p className="text-5xl font-bold text-white mb-1">
+                {balanceHidden ? '••••••' : `$${formatMoney(stats.thisMonth)}`}
+              </p>
+              <p className="text-white/40 text-sm">SGD earned this month</p>
+            </div>
 
-            {/* Stats Grid - Glass Pods */}
-            <div className="grid grid-cols-2 gap-4 mt-6">
-              <div className={clsx(
-                'p-4 rounded-2xl backdrop-blur-md border',
-                isDark
-                  ? 'bg-amber-500/10 border-amber-500/20'
-                  : 'bg-white/15 border-white/20'
-              )}>
-                <div className="flex items-center gap-2 mb-1">
-                  <ClockIcon className="h-4 w-4 text-amber-400" />
-                  <span className="text-xs text-white/70">Pending</span>
-                </div>
-                <p
-                  className="text-2xl font-bold text-amber-400"
-                  style={isDark ? { textShadow: '0 0 20px rgba(251,191,36,0.3)' } : undefined}
-                >
-                  {balanceHidden ? '••••' : `$${formatMoney(stats.pending)}`}
-                </p>
-              </div>
-              <div className={clsx(
-                'p-4 rounded-2xl backdrop-blur-md border',
-                isDark
-                  ? 'bg-emerald-500/10 border-emerald-500/20'
-                  : 'bg-white/15 border-white/20'
-              )}>
-                <div className="flex items-center gap-2 mb-1">
-                  <TrendingUpIcon className="h-4 w-4 text-emerald-400" />
-                  <span className="text-xs text-white/70">Total Earned</span>
-                </div>
-                <p
-                  className="text-2xl font-bold text-emerald-400"
-                  style={isDark ? { textShadow: '0 0 20px rgba(52,211,153,0.3)' } : undefined}
-                >
-                  {balanceHidden ? '••••' : `$${formatMoney(stats.total)}`}
-                </p>
-              </div>
+            {/* Stats Row */}
+            <div className="flex gap-3">
+              <StatPod 
+                label="Pending" 
+                value={`$${formatMoney(stats.pending)}`}
+                icon={ClockIcon}
+                color="amber"
+                hidden={balanceHidden}
+              />
+              <StatPod 
+                label="Total Earned" 
+                value={`$${formatMoney(stats.total)}`}
+                icon={TrendingUpIcon}
+                color="emerald"
+                hidden={balanceHidden}
+              />
             </div>
           </div>
         </div>
       </div>
 
-      {/* Quick Stats - Glass Pods */}
-      <div className="px-4 mb-4">
-        <div className="flex gap-3">
-          <div className={clsx(
-            'flex-1 p-4 rounded-2xl text-center border backdrop-blur-md',
-            isDark
-              ? 'bg-white/[0.03] border-white/[0.08]'
-              : 'bg-white border-slate-200 shadow-[0_4px_20px_rgba(0,0,0,0.05)]'
-          )}>
-            <p className={clsx('text-2xl font-bold', isDark ? 'text-white' : 'text-slate-900')}>
-              {user?.total_jobs_completed || 0}
-            </p>
-            <p className={clsx('text-xs', isDark ? 'text-dark-400' : 'text-slate-500')}>Jobs Done</p>
+      {/* Quick Stats */}
+      <div className="px-4 mt-4">
+        <div className="grid grid-cols-3 gap-3">
+          <div className="p-4 rounded-2xl bg-[#0a1628]/80 border border-white/[0.05] text-center">
+            <p className="text-2xl font-bold text-white">{user?.total_jobs_completed || 0}</p>
+            <p className="text-xs text-white/40 mt-1">Jobs Done</p>
           </div>
-          <div className={clsx(
-            'flex-1 p-4 rounded-2xl text-center border backdrop-blur-md',
-            isDark
-              ? 'bg-white/[0.03] border-white/[0.08]'
-              : 'bg-white border-slate-200 shadow-[0_4px_20px_rgba(0,0,0,0.05)]'
-          )}>
-            <p className={clsx('text-2xl font-bold', isDark ? 'text-white' : 'text-slate-900')}>
-              {payments.filter(p => p.status === 'pending').length}
-            </p>
-            <p className={clsx('text-xs', isDark ? 'text-dark-400' : 'text-slate-500')}>Pending</p>
+          <div className="p-4 rounded-2xl bg-[#0a1628]/80 border border-white/[0.05] text-center">
+            <p className="text-2xl font-bold text-amber-400">{payments.filter(p => p.status === 'pending').length}</p>
+            <p className="text-xs text-white/40 mt-1">Pending</p>
           </div>
-          <div className={clsx(
-            'flex-1 p-4 rounded-2xl text-center border backdrop-blur-md',
-            isDark
-              ? 'bg-white/[0.03] border-white/[0.08]'
-              : 'bg-white border-slate-200 shadow-[0_4px_20px_rgba(0,0,0,0.05)]'
-          )}>
-            <p className={clsx('text-2xl font-bold text-emerald-400', isDark && 'drop-shadow-[0_0_10px_rgba(52,211,153,0.3)]')}>
-              ${formatMoney(user?.total_incentives_earned || 0)}
-            </p>
-            <p className={clsx('text-xs', isDark ? 'text-dark-400' : 'text-slate-500')}>Bonuses</p>
+          <div className="p-4 rounded-2xl bg-[#0a1628]/80 border border-white/[0.05] text-center">
+            <p className="text-2xl font-bold text-violet-400">${formatMoney(user?.total_incentives_earned || 0)}</p>
+            <p className="text-xs text-white/40 mt-1">Bonuses</p>
           </div>
         </div>
       </div>
 
-      {/* Transactions */}
-      <div className="px-4">
+      {/* Transactions Section */}
+      <div className="px-4 mt-6">
         <div className="flex items-center justify-between mb-4">
-          <h2 className={clsx('text-lg font-bold', isDark ? 'text-white' : 'text-slate-900')}>Transactions</h2>
+          <h2 className="text-lg font-bold text-white flex items-center gap-2">
+            Transactions
+            <span className="text-lg">💳</span>
+          </h2>
+          <span className="text-white/40 text-sm">{filteredPayments.length} total</span>
         </div>
 
-        {/* Filter tabs - Glass style */}
+        {/* Filter Tabs */}
         <div className="flex gap-2 mb-4">
           {[
             { id: 'all', label: 'All' },
@@ -241,12 +227,10 @@ export default function Wallet() {
               key={tab.id}
               onClick={() => setFilter(tab.id)}
               className={clsx(
-                'px-4 py-2 rounded-xl text-sm font-medium transition-all border',
+                'px-4 py-2 rounded-xl text-sm font-medium transition-all',
                 filter === tab.id
-                  ? 'bg-gradient-to-r from-emerald-500 to-teal-500 text-white border-transparent shadow-lg shadow-emerald-500/25'
-                  : isDark
-                    ? 'bg-white/5 border-white/10 text-dark-400 hover:bg-white/10 hover:text-white'
-                    : 'bg-white border-slate-200 text-slate-500 hover:text-slate-700 shadow-sm'
+                  ? 'bg-gradient-to-r from-emerald-500 to-cyan-500 text-white shadow-lg shadow-emerald-500/25'
+                  : 'bg-[#0a1628] border border-white/[0.05] text-white/50 hover:text-white'
               )}
             >
               {tab.label}
@@ -254,29 +238,23 @@ export default function Wallet() {
           ))}
         </div>
 
+        {/* Transactions List */}
         {loading ? (
-          <div className="flex items-center justify-center py-12">
-            <div className="animate-spin h-8 w-8 border-3 border-emerald-500 border-t-transparent rounded-full" />
+          <div className="space-y-3">
+            {[1, 2, 3].map(i => (
+              <div key={i} className="h-20 rounded-2xl bg-[#0a1628] animate-pulse" />
+            ))}
           </div>
         ) : filteredPayments.length === 0 ? (
-          <div className={clsx(
-            'text-center py-12 rounded-2xl backdrop-blur-md border',
-            isDark
-              ? 'bg-white/[0.03] border-white/[0.08]'
-              : 'bg-white border-slate-200 shadow-[0_4px_20px_rgba(0,0,0,0.05)]'
-          )}>
-            <WalletIcon className={clsx('h-12 w-12 mx-auto mb-3', isDark ? 'text-dark-500' : 'text-slate-300')} />
-            <p className={isDark ? 'text-dark-400' : 'text-slate-500'}>No transactions yet</p>
+          <div className="text-center py-16 rounded-2xl bg-[#0a1628]/50 border border-white/[0.05]">
+            <WalletIcon className="h-16 w-16 mx-auto mb-4 text-white/10" />
+            <h3 className="text-white font-semibold mb-2">No transactions yet</h3>
+            <p className="text-white/40 text-sm">Complete jobs to start earning</p>
           </div>
         ) : (
-          <div className={clsx(
-            'rounded-2xl backdrop-blur-md border divide-y overflow-hidden',
-            isDark
-              ? 'bg-white/[0.03] border-white/[0.08] divide-white/[0.05]'
-              : 'bg-white border-slate-200 divide-slate-100 shadow-[0_4px_20px_rgba(0,0,0,0.05)]'
-          )}>
+          <div className="rounded-2xl bg-[#0a1628]/50 border border-white/[0.05] divide-y divide-white/[0.05] overflow-hidden">
             {filteredPayments.map(payment => (
-              <TransactionItem key={payment.id} payment={payment} isDark={isDark} />
+              <TransactionItem key={payment.id} payment={payment} />
             ))}
           </div>
         )}

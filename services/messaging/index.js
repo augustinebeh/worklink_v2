@@ -41,10 +41,11 @@ async function sendToCandidate(candidateId, content, options = {}) {
 
   // 1. Store message in database FIRST to get the ID
   const messageId = Date.now();
+  const timestamp = new Date().toISOString(); // Millisecond precision
   db.prepare(`
     INSERT INTO messages (id, candidate_id, sender, content, template_id, channel, read, ai_generated, ai_source, created_at)
-    VALUES (?, ?, 'admin', ?, ?, 'app', 0, ?, ?, datetime('now'))
-  `).run(messageId, candidateId, content, templateId, aiGenerated ? 1 : 0, aiSource);
+    VALUES (?, ?, 'admin', ?, ?, 'app', 0, ?, ?, ?)
+  `).run(messageId, candidateId, content, templateId, aiGenerated ? 1 : 0, aiSource, timestamp);
 
   // 2. Send to Telegram if linked (do this early to get external_id)
   if (candidate.telegram_chat_id && telegram.isConfigured()) {
@@ -132,10 +133,11 @@ async function sendViaApp(candidateId, content) {
   try {
     // Store message first
     const messageId = Date.now();
+    const timestamp = new Date().toISOString(); // Millisecond precision
     db.prepare(`
       INSERT INTO messages (id, candidate_id, sender, content, channel, read, created_at)
-      VALUES (?, ?, 'admin', ?, 'app', 0, datetime('now'))
-    `).run(messageId, candidateId, content);
+      VALUES (?, ?, 'admin', ?, 'app', 0, ?)
+    `).run(messageId, candidateId, content, timestamp);
 
     const message = db.prepare('SELECT * FROM messages WHERE id = ?').get(messageId);
 
@@ -195,10 +197,11 @@ async function handleIncomingMessage(channel, data) {
 
   // Store message
   const messageId = Date.now();
+  const timestamp = new Date().toISOString(); // Millisecond precision
   db.prepare(`
     INSERT INTO messages (id, candidate_id, sender, content, channel, external_id, read, created_at)
-    VALUES (?, ?, 'candidate', ?, ?, ?, 0, datetime('now'))
-  `).run(messageId, candidateId, content, channel, externalId);
+    VALUES (?, ?, 'candidate', ?, ?, ?, 0, ?)
+  `).run(messageId, candidateId, content, channel, externalId, timestamp);
 
   const message = db.prepare('SELECT * FROM messages WHERE id = ?').get(messageId);
 

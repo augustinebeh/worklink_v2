@@ -1,218 +1,110 @@
-import React, { useState, useEffect } from 'react';
+import { useState, useEffect } from 'react';
 import {
   TrophyIcon,
-  MedalIcon,
   CrownIcon,
-  StarIcon,
-  ZapIcon,
+  MedalIcon,
   FlameIcon,
+  ZapIcon,
   ChevronUpIcon,
   ChevronDownIcon,
   MinusIcon,
 } from 'lucide-react';
 import { useAuth } from '../contexts/AuthContext';
-import { useTheme } from '../contexts/ThemeContext';
 import { clsx } from 'clsx';
+import { calculateLevel, getLevelTier } from '../utils/gamification';
 import ProfileAvatar from '../components/ui/ProfileAvatar';
 
-const rankConfig = {
-  1: { icon: CrownIcon, color: 'text-gold-400', bg: 'bg-gold-500/20', border: 'border-gold-500/30' },
-  2: { icon: MedalIcon, color: 'text-slate-300', bg: 'bg-slate-400/20', border: 'border-slate-400/30' },
-  3: { icon: MedalIcon, color: 'text-amber-600', bg: 'bg-amber-600/20', border: 'border-amber-600/30' },
-};
-
-function LeaderboardRow({ entry, rank, isCurrentUser, isDark }) {
-  const config = rankConfig[rank];
-  const RankIcon = config?.icon;
-
-  const changeIcon = entry.change > 0 ? ChevronUpIcon : entry.change < 0 ? ChevronDownIcon : MinusIcon;
-  const changeColor = entry.change > 0 ? 'text-accent-400' : entry.change < 0 ? 'text-red-400' : (isDark ? 'text-dark-500' : 'text-slate-400');
-
-  return (
-    <div className={clsx(
-      'flex items-center gap-3 p-4 rounded-xl transition-all backdrop-blur-md border',
-      isCurrentUser
-        ? isDark
-          ? 'bg-primary-500/15 border-primary-500/40 shadow-lg shadow-primary-500/10'
-          : 'bg-primary-50 border-primary-300 shadow-[0_4px_20px_rgba(0,122,255,0.1)]'
-        : config
-          ? `${config.bg} border ${config.border}`
-          : isDark
-            ? 'bg-white/[0.03] border-white/[0.08] hover:bg-white/[0.05]'
-            : 'bg-white border-slate-200 shadow-[0_4px_15px_rgba(0,0,0,0.04)]'
-    )}>
-      {/* Rank */}
-      <div className={clsx(
-        'w-10 h-10 rounded-xl flex items-center justify-center font-bold',
-        config ? `${config.bg}` : isDark ? 'bg-dark-700' : 'bg-slate-100'
-      )}>
-        {RankIcon ? (
-          <RankIcon className={clsx('h-6 w-6', config.color)} />
-        ) : (
-          <span className={isDark ? 'text-dark-400' : 'text-slate-500'}>{rank}</span>
-        )}
-      </div>
-
-      {/* Avatar & Name */}
-      <div className="flex items-center gap-3 flex-1">
-        <ProfileAvatar
-          name={entry.name}
-          photoUrl={entry.profile_photo}
-          level={entry.level || 1}
-          size="md"
-          showLevel={false}
-          isCurrentUser={isCurrentUser}
-        />
-        <div>
-          <div className="flex items-center gap-2">
-            <span className={clsx('font-semibold', isCurrentUser ? 'text-primary-300' : isDark ? 'text-white' : 'text-slate-900')}>
-              {entry.name}
-            </span>
-            {isCurrentUser && (
-              <span className="px-2 py-0.5 rounded-full bg-primary-500/30 text-primary-300 text-xs">You</span>
-            )}
-          </div>
-          <div className={clsx('flex items-center gap-2 text-sm', isDark ? 'text-dark-400' : 'text-slate-500')}>
-            <span>Level {entry.level}</span>
-            {entry.streak_days > 0 && (
-              <div className="flex items-center gap-1">
-                <FlameIcon className="h-3 w-3 text-orange-400" />
-                <span>{entry.streak_days}d</span>
-              </div>
-            )}
-          </div>
-        </div>
-      </div>
-
-      {/* XP & Change */}
-      <div className="text-right">
-        <div className="flex items-center gap-1 text-primary-400">
-          <ZapIcon className="h-4 w-4" />
-          <span
-            className="font-bold text-lg"
-            style={isDark ? { textShadow: '0 0 15px rgba(99,102,241,0.4)' } : undefined}
-          >
-            {entry.xp?.toLocaleString()}
-          </span>
-        </div>
-        <div className={clsx('flex items-center gap-0.5 text-xs', changeColor)}>
-          {React.createElement(changeIcon, { className: 'h-3 w-3' })}
-          <span>{entry.change === 0 ? '-' : Math.abs(entry.change)}</span>
-        </div>
-      </div>
-    </div>
-  );
+function RankBadge({ rank }) {
+  if (rank === 1) return <div className="w-8 h-8 rounded-full bg-gradient-to-br from-amber-400 to-yellow-600 flex items-center justify-center"><CrownIcon className="h-4 w-4 text-white" /></div>;
+  if (rank === 2) return <div className="w-8 h-8 rounded-full bg-gradient-to-br from-slate-300 to-slate-500 flex items-center justify-center"><span className="text-white font-bold text-sm">2</span></div>;
+  if (rank === 3) return <div className="w-8 h-8 rounded-full bg-gradient-to-br from-amber-600 to-amber-800 flex items-center justify-center"><span className="text-white font-bold text-sm">3</span></div>;
+  return <div className="w-8 h-8 rounded-full bg-white/5 flex items-center justify-center"><span className="text-white/50 font-medium text-sm">{rank}</span></div>;
 }
 
-function TopThree({ entries, currentUserId, isDark }) {
-  // Reorder for display: 2nd, 1st, 3rd
-  const displayOrder = [entries[1], entries[0], entries[2]].filter(Boolean);
+function LeaderboardItem({ player, rank, isCurrentUser }) {
+  const level = calculateLevel(player.xp || 0);
+  const tier = getLevelTier(level);
+  
+  const tierColors = {
+    bronze: 'border-amber-700/50',
+    silver: 'border-slate-400/50',
+    gold: 'border-amber-400/50',
+    platinum: 'border-cyan-400/50',
+    diamond: 'border-violet-400/50',
+    mythic: 'border-rose-400/50',
+  };
 
   return (
     <div className={clsx(
-      'relative flex items-end justify-center gap-4 px-4 py-8 mx-4 rounded-2xl backdrop-blur-md border overflow-hidden',
-      isDark
-        ? 'bg-white/[0.03] border-white/[0.08]'
-        : 'bg-white/80 border-slate-200 shadow-[0_4px_20px_rgba(0,0,0,0.05)]'
+      'flex items-center gap-4 p-4 rounded-2xl transition-all',
+      isCurrentUser
+        ? 'bg-emerald-500/10 border-2 border-emerald-500/30'
+        : rank <= 3
+          ? 'bg-[#0a1628]/80 border border-amber-500/20'
+          : 'bg-[#0a1628]/50 border border-white/[0.05]'
     )}>
-      {/* Background glow for dark mode */}
-      {isDark && (
-        <>
-          <div className="absolute top-0 left-1/4 w-32 h-32 bg-gold-500/20 rounded-full blur-[60px]" />
-          <div className="absolute top-0 right-1/4 w-32 h-32 bg-primary-500/15 rounded-full blur-[60px]" />
-        </>
-      )}
-      {displayOrder.map((entry, idx) => {
-        const actualRank = idx === 0 ? 2 : idx === 1 ? 1 : 3;
-        const config = rankConfig[actualRank];
-        const isFirst = actualRank === 1;
-        const isCurrentUser = entry?.id === currentUserId;
+      <RankBadge rank={rank} />
+      
+      <ProfileAvatar
+        name={player.name}
+        photoUrl={player.profile_photo}
+        level={level}
+        size="md"
+        showLevel={false}
+      />
 
-        if (!entry) return null;
+      <div className="flex-1 min-w-0">
+        <div className="flex items-center gap-2">
+          <h3 className={clsx('font-semibold truncate', isCurrentUser ? 'text-emerald-400' : 'text-white')}>
+            {player.name}
+            {isCurrentUser && <span className="text-xs ml-1">(You)</span>}
+          </h3>
+        </div>
+        <div className="flex items-center gap-2 mt-0.5">
+          <span className="px-2 py-0.5 rounded-md bg-violet-500/20 text-violet-400 text-xs font-medium">
+            Lv.{level}
+          </span>
+          {player.streak_days > 0 && (
+            <span className="flex items-center gap-1 text-xs text-amber-400">
+              <FlameIcon className="h-3 w-3" /> {player.streak_days}
+            </span>
+          )}
+        </div>
+      </div>
 
-        return (
-          <div
-            key={entry.id}
-            className={clsx(
-              'flex flex-col items-center',
-              isFirst ? 'order-2' : idx === 0 ? 'order-1' : 'order-3'
-            )}
-          >
-            {/* Crown for 1st place */}
-            {isFirst && (
-              <CrownIcon className="h-8 w-8 text-gold-400 mb-2 animate-bounce" />
-            )}
-
-            {/* Avatar with level-based border */}
-            <div className="relative">
-              <ProfileAvatar
-                name={entry.name}
-                photoUrl={entry.profile_photo}
-                level={entry.level || 1}
-                size={isFirst ? '2xl' : 'xl'}
-                showLevel={true}
-                isCurrentUser={isCurrentUser}
-              />
-
-              {/* Rank badge */}
-              <div className={clsx(
-                'absolute -top-1 -right-1 px-2 py-0.5 rounded-full font-bold text-xs z-10',
-                config.bg, config.color, config.border, 'border'
-              )}>
-                #{actualRank}
-              </div>
-            </div>
-
-            {/* Name & XP */}
-            <p className={clsx(
-              'font-semibold mt-4',
-              isCurrentUser ? 'text-primary-300' : isDark ? 'text-white' : 'text-slate-900'
-            )}>
-              {entry.name?.split(' ')[0]}
-            </p>
-            <div className="flex items-center gap-1 text-primary-400 mt-1">
-              <ZapIcon className="h-4 w-4" />
-              <span
-                className="font-bold"
-                style={isDark ? { textShadow: '0 0 12px rgba(99,102,241,0.5)' } : undefined}
-              >
-                {entry.xp?.toLocaleString()}
-              </span>
-            </div>
-          </div>
-        );
-      })}
+      <div className="text-right">
+        <div className="flex items-center gap-1 justify-end">
+          <ZapIcon className="h-4 w-4 text-violet-400" />
+          <span className="text-lg font-bold text-white">{(player.xp || 0).toLocaleString()}</span>
+        </div>
+        <span className="text-xs text-white/40">XP</span>
+      </div>
     </div>
   );
 }
 
 export default function Leaderboard() {
   const { user } = useAuth();
-  const { isDark } = useTheme();
-  const [leaderboard, setLeaderboard] = useState([]);
-  const [userRank, setUserRank] = useState(null);
+  const [players, setPlayers] = useState([]);
   const [loading, setLoading] = useState(true);
-  const [period, setPeriod] = useState('all'); // all, weekly, monthly
+  const [period, setPeriod] = useState('all');
+  const [userRank, setUserRank] = useState(null);
 
   useEffect(() => {
     fetchLeaderboard();
-  }, [period, user]);
+  }, [period]);
 
   const fetchLeaderboard = async () => {
+    setLoading(true);
     try {
-      const res = await fetch(`/api/v1/gamification/leaderboard?period=${period}`);
+      const res = await fetch(`/api/v1/gamification/leaderboard?period=${period}&limit=50`);
       const data = await res.json();
       if (data.success) {
-        // Use rank change from API if available, otherwise 0
-        const entries = data.data.map(entry => ({
-          ...entry,
-          change: entry.rank_change ?? 0, // Will be 0 until API provides rank_change
-        }));
-        setLeaderboard(entries);
-
-        // Find user's rank
-        const userIdx = entries.findIndex(e => e.id === user?.id);
-        setUserRank(userIdx >= 0 ? userIdx + 1 : null);
+        setPlayers(data.data || []);
+        if (user) {
+          const rank = data.data.findIndex(p => p.id === user.id) + 1;
+          setUserRank(rank > 0 ? rank : null);
+        }
       }
     } catch (error) {
       console.error('Failed to fetch leaderboard:', error);
@@ -221,46 +113,52 @@ export default function Leaderboard() {
     }
   };
 
-  const topThree = leaderboard.slice(0, 3);
-  const restOfLeaderboard = leaderboard.slice(3);
+  const currentUserData = user ? players.find(p => p.id === user.id) : null;
+  const currentUserLevel = currentUserData ? calculateLevel(currentUserData.xp || 0) : 1;
 
   return (
-    <div className={clsx('min-h-screen pb-24', isDark ? 'bg-dark-950' : 'bg-transparent')}>
-      {/* Header - Glassmorphism */}
-      <div className={clsx(
-        'relative px-4 pt-safe pb-2 overflow-hidden',
-        isDark ? 'bg-gradient-to-b from-[#080810] via-[#0c0d1a] to-dark-950' : 'bg-gradient-to-b from-[#EFF6FF] to-transparent'
-      )}>
-        {/* Background glow */}
-        {isDark && (
-          <>
-            <div className="absolute top-0 right-0 w-48 h-48 bg-gold-500/15 rounded-full blur-[80px] -translate-y-1/2 translate-x-1/4" />
-            <div className="absolute bottom-0 left-0 w-40 h-40 bg-primary-500/10 rounded-full blur-[60px] translate-y-1/2 -translate-x-1/4" />
-          </>
-        )}
-        <div className="relative flex items-center justify-between mb-4">
-          <div>
-            <h1 className={clsx('text-2xl font-bold', isDark ? 'text-white' : 'text-slate-900')}>Leaderboard</h1>
-            <p className={clsx('text-sm mt-1', isDark ? 'text-dark-400' : 'text-slate-500')}>Compete with other workers</p>
-          </div>
-          {userRank && (
-            <div className={clsx(
-              'text-right px-4 py-2 rounded-xl backdrop-blur-md border',
-              isDark ? 'bg-white/[0.05] border-white/[0.1]' : 'bg-white border-slate-200 shadow-sm'
-            )}>
-              <p className={clsx('text-xs', isDark ? 'text-dark-400' : 'text-slate-500')}>Your Rank</p>
-              <p
-                className="text-2xl font-bold text-primary-400"
-                style={isDark ? { textShadow: '0 0 20px rgba(99,102,241,0.5)' } : undefined}
-              >
-                #{userRank}
-              </p>
+    <div className="min-h-screen bg-[#020817] pb-24">
+      {/* Header Card */}
+      <div className="px-4 pt-4">
+        <div className="relative rounded-3xl overflow-hidden">
+          <div className="absolute inset-0 bg-gradient-to-br from-[#0a1628] via-[#0d1f3c] to-[#0f2847]" />
+          <div className="absolute top-0 right-0 w-64 h-64 bg-violet-500/20 rounded-full blur-[80px] -translate-y-1/2 translate-x-1/4" />
+          <div className="absolute bottom-0 left-0 w-48 h-48 bg-emerald-500/15 rounded-full blur-[60px] translate-y-1/3 -translate-x-1/4" />
+          <div className="absolute inset-0 rounded-3xl border border-white/[0.08]" />
+          
+          <div className="relative p-6">
+            <div className="flex items-center gap-4 mb-4">
+              <div className="w-14 h-14 rounded-2xl bg-violet-500/20 border border-violet-500/30 flex items-center justify-center">
+                <TrophyIcon className="h-7 w-7 text-violet-400" />
+              </div>
+              <div>
+                <h1 className="text-2xl font-bold text-white">Leaderboard</h1>
+                <p className="text-white/50">Compete with other workers</p>
+              </div>
             </div>
-          )}
-        </div>
 
-        {/* Period filter - Glass style */}
-        <div className="relative flex gap-2 mb-4">
+            {userRank && (
+              <div className="flex items-center justify-between p-4 rounded-2xl bg-emerald-500/10 border border-emerald-500/30">
+                <div className="flex items-center gap-3">
+                  <RankBadge rank={userRank} />
+                  <div>
+                    <p className="text-white/50 text-sm">Your Rank</p>
+                    <p className="text-emerald-400 font-bold text-lg">#{userRank}</p>
+                  </div>
+                </div>
+                <div className="text-right">
+                  <p className="text-white/50 text-sm">Your XP</p>
+                  <p className="text-white font-bold text-lg">{(currentUserData?.xp || user?.xp || 0).toLocaleString()}</p>
+                </div>
+              </div>
+            )}
+          </div>
+        </div>
+      </div>
+
+      {/* Period Tabs */}
+      <div className="px-4 mt-4">
+        <div className="flex gap-2">
           {[
             { id: 'all', label: 'All Time' },
             { id: 'monthly', label: 'This Month' },
@@ -270,67 +168,42 @@ export default function Leaderboard() {
               key={tab.id}
               onClick={() => setPeriod(tab.id)}
               className={clsx(
-                'flex-1 py-2 rounded-xl text-sm font-medium transition-all border',
+                'px-4 py-2 rounded-xl text-sm font-medium transition-all',
                 period === tab.id
-                  ? 'bg-gradient-to-r from-primary-500 to-violet-500 text-white border-transparent shadow-lg shadow-primary-500/25'
-                  : isDark
-                    ? 'bg-white/[0.05] border-white/[0.1] text-dark-400 hover:bg-white/[0.08] hover:text-white'
-                    : 'bg-white border-slate-200 text-slate-500 hover:text-slate-700 shadow-sm'
+                  ? 'bg-gradient-to-r from-violet-500 to-cyan-500 text-white shadow-lg shadow-violet-500/25'
+                  : 'bg-[#0a1628] border border-white/[0.05] text-white/50 hover:text-white'
               )}
             >
               {tab.label}
             </button>
           ))}
         </div>
-
       </div>
 
-      {/* Top 3 Podium - Outside header for better visual separation */}
-      {!loading && topThree.length > 0 && (
-        <TopThree entries={topThree} currentUserId={user?.id} isDark={isDark} />
-      )}
-
-      {/* Rest of leaderboard */}
+      {/* Leaderboard List */}
       <div className="px-4 py-4">
         {loading ? (
-          <div className="flex items-center justify-center py-12">
-            <div className="animate-spin h-8 w-8 border-4 border-primary-500 border-t-transparent rounded-full" />
+          <div className="space-y-3">
+            {[1, 2, 3, 4, 5].map(i => (
+              <div key={i} className="h-20 rounded-2xl bg-[#0a1628] animate-pulse" />
+            ))}
           </div>
-        ) : restOfLeaderboard.length === 0 ? (
-          <div className={clsx(
-            'text-center py-12 rounded-2xl backdrop-blur-md border',
-            isDark ? 'bg-white/[0.03] border-white/[0.08]' : 'bg-white border-slate-200 shadow-[0_4px_20px_rgba(0,0,0,0.05)]'
-          )}>
-            <TrophyIcon className={clsx('h-12 w-12 mx-auto mb-4', isDark ? 'text-dark-500' : 'text-slate-300')} />
-            <p className={isDark ? 'text-dark-400' : 'text-slate-500'}>No more entries</p>
+        ) : players.length === 0 ? (
+          <div className="text-center py-16 rounded-2xl bg-[#0a1628]/50 border border-white/[0.05]">
+            <TrophyIcon className="h-16 w-16 mx-auto mb-4 text-white/10" />
+            <h3 className="text-white font-semibold mb-2">No players yet</h3>
+            <p className="text-white/40 text-sm">Be the first to earn XP!</p>
           </div>
         ) : (
           <div className="space-y-3">
-            {restOfLeaderboard.map((entry, idx) => (
-              <LeaderboardRow
-                key={entry.id}
-                entry={entry}
-                rank={idx + 4}
-                isCurrentUser={entry.id === user?.id}
-                isDark={isDark}
+            {players.map((player, index) => (
+              <LeaderboardItem
+                key={player.id}
+                player={player}
+                rank={index + 1}
+                isCurrentUser={user?.id === player.id}
               />
             ))}
-          </div>
-        )}
-
-        {/* User's position if not in top */}
-        {userRank && userRank > 10 && user && (
-          <div className={clsx('mt-6 pt-6 border-t', isDark ? 'border-white/[0.08]' : 'border-slate-200')}>
-            <p className={clsx('text-center text-sm mb-3', isDark ? 'text-dark-400' : 'text-slate-500')}>Your Position</p>
-            <LeaderboardRow
-              entry={{
-                ...user,
-                change: 0,
-              }}
-              rank={userRank}
-              isCurrentUser={true}
-              isDark={isDark}
-            />
           </div>
         )}
       </div>

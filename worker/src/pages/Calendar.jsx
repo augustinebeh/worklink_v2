@@ -8,10 +8,8 @@ import {
   CalendarIcon,
   CheckIcon,
   XIcon,
-  AlertCircleIcon,
 } from 'lucide-react';
 import { useAuth } from '../contexts/AuthContext';
-import { useTheme } from '../contexts/ThemeContext';
 import { clsx } from 'clsx';
 import { DEFAULT_LOCALE, TIMEZONE, getSGDateString } from '../utils/constants';
 
@@ -28,13 +26,12 @@ function getFirstDayOfMonth(year, month) {
 
 export default function Calendar() {
   const { user } = useAuth();
-  const { isDark } = useTheme();
   const [currentDate, setCurrentDate] = useState(new Date());
   const [selectedDate, setSelectedDate] = useState(new Date());
   const [deployments, setDeployments] = useState([]);
   const [availability, setAvailability] = useState([]);
   const [loading, setLoading] = useState(true);
-  const [mode, setMode] = useState('view'); // 'view' | 'edit'
+  const [mode, setMode] = useState('view');
   const [pendingChanges, setPendingChanges] = useState({});
   const [saving, setSaving] = useState(false);
 
@@ -54,10 +51,8 @@ export default function Calendar() {
         fetch(`/api/v1/candidates/${user.id}/deployments`),
         fetch(`/api/v1/availability/${user.id}?days=60`),
       ]);
-
       const deploymentsData = await deploymentsRes.json();
       const availabilityData = await availabilityRes.json();
-
       if (deploymentsData.success) setDeployments(deploymentsData.data);
       if (availabilityData.success) setAvailability(availabilityData.data.availability || []);
     } catch (error) {
@@ -75,53 +70,24 @@ export default function Calendar() {
     setSelectedDate(today);
   };
 
-  const getDateString = (day) => {
-    return `${year}-${String(month + 1).padStart(2, '0')}-${String(day).padStart(2, '0')}`;
-  };
-
-  const getDeploymentsForDate = (date) => {
-    const dateStr = getSGDateString(date);
-    return deployments.filter(d => d.job_date === dateStr);
-  };
-
+  const getDateString = (day) => `${year}-${String(month + 1).padStart(2, '0')}-${String(day).padStart(2, '0')}`;
+  const getDeploymentsForDate = (date) => deployments.filter(d => d.job_date === getSGDateString(date));
   const getAvailabilityForDate = (dateStr) => {
-    // Check pending changes first
-    if (pendingChanges[dateStr] !== undefined) {
-      return pendingChanges[dateStr];
-    }
-    const avail = availability.find(a => a.date === dateStr);
-    return avail?.status || 'unset';
+    if (pendingChanges[dateStr] !== undefined) return pendingChanges[dateStr];
+    return availability.find(a => a.date === dateStr)?.status || 'unset';
   };
 
   const selectedDeployments = getDeploymentsForDate(selectedDate);
   const selectedDateStr = getSGDateString(selectedDate);
   const selectedAvailability = getAvailabilityForDate(selectedDateStr);
-
-  const hasJobs = (day) => {
-    const date = new Date(year, month, day);
-    return getDeploymentsForDate(date).length > 0;
-  };
-
-  const isToday = (day) => {
-    const todaySG = getSGDateString();
-    const dateStr = getDateString(day);
-    return dateStr === todaySG;
-  };
-
-  const isSelected = (day) => {
-    return day === selectedDate.getDate() && month === selectedDate.getMonth() && year === selectedDate.getFullYear();
-  };
-
-  const isPast = (day) => {
-    const dateStr = getDateString(day);
-    const todaySG = getSGDateString();
-    return dateStr < todaySG;
-  };
+  const hasJobs = (day) => getDeploymentsForDate(new Date(year, month, day)).length > 0;
+  const isToday = (day) => getDateString(day) === getSGDateString();
+  const isSelected = (day) => day === selectedDate.getDate() && month === selectedDate.getMonth() && year === selectedDate.getFullYear();
+  const isPast = (day) => getDateString(day) < getSGDateString();
 
   const handleDayClick = (day) => {
     const dateStr = getDateString(day);
     if (mode === 'edit' && !isPast(day)) {
-      // Toggle availability in edit mode
       const currentStatus = getAvailabilityForDate(dateStr);
       const newStatus = currentStatus === 'available' ? 'unavailable' : 'available';
       setPendingChanges({ ...pendingChanges, [dateStr]: newStatus });
@@ -132,11 +98,7 @@ export default function Calendar() {
 
   const handleSaveAvailability = async () => {
     const dates = Object.entries(pendingChanges).map(([date, status]) => ({ date, status }));
-    if (dates.length === 0) {
-      setMode('view');
-      return;
-    }
-
+    if (dates.length === 0) { setMode('view'); return; }
     setSaving(true);
     try {
       const res = await fetch(`/api/v1/availability/${user.id}`, {
@@ -144,26 +106,24 @@ export default function Calendar() {
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ dates }),
       });
-      const data = await res.json();
-      if (data.success) {
+      if ((await res.json()).success) {
         setPendingChanges({});
         setMode('view');
         fetchData();
       }
     } catch (error) {
-      console.error('Failed to save availability:', error);
+      console.error('Failed to save:', error);
     } finally {
       setSaving(false);
     }
   };
 
   const handleSetAvailability = async (status) => {
-    const dateStr = getSGDateString(selectedDate);
     try {
       await fetch(`/api/v1/availability/${user.id}`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ dates: [{ date: dateStr, status }] }),
+        body: JSON.stringify({ dates: [{ date: selectedDateStr, status }] }),
       });
       fetchData();
     } catch (error) {
@@ -173,70 +133,38 @@ export default function Calendar() {
 
   const getDayStatus = (day) => {
     if (hasJobs(day)) return 'booked';
-    const dateStr = getDateString(day);
-    return getAvailabilityForDate(dateStr);
-  };
-
-  const statusColors = {
-    available: 'bg-emerald-500/30 border-emerald-500/50',
-    unavailable: 'bg-red-500/20 border-red-500/30',
-    booked: 'bg-primary-500/30 border-primary-500/50',
-    unset: '',
-  };
-
-  const statusDots = {
-    available: 'bg-emerald-400',
-    unavailable: 'bg-red-400',
-    booked: 'bg-primary-400',
+    return getAvailabilityForDate(getDateString(day));
   };
 
   return (
-    <div className={clsx('min-h-screen pb-24', isDark ? 'bg-dark-950' : 'bg-transparent')}>
-      {/* Header - Glassmorphism */}
-      <div className={clsx(
-        'sticky top-0 z-10 backdrop-blur-xl px-4 pt-safe pb-4',
-        isDark ? 'bg-dark-950/90 border-b border-white/[0.08]' : 'bg-white/90 shadow-[0_1px_3px_rgba(0,0,0,0.03)]'
-      )}>
+    <div className="min-h-screen bg-[#020817] pb-24">
+      {/* Header */}
+      <div className="sticky top-0 z-10 bg-[#020817]/95 backdrop-blur-xl px-4 pt-4 pb-4 border-b border-white/[0.05]">
         <div className="flex items-center justify-between mb-4">
-          <h1 className={clsx('text-2xl font-bold', isDark ? 'text-white' : 'text-slate-900')}>Calendar</h1>
+          <h1 className="text-2xl font-bold text-white">Calendar</h1>
           <div className="flex items-center gap-2">
             {mode === 'edit' ? (
               <>
                 <button
                   onClick={() => { setPendingChanges({}); setMode('view'); }}
-                  className={clsx(
-                    'px-3 py-1.5 rounded-xl text-sm font-medium border backdrop-blur-md',
-                    isDark ? 'bg-white/[0.05] border-white/[0.1] text-dark-400' : 'bg-slate-100 border-slate-200 text-slate-500'
-                  )}
+                  className="px-3 py-2 rounded-xl bg-white/5 border border-white/10 text-white/50 text-sm font-medium"
                 >
                   Cancel
                 </button>
                 <button
                   onClick={handleSaveAvailability}
                   disabled={saving}
-                  className="px-3 py-1.5 rounded-xl bg-gradient-to-r from-primary-500 to-blue-500 text-white text-sm font-medium shadow-lg shadow-primary-500/25 disabled:opacity-50"
+                  className="px-4 py-2 rounded-xl bg-emerald-500 text-white text-sm font-medium disabled:opacity-50"
                 >
                   {saving ? 'Saving...' : `Save (${Object.keys(pendingChanges).length})`}
                 </button>
               </>
             ) : (
               <>
-                <button
-                  onClick={goToToday}
-                  className={clsx(
-                    'px-3 py-1.5 rounded-xl text-sm font-medium border backdrop-blur-md',
-                    isDark ? 'bg-white/[0.05] border-white/[0.1] text-dark-300' : 'bg-slate-100 border-slate-200 text-slate-600'
-                  )}
-                >
+                <button onClick={goToToday} className="px-3 py-2 rounded-xl bg-white/5 border border-white/10 text-white/70 text-sm font-medium">
                   Today
                 </button>
-                <button
-                  onClick={() => setMode('edit')}
-                  className={clsx(
-                    'px-3 py-1.5 rounded-xl text-sm font-medium border',
-                    isDark ? 'bg-primary-500/20 border-primary-500/30 text-primary-400' : 'bg-primary-50 border-primary-200 text-primary-600'
-                  )}
-                >
+                <button onClick={() => setMode('edit')} className="px-3 py-2 rounded-xl bg-emerald-500/20 border border-emerald-500/30 text-emerald-400 text-sm font-medium">
                   Edit
                 </button>
               </>
@@ -244,57 +172,56 @@ export default function Calendar() {
           </div>
         </div>
 
-        {/* Edit mode legend */}
         {mode === 'edit' && (
-          <div className="flex items-center gap-4 mb-4 text-xs">
-            <span className={isDark ? 'text-dark-400' : 'text-slate-500'}>Tap dates to toggle:</span>
-            <div className="flex items-center gap-1">
-              <span className="w-3 h-3 rounded-full bg-emerald-400" />
-              <span className="text-emerald-400">Available</span>
-            </div>
-            <div className="flex items-center gap-1">
-              <span className="w-3 h-3 rounded-full bg-red-400" />
-              <span className="text-red-400">Unavailable</span>
-            </div>
+          <div className="flex items-center gap-4 mb-4 text-xs text-white/50">
+            <span>Tap dates to toggle:</span>
+            <span className="flex items-center gap-1"><span className="w-2 h-2 rounded-full bg-emerald-400" /> Available</span>
+            <span className="flex items-center gap-1"><span className="w-2 h-2 rounded-full bg-red-400" /> Unavailable</span>
           </div>
         )}
 
-        {/* Month navigation */}
+        {/* Month Navigation */}
         <div className="flex items-center justify-between">
-          <button onClick={goToPreviousMonth} className={clsx('p-2 rounded-lg', isDark ? 'hover:bg-dark-800' : 'hover:bg-slate-100')}>
-            <ChevronLeftIcon className={clsx('h-5 w-5', isDark ? 'text-dark-400' : 'text-slate-500')} />
+          <button onClick={goToPreviousMonth} className="p-2 rounded-xl hover:bg-white/5">
+            <ChevronLeftIcon className="h-5 w-5 text-white/50" />
           </button>
-          <h2 className={clsx('text-lg font-semibold', isDark ? 'text-white' : 'text-slate-900')}>
-            {MONTHS[month]} {year}
-          </h2>
-          <button onClick={goToNextMonth} className={clsx('p-2 rounded-lg', isDark ? 'hover:bg-dark-800' : 'hover:bg-slate-100')}>
-            <ChevronRightIcon className={clsx('h-5 w-5', isDark ? 'text-dark-400' : 'text-slate-500')} />
+          <h2 className="text-lg font-semibold text-white">{MONTHS[month]} {year}</h2>
+          <button onClick={goToNextMonth} className="p-2 rounded-xl hover:bg-white/5">
+            <ChevronRightIcon className="h-5 w-5 text-white/50" />
           </button>
         </div>
       </div>
 
       <div className="px-4 py-4">
-        {/* Day headers */}
+        {/* Day Headers */}
         <div className="grid grid-cols-7 gap-1 mb-2">
           {DAYS.map(day => (
-            <div key={day} className={clsx('text-center text-xs font-medium py-2', isDark ? 'text-dark-500' : 'text-slate-500')}>
-              {day}
-            </div>
+            <div key={day} className="text-center text-xs font-medium py-2 text-white/40">{day}</div>
           ))}
         </div>
 
-        {/* Calendar grid */}
+        {/* Calendar Grid */}
         <div className="grid grid-cols-7 gap-1">
-          {Array.from({ length: firstDay }).map((_, i) => (
-            <div key={`empty-${i}`} className="aspect-square" />
-          ))}
+          {Array.from({ length: firstDay }).map((_, i) => <div key={`empty-${i}`} className="aspect-square" />)}
           
           {Array.from({ length: daysInMonth }).map((_, i) => {
             const day = i + 1;
             const status = getDayStatus(day);
-            const dateStr = getDateString(day);
-            const hasPendingChange = pendingChanges[dateStr] !== undefined;
+            const hasPending = pendingChanges[getDateString(day)] !== undefined;
             
+            const statusStyles = {
+              available: 'bg-emerald-500/20 border-emerald-500/40',
+              unavailable: 'bg-red-500/20 border-red-500/40',
+              booked: 'bg-violet-500/20 border-violet-500/40',
+              unset: 'border-white/[0.05]',
+            };
+            
+            const dotColors = {
+              available: 'bg-emerald-400',
+              unavailable: 'bg-red-400',
+              booked: 'bg-violet-400',
+            };
+
             return (
               <button
                 key={day}
@@ -302,24 +229,16 @@ export default function Calendar() {
                 disabled={isPast(day) && mode === 'edit'}
                 className={clsx(
                   'aspect-square rounded-xl flex flex-col items-center justify-center relative transition-all border',
-                  isSelected(day) && mode !== 'edit'
-                    ? 'bg-primary-500 text-white border-primary-400'
-                    : isToday(day)
-                      ? 'bg-primary-500/20 text-primary-400 border-primary-500/30'
-                      : isPast(day)
-                        ? (isDark ? 'text-dark-600' : 'text-slate-300') + ' border-transparent'
-                        : mode === 'edit' && status !== 'booked'
-                          ? `cursor-pointer ${statusColors[status] || (isDark ? 'border-dark-700 hover:border-dark-600' : 'border-slate-200 hover:border-slate-300')}`
-                          : `border-transparent ${statusColors[status]}`,
-                  hasPendingChange && 'ring-2 ring-yellow-400'
+                  isSelected(day) && mode !== 'edit' ? 'bg-emerald-500 text-white border-emerald-400' :
+                  isToday(day) ? 'bg-emerald-500/20 text-emerald-400 border-emerald-500/40' :
+                  isPast(day) ? 'text-white/20 border-transparent' :
+                  statusStyles[status],
+                  hasPending && 'ring-2 ring-amber-400'
                 )}
               >
-                <span className={clsx('text-sm font-medium', isPast(day) && mode !== 'edit' ? '' : '')}>{day}</span>
+                <span className="text-sm font-medium">{day}</span>
                 {status !== 'unset' && !isSelected(day) && (
-                  <span className={clsx(
-                    'absolute bottom-1 w-1.5 h-1.5 rounded-full',
-                    statusDots[status]
-                  )} />
+                  <span className={clsx('absolute bottom-1 w-1.5 h-1.5 rounded-full', dotColors[status])} />
                 )}
               </button>
             );
@@ -327,82 +246,57 @@ export default function Calendar() {
         </div>
 
         {/* Legend */}
-        <div className="flex items-center justify-center gap-6 mt-4 text-xs">
-          <div className="flex items-center gap-1.5">
-            <span className="w-2 h-2 rounded-full bg-emerald-400" />
-            <span className={isDark ? 'text-dark-400' : 'text-slate-500'}>Available</span>
-          </div>
-          <div className="flex items-center gap-1.5">
-            <span className="w-2 h-2 rounded-full bg-primary-400" />
-            <span className={isDark ? 'text-dark-400' : 'text-slate-500'}>Booked</span>
-          </div>
-          <div className="flex items-center gap-1.5">
-            <span className="w-2 h-2 rounded-full bg-red-400" />
-            <span className={isDark ? 'text-dark-400' : 'text-slate-500'}>Unavailable</span>
-          </div>
+        <div className="flex items-center justify-center gap-6 mt-4 text-xs text-white/40">
+          <span className="flex items-center gap-1"><span className="w-2 h-2 rounded-full bg-emerald-400" /> Available</span>
+          <span className="flex items-center gap-1"><span className="w-2 h-2 rounded-full bg-violet-400" /> Booked</span>
+          <span className="flex items-center gap-1"><span className="w-2 h-2 rounded-full bg-red-400" /> Unavailable</span>
         </div>
 
-        {/* Selected date details */}
+        {/* Selected Date Details */}
         {mode !== 'edit' && (
           <div className="mt-6">
-            <div className="flex items-center justify-between mb-3">
-              <h3 className={clsx('text-lg font-semibold', isDark ? 'text-white' : 'text-slate-900')}>
-                {selectedDate.toLocaleDateString(DEFAULT_LOCALE, { weekday: 'long', day: 'numeric', month: 'long', timeZone: TIMEZONE })}
-              </h3>
-            </div>
+            <h3 className="text-lg font-semibold text-white mb-3">
+              {selectedDate.toLocaleDateString(DEFAULT_LOCALE, { weekday: 'long', day: 'numeric', month: 'long', timeZone: TIMEZONE })}
+            </h3>
 
-            {/* Quick availability buttons - Glass style */}
             {!isPast(selectedDate.getDate()) && selectedDeployments.length === 0 && (
               <div className="flex items-center gap-2 mb-4">
-                <span className={clsx('text-sm', isDark ? 'text-dark-400' : 'text-slate-500')}>Set as:</span>
+                <span className="text-sm text-white/40">Set as:</span>
                 <button
                   onClick={() => handleSetAvailability('available')}
                   className={clsx(
-                    'flex items-center gap-1 px-4 py-2 rounded-xl text-sm font-medium transition-all border',
+                    'flex items-center gap-1 px-4 py-2 rounded-xl text-sm font-medium transition-all',
                     selectedAvailability === 'available'
-                      ? 'bg-gradient-to-r from-emerald-500 to-teal-500 text-white border-transparent shadow-lg shadow-emerald-500/25'
-                      : isDark
-                        ? 'bg-emerald-500/15 border-emerald-500/30 text-emerald-400 hover:bg-emerald-500/25'
-                        : 'bg-emerald-50 border-emerald-200 text-emerald-600 hover:bg-emerald-100'
+                      ? 'bg-emerald-500 text-white'
+                      : 'bg-emerald-500/20 border border-emerald-500/30 text-emerald-400'
                   )}
                 >
-                  <CheckIcon className="h-4 w-4" />
-                  Available
+                  <CheckIcon className="h-4 w-4" /> Available
                 </button>
                 <button
                   onClick={() => handleSetAvailability('unavailable')}
                   className={clsx(
-                    'flex items-center gap-1 px-4 py-2 rounded-xl text-sm font-medium transition-all border',
+                    'flex items-center gap-1 px-4 py-2 rounded-xl text-sm font-medium transition-all',
                     selectedAvailability === 'unavailable'
-                      ? 'bg-gradient-to-r from-red-500 to-rose-500 text-white border-transparent shadow-lg shadow-red-500/25'
-                      : isDark
-                        ? 'bg-red-500/15 border-red-500/30 text-red-400 hover:bg-red-500/25'
-                        : 'bg-red-50 border-red-200 text-red-600 hover:bg-red-100'
+                      ? 'bg-red-500 text-white'
+                      : 'bg-red-500/20 border border-red-500/30 text-red-400'
                   )}
                 >
-                  <XIcon className="h-4 w-4" />
-                  Unavailable
+                  <XIcon className="h-4 w-4" /> Unavailable
                 </button>
               </div>
             )}
-            
+
             {loading ? (
-              <div className="flex items-center justify-center py-8">
-                <div className="animate-spin h-6 w-6 border-2 border-primary-500 border-t-transparent rounded-full" />
+              <div className="flex justify-center py-8">
+                <div className="animate-spin h-6 w-6 border-2 border-emerald-500 border-t-transparent rounded-full" />
               </div>
             ) : selectedDeployments.length === 0 ? (
-              <div className={clsx(
-                'text-center py-10 rounded-2xl backdrop-blur-md border',
-                isDark ? 'bg-white/[0.03] border-white/[0.08]' : 'bg-white border-slate-200 shadow-[0_4px_20px_rgba(0,0,0,0.05)]'
-              )}>
-                <CalendarIcon className={clsx('h-10 w-10 mx-auto mb-2', isDark ? 'text-dark-500' : 'text-slate-300')} />
-                <p className={isDark ? 'text-dark-400' : 'text-slate-500'}>No jobs scheduled</p>
-                {selectedAvailability === 'available' && (
-                  <p className="text-sm text-emerald-400 mt-1">You're marked as available</p>
-                )}
-                {selectedAvailability === 'unavailable' && (
-                  <p className="text-sm text-red-400 mt-1">You're marked as unavailable</p>
-                )}
+              <div className="text-center py-12 rounded-2xl bg-[#0a1628]/50 border border-white/[0.05]">
+                <CalendarIcon className="h-12 w-12 mx-auto mb-3 text-white/10" />
+                <p className="text-white/40">No jobs scheduled</p>
+                {selectedAvailability === 'available' && <p className="text-sm text-emerald-400 mt-1">You're marked as available</p>}
+                {selectedAvailability === 'unavailable' && <p className="text-sm text-red-400 mt-1">You're marked as unavailable</p>}
               </div>
             ) : (
               <div className="space-y-3">
@@ -410,36 +304,25 @@ export default function Calendar() {
                   <Link
                     key={deployment.id}
                     to={`/jobs/${deployment.job_id}`}
-                    className={clsx(
-                      'block p-4 rounded-xl backdrop-blur-md border transition-all',
-                      isDark
-                        ? 'bg-white/[0.03] border-white/[0.08] hover:bg-white/[0.05] hover:border-primary-500/30'
-                        : 'bg-white border-slate-200 shadow-[0_4px_20px_rgba(0,0,0,0.05)] hover:shadow-[0_10px_40px_rgba(0,0,0,0.08)]'
-                    )}
+                    className="block p-4 rounded-2xl bg-[#0a1628]/80 border border-white/[0.05] hover:border-emerald-500/30 transition-all"
                   >
                     <div className="flex items-start justify-between">
                       <div>
-                        <h4 className={clsx('font-semibold', isDark ? 'text-white' : 'text-slate-900')}>{deployment.job_title}</h4>
-                        <p className={clsx('text-sm', isDark ? 'text-dark-400' : 'text-slate-500')}>{deployment.company_name || deployment.location}</p>
+                        <h4 className="font-semibold text-white">{deployment.job_title}</h4>
+                        <p className="text-sm text-white/40">{deployment.company_name || deployment.location}</p>
                       </div>
                       <span className={clsx(
                         'px-2 py-1 rounded-full text-xs font-medium',
-                        deployment.status === 'completed' ? 'bg-accent-500/20 text-accent-400' :
-                        deployment.status === 'confirmed' ? 'bg-primary-500/20 text-primary-400' :
+                        deployment.status === 'completed' ? 'bg-emerald-500/20 text-emerald-400' :
+                        deployment.status === 'confirmed' ? 'bg-violet-500/20 text-violet-400' :
                         'bg-amber-500/20 text-amber-400'
                       )}>
                         {deployment.status}
                       </span>
                     </div>
-                    <div className={clsx('flex items-center gap-4 mt-3 text-sm', isDark ? 'text-dark-400' : 'text-slate-500')}>
-                      <div className="flex items-center gap-1">
-                        <ClockIcon className="h-4 w-4" />
-                        <span>{deployment.start_time || '09:00'} - {deployment.end_time || '17:00'}</span>
-                      </div>
-                      <div className="flex items-center gap-1">
-                        <MapPinIcon className="h-4 w-4" />
-                        <span>{deployment.location}</span>
-                      </div>
+                    <div className="flex items-center gap-4 mt-3 text-sm text-white/40">
+                      <span className="flex items-center gap-1"><ClockIcon className="h-4 w-4" /> {deployment.start_time || '09:00'} - {deployment.end_time || '17:00'}</span>
+                      <span className="flex items-center gap-1"><MapPinIcon className="h-4 w-4" /> {deployment.location}</span>
                     </div>
                   </Link>
                 ))}

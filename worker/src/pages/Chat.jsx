@@ -481,8 +481,16 @@ export default function Chat() {
     setShowEmoji(false);
   };
 
-  // Group messages by date (Singapore timezone)
-  const groupedMessages = messages.reduce((acc, msg) => {
+  // Sort messages by timestamp first, then group by date (Singapore timezone)
+  const sortedMessages = [...messages].sort((a, b) => {
+    const timeA = parseUTCTimestamp(a.created_at).getTime();
+    const timeB = parseUTCTimestamp(b.created_at).getTime();
+    if (timeA !== timeB) return timeA - timeB;
+    // Secondary sort by ID for stable ordering
+    return (a.id || 0) - (b.id || 0);
+  });
+
+  const groupedMessages = sortedMessages.reduce((acc, msg) => {
     const date = getSGDateString(msg.created_at);
     if (!acc[date]) acc[date] = [];
     acc[date].push(msg);

@@ -17,14 +17,13 @@ import {
   ClockIcon,
   SunIcon,
   MoonIcon,
-  SettingsIcon,
   CameraIcon,
   SparklesIcon,
   MessageCircleIcon,
   ExternalLinkIcon,
   XIcon,
-  LinkIcon,
-  UnlinkIcon,
+  SettingsIcon,
+  FlameIcon,
 } from 'lucide-react';
 import { useToast } from '../components/ui/Toast';
 import { useAuth } from '../contexts/AuthContext';
@@ -32,384 +31,89 @@ import { useTheme } from '../contexts/ThemeContext';
 import { clsx } from 'clsx';
 import { XP_THRESHOLDS as xpThresholds, LEVEL_TITLES as levelTitles, calculateLevel, getLevelTier, LEVEL_TIERS } from '../utils/gamification';
 import { DEFAULTS } from '../utils/constants';
+import ProfileAvatar from '../components/ui/ProfileAvatar';
 
-function StatItem({ icon: Icon, label, value, color = 'primary' }) {
-  const { isDark } = useTheme();
-
+// Stat Card Component
+function StatCard({ icon: Icon, label, value, color = 'emerald' }) {
   const colorClasses = {
-    primary: { icon: 'text-primary-400', bg: 'bg-primary-500/20', border: 'border-primary-500/30' },
-    accent: { icon: 'text-emerald-400', bg: 'bg-emerald-500/20', border: 'border-emerald-500/30' },
-    gold: { icon: 'text-amber-400', bg: 'bg-amber-500/20', border: 'border-amber-500/30' },
+    emerald: 'from-emerald-500/20 to-emerald-500/5 border-emerald-500/20 text-emerald-400',
+    violet: 'from-violet-500/20 to-violet-500/5 border-violet-500/20 text-violet-400',
+    amber: 'from-amber-500/20 to-amber-500/5 border-amber-500/20 text-amber-400',
+    cyan: 'from-cyan-500/20 to-cyan-500/5 border-cyan-500/20 text-cyan-400',
   };
-
-  const styles = colorClasses[color] || colorClasses.primary;
 
   return (
     <div className={clsx(
-      'flex items-center gap-3 p-4 rounded-xl backdrop-blur-md border',
-      isDark
-        ? 'bg-white/[0.03] border-white/[0.08]'
-        : 'bg-white border-slate-200 shadow-[0_4px_15px_rgba(0,0,0,0.04)]'
+      'p-4 rounded-2xl border bg-gradient-to-br',
+      colorClasses[color].split(' ').slice(0, 3).join(' ')
     )}>
-      <div className={clsx('p-2.5 rounded-xl border', styles.bg, styles.border)}>
-        <Icon className={clsx('h-4 w-4', styles.icon)} />
+      <div className="flex items-center gap-2 mb-2">
+        <Icon className={clsx('h-4 w-4', colorClasses[color].split(' ').slice(-1))} />
+        <span className="text-white/50 text-xs">{label}</span>
       </div>
-      <div>
-        <p className={clsx('text-xs', isDark ? 'text-dark-400' : 'text-slate-500')}>{label}</p>
-        <p className={clsx('font-bold', isDark ? 'text-white' : 'text-slate-900')}>{value}</p>
-      </div>
+      <p className={clsx('text-2xl font-bold', colorClasses[color].split(' ').slice(-1))}>{value}</p>
     </div>
   );
 }
 
-// Border preview for customization
-function BorderPreview({ tier, isLocked, isSelected, onClick, level }) {
-  const { isDark } = useTheme();
-
-  const getTierStyles = () => {
-    switch (tier) {
-      case 'mythic':
-        return {
-          gradient: 'bg-gradient-to-br from-rose-400 via-pink-500 to-rose-600',
-          glow: isSelected ? 'shadow-lg shadow-rose-500/50' : '',
-          label: 'Mythic',
-          minLevel: 50,
-          animation: 'animate-pulse',
-        };
-      case 'diamondElite':
-        return {
-          gradient: 'bg-gradient-to-br from-violet-300 via-fuchsia-400 to-pink-500',
-          glow: isSelected ? 'shadow-lg shadow-purple-500/50' : '',
-          label: 'Diamond+',
-          minLevel: 45,
-          animation: '',
-        };
-      case 'diamond':
-        return {
-          gradient: 'bg-gradient-to-br from-violet-400 via-purple-500 to-fuchsia-600',
-          glow: isSelected ? 'shadow-lg shadow-violet-500/40' : '',
-          label: 'Diamond',
-          minLevel: 40,
-          animation: '',
-        };
-      case 'platinumElite':
-        return {
-          gradient: 'bg-gradient-to-br from-cyan-200 via-teal-400 to-emerald-500',
-          glow: isSelected ? 'shadow-md shadow-teal-500/40' : '',
-          label: 'Platinum+',
-          minLevel: 35,
-          animation: '',
-        };
-      case 'platinum':
-        return {
-          gradient: 'bg-gradient-to-br from-cyan-300 via-cyan-500 to-teal-600',
-          glow: isSelected ? 'shadow-md shadow-cyan-500/30' : '',
-          label: 'Platinum',
-          minLevel: 30,
-          animation: '',
-        };
-      case 'goldElite':
-        return {
-          gradient: 'bg-gradient-to-br from-yellow-200 via-amber-400 to-yellow-500',
-          glow: isSelected ? 'shadow-md shadow-yellow-400/40' : '',
-          label: 'Gold+',
-          minLevel: 25,
-          animation: '',
-        };
-      case 'gold':
-        return {
-          gradient: 'bg-gradient-to-br from-yellow-300 via-yellow-500 to-amber-600',
-          glow: isSelected ? 'shadow-md shadow-yellow-500/30' : '',
-          label: 'Gold',
-          minLevel: 20,
-          animation: '',
-        };
-      case 'silverElite':
-        return {
-          gradient: 'bg-gradient-to-br from-zinc-200 via-slate-300 to-zinc-400',
-          glow: isSelected ? 'shadow-sm shadow-zinc-400/30' : '',
-          label: 'Silver+',
-          minLevel: 15,
-          animation: '',
-        };
-      case 'silver':
-        return {
-          gradient: 'bg-gradient-to-br from-slate-200 via-slate-400 to-slate-500',
-          glow: isSelected ? 'shadow-sm shadow-slate-400/20' : '',
-          label: 'Silver',
-          minLevel: 10,
-          animation: '',
-        };
-      case 'bronzeElite':
-        return {
-          gradient: 'bg-gradient-to-br from-amber-400 via-orange-500 to-amber-600',
-          glow: isSelected ? 'shadow-sm shadow-orange-500/30' : '',
-          label: 'Bronze+',
-          minLevel: 5,
-          animation: '',
-        };
-      default: // bronze
-        return {
-          gradient: 'bg-gradient-to-br from-amber-500 via-amber-700 to-amber-900',
-          glow: '',
-          label: 'Bronze',
-          minLevel: 1,
-          animation: '',
-        };
-    }
-  };
-
-  const styles = getTierStyles();
-
-  return (
-    <button
-      onClick={onClick}
-      disabled={isLocked}
-      className={clsx(
-        'flex flex-col items-center gap-2 p-3 rounded-xl transition-all',
-        isSelected && !isLocked && (isDark ? 'bg-primary-500/20 ring-2 ring-primary-500' : 'bg-primary-100 ring-2 ring-primary-500'),
-        !isSelected && !isLocked && (isDark ? 'bg-dark-800/50 hover:bg-dark-700/50' : 'bg-white hover:bg-slate-50 border border-slate-200'),
-        isLocked && 'opacity-50 cursor-not-allowed'
-      )}
-    >
-      {/* Border preview circle */}
-      <div className={clsx(
-        'w-12 h-12 rounded-full p-[3px]',
-        styles.gradient,
-        styles.glow
-      )}>
-        <div className={clsx(
-          'w-full h-full rounded-full flex items-center justify-center',
-          isDark ? 'bg-dark-900' : 'bg-white'
-        )}>
-          {isLocked ? (
-            <span className={clsx('text-xs', isDark ? 'text-dark-500' : 'text-slate-400')}>Lv.{styles.minLevel}</span>
-          ) : (
-            <span className={clsx('text-sm font-bold', isDark ? 'text-white' : 'text-slate-700')}>{level}</span>
-          )}
-        </div>
-      </div>
-      <span className={clsx(
-        'text-xs font-medium',
-        isLocked ? (isDark ? 'text-dark-500' : 'text-slate-400') : (isDark ? 'text-white' : 'text-slate-700')
-      )}>
-        {styles.label}
-      </span>
-      {isSelected && !isLocked && (
-        <CheckIcon className="h-4 w-4 text-primary-500" />
-      )}
-    </button>
-  );
-}
-
-function MenuLink({ icon: Icon, label, sublabel, onClick, danger, rightElement }) {
-  const { isDark } = useTheme();
-
+// Menu Link Component
+function MenuLink({ icon: Icon, label, sublabel, onClick, danger, badge }) {
   return (
     <button
       onClick={onClick}
       className={clsx(
-        'w-full flex items-center justify-between p-4 rounded-xl transition-all backdrop-blur-md border',
+        'w-full flex items-center gap-4 p-4 rounded-2xl transition-all',
         danger
-          ? 'bg-red-500/10 hover:bg-red-500/20 border-red-500/20'
-          : isDark
-            ? 'bg-white/[0.03] border-white/[0.08] hover:bg-white/[0.06] hover:border-white/[0.12]'
-            : 'bg-white border-slate-200 shadow-[0_4px_15px_rgba(0,0,0,0.04)] hover:shadow-[0_6px_20px_rgba(0,0,0,0.06)]'
+          ? 'bg-red-500/10 hover:bg-red-500/20 border border-red-500/20'
+          : 'bg-[#0a1628]/80 border border-white/[0.05] hover:border-white/10'
       )}
     >
-      <div className="flex items-center gap-3">
-        <div className={clsx(
-          'p-2 rounded-lg',
-          danger
-            ? 'bg-red-500/20'
-            : isDark ? 'bg-white/[0.05]' : 'bg-slate-100'
-        )}>
-          <Icon className={clsx('h-5 w-5', danger ? 'text-red-400' : isDark ? 'text-primary-400' : 'text-slate-500')} />
-        </div>
-        <div className="text-left">
-          <span className={danger ? 'text-red-400' : isDark ? 'text-white' : 'text-slate-900'}>{label}</span>
-          {sublabel && (
-            <p className={clsx('text-xs', isDark ? 'text-dark-500' : 'text-slate-500')}>{sublabel}</p>
-          )}
-        </div>
+      <div className={clsx(
+        'w-10 h-10 rounded-xl flex items-center justify-center',
+        danger ? 'bg-red-500/20' : 'bg-white/5'
+      )}>
+        <Icon className={clsx('h-5 w-5', danger ? 'text-red-400' : 'text-white/70')} />
       </div>
-      {rightElement || (
-        <ChevronRightIcon className={clsx('h-5 w-5', danger ? 'text-red-400' : isDark ? 'text-dark-500' : 'text-slate-400')} />
-      )}
-    </button>
-  );
-}
-
-function ThemeToggleButton({ compact = false }) {
-  const { toggleTheme, isDark } = useTheme();
-
-  if (compact) {
-    return (
-      <button
-        onClick={toggleTheme}
-        className={clsx(
-          'p-1.5 rounded-lg transition-colors',
-          isDark ? 'bg-dark-700 hover:bg-dark-600' : 'bg-slate-200 hover:bg-slate-300'
-        )}
-        aria-label={isDark ? 'Switch to light mode' : 'Switch to dark mode'}
-      >
-        {isDark ? (
-          <SunIcon className="h-4 w-4 text-amber-400" />
-        ) : (
-          <MoonIcon className="h-4 w-4 text-slate-600" />
-        )}
-      </button>
-    );
-  }
-
-  return (
-    <button
-      onClick={toggleTheme}
-      className={clsx(
-        'p-2 rounded-xl transition-colors',
-        isDark ? 'bg-dark-800 hover:bg-dark-700' : 'bg-slate-100 hover:bg-slate-200'
-      )}
-      aria-label={isDark ? 'Switch to light mode' : 'Switch to dark mode'}
-    >
-      {isDark ? (
-        <SunIcon className="h-5 w-5 text-amber-400" />
+      <div className="flex-1 text-left">
+        <span className={danger ? 'text-red-400' : 'text-white'}>{label}</span>
+        {sublabel && <p className="text-xs text-white/40">{sublabel}</p>}
+      </div>
+      {badge ? (
+        <span className="px-2 py-1 rounded-lg bg-emerald-500/20 text-emerald-400 text-xs font-medium">{badge}</span>
       ) : (
-        <MoonIcon className="h-5 w-5 text-slate-600" />
+        <ChevronRightIcon className={clsx('h-5 w-5', danger ? 'text-red-400/50' : 'text-white/30')} />
       )}
     </button>
   );
 }
 
-function XPProgressBar({ currentXP }) {
-  const { isDark } = useTheme();
-  const safeXP = currentXP || 0;
-  const safeLevel = calculateLevel(safeXP);
+// XP Progress Component
+function XPProgress({ currentXP, level }) {
   const maxLevel = xpThresholds.length;
-  const currentThreshold = xpThresholds[safeLevel - 1] || 0;
-  const nextThreshold = xpThresholds[safeLevel] || xpThresholds[maxLevel - 1];
-  const xpInLevel = Math.max(0, safeXP - currentThreshold);
+  const currentThreshold = xpThresholds[level - 1] || 0;
+  const nextThreshold = xpThresholds[level] || xpThresholds[maxLevel - 1];
+  const xpInLevel = Math.max(0, currentXP - currentThreshold);
   const xpNeeded = Math.max(1, nextThreshold - currentThreshold);
-  const progress = safeLevel >= maxLevel ? 100 : Math.min((xpInLevel / xpNeeded) * 100, 100);
-  const isMaxLevel = safeLevel >= maxLevel;
-
-  // Level tier styling
-  const getLevelStyle = (level) => {
-    if (level >= 40) return 'bg-violet-500/20 text-violet-300 border border-violet-500/40 shadow-lg shadow-violet-500/20';
-    if (level >= 30) return 'bg-cyan-500/20 text-cyan-300 border border-cyan-500/40 shadow-lg shadow-cyan-500/20';
-    if (level >= 20) return 'bg-yellow-500/20 text-yellow-300 border border-yellow-500/40 shadow-lg shadow-yellow-500/20';
-    if (level >= 10) return 'bg-slate-500/20 text-slate-300 border border-slate-500/40';
-    return isDark ? 'bg-amber-500/20 text-amber-300 border border-amber-500/40' : 'bg-amber-100 text-amber-700 border border-amber-200';
-  };
+  const progress = level >= maxLevel ? 100 : Math.min((xpInLevel / xpNeeded) * 100, 100);
 
   return (
     <div className="w-full">
-      <div className="flex items-center justify-between mb-2">
-        <div className="flex items-center gap-2">
-          <span className={clsx(
-            'inline-flex items-center justify-center px-3 py-1 rounded-lg font-bold text-sm',
-            getLevelStyle(safeLevel)
-          )}>
-            Lv.{safeLevel}
-          </span>
-          <span className={clsx('text-sm font-medium', isDark ? 'text-violet-300' : 'text-slate-600')}>
-            {levelTitles[safeLevel] || 'Newcomer'}
-          </span>
-        </div>
-        <div className="text-sm">
-          <span className="font-bold text-emerald-400">{xpInLevel.toLocaleString()}</span>
-          <span className={isDark ? 'text-dark-400' : 'text-slate-500'}> / {xpNeeded.toLocaleString()}</span>
-        </div>
+      <div className="flex items-center justify-between mb-2 text-sm">
+        <span className="text-white/50">Level Progress</span>
+        <span className="text-white">
+          <span className="text-emerald-400 font-bold">{xpInLevel.toLocaleString()}</span>
+          <span className="text-white/30"> / {xpNeeded.toLocaleString()} XP</span>
+        </span>
       </div>
-
-      {/* Glow-track XP Bar */}
-      <div className="xp-bar-command-center">
+      <div className="h-3 rounded-full bg-white/5 overflow-hidden">
         <div
-          className="xp-bar-fill-command-center"
+          className="h-full rounded-full bg-gradient-to-r from-emerald-500 via-cyan-500 to-violet-500 transition-all duration-500"
           style={{ width: `${Math.max(progress, 2)}%` }}
         />
       </div>
-
-      {!isMaxLevel && (
-        <p className={clsx('text-xs mt-2 text-right', isDark ? 'text-dark-400' : 'text-slate-500')}>
-          <span className="text-violet-400 font-medium">{(xpNeeded - xpInLevel).toLocaleString()}</span> XP to {levelTitles[safeLevel + 1] || 'Next Level'}
-        </p>
-      )}
-    </div>
-  );
-}
-
-function LevelBadgeSimple({ level, size = 'md' }) {
-  const safeLevel = level || 1;
-  const tier = getLevelTier(safeLevel);
-
-  // Tier-based styling with glow effects
-  const getTierStyles = () => {
-    switch (tier) {
-      case 'mythic':
-        return {
-          gradient: 'bg-gradient-to-br from-rose-400 via-pink-500 to-rose-600',
-          glow: 'shadow-lg shadow-rose-500/50',
-          ring: 'ring-2 ring-rose-300/50',
-          text: 'text-white',
-          animation: 'animate-pulse',
-        };
-      case 'diamond':
-        return {
-          gradient: 'bg-gradient-to-br from-violet-400 via-purple-500 to-fuchsia-600',
-          glow: 'shadow-lg shadow-violet-500/40',
-          ring: 'ring-2 ring-violet-300/50',
-          text: 'text-white',
-          animation: '',
-        };
-      case 'platinum':
-        return {
-          gradient: 'bg-gradient-to-br from-cyan-300 via-cyan-500 to-teal-600',
-          glow: 'shadow-md shadow-cyan-500/30',
-          ring: 'ring-2 ring-cyan-200/40',
-          text: 'text-white',
-          animation: '',
-        };
-      case 'gold':
-        return {
-          gradient: 'bg-gradient-to-br from-yellow-300 via-yellow-500 to-amber-600',
-          glow: 'shadow-md shadow-yellow-500/30',
-          ring: 'ring-2 ring-yellow-200/40',
-          text: 'text-amber-900',
-          animation: '',
-        };
-      case 'silver':
-        return {
-          gradient: 'bg-gradient-to-br from-slate-200 via-slate-400 to-slate-500',
-          glow: 'shadow-sm shadow-slate-400/20',
-          ring: 'ring-1 ring-slate-300/30',
-          text: 'text-slate-800',
-          animation: '',
-        };
-      default: // bronze
-        return {
-          gradient: 'bg-gradient-to-br from-amber-500 via-amber-700 to-amber-900',
-          glow: '',
-          ring: 'ring-1 ring-amber-400/30',
-          text: 'text-amber-100',
-          animation: '',
-        };
-    }
-  };
-
-  const styles = getTierStyles();
-  const sizeClasses = size === 'sm' ? 'h-8 w-8 text-xs' : size === 'lg' ? 'h-12 w-12 text-base' : 'h-10 w-10 text-sm';
-
-  return (
-    <div className={clsx(
-      'relative flex items-center justify-center rounded-full font-bold',
-      sizeClasses,
-      styles.gradient,
-      styles.glow,
-      styles.ring,
-      styles.text,
-      styles.animation
-    )}>
-      {safeLevel}
+      <p className="text-xs text-white/40 mt-1.5 text-right">
+        {(xpNeeded - xpInLevel).toLocaleString()} XP to {levelTitles[level + 1] || 'Max Level'}
+      </p>
     </div>
   );
 }
@@ -417,27 +121,20 @@ function LevelBadgeSimple({ level, size = 'md' }) {
 export default function Profile() {
   const navigate = useNavigate();
   const { user, logout, refreshUser } = useAuth();
-  const { isDark } = useTheme();
+  const { isDark, toggleTheme } = useTheme();
   const toast = useToast();
   const [copied, setCopied] = useState(false);
   const [achievements, setAchievements] = useState([]);
-  const [loading, setLoading] = useState(false);
   const [uploadingPhoto, setUploadingPhoto] = useState(false);
   const [showTelegramModal, setShowTelegramModal] = useState(false);
   const [telegramCode, setTelegramCode] = useState(null);
   const [telegramLoading, setTelegramLoading] = useState(false);
-  const [codeCopied, setCodeCopied] = useState(false);
 
   useEffect(() => {
-    if (user?.id) {
-      fetchUserData();
-    }
+    if (user?.id) fetchUserData();
   }, [user?.id]);
 
   const fetchUserData = async () => {
-    if (!user?.id) return;
-
-    setLoading(true);
     try {
       const res = await fetch(`/api/v1/candidates/${user.id}`);
       const data = await res.json();
@@ -447,8 +144,6 @@ export default function Profile() {
       }
     } catch (error) {
       console.error('Failed to fetch user data:', error);
-    } finally {
-      setLoading(false);
     }
   };
 
@@ -456,6 +151,7 @@ export default function Profile() {
     if (user?.referral_code) {
       navigator.clipboard.writeText(user.referral_code);
       setCopied(true);
+      toast.success('Copied!', 'Referral code copied to clipboard');
       setTimeout(() => setCopied(false), 2000);
     }
   };
@@ -463,67 +159,40 @@ export default function Profile() {
   const handlePhotoUpload = async (e) => {
     const file = e.target.files?.[0];
     if (!file) return;
-
-    // Validate file type
     if (!file.type.startsWith('image/')) {
-      toast.error('Invalid file', 'Please select an image file');
+      toast.error('Invalid file', 'Please select an image');
       return;
     }
-
-    // Validate file size (5MB max)
     if (file.size > 5 * 1024 * 1024) {
-      toast.error('File too large', 'Please select an image under 5MB');
+      toast.error('File too large', 'Max 5MB');
       return;
     }
 
     setUploadingPhoto(true);
-
-    try {
-      // Convert to base64
-      const reader = new FileReader();
-      reader.onload = async (event) => {
-        const base64 = event.target?.result;
-
+    const reader = new FileReader();
+    reader.onload = async (event) => {
+      try {
         const res = await fetch(`/api/v1/candidates/${user.id}/photo`, {
           method: 'POST',
           headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify({ photo: base64 }),
+          body: JSON.stringify({ photo: event.target?.result }),
         });
-
         const data = await res.json();
-
         if (data.success) {
-          toast.success('Photo updated', 'Your profile picture has been changed');
+          toast.success('Updated!', 'Profile picture changed');
           refreshUser();
-        } else {
-          toast.error('Upload failed', data.error || 'Please try again');
         }
-
-        setUploadingPhoto(false);
-      };
-
-      reader.onerror = () => {
-        toast.error('Upload failed', 'Could not read the image file');
-        setUploadingPhoto(false);
-      };
-
-      reader.readAsDataURL(file);
-    } catch (error) {
-      toast.error('Upload failed', 'Please try again');
+      } catch (error) {
+        toast.error('Failed', 'Please try again');
+      }
       setUploadingPhoto(false);
-    }
-  };
-
-  const handleLogout = () => {
-    logout();
-    navigate('/login');
+    };
+    reader.readAsDataURL(file);
   };
 
   const handleConnectTelegram = async () => {
     setShowTelegramModal(true);
     setTelegramLoading(true);
-    setTelegramCode(null);
-
     try {
       const res = await fetch('/api/v1/messaging/telegram/verify', {
         method: 'POST',
@@ -531,67 +200,31 @@ export default function Profile() {
         body: JSON.stringify({ candidateId: user.id }),
       });
       const data = await res.json();
-
-      if (data.success) {
-        if (data.data.alreadyLinked) {
-          toast.info('Already Connected', 'Your Telegram is already linked');
-          setShowTelegramModal(false);
-        } else {
-          setTelegramCode(data.data);
-        }
+      if (data.success && !data.data.alreadyLinked) {
+        setTelegramCode(data.data);
       } else {
-        toast.error('Error', data.error || 'Failed to generate code');
         setShowTelegramModal(false);
+        if (data.data?.alreadyLinked) toast.info('Already connected');
       }
     } catch (error) {
-      toast.error('Error', 'Failed to connect. Please try again.');
       setShowTelegramModal(false);
-    } finally {
-      setTelegramLoading(false);
+      toast.error('Error', 'Failed to connect');
     }
+    setTelegramLoading(false);
   };
 
-  const handleCopyTelegramCode = () => {
-    if (telegramCode?.code) {
-      navigator.clipboard.writeText(telegramCode.code);
-      setCodeCopied(true);
-      setTimeout(() => setCodeCopied(false), 2000);
-      toast.success('Copied', 'Code copied to clipboard');
-    }
+  const handleLogout = () => {
+    logout();
+    navigate('/login');
   };
 
-  const handleUnlinkTelegram = async () => {
-    try {
-      const res = await fetch(`/api/v1/messaging/telegram/${user.id}`, {
-        method: 'DELETE',
-      });
-      const data = await res.json();
-
-      if (data.success) {
-        toast.success('Disconnected', 'Telegram has been unlinked');
-        refreshUser();
-      } else {
-        toast.error('Error', data.error || 'Failed to unlink');
-      }
-    } catch (error) {
-      toast.error('Error', 'Failed to unlink. Please try again.');
-    }
-  };
-
-  // Not logged in state
   if (!user) {
     return (
-      <div className={clsx(
-        'min-h-screen flex items-center justify-center pb-24',
-        isDark ? 'bg-dark-950' : 'bg-slate-50'
-      )}>
+      <div className="min-h-screen bg-[#020817] flex items-center justify-center pb-24">
         <div className="text-center">
-          <UserIcon className={clsx('h-12 w-12 mx-auto mb-4', isDark ? 'text-dark-600' : 'text-slate-400')} />
-          <p className={isDark ? 'text-dark-400' : 'text-slate-600'}>Please log in to view your profile</p>
-          <button
-            onClick={() => navigate('/login')}
-            className="mt-4 px-6 py-2 rounded-xl bg-primary-500 text-white font-medium"
-          >
+          <UserIcon className="h-16 w-16 mx-auto mb-4 text-white/10" />
+          <p className="text-white/40 mb-4">Please log in to view your profile</p>
+          <button onClick={() => navigate('/login')} className="px-6 py-3 rounded-xl bg-emerald-500 text-white font-medium">
             Log In
           </button>
         </div>
@@ -599,317 +232,193 @@ export default function Profile() {
     );
   }
 
-  // Safe data extraction
   const userName = user.name || 'User';
   const userXP = user.xp || 0;
   const userLevel = calculateLevel(userXP);
   const userRating = user.rating || 0;
-  const userEmail = user.email || '';
-  const userPhone = user.phone || DEFAULTS.userPhone;
   const referralCode = user.referral_code || 'N/A';
   const jobsCompleted = user.total_jobs_completed || 0;
   const streakDays = user.streak_days || 0;
-
-  // Handle certifications
-  let certifications = [];
-  try {
-    if (Array.isArray(user.certifications)) {
-      certifications = user.certifications;
-    } else if (typeof user.certifications === 'string') {
-      certifications = JSON.parse(user.certifications);
-    }
-  } catch (e) {
-    certifications = [];
-  }
+  const tier = getLevelTier(userLevel);
 
   return (
-    <div className={clsx('min-h-screen pb-24', isDark ? 'bg-dark-950' : 'bg-transparent')}>
-      {/* Profile Header Section - Glassmorphism */}
-      <div className={clsx(
-        'relative px-4 pt-4 pb-6 overflow-hidden',
-        isDark
-          ? 'bg-gradient-to-b from-[#080810] via-[#0c0d1a] to-dark-950'
-          : 'bg-gradient-to-b from-[#EFF6FF] to-transparent'
-      )}>
-        {/* Background gradient blobs for depth */}
-        {isDark && (
-          <>
-            <div className="absolute top-0 right-0 w-64 h-64 bg-primary-500/15 rounded-full blur-[80px] -translate-y-1/2 translate-x-1/4" />
-            <div className="absolute bottom-0 left-0 w-48 h-48 bg-violet-500/10 rounded-full blur-[60px] translate-y-1/2 -translate-x-1/4" />
-          </>
-        )}
-        {/* Profile card */}
-        <div className="relative flex items-center gap-4">
-          {/* Avatar with photo upload */}
-          <div className="relative">
-            <label className="cursor-pointer block">
-              <input
-                type="file"
-                accept="image/*"
-                onChange={handlePhotoUpload}
-                className="hidden"
-                disabled={uploadingPhoto}
-              />
-              <div className="w-20 h-20 rounded-2xl bg-gradient-to-br from-primary-500 to-primary-700 flex items-center justify-center border-2 border-primary-400 overflow-hidden">
-                {uploadingPhoto ? (
-                  <div className="animate-spin h-8 w-8 border-3 border-white border-t-transparent rounded-full" />
-                ) : user.profile_photo ? (
-                  <img src={user.profile_photo} alt={userName} className="w-full h-full object-cover" />
-                ) : (
-                  <span className="text-3xl font-bold text-white">{userName.charAt(0)}</span>
-                )}
-              </div>
-              {/* Camera icon overlay */}
-              <div className="absolute bottom-0 right-0 w-7 h-7 rounded-full bg-primary-500 border-2 border-white flex items-center justify-center">
-                <CameraIcon className="h-3.5 w-3.5 text-white" />
-              </div>
-            </label>
-            <div className="absolute -bottom-2 -right-2">
-              <LevelBadgeSimple level={userLevel} />
-            </div>
-          </div>
+    <div className="min-h-screen bg-[#020817] pb-24">
+      {/* Profile Header Card */}
+      <div className="px-4 pt-4">
+        <div className="relative rounded-3xl overflow-hidden">
+          {/* Background */}
+          <div className="absolute inset-0 bg-gradient-to-br from-[#0a1628] via-[#0d1f3c] to-[#0f2847]" />
+          <div className="absolute top-0 right-0 w-64 h-64 bg-violet-500/20 rounded-full blur-[80px] -translate-y-1/2 translate-x-1/4" />
+          <div className="absolute bottom-0 left-0 w-48 h-48 bg-emerald-500/15 rounded-full blur-[60px] translate-y-1/3 -translate-x-1/4" />
+          <div className="absolute inset-0 rounded-3xl border border-white/[0.08]" />
 
-          <div className="flex-1">
-            <div className="flex items-center justify-between">
-              <h2 className={clsx('text-xl font-bold', isDark ? 'text-white' : 'text-slate-900')}>{userName}</h2>
-              <ThemeToggleButton compact />
-            </div>
-            <p className="text-primary-400 text-sm">{levelTitles[userLevel] || 'Newcomer'}</p>
-            <div className="flex items-center gap-2 mt-1">
-              <StarIcon className="h-4 w-4 text-gold-400 fill-gold-400" />
-              <span className={clsx('font-medium', isDark ? 'text-white' : 'text-slate-900')}>{userRating.toFixed(1)}</span>
-              <span className={clsx('text-sm', isDark ? 'text-dark-500' : 'text-slate-500')}>rating</span>
-            </div>
-          </div>
-        </div>
+          {/* Content */}
+          <div className="relative p-6">
+            {/* Top Row */}
+            <div className="flex items-center justify-between mb-6">
+              <div className="flex items-center gap-4">
+                {/* Avatar with upload */}
+                <label className="cursor-pointer relative">
+                  <input type="file" accept="image/*" onChange={handlePhotoUpload} className="hidden" disabled={uploadingPhoto} />
+                  <div className="relative">
+                    <ProfileAvatar
+                      name={userName}
+                      photoUrl={user.profile_photo}
+                      level={userLevel}
+                      size="xl"
+                      showLevel={false}
+                    />
+                    {uploadingPhoto && (
+                      <div className="absolute inset-0 bg-black/50 rounded-full flex items-center justify-center">
+                        <div className="animate-spin h-6 w-6 border-2 border-white border-t-transparent rounded-full" />
+                      </div>
+                    )}
+                    <div className="absolute bottom-0 right-0 w-8 h-8 rounded-full bg-emerald-500 border-2 border-[#0a1628] flex items-center justify-center">
+                      <CameraIcon className="h-4 w-4 text-white" />
+                    </div>
+                  </div>
+                </label>
 
-        {/* XP Progress */}
-        <div className="mt-6">
-          <XPProgressBar currentXP={userXP} />
-        </div>
-      </div>
-
-      <div className="px-4 py-6 space-y-6">
-        {/* Quick Stats */}
-        <div className="grid grid-cols-2 gap-3">
-          <StatItem icon={BriefcaseIcon} label="Jobs Completed" value={jobsCompleted} color="primary" />
-          <StatItem icon={ZapIcon} label="Total XP" value={userXP.toLocaleString()} color="accent" />
-          <StatItem icon={TrophyIcon} label="Achievements" value={achievements.length} color="gold" />
-          <StatItem icon={ClockIcon} label="Streak" value={`${streakDays} days`} color="primary" />
-        </div>
-
-        {/* Profile Border Customization */}
-        <div>
-          <div className="flex items-center gap-2 mb-3">
-            <SparklesIcon className={clsx('h-5 w-5', isDark ? 'text-primary-400' : 'text-primary-500')} />
-            <h3 className={clsx('text-lg font-semibold', isDark ? 'text-white' : 'text-slate-900')}>Profile Border</h3>
-          </div>
-          <p className={clsx('text-sm mb-3', isDark ? 'text-dark-400' : 'text-slate-500')}>
-            Unlock premium borders by leveling up. Your current tier: <span className="font-semibold text-primary-400">{getLevelTier(userLevel).replace('Elite', '+')}</span>
-          </p>
-          <div className="grid grid-cols-4 gap-2">
-            {['bronze', 'bronzeElite', 'silver', 'silverElite', 'gold', 'goldElite', 'platinum', 'platinumElite', 'diamond', 'diamondElite', 'mythic'].map((tier) => {
-              const tierData = LEVEL_TIERS[tier];
-              const isLocked = userLevel < tierData.min;
-              const currentTier = getLevelTier(userLevel);
-              const isSelected = currentTier === tier;
-              const displayName = tier.replace('Elite', '+');
-
-              return (
-                <BorderPreview
-                  key={tier}
-                  tier={tier}
-                  isLocked={isLocked}
-                  isSelected={isSelected}
-                  level={userLevel}
-                  onClick={() => {
-                    if (!isLocked) {
-                      toast.info('Border Applied', `Using ${displayName.charAt(0).toUpperCase() + displayName.slice(1)} border`);
-                    }
-                  }}
-                />
-              );
-            })}
-          </div>
-        </div>
-
-        {/* Referral Code - Glassmorphism */}
-        <div className={clsx(
-          'relative p-5 rounded-2xl border backdrop-blur-md overflow-hidden',
-          isDark
-            ? 'bg-white/[0.03] border-emerald-500/30'
-            : 'bg-gradient-to-r from-emerald-50 to-teal-50 border-emerald-200 shadow-[0_4px_20px_rgba(0,0,0,0.05)]'
-        )}>
-          {/* Glow effect */}
-          {isDark && (
-            <div className="absolute inset-0 bg-gradient-to-r from-emerald-500/10 to-teal-500/10 rounded-2xl" />
-          )}
-          <div className="relative flex items-center justify-between mb-3">
-            <div className="flex items-center gap-2">
-              <div className={clsx('p-2 rounded-lg', isDark ? 'bg-emerald-500/20' : 'bg-emerald-100')}>
-                <ShareIcon className={clsx('h-5 w-5', isDark ? 'text-emerald-400' : 'text-emerald-600')} />
-              </div>
-              <span className={clsx('font-semibold', isDark ? 'text-white' : 'text-slate-900')}>Referral Code</span>
-            </div>
-            <span className={clsx(
-              'px-2 py-1 rounded-lg text-xs font-medium',
-              isDark ? 'bg-emerald-500/20 text-emerald-400' : 'bg-emerald-100 text-emerald-600'
-            )}>
-              Earn $30
-            </span>
-          </div>
-          <div className="relative flex items-center gap-3">
-            <div className={clsx(
-              'flex-1 px-4 py-3 rounded-xl border backdrop-blur-md',
-              isDark ? 'bg-white/[0.05] border-white/[0.1]' : 'bg-white border-slate-200'
-            )}>
-              <p className={clsx(
-                'font-mono text-xl tracking-wider text-center',
-                isDark ? 'text-white' : 'text-slate-900'
-              )}
-              style={isDark ? { textShadow: '0 0 20px rgba(52,211,153,0.3)' } : undefined}
-              >
-                {referralCode}
-              </p>
-            </div>
-            <button
-              onClick={handleCopyReferral}
-              className="p-3 rounded-xl bg-gradient-to-r from-emerald-500 to-teal-500 text-white shadow-lg shadow-emerald-500/25 hover:shadow-emerald-500/40 transition-shadow"
-            >
-              {copied ? <CheckIcon className="h-5 w-5" /> : <CopyIcon className="h-5 w-5" />}
-            </button>
-          </div>
-        </div>
-
-        {/* Certifications */}
-        {certifications.length > 0 && (
-          <div>
-            <h3 className={clsx('text-lg font-semibold mb-3', isDark ? 'text-white' : 'text-slate-900')}>Certifications</h3>
-            <div className="flex flex-wrap gap-2">
-              {certifications.map((cert, idx) => (
-                <span
-                  key={idx}
-                  className="flex items-center gap-1 px-3 py-2 rounded-lg bg-primary-500/20 text-primary-400 text-sm"
-                >
-                  <AwardIcon className="h-4 w-4" />
-                  {cert}
-                </span>
-              ))}
-            </div>
-          </div>
-        )}
-
-        {/* Contact Info - Glassmorphism */}
-        <div>
-          <h3 className={clsx('text-lg font-semibold mb-3', isDark ? 'text-white' : 'text-slate-900')}>Contact Info</h3>
-          <div className="space-y-3">
-            <div className={clsx(
-              'flex items-center gap-3 p-4 rounded-xl backdrop-blur-md border',
-              isDark ? 'bg-white/[0.03] border-white/[0.08]' : 'bg-white border-slate-200 shadow-[0_4px_15px_rgba(0,0,0,0.04)]'
-            )}>
-              <div className={clsx('p-2 rounded-lg', isDark ? 'bg-primary-500/20' : 'bg-slate-100')}>
-                <MailIcon className={clsx('h-4 w-4', isDark ? 'text-primary-400' : 'text-slate-500')} />
-              </div>
-              <span className={isDark ? 'text-white' : 'text-slate-900'}>{userEmail}</span>
-            </div>
-            <div className={clsx(
-              'flex items-center gap-3 p-4 rounded-xl backdrop-blur-md border',
-              isDark ? 'bg-white/[0.03] border-white/[0.08]' : 'bg-white border-slate-200 shadow-[0_4px_15px_rgba(0,0,0,0.04)]'
-            )}>
-              <div className={clsx('p-2 rounded-lg', isDark ? 'bg-primary-500/20' : 'bg-slate-100')}>
-                <PhoneIcon className={clsx('h-4 w-4', isDark ? 'text-primary-400' : 'text-slate-500')} />
-              </div>
-              <span className={isDark ? 'text-white' : 'text-slate-900'}>{userPhone}</span>
-            </div>
-          </div>
-        </div>
-
-        {/* Menu items */}
-        <div className="space-y-2">
-          <MenuLink icon={UserIcon} label="Edit Profile" sublabel="Update your information" onClick={() => navigate('/complete-profile')} />
-          <MenuLink icon={ShareIcon} label="Refer & Earn" sublabel="Invite friends, get $30" onClick={() => navigate('/referrals')} />
-          <MenuLink icon={AwardIcon} label="Achievements" onClick={() => navigate('/achievements')} />
-          <MenuLink icon={TrophyIcon} label="Leaderboard" onClick={() => navigate('/leaderboard')} />
-          <MenuLink
-            icon={MessageCircleIcon}
-            label="Connect Telegram"
-            sublabel={user.telegram_chat_id ? 'Connected' : 'Get notifications via Telegram'}
-            onClick={user.telegram_chat_id ? handleUnlinkTelegram : handleConnectTelegram}
-            rightElement={
-              user.telegram_chat_id ? (
-                <span className="flex items-center gap-1 text-xs text-green-400">
-                  <CheckIcon className="h-4 w-4" /> Connected
-                </span>
-              ) : null
-            }
-          />
-          <MenuLink icon={LogOutIcon} label="Log Out" onClick={handleLogout} danger />
-        </div>
-      </div>
-
-      {/* Telegram Connection Modal */}
-      {showTelegramModal && (
-        <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/60 backdrop-blur-sm">
-          <div className={clsx(
-            'w-full max-w-sm rounded-2xl p-6',
-            isDark ? 'bg-dark-900 border border-dark-700' : 'bg-white'
-          )}>
-            {/* Header */}
-            <div className="flex items-center justify-between mb-4">
-              <div className="flex items-center gap-2">
-                <div className="p-2 rounded-lg bg-blue-500/20">
-                  <MessageCircleIcon className="h-5 w-5 text-blue-400" />
+                <div>
+                  <h1 className="text-xl font-bold text-white">{userName}</h1>
+                  <p className="text-emerald-400 text-sm">{levelTitles[userLevel] || 'Newcomer'}</p>
+                  <div className="flex items-center gap-2 mt-1">
+                    <StarIcon className="h-4 w-4 text-amber-400 fill-amber-400" />
+                    <span className="text-white font-medium">{userRating.toFixed(1)}</span>
+                    <span className="text-white/40 text-sm">rating</span>
+                  </div>
                 </div>
-                <h3 className={clsx('text-lg font-semibold', isDark ? 'text-white' : 'text-slate-900')}>
-                  Connect Telegram
-                </h3>
               </div>
+
+              {/* Theme Toggle */}
               <button
-                onClick={() => setShowTelegramModal(false)}
-                className={clsx('p-2 rounded-lg', isDark ? 'hover:bg-dark-700' : 'hover:bg-slate-100')}
+                onClick={toggleTheme}
+                className="p-3 rounded-xl bg-white/5 border border-white/10 hover:bg-white/10 transition-colors"
               >
-                <XIcon className={clsx('h-5 w-5', isDark ? 'text-dark-400' : 'text-slate-500')} />
+                {isDark ? <SunIcon className="h-5 w-5 text-amber-400" /> : <MoonIcon className="h-5 w-5 text-slate-400" />}
               </button>
             </div>
 
+            {/* Level Badge */}
+            <div className="flex items-center gap-3 mb-4">
+              <div className="flex items-center gap-2 px-4 py-2 rounded-xl bg-violet-500/20 border border-violet-500/30">
+                <ZapIcon className="h-4 w-4 text-violet-400" />
+                <span className="text-violet-400 font-bold">Level {userLevel}</span>
+              </div>
+              <div className="flex items-center gap-2 px-4 py-2 rounded-xl bg-amber-500/20 border border-amber-500/30">
+                <FlameIcon className="h-4 w-4 text-amber-400" />
+                <span className="text-amber-400 font-medium">{streakDays} day streak</span>
+              </div>
+            </div>
+
+            {/* XP Progress */}
+            <XPProgress currentXP={userXP} level={userLevel} />
+          </div>
+        </div>
+      </div>
+
+      {/* Stats Grid */}
+      <div className="px-4 mt-4">
+        <div className="grid grid-cols-2 gap-3">
+          <StatCard icon={BriefcaseIcon} label="Jobs Completed" value={jobsCompleted} color="emerald" />
+          <StatCard icon={ZapIcon} label="Total XP" value={userXP.toLocaleString()} color="violet" />
+          <StatCard icon={TrophyIcon} label="Achievements" value={achievements.length} color="amber" />
+          <StatCard icon={SparklesIcon} label="Tier" value={tier.replace('Elite', '+')} color="cyan" />
+        </div>
+      </div>
+
+      {/* Referral Card */}
+      <div className="px-4 mt-6">
+        <div className="relative rounded-2xl overflow-hidden">
+          <div className="absolute inset-0 bg-gradient-to-r from-emerald-500/20 to-cyan-500/20" />
+          <div className="absolute inset-0 border border-emerald-500/30 rounded-2xl" />
+          <div className="relative p-5">
+            <div className="flex items-center justify-between mb-3">
+              <div className="flex items-center gap-2">
+                <ShareIcon className="h-5 w-5 text-emerald-400" />
+                <span className="text-white font-semibold">Referral Code</span>
+              </div>
+              <span className="px-2 py-1 rounded-lg bg-emerald-500/20 text-emerald-400 text-xs font-medium">Earn $30</span>
+            </div>
+            <div className="flex items-center gap-3">
+              <div className="flex-1 px-4 py-3 rounded-xl bg-[#0a1628] border border-white/[0.05]">
+                <p className="font-mono text-xl text-white tracking-widest text-center">{referralCode}</p>
+              </div>
+              <button
+                onClick={handleCopyReferral}
+                className="p-3 rounded-xl bg-emerald-500 text-white shadow-lg shadow-emerald-500/25"
+              >
+                {copied ? <CheckIcon className="h-5 w-5" /> : <CopyIcon className="h-5 w-5" />}
+              </button>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      {/* Contact Info */}
+      <div className="px-4 mt-6">
+        <h2 className="text-white font-semibold mb-3 flex items-center gap-2">
+          Contact Info <span className="text-lg">📧</span>
+        </h2>
+        <div className="space-y-3">
+          <div className="flex items-center gap-4 p-4 rounded-2xl bg-[#0a1628]/80 border border-white/[0.05]">
+            <div className="w-10 h-10 rounded-xl bg-white/5 flex items-center justify-center">
+              <MailIcon className="h-5 w-5 text-white/50" />
+            </div>
+            <span className="text-white">{user.email}</span>
+          </div>
+          <div className="flex items-center gap-4 p-4 rounded-2xl bg-[#0a1628]/80 border border-white/[0.05]">
+            <div className="w-10 h-10 rounded-xl bg-white/5 flex items-center justify-center">
+              <PhoneIcon className="h-5 w-5 text-white/50" />
+            </div>
+            <span className="text-white">{user.phone || DEFAULTS.userPhone}</span>
+          </div>
+        </div>
+      </div>
+
+      {/* Menu Items */}
+      <div className="px-4 mt-6 space-y-2">
+        <MenuLink icon={UserIcon} label="Edit Profile" sublabel="Update your information" onClick={() => navigate('/complete-profile')} />
+        <MenuLink icon={ShareIcon} label="Refer & Earn" sublabel="Invite friends, get $30" onClick={() => navigate('/referrals')} />
+        <MenuLink icon={AwardIcon} label="Achievements" onClick={() => navigate('/achievements')} />
+        <MenuLink icon={TrophyIcon} label="Leaderboard" onClick={() => navigate('/leaderboard')} />
+        <MenuLink
+          icon={MessageCircleIcon}
+          label="Connect Telegram"
+          sublabel={user.telegram_chat_id ? 'Connected' : 'Get notifications'}
+          onClick={handleConnectTelegram}
+          badge={user.telegram_chat_id ? '✓ Connected' : null}
+        />
+        <MenuLink icon={LogOutIcon} label="Log Out" onClick={handleLogout} danger />
+      </div>
+
+      {/* Telegram Modal */}
+      {showTelegramModal && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/70 backdrop-blur-sm">
+          <div className="w-full max-w-sm rounded-2xl bg-[#0a1628] border border-white/10 p-6">
+            <div className="flex items-center justify-between mb-4">
+              <h3 className="text-lg font-bold text-white">Connect Telegram</h3>
+              <button onClick={() => setShowTelegramModal(false)} className="p-2 rounded-lg hover:bg-white/5">
+                <XIcon className="h-5 w-5 text-white/50" />
+              </button>
+            </div>
             {telegramLoading ? (
-              <div className="flex flex-col items-center py-8">
-                <div className="animate-spin h-8 w-8 border-3 border-primary-500 border-t-transparent rounded-full mb-3" />
-                <p className={isDark ? 'text-dark-400' : 'text-slate-500'}>Generating code...</p>
+              <div className="py-8 text-center">
+                <div className="animate-spin h-8 w-8 border-2 border-emerald-500 border-t-transparent rounded-full mx-auto mb-3" />
+                <p className="text-white/50">Generating code...</p>
               </div>
             ) : telegramCode ? (
               <div className="space-y-4">
-                {/* Instructions */}
-                <div className={clsx('p-3 rounded-xl text-sm', isDark ? 'bg-dark-800' : 'bg-slate-100')}>
-                  <ol className={clsx('list-decimal list-inside space-y-2', isDark ? 'text-dark-300' : 'text-slate-600')}>
+                <div className="p-3 rounded-xl bg-white/5 text-sm text-white/60">
+                  <ol className="list-decimal list-inside space-y-1">
                     <li>Open Telegram</li>
-                    <li>Search for <span className="font-semibold text-blue-400">@WorkLinkAdminBot</span></li>
+                    <li>Search for <span className="text-blue-400">@WorkLinkAdminBot</span></li>
                     <li>Send the code below</li>
                   </ol>
                 </div>
-
-                {/* Code Display */}
-                <div className={clsx(
-                  'flex items-center justify-between p-4 rounded-xl border-2 border-dashed',
-                  isDark ? 'bg-dark-800 border-dark-600' : 'bg-slate-50 border-slate-300'
-                )}>
-                  <span className={clsx('text-2xl font-mono font-bold tracking-widest', isDark ? 'text-white' : 'text-slate-900')}>
-                    {telegramCode.code}
-                  </span>
-                  <button
-                    onClick={handleCopyTelegramCode}
-                    className="p-2 rounded-lg bg-primary-500 text-white"
-                  >
-                    {codeCopied ? <CheckIcon className="h-5 w-5" /> : <CopyIcon className="h-5 w-5" />}
-                  </button>
+                <div className="p-4 rounded-xl bg-white/5 border-2 border-dashed border-white/20 text-center">
+                  <span className="text-3xl font-mono font-bold text-white tracking-widest">{telegramCode.code}</span>
                 </div>
-
-                {/* Expiry notice */}
-                <p className={clsx('text-xs text-center', isDark ? 'text-dark-500' : 'text-slate-500')}>
-                  Code expires in {telegramCode.expiresIn}
-                </p>
-
-                {/* Open Telegram Button */}
                 <a
                   href={telegramCode.deepLink}
                   target="_blank"
@@ -917,7 +426,7 @@ export default function Profile() {
                   className="flex items-center justify-center gap-2 w-full py-3 rounded-xl bg-blue-500 text-white font-medium"
                 >
                   <ExternalLinkIcon className="h-5 w-5" />
-                  Open in Telegram
+                  Open Telegram
                 </a>
               </div>
             ) : null}

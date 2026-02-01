@@ -32,10 +32,11 @@ router.post('/:candidateId/messages', (req, res) => {
     const { content } = req.body;
 
     const id = Date.now();
+    const timestamp = new Date().toISOString(); // Millisecond precision
     db.prepare(`
       INSERT INTO messages (id, candidate_id, sender, content, read, created_at)
-      VALUES (?, ?, 'candidate', ?, 0, datetime('now'))
-    `).run(id, candidateId, content);
+      VALUES (?, ?, 'candidate', ?, 0, ?)
+    `).run(id, candidateId, content, timestamp);
 
     const message = db.prepare('SELECT * FROM messages WHERE id = ?').get(id);
     res.json({ success: true, data: message });
@@ -183,13 +184,14 @@ router.post('/admin/broadcast', (req, res) => {
 
     const insertStmt = db.prepare(`
       INSERT INTO messages (id, candidate_id, sender, content, template_id, read, created_at)
-      VALUES (?, ?, 'admin', ?, ?, 0, datetime('now'))
+      VALUES (?, ?, 'admin', ?, ?, 0, ?)
     `);
 
     const results = [];
     candidate_ids.forEach((candidateId, idx) => {
       const id = Date.now() + idx;
-      insertStmt.run(id, candidateId, content, template_id || null);
+      const timestamp = new Date().toISOString(); // Millisecond precision
+      insertStmt.run(id, candidateId, content, template_id || null, timestamp);
 
       const message = db.prepare('SELECT * FROM messages WHERE id = ?').get(id);
 

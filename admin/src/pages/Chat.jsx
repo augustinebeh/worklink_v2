@@ -113,7 +113,17 @@ function groupMessagesByDate(messages) {
   const groups = [];
   let currentDate = null;
 
-  messages.forEach(msg => {
+  // Sort messages by created_at timestamp (oldest first), then by ID for stable ordering
+  const sortedMessages = [...messages].sort((a, b) => {
+    const timeA = parseUTCTimestamp(a.created_at).getTime();
+    const timeB = parseUTCTimestamp(b.created_at).getTime();
+    // Primary sort by timestamp
+    if (timeA !== timeB) return timeA - timeB;
+    // Secondary sort by ID (ensures messages with same timestamp are ordered by creation)
+    return (a.id || 0) - (b.id || 0);
+  });
+
+  sortedMessages.forEach(msg => {
     const msgDate = parseUTCTimestamp(msg.created_at).toDateString();
     if (msgDate !== currentDate) {
       currentDate = msgDate;

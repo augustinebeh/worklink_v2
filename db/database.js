@@ -1198,29 +1198,63 @@ function seedEssentialData() {
   // ============================================
   // SLM TRAINING DATA - Auto-seed & dedupe for production
   // ============================================
+  // SAFETY GUARANTEES:
+  // - ADDITIVE ONLY: Uses INSERT OR IGNORE, never overwrites existing data
+  // - NO DROP/TRUNCATE: Never deletes tables or clears all data
+  // - PRESERVES LEARNED DATA: Entries from user interactions are kept
+  // - DEDUP KEEPS BEST: Only removes duplicates, keeps highest quality version
+  // ============================================
   try {
     const slmSeeder = require('./seed-slm-data');
     slmSeeder.setDb(db); // Pass db to avoid circular dependency
 
-    // Always dedupe on startup to keep data clean
+    // Check what we're working with (for logging)
     const kbCount = db.prepare('SELECT COUNT(*) as c FROM ml_knowledge_base').get().c;
+    const learnedCount = db.prepare(`SELECT COUNT(*) as c FROM ml_knowledge_base WHERE source = 'learned'`).get().c;
+    console.log(`  📊 SLM data: ${kbCount} KB entries (${learnedCount} learned from users)`);
+
+    // Dedupe on startup to keep data clean (only removes actual duplicates)
     if (kbCount > 50) {
-      console.log('  🧹 Deduplicating SLM data...');
+      console.log('  🧹 Deduplicating SLM data (preserving unique entries)...');
       slmSeeder.deduplicateKnowledgeBase();
       slmSeeder.deduplicateTrainingData();
     }
 
-    // Seed if missing
+    // Seed knowledge base if missing
     const slmSeedCount = db.prepare(`
       SELECT COUNT(*) as c FROM ml_knowledge_base WHERE source IN ('seed', 'singlish_seed')
     `).get().c;
 
     if (slmSeedCount < 10) {
-      console.log('  🤖 Seeding SLM training data (additive)...');
+      console.log('  🤖 Seeding SLM knowledge base...');
       slmSeeder.importToKnowledgeBase(slmSeeder.seedData);
-      const generated = slmSeeder.generateFromTemplates(300);
-      slmSeeder.importToTrainingData([...slmSeeder.seedData, ...generated]);
-      console.log('  ✅ SLM data seeded');
+    }
+
+    // Always ensure 2000+ training entries (additive - won't duplicate)
+    const trainingCount = db.prepare('SELECT COUNT(*) as c FROM ml_training_data').get().c;
+    const TARGET_ENTRIES = 2000;
+
+    if (trainingCount < TARGET_ENTRIES) {
+      console.log(`  🤖 Expanding SLM training data (${trainingCount} → ${TARGET_ENTRIES}+)...`);
+
+      // Import base seed data first
+      slmSeeder.importToTrainingData(slmSeeder.seedData);
+
+      // Run multiple generation passes until we reach target
+      const passesNeeded = Math.ceil((TARGET_ENTRIES - trainingCount) / 400);
+      for (let i = 0; i < Math.max(5, passesNeeded); i++) {
+        const generated = slmSeeder.generateFromTemplates(500);
+        slmSeeder.importToTrainingData(generated);
+      }
+
+      // Final deduplication pass
+      console.log('  🧹 Final deduplication...');
+      slmSeeder.deduplicateTrainingData();
+
+      const finalCount = db.prepare('SELECT COUNT(*) as c FROM ml_training_data').get().c;
+      console.log(`  ✅ SLM data ready: ${finalCount} training entries`);
+    } else {
+      console.log(`  ✅ SLM training data OK: ${trainingCount} entries`);
     }
   } catch (e) {
     console.log('  ⚠️ SLM seeder not available:', e.message);

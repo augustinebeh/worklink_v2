@@ -10,9 +10,11 @@ import {
   UsersIcon,
   BuildingIcon,
   AlertCircleIcon,
+  DollarSignIcon,
+  ShareIcon,
 } from 'lucide-react';
 import { useAuth } from '../contexts/AuthContext';
-import { useTheme } from '../contexts/ThemeContext';
+import { useToast } from '../components/ui/Toast';
 import { clsx } from 'clsx';
 import {
   formatMoney,
@@ -27,7 +29,7 @@ export default function JobDetail() {
   const { id } = useParams();
   const navigate = useNavigate();
   const { user } = useAuth();
-  const { isDark } = useTheme();
+  const toast = useToast();
   const [job, setJob] = useState(null);
   const [loading, setLoading] = useState(true);
   const [applying, setApplying] = useState(false);
@@ -43,7 +45,6 @@ export default function JobDetail() {
       const data = await res.json();
       if (data.success) {
         setJob(data.data);
-        // Check if user has already applied
         if (user) {
           const deployRes = await fetch(`/api/v1/deployments?job_id=${id}&candidate_id=${user.id}`);
           const deployData = await deployRes.json();
@@ -68,17 +69,17 @@ export default function JobDetail() {
       const res = await fetch('/api/v1/deployments', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({
-          job_id: id,
-          candidate_id: user.id,
-        }),
+        body: JSON.stringify({ job_id: id, candidate_id: user.id }),
       });
       const data = await res.json();
       if (data.success) {
         setHasApplied(true);
+        toast.success('Applied!', 'Your application has been submitted');
+      } else {
+        toast.error('Failed', data.error || 'Could not apply');
       }
     } catch (error) {
-      console.error('Failed to apply:', error);
+      toast.error('Error', 'Please try again');
     } finally {
       setApplying(false);
     }
@@ -86,221 +87,199 @@ export default function JobDetail() {
 
   if (loading) {
     return (
-      <div className={clsx('min-h-screen flex items-center justify-center', isDark ? 'bg-dark-950' : 'bg-transparent')}>
-        <div className="animate-spin h-8 w-8 border-4 border-primary-500 border-t-transparent rounded-full" />
+      <div className="min-h-screen bg-[#020817] flex items-center justify-center">
+        <div className="animate-spin h-8 w-8 border-2 border-emerald-500 border-t-transparent rounded-full" />
       </div>
     );
   }
 
   if (!job) {
     return (
-      <div className={clsx('min-h-screen flex flex-col items-center justify-center p-4', isDark ? 'bg-dark-950' : 'bg-transparent')}>
-        <AlertCircleIcon className="h-12 w-12 text-red-500 mb-4" />
-        <p className={clsx('text-lg', isDark ? 'text-white' : 'text-slate-900')}>Job not found</p>
-        <button onClick={() => navigate('/jobs')} className="mt-4 text-primary-400">Back to Jobs</button>
+      <div className="min-h-screen bg-[#020817] flex flex-col items-center justify-center p-4">
+        <AlertCircleIcon className="h-16 w-16 text-red-500/50 mb-4" />
+        <p className="text-white text-lg font-semibold">Job not found</p>
+        <button onClick={() => navigate('/jobs')} className="mt-4 text-emerald-400">Back to Jobs</button>
       </div>
     );
   }
 
-  // Calculate hours and pay
-  const hours = calculateJobHours(job.start_time, job.end_time, job.break_minutes);
+  const startTime = job.start_time || DEFAULT_START_TIME;
+  const endTime = job.end_time || DEFAULT_END_TIME;
+  const hours = calculateJobHours(startTime, endTime, job.break_minutes);
   const totalPay = hours * job.pay_rate;
-
   const jobDate = new Date(job.job_date);
   const slotsLeft = job.total_slots - job.filled_slots;
 
   return (
-    <div className={clsx('min-h-screen pb-32', isDark ? 'bg-dark-950' : 'bg-transparent')}>
+    <div className="min-h-screen bg-[#020817] pb-32">
       {/* Header */}
-      <div className={clsx(
-        'sticky top-0 z-10 backdrop-blur-lg px-4 pt-safe pb-4',
-        isDark ? 'bg-dark-950/95 border-b border-white/5' : 'bg-white/90 shadow-[0_1px_3px_rgba(0,0,0,0.03)]'
-      )}>
-        <button
-          onClick={() => navigate(-1)}
-          className={clsx('flex items-center gap-2', isDark ? 'text-dark-400 hover:text-white' : 'text-slate-500 hover:text-slate-900')}
-        >
-          <ArrowLeftIcon className="h-5 w-5" />
-          <span>Back</span>
-        </button>
+      <div className="sticky top-0 z-10 bg-[#020817]/95 backdrop-blur-xl px-4 pt-4 pb-4 border-b border-white/[0.05]">
+        <div className="flex items-center justify-between">
+          <button
+            onClick={() => navigate(-1)}
+            className="flex items-center gap-2 text-white/50 hover:text-white transition-colors"
+          >
+            <ArrowLeftIcon className="h-5 w-5" />
+            <span>Back</span>
+          </button>
+          <button className="p-2 rounded-xl bg-white/5 hover:bg-white/10 transition-colors">
+            <ShareIcon className="h-5 w-5 text-white/50" />
+          </button>
+        </div>
       </div>
 
       <div className="px-4 py-6 space-y-6">
-        {/* Title section */}
-        <div>
-          <div className="flex items-center gap-2 mb-2">
-            {job.featured === 1 && (
-              <span className="flex items-center gap-1 px-2 py-0.5 rounded-full bg-primary-500/20 text-primary-400 text-xs font-medium">
-                <ZapIcon className="h-3 w-3" /> Featured
-              </span>
-            )}
-            {hasApplied && (
-              <span className="flex items-center gap-1 px-2 py-0.5 rounded-full bg-accent-500/20 text-accent-400 text-xs font-medium">
-                <CheckCircleIcon className="h-3 w-3" /> Applied
-              </span>
-            )}
-          </div>
-          <h1 className={clsx('text-2xl font-bold', isDark ? 'text-white' : 'text-slate-900')}>{job.title}</h1>
-          <p className={clsx('mt-1 flex items-center gap-2', isDark ? 'text-dark-400' : 'text-slate-500')}>
-            <BuildingIcon className="h-4 w-4" />
-            {job.company_name || 'TalentVis Client'}
-          </p>
-        </div>
-
-        {/* Quick info cards - Glassmorphism */}
-        <div className="grid grid-cols-2 gap-3">
-          <div className={clsx(
-            'p-4 rounded-xl backdrop-blur-md border',
-            isDark ? 'bg-white/[0.03] border-white/[0.08]' : 'bg-white border-slate-200 shadow-[0_4px_20px_rgba(0,0,0,0.05)]'
-          )}>
-            <div className={clsx('p-2 rounded-lg w-fit mb-2', isDark ? 'bg-primary-500/20' : 'bg-primary-50')}>
-              <CalendarIcon className="h-5 w-5 text-primary-400" />
-            </div>
-            <p className={clsx('text-xs', isDark ? 'text-dark-500' : 'text-slate-400')}>Date</p>
-            <p className={clsx('font-medium', isDark ? 'text-white' : 'text-slate-900')}>{jobDate.toLocaleDateString(DEFAULT_LOCALE, { weekday: 'long', day: 'numeric', month: 'long', timeZone: TIMEZONE })}</p>
-          </div>
-          <div className={clsx(
-            'p-4 rounded-xl backdrop-blur-md border',
-            isDark ? 'bg-white/[0.03] border-white/[0.08]' : 'bg-white border-slate-200 shadow-[0_4px_20px_rgba(0,0,0,0.05)]'
-          )}>
-            <div className={clsx('p-2 rounded-lg w-fit mb-2', isDark ? 'bg-primary-500/20' : 'bg-primary-50')}>
-              <ClockIcon className="h-5 w-5 text-primary-400" />
-            </div>
-            <p className={clsx('text-xs', isDark ? 'text-dark-500' : 'text-slate-400')}>Time</p>
-            <p className={clsx('font-medium', isDark ? 'text-white' : 'text-slate-900')}>{job.start_time} - {job.end_time}</p>
-            <p className={clsx('text-xs', isDark ? 'text-dark-500' : 'text-slate-400')}>{hours.toFixed(1)} hours</p>
-          </div>
-          <div className={clsx(
-            'p-4 rounded-xl backdrop-blur-md border',
-            isDark ? 'bg-white/[0.03] border-white/[0.08]' : 'bg-white border-slate-200 shadow-[0_4px_20px_rgba(0,0,0,0.05)]'
-          )}>
-            <div className={clsx('p-2 rounded-lg w-fit mb-2', isDark ? 'bg-primary-500/20' : 'bg-primary-50')}>
-              <MapPinIcon className="h-5 w-5 text-primary-400" />
-            </div>
-            <p className={clsx('text-xs', isDark ? 'text-dark-500' : 'text-slate-400')}>Location</p>
-            <p className={clsx('font-medium', isDark ? 'text-white' : 'text-slate-900')}>{job.location}</p>
-          </div>
-          <div className={clsx(
-            'p-4 rounded-xl backdrop-blur-md border',
-            isDark ? 'bg-white/[0.03] border-white/[0.08]' : 'bg-white border-slate-200 shadow-[0_4px_20px_rgba(0,0,0,0.05)]'
-          )}>
-            <div className={clsx('p-2 rounded-lg w-fit mb-2', isDark ? 'bg-primary-500/20' : 'bg-primary-50')}>
-              <UsersIcon className="h-5 w-5 text-primary-400" />
-            </div>
-            <p className={clsx('text-xs', isDark ? 'text-dark-500' : 'text-slate-400')}>Slots</p>
-            <p className={clsx('font-medium', isDark ? 'text-white' : 'text-slate-900')}>{slotsLeft} of {job.total_slots} left</p>
-          </div>
-        </div>
-
-        {/* Pay section - Glassmorphism with glow */}
-        <div className={clsx(
-          'relative p-6 rounded-2xl backdrop-blur-md border overflow-hidden',
-          isDark
-            ? 'bg-white/[0.03] border-accent-500/30'
-            : 'bg-gradient-to-br from-emerald-50 to-teal-50 border-emerald-200 shadow-[0_4px_20px_rgba(0,0,0,0.05)]'
-        )}>
-          {/* Background glow */}
-          {isDark && (
-            <>
-              <div className="absolute inset-0 bg-gradient-to-br from-accent-500/10 to-teal-500/5" />
-              <div className="absolute -top-10 -right-10 w-32 h-32 bg-accent-500/20 rounded-full blur-[40px]" />
-            </>
+        {/* Hero Card */}
+        <div className="relative rounded-3xl overflow-hidden">
+          <div className="absolute inset-0 bg-gradient-to-br from-[#0a1628] via-[#0d1f3c] to-[#0f2847]" />
+          {job.featured === 1 && (
+            <div className="absolute top-0 right-0 w-48 h-48 bg-amber-500/20 rounded-full blur-[60px] -translate-y-1/2 translate-x-1/4" />
           )}
-          <div className="relative flex items-center justify-between">
-            <div>
-              <p className="text-accent-400 text-sm font-medium">Total Earnings</p>
-              <p
-                className={clsx('text-4xl font-bold', isDark ? 'text-white' : 'text-slate-900')}
-                style={isDark ? { textShadow: '0 0 30px rgba(52,211,153,0.4)' } : undefined}
-              >
-                ${formatMoney(totalPay)}
-              </p>
-              <p className={clsx('text-sm', isDark ? 'text-dark-400' : 'text-slate-500')}>${formatMoney(job.pay_rate)}/hr × {hours.toFixed(1)} hours</p>
+          <div className="absolute inset-0 rounded-3xl border border-white/[0.08]" />
+          
+          <div className="relative p-6">
+            {/* Badges */}
+            <div className="flex items-center gap-2 mb-3">
+              {job.featured === 1 && (
+                <span className="flex items-center gap-1 px-3 py-1 rounded-full bg-amber-500/20 border border-amber-500/30 text-amber-400 text-sm font-medium">
+                  <ZapIcon className="h-4 w-4" /> Hot
+                </span>
+              )}
+              {hasApplied && (
+                <span className="flex items-center gap-1 px-3 py-1 rounded-full bg-emerald-500/20 border border-emerald-500/30 text-emerald-400 text-sm font-medium">
+                  <CheckCircleIcon className="h-4 w-4" /> Applied
+                </span>
+              )}
+              {slotsLeft <= 3 && (
+                <span className="px-3 py-1 rounded-full bg-red-500/20 border border-red-500/30 text-red-400 text-sm font-medium">
+                  {slotsLeft} slots left
+                </span>
+              )}
             </div>
-            {job.xp_bonus > 0 && (
-              <div className={clsx(
-                'text-right px-4 py-3 rounded-xl backdrop-blur-md border',
-                isDark ? 'bg-primary-500/15 border-primary-500/30' : 'bg-primary-50 border-primary-200'
-              )}>
-                <div className="flex items-center gap-1 text-primary-400">
-                  <ZapIcon className="h-5 w-5" />
-                  <span
-                    className="text-xl font-bold"
-                    style={isDark ? { textShadow: '0 0 15px rgba(99,102,241,0.5)' } : undefined}
-                  >
-                    +{job.xp_bonus}
-                  </span>
+
+            {/* Title */}
+            <h1 className="text-2xl font-bold text-white mb-2">{job.title}</h1>
+            <p className="flex items-center gap-2 text-white/50">
+              <BuildingIcon className="h-4 w-4" />
+              {job.company_name || 'WorkLink Client'}
+            </p>
+
+            {/* Pay Highlight */}
+            <div className="mt-6 p-4 rounded-2xl bg-emerald-500/10 border border-emerald-500/30">
+              <div className="flex items-center justify-between">
+                <div>
+                  <p className="text-white/50 text-sm">Total Earnings</p>
+                  <p className="text-3xl font-bold text-emerald-400">${formatMoney(totalPay)}</p>
                 </div>
-                <p className={clsx('text-xs', isDark ? 'text-dark-400' : 'text-slate-500')}>Bonus XP</p>
+                <div className="text-right">
+                  <p className="text-white/50 text-sm">Rate</p>
+                  <p className="text-lg font-semibold text-white">${formatMoney(job.pay_rate)}/hr</p>
+                </div>
               </div>
-            )}
+            </div>
           </div>
         </div>
+
+        {/* Info Grid */}
+        <div className="grid grid-cols-2 gap-3">
+          <div className="p-4 rounded-2xl bg-[#0a1628]/80 border border-white/[0.05]">
+            <div className="flex items-center gap-2 text-white/40 mb-1">
+              <CalendarIcon className="h-4 w-4" />
+              <span className="text-sm">Date</span>
+            </div>
+            <p className="text-white font-medium">
+              {jobDate.toLocaleDateString(DEFAULT_LOCALE, { weekday: 'short', day: 'numeric', month: 'short', timeZone: TIMEZONE })}
+            </p>
+          </div>
+          <div className="p-4 rounded-2xl bg-[#0a1628]/80 border border-white/[0.05]">
+            <div className="flex items-center gap-2 text-white/40 mb-1">
+              <ClockIcon className="h-4 w-4" />
+              <span className="text-sm">Time</span>
+            </div>
+            <p className="text-white font-medium">{startTime} - {endTime}</p>
+          </div>
+          <div className="p-4 rounded-2xl bg-[#0a1628]/80 border border-white/[0.05]">
+            <div className="flex items-center gap-2 text-white/40 mb-1">
+              <MapPinIcon className="h-4 w-4" />
+              <span className="text-sm">Location</span>
+            </div>
+            <p className="text-white font-medium truncate">{job.location}</p>
+          </div>
+          <div className="p-4 rounded-2xl bg-[#0a1628]/80 border border-white/[0.05]">
+            <div className="flex items-center gap-2 text-white/40 mb-1">
+              <UsersIcon className="h-4 w-4" />
+              <span className="text-sm">Slots</span>
+            </div>
+            <p className="text-white font-medium">{slotsLeft} / {job.total_slots} available</p>
+          </div>
+        </div>
+
+        {/* XP Bonus */}
+        {job.xp_bonus > 0 && (
+          <div className="p-4 rounded-2xl bg-violet-500/10 border border-violet-500/30 flex items-center gap-4">
+            <div className="w-12 h-12 rounded-2xl bg-violet-500/20 flex items-center justify-center">
+              <ZapIcon className="h-6 w-6 text-violet-400" />
+            </div>
+            <div>
+              <p className="text-white font-semibold">XP Bonus</p>
+              <p className="text-violet-400">+{job.xp_bonus} XP for completing this job</p>
+            </div>
+          </div>
+        )}
 
         {/* Description */}
         {job.description && (
           <div>
-            <h2 className={clsx('text-lg font-semibold mb-2', isDark ? 'text-white' : 'text-slate-900')}>Description</h2>
-            <p className={clsx('leading-relaxed', isDark ? 'text-dark-300' : 'text-slate-600')}>{job.description}</p>
+            <h2 className="text-lg font-semibold text-white mb-3">Job Description</h2>
+            <div className="p-4 rounded-2xl bg-[#0a1628]/80 border border-white/[0.05]">
+              <p className="text-white/70 whitespace-pre-line">{job.description}</p>
+            </div>
           </div>
         )}
 
         {/* Requirements */}
-        {job.required_certifications && job.required_certifications.length > 0 && (
+        {job.requirements && (
           <div>
-            <h2 className={clsx('text-lg font-semibold mb-2', isDark ? 'text-white' : 'text-slate-900')}>Requirements</h2>
-            <div className="flex flex-wrap gap-2">
-              {job.required_certifications.map((cert, idx) => (
-                <span
-                  key={idx}
-                  className={clsx(
-                    'px-3 py-1 rounded-full text-sm',
-                    isDark ? 'bg-dark-800 text-dark-300' : 'bg-slate-100 text-slate-600'
-                  )}
-                >
-                  {cert}
-                </span>
-              ))}
+            <h2 className="text-lg font-semibold text-white mb-3">Requirements</h2>
+            <div className="p-4 rounded-2xl bg-[#0a1628]/80 border border-white/[0.05]">
+              <p className="text-white/70 whitespace-pre-line">{job.requirements}</p>
             </div>
           </div>
         )}
       </div>
 
-      {/* Fixed apply button - Glassmorphism */}
-      <div className={clsx(
-        'fixed bottom-20 left-0 right-0 p-4 backdrop-blur-xl',
-        isDark ? 'bg-dark-950/90 border-t border-white/[0.08]' : 'bg-white/90 shadow-[0_-4px_20px_rgba(0,0,0,0.05)]'
-      )}>
-        <button
-          onClick={handleApply}
-          disabled={hasApplied || applying || slotsLeft === 0}
-          className={clsx(
-            'w-full py-4 rounded-xl font-semibold text-lg transition-all',
-            hasApplied
-              ? 'bg-accent-500/20 text-accent-400 cursor-default border border-accent-500/30'
-              : slotsLeft === 0
-                ? isDark
-                  ? 'bg-dark-800 text-dark-500 cursor-not-allowed'
-                  : 'bg-slate-200 text-slate-400 cursor-not-allowed'
-                : 'bg-gradient-to-r from-primary-500 to-blue-500 text-white shadow-lg shadow-primary-500/30 hover:shadow-primary-500/50 active:scale-[0.98]'
-          )}
-        >
-          {applying ? (
-            <div className="flex items-center justify-center gap-2">
-              <div className="animate-spin h-5 w-5 border-2 border-white border-t-transparent rounded-full" />
-              <span>Applying...</span>
-            </div>
-          ) : hasApplied ? (
-            <div className="flex items-center justify-center gap-2">
+      {/* Fixed Apply Button */}
+      <div className="fixed bottom-0 left-0 right-0 p-4 bg-[#020817]/95 backdrop-blur-xl border-t border-white/[0.05]" style={{ paddingBottom: 'calc(env(safe-area-inset-bottom, 0px) + 16px)' }}>
+        <div className="flex items-center gap-4">
+          <div className="flex-1">
+            <p className="text-white/50 text-sm">Total Pay</p>
+            <p className="text-2xl font-bold text-emerald-400">${formatMoney(totalPay)}</p>
+          </div>
+          {hasApplied ? (
+            <button
+              disabled
+              className="px-8 py-4 rounded-2xl bg-emerald-500/20 border border-emerald-500/30 text-emerald-400 font-semibold flex items-center gap-2"
+            >
               <CheckCircleIcon className="h-5 w-5" />
-              <span>Applied</span>
-            </div>
+              Applied
+            </button>
           ) : slotsLeft === 0 ? (
-            'No Slots Available'
+            <button
+              disabled
+              className="px-8 py-4 rounded-2xl bg-white/5 text-white/30 font-semibold"
+            >
+              Fully Booked
+            </button>
           ) : (
-            `Apply for $${formatMoney(totalPay)}`
+            <button
+              onClick={handleApply}
+              disabled={applying}
+              className="px-8 py-4 rounded-2xl bg-gradient-to-r from-emerald-500 to-cyan-500 text-white font-semibold shadow-lg shadow-emerald-500/25 active:scale-95 transition-transform disabled:opacity-50"
+            >
+              {applying ? 'Applying...' : 'Apply Now'}
+            </button>
           )}
-        </button>
+        </div>
       </div>
     </div>
   );

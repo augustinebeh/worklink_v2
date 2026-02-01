@@ -144,9 +144,18 @@ async function generateResponse(candidateId, message, options = {}) {
   const startTime = Date.now();
   const settings = getSettings();
 
-  // 1. Try knowledge base first (FREE!)
-  console.log(`🤖 [AI] Checking knowledge base (kb_enabled=${settings.kb_enabled})`);
-  if (settings.kb_enabled !== false) {
+  // Check if this query needs real-time data (payment amounts, job status, etc.)
+  const lowerMessage = message.toLowerCase();
+  const needsRealTimeData =
+    lowerMessage.includes('how much') ||
+    lowerMessage.includes('my balance') ||
+    lowerMessage.includes('my payment') ||
+    lowerMessage.includes('my earning') ||
+    (lowerMessage.includes('pending') && (lowerMessage.includes('amount') || lowerMessage.includes('much') || lowerMessage.includes('payment')));
+
+  // 1. Try knowledge base first (FREE!) - but skip for real-time data queries
+  console.log(`🤖 [AI] Checking knowledge base (kb_enabled=${settings.kb_enabled}, needsRealTimeData=${needsRealTimeData})`);
+  if (settings.kb_enabled !== false && !needsRealTimeData) {
     const kbAnswer = await ml.findAnswer(message);
     console.log(`🤖 [AI] KB answer:`, kbAnswer ? 'Found' : 'Not found');
 
