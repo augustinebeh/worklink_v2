@@ -418,7 +418,7 @@ function QuickReplyChip({ template, onClick }) {
 }
 
 export default function AdminChat() {
-  const { fetchUnreadTotal } = useAdminWebSocket();
+  const { fetchUnreadTotal, subscribe, send, isConnected, markMessagesRead } = useAdminWebSocket();
   const [conversations, setConversations] = useState([]);
   const [candidates, setCandidates] = useState([]);
   const [templates, setTemplates] = useState([]);
@@ -429,7 +429,6 @@ export default function AdminChat() {
   const [showNewChat, setShowNewChat] = useState(false);
   const [searchTerm, setSearchTerm] = useState('');
   const [loading, setLoading] = useState(true);
-  const [isConnected, setIsConnected] = useState(false);
   const [sidebarCollapsed, setSidebarCollapsed] = useState(false);
   const [soundEnabled, setSoundEnabled] = useState(() => {
     // Load from localStorage, default to true
@@ -454,7 +453,6 @@ export default function AdminChat() {
   }, []);
 
   const messagesEndRef = useRef(null);
-  const wsRef = useRef(null);
   const inputRef = useRef(null);
   const selectedConversationRef = useRef(null);
   const soundEnabledRef = useRef(soundEnabled);
@@ -467,16 +465,82 @@ export default function AdminChat() {
     soundEnabledRef.current = soundEnabled;
   }, [soundEnabled]);
 
+  // Fetch initial data
   useEffect(() => {
     fetchConversations();
     fetchCandidates();
     fetchTemplates();
-    connectWebSocket();
+  }, []);
+
+  // Subscribe to WebSocket messages using shared context
+  useEffect(() => {
+    if (!subscribe) return;
+
+    const unsubNewMessage = subscribe('new_message', (data) => {
+      console.log('New message received:', data);
+      if (soundEnabledRef.current) {
+        playNotificationSound();
+      }
+      setMessages(prev => {
+        const currentConv = selectedConversationRef.current;
+        if (currentConv?.candidate_id === data.candidateId) {
+          if (prev.some(m => m.id === data.message.id)) return prev;
+          return [...prev, data.message];
+        }
+        return prev;
+      });
+      fetchConversations();
+    });
+
+    const unsubMessageSent = subscribe('message_sent', (data) => {
+      setMessages(prev => {
+        if (prev.some(m => m.id === data.message.id)) return prev;
+        return [...prev, data.message];
+      });
+      fetchConversations();
+    });
+
+    const unsubStatusChange = subscribe('status_change', (data) => {
+      setConversations(prev => prev.map(c =>
+        c.candidate_id === data.candidateId
+          ? { ...c, online_status: data.status, last_seen: data.last_seen || c.last_seen }
+          : c
+      ));
+    });
+
+    const unsubAiSuggestion = subscribe('ai_suggestion', (data) => {
+      console.log('AI suggestion received:', data);
+      const currentConv = selectedConversationRef.current;
+      if (currentConv?.candidate_id === data.candidateId) {
+        setAiSuggestion(data.suggestion);
+      }
+    });
+
+    const unsubAiUpdate = subscribe('ai_suggestion_update', () => {
+      setAiSuggestion(null);
+    });
+
+    const unsubAiMessageSent = subscribe('ai_message_sent', (data) => {
+      console.log('AI message sent:', data);
+      fetchMessages(data.candidateId);
+    });
+
+    const unsubAiModeUpdated = subscribe('ai_mode_updated', (data) => {
+      if (selectedConversationRef.current?.candidate_id === data.candidateId) {
+        setAiMode(data.mode);
+      }
+    });
 
     return () => {
-      if (wsRef.current) wsRef.current.close();
+      unsubNewMessage();
+      unsubMessageSent();
+      unsubStatusChange();
+      unsubAiSuggestion();
+      unsubAiUpdate();
+      unsubAiMessageSent();
+      unsubAiModeUpdated();
     };
-  }, []);
+  }, [subscribe]);
 
   useEffect(() => {
     messagesEndRef.current?.scrollIntoView({ behavior: 'smooth' });
@@ -489,11 +553,11 @@ export default function AdminChat() {
       setAiSuggestion(null); // Clear suggestion when switching conversations
 
       // Mark messages as read when opening conversation
-      if (wsRef.current?.readyState === WebSocket.OPEN && selectedConversation.unread_count > 0) {
-        wsRef.current.send(JSON.stringify({
+      if (isConnected && selectedConversation.unread_count > 0) {
+        send({
           type: 'read',
           candidateId: selectedConversation.candidate_id
-        }));
+        });
         // Update global unread total
         fetchUnreadTotal();
       }
@@ -504,129 +568,7 @@ export default function AdminChat() {
           : c
       ));
     }
-  }, [selectedConversation, fetchUnreadTotal]);
-
-  const connectWebSocket = () => {
-    const protocol = window.location.protocol === 'https:' ? 'wss:' : 'ws:';
-    // Include admin token for authentication
-    const token = sessionStorage.getItem('admin_token') || 'demo-admin-token';
-    const wsUrl = `${protocol}//${window.location.host}/ws?admin=true&token=${encodeURIComponent(token)}`;
-
-    console.log('🔌 Connecting to WebSocket:', wsUrl);
-    console.log('🔌 Token used:', token);
-
-    try {
-      wsRef.current = new WebSocket(wsUrl);
-
-      wsRef.current.onopen = () => {
-        console.log('✅ Admin WebSocket connected');
-        setIsConnected(true);
-      };
-
-      wsRef.current.onmessage = (event) => {
-        try {
-          const data = JSON.parse(event.data);
-          console.log('WebSocket message received:', data.type, data);
-          handleWebSocketMessage(data);
-        } catch (e) {
-          console.error('Failed to parse WebSocket message:', e);
-        }
-      };
-
-      wsRef.current.onclose = () => {
-        console.log('WebSocket disconnected, reconnecting...');
-        setIsConnected(false);
-        setTimeout(connectWebSocket, 3000);
-      };
-
-      wsRef.current.onerror = (error) => {
-        console.error('WebSocket error:', error);
-      };
-    } catch (error) {
-      console.error('WebSocket connection error:', error);
-    }
-  };
-
-  const handleWebSocketMessage = (data) => {
-    switch (data.type) {
-      case 'connected':
-        console.log('WebSocket connected as admin');
-        break;
-
-      case 'new_message':
-        console.log('New message received:', data);
-        // Play notification sound for incoming messages
-        if (soundEnabledRef.current) {
-          playNotificationSound();
-        }
-        setMessages(prev => {
-          const currentConv = selectedConversationRef.current;
-          if (currentConv?.candidate_id === data.candidateId) {
-            if (prev.some(m => m.id === data.message.id)) {
-              return prev;
-            }
-            return [...prev, data.message];
-          }
-          return prev;
-        });
-        fetchConversations();
-        break;
-
-      case 'message_sent':
-        setMessages(prev => {
-          if (prev.some(m => m.id === data.message.id)) {
-            return prev;
-          }
-          return [...prev, data.message];
-        });
-        fetchConversations();
-        break;
-
-      case 'status_change':
-        setConversations(prev => prev.map(c =>
-          c.candidate_id === data.candidateId
-            ? { ...c, online_status: data.status, last_seen: data.last_seen || c.last_seen }
-            : c
-        ));
-        break;
-
-      case 'online_candidates':
-        console.log('Online candidates:', data.candidates);
-        break;
-
-      case 'typing':
-        break;
-
-      // AI Chat events
-      case 'ai_suggestion':
-        console.log('AI suggestion received:', data);
-        const currentConv = selectedConversationRef.current;
-        if (currentConv?.candidate_id === data.candidateId) {
-          setAiSuggestion(data.suggestion);
-        }
-        break;
-
-      case 'ai_suggestion_accepted':
-      case 'ai_suggestion_sent':
-      case 'ai_suggestion_dismissed':
-        setAiSuggestion(null);
-        break;
-
-      case 'ai_message_sent':
-        console.log('AI message sent:', data);
-        fetchMessages(data.candidateId);
-        break;
-
-      case 'ai_mode_updated':
-        if (selectedConversationRef.current?.candidate_id === data.candidateId) {
-          setAiMode(data.mode);
-        }
-        break;
-
-      default:
-        console.log('Unknown WebSocket message type:', data.type);
-    }
-  };
+  }, [selectedConversation, fetchUnreadTotal, isConnected, send]);
 
   const fetchConversations = async () => {
     try {
@@ -781,12 +723,12 @@ export default function AdminChat() {
     setMessages(prev => [...prev, optimisticMessage]);
 
     try {
-      if (wsRef.current?.readyState === WebSocket.OPEN) {
-        wsRef.current.send(JSON.stringify({
+      if (isConnected) {
+        send({
           type: 'message',
           candidateId: selectedConversation.candidate_id,
           content,
-        }));
+        });
       } else {
         // Fallback to HTTP API
         const res = await fetch(`/api/v1/chat/admin/${selectedConversation.candidate_id}/messages`, {

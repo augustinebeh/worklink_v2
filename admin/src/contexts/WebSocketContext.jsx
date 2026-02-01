@@ -134,6 +134,25 @@ export function WebSocketProvider({ children }) {
       case 'pong':
         break;
 
+      // AI Chat events
+      case 'ai_suggestion':
+        notifyListeners('ai_suggestion', data);
+        break;
+
+      case 'ai_suggestion_accepted':
+      case 'ai_suggestion_sent':
+      case 'ai_suggestion_dismissed':
+        notifyListeners('ai_suggestion_update', data);
+        break;
+
+      case 'ai_message_sent':
+        notifyListeners('ai_message_sent', data);
+        break;
+
+      case 'ai_mode_updated':
+        notifyListeners('ai_mode_updated', data);
+        break;
+
       default:
         logger.debug('Unknown admin WebSocket message:', data.type);
     }

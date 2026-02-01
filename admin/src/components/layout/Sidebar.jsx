@@ -329,20 +329,6 @@ export default function Sidebar({ collapsed, onCollapse, mobileOpen, onMobileClo
         </div>
       )}
 
-      {/* Collapse Toggle Button - Desktop only */}
-      <button
-        onClick={() => onCollapse?.(!collapsed)}
-        aria-label={collapsed ? 'Expand sidebar' : 'Collapse sidebar'}
-        className={clsx(
-          'hidden lg:flex absolute -right-3 top-20 h-6 w-6 items-center justify-center rounded-full border border-slate-200 dark:border-slate-700 bg-white dark:bg-slate-800 text-slate-400 hover:text-slate-600 dark:hover:text-slate-300 shadow-sm hover:shadow transition-all focus:outline-none focus:ring-2 focus:ring-primary-500/50'
-        )}
-      >
-        {collapsed ? (
-          <ChevronRightIcon className="h-4 w-4" />
-        ) : (
-          <ChevronLeftIcon className="h-4 w-4" />
-        )}
-      </button>
     </aside>
   );
 }

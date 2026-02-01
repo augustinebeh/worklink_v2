@@ -1,4 +1,5 @@
 import { clsx } from 'clsx';
+import logoImage from '../../assets/worklinkv2_vector_logo.png';
 
 export default function Logo({ size = 'md', showText = true, className }) {
   const sizes = {
@@ -32,11 +33,10 @@ export default function Logo({ size = 'md', showText = true, className }) {
 export function LogoIcon({ size = 32, className }) {
   return (
     <img
-      src="/favicon.png"
+      src={logoImage}
       alt="WorkLink"
-      width={size}
-      height={size}
-      className={clsx('rounded-xl', className)}
+      style={{ height: size, width: 'auto' }}
+      className={clsx(className)}
     />
   );
 }
