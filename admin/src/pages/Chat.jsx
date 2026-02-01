@@ -512,11 +512,14 @@ export default function AdminChat() {
     const token = sessionStorage.getItem('admin_token') || 'demo-admin-token';
     const wsUrl = `${protocol}//${window.location.host}/ws?admin=true&token=${encodeURIComponent(token)}`;
 
+    console.log('🔌 Connecting to WebSocket:', wsUrl);
+    console.log('🔌 Token used:', token);
+
     try {
       wsRef.current = new WebSocket(wsUrl);
 
       wsRef.current.onopen = () => {
-        console.log('Admin WebSocket connected');
+        console.log('✅ Admin WebSocket connected');
         setIsConnected(true);
       };
 
@@ -765,19 +768,38 @@ export default function AdminChat() {
     setNewMessage('');
     setShowEmoji(false);
 
-    if (wsRef.current?.readyState === WebSocket.OPEN) {
-      wsRef.current.send(JSON.stringify({
-        type: 'message',
-        candidateId: selectedConversation.candidate_id,
-        content,
-      }));
-    } else {
-      await fetch(`/api/v1/chat/admin/${selectedConversation.candidate_id}/messages`, {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ content }),
-      });
-      fetchMessages(selectedConversation.candidate_id);
+    // Optimistically add message to UI immediately
+    const optimisticMessage = {
+      id: Date.now(),
+      candidate_id: selectedConversation.candidate_id,
+      sender: 'admin',
+      content,
+      channel: 'app',
+      read: 0,
+      created_at: new Date().toISOString(),
+    };
+    setMessages(prev => [...prev, optimisticMessage]);
+
+    try {
+      if (wsRef.current?.readyState === WebSocket.OPEN) {
+        wsRef.current.send(JSON.stringify({
+          type: 'message',
+          candidateId: selectedConversation.candidate_id,
+          content,
+        }));
+      } else {
+        // Fallback to HTTP API
+        const res = await fetch(`/api/v1/chat/admin/${selectedConversation.candidate_id}/messages`, {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ content }),
+        });
+        if (!res.ok) {
+          console.error('Failed to send message via HTTP');
+        }
+      }
+    } catch (error) {
+      console.error('Error sending message:', error);
     }
 
     inputRef.current?.focus();
