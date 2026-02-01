@@ -114,12 +114,17 @@ export function WebSocketProvider({ children }) {
 
       case 'notifications':
         setNotifications(data.notifications || []);
-        setUnreadNotifications(data.unreadCount || 0);
+        // Only count non-chat notifications (chat shown on chat bubble instead)
+        const nonChatUnread = (data.notifications || []).filter(n => n.type !== 'chat' && n.read === 0).length;
+        setUnreadNotifications(nonChatUnread);
         break;
 
       case 'notification':
         setNotifications(prev => [data.notification, ...prev]);
-        setUnreadNotifications(prev => prev + 1);
+        // Only increment if not a chat notification
+        if (data.notification?.type !== 'chat') {
+          setUnreadNotifications(prev => prev + 1);
+        }
         notifyListeners('notification', data);
         break;
 

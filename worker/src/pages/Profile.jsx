@@ -715,13 +715,18 @@ export default function Profile() {
         </div>
 
         {/* Referral Code */}
-        <div className="p-4 rounded-2xl bg-gradient-to-r from-accent-900/30 to-accent-800/10 border border-accent-500/20">
+        <div className={clsx(
+          'p-4 rounded-2xl border',
+          isDark
+            ? 'bg-gradient-to-r from-emerald-900/50 to-teal-900/30 border-emerald-500/20'
+            : 'bg-gradient-to-r from-emerald-50 to-teal-50 border-emerald-200'
+        )}>
           <div className="flex items-center justify-between mb-2">
             <div className="flex items-center gap-2">
-              <ShareIcon className="h-5 w-5 text-accent-400" />
+              <ShareIcon className={clsx('h-5 w-5', isDark ? 'text-emerald-400' : 'text-emerald-600')} />
               <span className={clsx('font-medium', isDark ? 'text-white' : 'text-slate-900')}>Referral Code</span>
             </div>
-            <span className="text-xs text-accent-400">Earn $30 per referral</span>
+            <span className={clsx('text-xs', isDark ? 'text-emerald-400' : 'text-emerald-600')}>Earn $30 per referral</span>
           </div>
           <div className="flex items-center gap-2">
             <div className={clsx(
@@ -732,7 +737,10 @@ export default function Profile() {
             </div>
             <button
               onClick={handleCopyReferral}
-              className="p-3 rounded-xl bg-accent-500 text-white"
+              className={clsx(
+                'p-3 rounded-xl text-white',
+                isDark ? 'bg-emerald-500' : 'bg-emerald-600'
+              )}
             >
               {copied ? <CheckIcon className="h-5 w-5" /> : <CopyIcon className="h-5 w-5" />}
             </button>

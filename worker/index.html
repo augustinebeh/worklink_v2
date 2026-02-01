@@ -99,21 +99,31 @@
   <script>
     (function() {
       const theme = localStorage.getItem('theme');
-      if (theme === 'light') {
+      const isLight = theme === 'light';
+      if (isLight) {
         document.documentElement.classList.remove('dark');
         document.documentElement.classList.add('light');
       }
+      // Set background color based on theme
+      const bgColor = isLight ? '#f8fafc' : '#020617';
+      document.documentElement.style.backgroundColor = bgColor;
+      // Update theme-color meta tag
+      const metaTheme = document.querySelector('meta[name="theme-color"]');
+      if (metaTheme) metaTheme.setAttribute('content', bgColor);
     })();
   </script>
 
   <!-- Splash screens for iOS -->
   <style>
-    /* Ensure status bar area is dark on iOS */
+    /* Default to dark, will be overridden by script if light theme */
     html {
       background-color: #020617;
     }
+    html.light {
+      background-color: #f8fafc;
+    }
     body {
-      background-color: #020617;
+      background-color: inherit;
       margin: 0;
       padding: 0;
     }

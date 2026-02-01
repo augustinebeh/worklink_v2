@@ -47,18 +47,26 @@ function QuestCard({ quest, onClaim, claiming, isDark }) {
     if (isClaimed || isClaimable) return;
 
     const requirement = quest.requirement || {};
-    if (requirement.type === 'jobs_completed' || requirement.type === 'accept_job') {
+    const reqType = requirement.type || '';
+
+    if (reqType === 'jobs_completed' || reqType === 'accept_job') {
       navigate('/jobs');
-    } else if (requirement.type === 'training_completed') {
+    } else if (reqType === 'training_completed') {
       navigate('/training');
-    } else if (requirement.type === 'referral') {
+    } else if (reqType === 'referral') {
       navigate('/referrals');
-    } else if (requirement.type === 'streak') {
-      // Daily check-in quest - already counted by opening the app
-      // Don't navigate away, just stay on quests page
+    } else if (reqType === 'streak' || reqType === 'daily_check_in' || reqType === 'check_in') {
+      // Daily check-in quest - already counted by visiting quests page
+      // Show feedback to user
       return;
-    } else if (requirement.type === 'profile_complete') {
+    } else if (reqType === 'profile_complete') {
       navigate('/complete-profile');
+    } else if (reqType === 'rating' || reqType === 'five_star' || reqType === 'review' || reqType === 'five_star_rating') {
+      // Rating quests are completed when the user receives a 5-star rating from employers
+      // Can't navigate anywhere - this is tracked automatically by the system
+      return;
+    } else if (reqType === 'hours_worked') {
+      navigate('/wallet'); // Show work history
     }
   };
 
@@ -233,6 +241,21 @@ export default function Quests() {
     return () => clearInterval(interval);
   }, []);
 
+  // Record daily check-in when visiting quests page
+  const recordDailyCheckIn = useCallback(async () => {
+    if (!user?.id) return;
+
+    try {
+      await fetch(`/api/v1/gamification/quests/check-in`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ candidate_id: user.id }),
+      });
+    } catch (error) {
+      console.error('Failed to record check-in:', error);
+    }
+  }, [user?.id]);
+
   const fetchQuests = useCallback(async () => {
     if (!user?.id) {
       setLoading(false);
@@ -240,6 +263,9 @@ export default function Quests() {
     }
 
     try {
+      // Record daily check-in first
+      await recordDailyCheckIn();
+
       const res = await fetch(`/api/v1/gamification/quests/user/${user.id}`);
       const data = await res.json();
 

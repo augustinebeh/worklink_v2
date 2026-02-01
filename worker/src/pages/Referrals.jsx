@@ -11,9 +11,11 @@ import {
   StarIcon,
   MessageCircleIcon,
   SendIcon,
+  LinkIcon,
 } from 'lucide-react';
 import { useAuth } from '../contexts/AuthContext';
 import { useTheme } from '../contexts/ThemeContext';
+import { useToast } from '../components/ui/Toast';
 import { clsx } from 'clsx';
 import { formatMoney, REFERRAL_STATUS_LABELS } from '../utils/constants';
 
@@ -154,9 +156,11 @@ function ShareButton({ icon: Icon, label, color, onClick }) {
 export default function Referrals() {
   const { user } = useAuth();
   const { isDark } = useTheme();
+  const toast = useToast();
   const [data, setData] = useState(null);
   const [loading, setLoading] = useState(true);
   const [copied, setCopied] = useState(false);
+  const [linkCopied, setLinkCopied] = useState(false);
   const [leaderboard, setLeaderboard] = useState([]);
 
   useEffect(() => {
@@ -192,6 +196,7 @@ export default function Referrals() {
     if (data?.referralCode) {
       navigator.clipboard.writeText(data.referralCode);
       setCopied(true);
+      toast.success('Copied!', 'Referral code copied to clipboard');
       setTimeout(() => setCopied(false), 2000);
     }
   };
@@ -211,8 +216,9 @@ export default function Referrals() {
         break;
       case 'copy':
         navigator.clipboard.writeText(data.shareLinks.web);
-        setCopied(true);
-        setTimeout(() => setCopied(false), 2000);
+        setLinkCopied(true);
+        toast.success('Link Copied!', 'Share link copied to clipboard');
+        setTimeout(() => setLinkCopied(false), 2000);
         break;
     }
   };
@@ -304,9 +310,11 @@ export default function Referrals() {
               onClick={() => handleShare('sms')}
             />
             <ShareButton
-              icon={CopyIcon}
-              label="Link"
-              color={isDark ? 'bg-dark-700 text-white hover:bg-dark-600' : 'bg-slate-100 text-slate-700 hover:bg-slate-200'}
+              icon={linkCopied ? CheckIcon : LinkIcon}
+              label={linkCopied ? 'Copied!' : 'Link'}
+              color={linkCopied
+                ? 'bg-accent-500/20 text-accent-400'
+                : isDark ? 'bg-dark-700 text-white hover:bg-dark-600' : 'bg-slate-100 text-slate-700 hover:bg-slate-200'}
               onClick={() => handleShare('copy')}
             />
           </div>

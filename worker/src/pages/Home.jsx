@@ -394,11 +394,17 @@ export default function Home() {
           'relative overflow-hidden rounded-3xl p-6',
           isDark
             ? 'bg-gradient-to-br from-[#0a1628] via-[#0d1f3c] to-[#0f2847] border border-white/5'
-            : 'bg-gradient-to-br from-[#7dd3fc] via-[#38bdf8] to-[#0ea5e9] shadow-lg shadow-sky-500/25'
+            : 'bg-gradient-to-br from-[#0f766e] via-[#0d9488] to-[#14b8a6] shadow-lg shadow-teal-600/25'
         )}>
           {/* Background decoration */}
-          <div className="absolute top-0 right-0 w-64 h-64 bg-primary-500/10 rounded-full blur-3xl -translate-y-1/2 translate-x-1/2" />
-          <div className="absolute bottom-0 left-0 w-48 h-48 bg-cyan-500/10 rounded-full blur-3xl translate-y-1/2 -translate-x-1/2" />
+          <div className={clsx(
+            'absolute top-0 right-0 w-64 h-64 rounded-full blur-3xl -translate-y-1/2 translate-x-1/2',
+            isDark ? 'bg-primary-500/10' : 'bg-emerald-300/20'
+          )} />
+          <div className={clsx(
+            'absolute bottom-0 left-0 w-48 h-48 rounded-full blur-3xl translate-y-1/2 -translate-x-1/2',
+            isDark ? 'bg-cyan-500/10' : 'bg-teal-200/20'
+          )} />
 
           <div className="relative">
             {/* This Month Label */}
@@ -431,11 +437,16 @@ export default function Home() {
             <div className="mb-6">
               <div className="flex items-center justify-between text-sm mb-2">
                 <span className="text-white/70">{levelTitles[userLevel]}</span>
-                <span className="text-cyan-300">{xpInLevel.toLocaleString()} / {xpNeeded.toLocaleString()} XP</span>
+                <span className={isDark ? 'text-cyan-300' : 'text-emerald-200'}>{xpInLevel.toLocaleString()} / {xpNeeded.toLocaleString()} XP</span>
               </div>
               <div className="h-2 bg-white/20 rounded-full overflow-hidden">
                 <div
-                  className="h-full bg-gradient-to-r from-primary-400 to-cyan-400 rounded-full transition-all duration-500"
+                  className={clsx(
+                    'h-full rounded-full transition-all duration-500',
+                    isDark
+                      ? 'bg-gradient-to-r from-primary-400 to-cyan-400'
+                      : 'bg-gradient-to-r from-emerald-300 to-teal-200'
+                  )}
                   style={{ width: `${progress}%` }}
                 />
               </div>

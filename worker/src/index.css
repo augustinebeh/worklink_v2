@@ -21,14 +21,14 @@
 
 /* Light theme - Clean modern style */
 .light {
-  --bg-primary: #f0f4f8;
+  --bg-primary: #f8fafc;
   --bg-secondary: #ffffff;
   --bg-card: #ffffff;
   --bg-card-hover: #f8fafc;
-  --text-primary: #1e293b;
+  --text-primary: #0f172a;
   --text-secondary: #475569;
   --text-muted: #64748b;
-  --border-color: rgba(0, 0, 0, 0.06);
+  --border-color: rgba(0, 0, 0, 0.08);
   --gradient-start: #ffffff;
   --gradient-mid: #f8fafc;
   --gradient-end: #f1f5f9;
@@ -92,12 +92,12 @@
 
   /* Light theme - Clean modern white */
   html.light {
-    background-color: #f0f4f8;
+    background-color: #f8fafc;
   }
 
   html.light body {
     @apply text-slate-900;
-    background: linear-gradient(180deg, #f0f4f8 0%, #e8eef4 100%);
+    background: linear-gradient(180deg, #f8fafc 0%, #f1f5f9 50%, #e2e8f0 100%);
     background-attachment: fixed;
   }
 

@@ -125,26 +125,39 @@ export default function CompleteProfile() {
   };
 
   const handleSave = async () => {
-    if (!validate() || !user?.id) return;
+    if (!validate()) {
+      toast.error('Validation failed', 'Please fill in all required fields');
+      return;
+    }
+
+    if (!user?.id) {
+      toast.error('Not logged in', 'Please log in to save your profile');
+      return;
+    }
 
     setSaving(true);
     try {
+      console.log('Saving profile:', formData);
       const res = await fetch(`/api/v1/candidates/${user.id}`, {
         method: 'PATCH',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify(formData),
       });
+
       const data = await res.json();
+      console.log('Save response:', data);
 
       if (data.success) {
         toast.success('Profile saved', 'Your profile has been updated');
-        refreshUser?.();
+        await refreshUser?.();
         navigate('/profile');
       } else {
-        toast.error('Save failed', data.error);
+        toast.error('Save failed', data.error || 'Unknown error occurred');
+        console.error('Profile save failed:', data);
       }
     } catch (error) {
-      toast.error('Save failed', 'Please try again');
+      console.error('Profile save error:', error);
+      toast.error('Save failed', error.message || 'Please try again');
     } finally {
       setSaving(false);
     }
