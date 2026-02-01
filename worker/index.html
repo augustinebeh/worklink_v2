@@ -104,8 +104,8 @@
         document.documentElement.classList.remove('dark');
         document.documentElement.classList.add('light');
       }
-      // Set background color based on theme
-      const bgColor = isLight ? '#f8fafc' : '#020617';
+      // Set background color based on theme (soft blue for light mode)
+      const bgColor = isLight ? '#DAEBF2' : '#020617';
       document.documentElement.style.backgroundColor = bgColor;
       // Update theme-color meta tag
       const metaTheme = document.querySelector('meta[name="theme-color"]');
@@ -120,7 +120,7 @@
       background-color: #020617;
     }
     html.light {
-      background-color: #f8fafc;
+      background-color: #DAEBF2;
     }
     body {
       background-color: inherit;

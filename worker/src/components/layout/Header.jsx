@@ -31,7 +31,7 @@ export default function Header() {
           'fixed top-0 left-0 right-0 z-[9999]',
           isDark
             ? 'backdrop-blur-xl bg-dark-900/70 border-b border-white/5'
-            : 'backdrop-blur-md bg-white/80 border-b border-slate-200/60 shadow-sm'
+            : 'backdrop-blur-md bg-white/90 border-b border-[#C2DAE6] shadow-sm'
         )}
         style={{ paddingTop: 'env(safe-area-inset-top, 0px)' }}
       >

@@ -95,19 +95,19 @@ export default function Wallet() {
   });
 
   return (
-    <div className={clsx('min-h-screen pb-24', isDark ? 'bg-dark-950' : 'bg-slate-50')}>
+    <div className={clsx('min-h-screen pb-24', isDark ? 'bg-dark-950' : 'bg-transparent')}>
       {/* Balance Card */}
       <div className="px-4 py-4">
         <div className={clsx(
           'relative overflow-hidden rounded-3xl p-6 border backdrop-blur-xl',
           isDark
             ? 'bg-gradient-to-br from-[#0a1628] via-[#0d1f3c] to-[#1a1a3e] border-white/5'
-            : 'bg-gradient-to-br from-primary-600 via-primary-700 to-cyan-700 border-primary-500/20 shadow-lg shadow-primary-500/20'
+            : 'bg-gradient-to-br from-[#94BDCF] via-[#80CCE3] to-[#B0DEED] border-[#C2DAE6] shadow-lg shadow-[#94BDCF]/30'
         )}>
           {/* Background decoration */}
           <div className={clsx(
             'absolute top-0 right-0 w-64 h-64 rounded-full blur-3xl -translate-y-1/2 translate-x-1/2',
-            isDark ? 'bg-blue-500/10' : 'bg-cyan-400/20'
+            isDark ? 'bg-blue-500/10' : 'bg-white/30'
           )} />
           <div className={clsx(
             'absolute bottom-0 left-0 w-48 h-48 rounded-full blur-3xl translate-y-1/2 -translate-x-1/2',

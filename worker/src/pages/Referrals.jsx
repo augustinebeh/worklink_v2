@@ -240,7 +240,7 @@ export default function Referrals() {
   }
 
   return (
-    <div className={clsx('min-h-screen pb-24', isDark ? 'bg-dark-950' : 'bg-slate-50')}>
+    <div className={clsx('min-h-screen pb-24', isDark ? 'bg-dark-950' : 'bg-transparent')}>
       {/* Header */}
       <div className={clsx(
         'px-4 pt-4 pb-6',

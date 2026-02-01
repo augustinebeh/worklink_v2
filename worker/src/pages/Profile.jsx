@@ -611,13 +611,13 @@ export default function Profile() {
   }
 
   return (
-    <div className={clsx('min-h-screen pb-24', isDark ? 'bg-dark-950' : 'bg-slate-50')}>
+    <div className={clsx('min-h-screen pb-24', isDark ? 'bg-dark-950' : 'bg-transparent')}>
       {/* Profile Header Section */}
       <div className={clsx(
         'px-4 pt-4 pb-6',
         isDark
           ? 'bg-gradient-to-b from-primary-900/30 to-dark-950'
-          : 'bg-gradient-to-b from-primary-100 to-slate-50'
+          : 'bg-gradient-to-b from-[#C2DAE6] to-transparent'
       )}>
         {/* Profile card */}
         <div className="flex items-center gap-4">

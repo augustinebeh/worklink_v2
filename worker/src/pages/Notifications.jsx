@@ -191,9 +191,9 @@ export default function Notifications() {
   }
 
   return (
-    <div className="min-h-screen bg-white dark:bg-dark-950 pb-24">
+    <div className="min-h-screen bg-transparent dark:bg-dark-950 pb-24">
       {/* Header */}
-      <div className="sticky top-0 z-10 bg-white/95 dark:bg-dark-950/95 backdrop-blur-lg px-4 pt-safe pb-4 border-b border-slate-200 dark:border-white/5">
+      <div className="sticky top-0 z-10 bg-white/90 dark:bg-dark-950/95 backdrop-blur-lg px-4 pt-safe pb-4 border-b border-[#C2DAE6] dark:border-white/5">
         <div className="flex items-center justify-between">
           <div>
             <h1 className="text-2xl font-bold text-slate-900 dark:text-white">Notifications</h1>

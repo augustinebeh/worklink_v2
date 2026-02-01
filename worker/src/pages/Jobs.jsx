@@ -44,8 +44,8 @@ function JobCard({ job, applied, isDark }) {
             ? 'bg-accent-900/10 border-accent-500/30'
             : 'bg-dark-900/50 border-white/5 hover:border-primary-500/30'
           : applied
-            ? 'bg-emerald-50 border-emerald-200'
-            : 'bg-white border-slate-200 shadow-sm hover:border-primary-300'
+            ? 'bg-[#B0DEED]/30 border-[#80CCE3]'
+            : 'bg-white border-[#C2DAE6] shadow-sm hover:border-[#80CCE3]'
       )}
     >
       {/* Status badges */}
@@ -167,15 +167,15 @@ export default function Jobs() {
   });
 
   return (
-    <div className={clsx('min-h-screen pb-24', isDark ? 'bg-dark-950' : 'bg-slate-50')}>
+    <div className={clsx('min-h-screen pb-24', isDark ? 'bg-dark-950' : 'bg-transparent')}>
       {/* Search & Filters */}
       <div className={clsx(
         'px-4 pt-4 pb-4',
-        isDark ? 'bg-dark-950' : 'bg-slate-50'
+        isDark ? 'bg-dark-950' : 'bg-transparent'
       )}>
         {/* Search */}
         <div className="relative mb-4">
-          <SearchIcon className={clsx('absolute left-3 top-1/2 -translate-y-1/2 h-5 w-5', isDark ? 'text-dark-500' : 'text-slate-400')} />
+          <SearchIcon className={clsx('absolute left-3 top-1/2 -translate-y-1/2 h-5 w-5', isDark ? 'text-dark-500' : 'text-[#94BDCF]')} />
           <input
             type="text"
             placeholder="Search jobs, locations..."
@@ -185,7 +185,7 @@ export default function Jobs() {
               'w-full pl-10 pr-4 py-3 rounded-xl border focus:outline-none focus:border-primary-500',
               isDark
                 ? 'bg-dark-800 border-white/10 text-white placeholder-dark-500'
-                : 'bg-slate-100 border-slate-200 text-slate-900 placeholder-slate-400'
+                : 'bg-white border-[#C2DAE6] text-slate-900 placeholder-[#94BDCF]'
             )}
           />
         </div>
@@ -206,7 +206,7 @@ export default function Jobs() {
                   ? 'bg-primary-500 text-white'
                   : isDark
                     ? 'bg-dark-800 text-dark-400 hover:text-white'
-                    : 'bg-slate-100 text-slate-500 hover:text-slate-700'
+                    : 'bg-white text-[#94BDCF] hover:text-slate-700 border border-[#C2DAE6]'
               )}
             >
               {tab.label}

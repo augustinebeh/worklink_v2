@@ -19,19 +19,21 @@
   --gradient-end: #0f2847;
 }
 
-/* Light theme - Clean modern style */
+/* Light theme - Soft blue palette */
 .light {
-  --bg-primary: #f8fafc;
+  --bg-primary: #DAEBF2;
   --bg-secondary: #ffffff;
   --bg-card: #ffffff;
-  --bg-card-hover: #f8fafc;
+  --bg-card-hover: #DAEBF2;
   --text-primary: #0f172a;
   --text-secondary: #475569;
   --text-muted: #64748b;
-  --border-color: rgba(0, 0, 0, 0.08);
-  --gradient-start: #ffffff;
-  --gradient-mid: #f8fafc;
-  --gradient-end: #f1f5f9;
+  --border-color: #C2DAE6;
+  --gradient-start: #DAEBF2;
+  --gradient-mid: #C2DAE6;
+  --gradient-end: #B0DEED;
+  --accent-light: #80CCE3;
+  --accent-medium: #94BDCF;
 }
 
 @layer base {
@@ -90,14 +92,14 @@
     background-color: #020617;
   }
 
-  /* Light theme - Clean modern white */
+  /* Light theme - Soft blue palette */
   html.light {
-    background-color: #f8fafc;
+    background-color: #DAEBF2;
   }
 
   html.light body {
     @apply text-slate-900;
-    background: linear-gradient(180deg, #f8fafc 0%, #f1f5f9 50%, #e2e8f0 100%);
+    background: linear-gradient(180deg, #DAEBF2 0%, #C2DAE6 50%, #B0DEED 100%);
     background-attachment: fixed;
   }
 

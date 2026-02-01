@@ -98,7 +98,7 @@ export default function Sidebar({ isOpen, onClose }) {
         className={clsx(
           'fixed top-0 left-0 bottom-0 w-72 z-[100] transform transition-transform duration-300 ease-out',
           isOpen ? 'translate-x-0' : '-translate-x-full',
-          isDark ? 'bg-[#0b1426]' : 'bg-white shadow-2xl shadow-slate-400/20'
+          isDark ? 'bg-[#0b1426]' : 'bg-white shadow-2xl shadow-[#94BDCF]/30'
         )}
         style={{ paddingTop: 'env(safe-area-inset-top, 0px)' }}
       >

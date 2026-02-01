@@ -38,7 +38,7 @@ export default function BottomNav() {
         'fixed bottom-0 left-0 right-0 z-50 backdrop-blur-xl',
         isDark
           ? 'bg-dark-900/70 border-t border-white/5'
-          : 'bg-white/80 border-t border-slate-200/60 shadow-[0_-2px_10px_rgba(0,0,0,0.05)]'
+          : 'bg-white/90 border-t border-[#C2DAE6] shadow-[0_-2px_10px_rgba(148,189,207,0.15)]'
       )}
       style={{ paddingBottom: 'env(safe-area-inset-bottom, 0px)' }}
     >

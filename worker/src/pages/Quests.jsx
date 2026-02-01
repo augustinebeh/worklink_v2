@@ -357,7 +357,7 @@ export default function Quests() {
   });
 
   return (
-    <div className={clsx('min-h-screen pb-24', isDark ? 'bg-dark-950' : 'bg-slate-50')}>
+    <div className={clsx('min-h-screen pb-24', isDark ? 'bg-dark-950' : 'bg-transparent')}>
       {/* Header */}
       <div className={clsx(
         'sticky top-0 z-10 backdrop-blur-lg px-4 pt-safe pb-4 border-b',

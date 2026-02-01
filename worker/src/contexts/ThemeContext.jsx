@@ -19,8 +19,8 @@ export function ThemeProvider({ children }) {
     if (theme === 'light') {
       root.classList.remove('dark');
       root.classList.add('light');
-      // Update theme-color meta tag for iOS status bar
-      document.querySelector('meta[name="theme-color"]')?.setAttribute('content', '#f8fafc');
+      // Update theme-color meta tag for iOS status bar (soft blue)
+      document.querySelector('meta[name="theme-color"]')?.setAttribute('content', '#DAEBF2');
     } else {
       root.classList.remove('light');
       root.classList.add('dark');
