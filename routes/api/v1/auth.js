@@ -56,9 +56,16 @@ router.post('/login', (req, res) => {
 // Worker app login - simplified
 router.post('/worker/login', (req, res) => {
   try {
-    const { email } = req.body;
+    const { email, phone } = req.body;
 
-    let candidate = db.prepare('SELECT * FROM candidates WHERE email = ?').get(email);
+    let candidate;
+    
+    // Support login by phone (Telegram users) or email
+    if (phone) {
+      candidate = db.prepare('SELECT * FROM candidates WHERE phone = ?').get(phone);
+    } else if (email) {
+      candidate = db.prepare('SELECT * FROM candidates WHERE email = ?').get(email);
+    }
 
     // Demo account handling - create or update Sarah Tan
     if (email === 'sarah.tan@email.com') {
@@ -126,7 +133,8 @@ router.post('/worker/login', (req, res) => {
     }
 
     if (!candidate) {
-      return res.status(401).json({ success: false, error: 'Email not found. Please contact admin to register.' });
+      const loginMethod = phone ? 'phone number' : 'email';
+      return res.status(401).json({ success: false, error: `${loginMethod} not found. Please sign up first.` });
     }
 
     candidate.certifications = JSON.parse(candidate.certifications || '[]');
@@ -141,7 +149,7 @@ router.post('/worker/login', (req, res) => {
   }
 });
 
-// Register new candidate
+// Register new candidate (email-based)
 router.post('/register', validate(schemas.registration), (req, res) => {
   try {
     const { name, email, phone, date_of_birth } = req.body;
@@ -164,6 +172,111 @@ router.post('/register', validate(schemas.registration), (req, res) => {
     candidate.certifications = JSON.parse(candidate.certifications || '[]');
 
     res.status(201).json({
+      success: true,
+      data: candidate,
+      token: `demo-token-${candidate.id}`,
+    });
+  } catch (error) {
+    res.status(500).json({ success: false, error: error.message });
+  }
+});
+
+// Register via Telegram (phone-based, no email required)
+router.post('/register/telegram', (req, res) => {
+  try {
+    const { name, phone, telegram_username } = req.body;
+
+    // Validate required fields
+    if (!name || !phone) {
+      return res.status(400).json({ success: false, error: 'Name and phone number are required' });
+    }
+
+    // Validate phone format (Singapore format: +65XXXXXXXX or 65XXXXXXXX or 8/9XXXXXXX)
+    const cleanPhone = phone.replace(/[\s\-()]/g, '');
+    let normalizedPhone = cleanPhone;
+    
+    if (cleanPhone.startsWith('+65')) {
+      normalizedPhone = cleanPhone;
+    } else if (cleanPhone.startsWith('65')) {
+      normalizedPhone = '+' + cleanPhone;
+    } else if (cleanPhone.match(/^[89]\d{7}$/)) {
+      normalizedPhone = '+65' + cleanPhone;
+    } else {
+      return res.status(400).json({ success: false, error: 'Please enter a valid Singapore phone number' });
+    }
+
+    // Check if phone exists
+    const existingPhone = db.prepare('SELECT id FROM candidates WHERE phone = ?').get(normalizedPhone);
+    if (existingPhone) {
+      return res.status(400).json({ success: false, error: 'Phone number already registered. Please login instead.' });
+    }
+
+    // Check if telegram username exists (if provided)
+    if (telegram_username) {
+      const existingTelegram = db.prepare('SELECT id FROM candidates WHERE telegram_username = ?').get(telegram_username);
+      if (existingTelegram) {
+        return res.status(400).json({ success: false, error: 'Telegram username already registered' });
+      }
+    }
+
+    const id = 'CND' + Date.now().toString(36).toUpperCase();
+    const referralCode = name.split(' ')[0].toUpperCase() + Date.now().toString(36).toUpperCase().slice(-4);
+
+    db.prepare(`
+      INSERT INTO candidates (
+        id, name, phone, telegram_username, status, source, referral_code, 
+        xp, level, created_at, updated_at
+      )
+      VALUES (?, ?, ?, ?, 'pending', 'telegram', ?, 0, 1, datetime('now'), datetime('now'))
+    `).run(id, name.trim(), normalizedPhone, telegram_username || null, referralCode);
+
+    const candidate = db.prepare('SELECT * FROM candidates WHERE id = ?').get(id);
+    candidate.certifications = JSON.parse(candidate.certifications || '[]');
+
+    logger.info(`📱 New Telegram registration: ${name} (${normalizedPhone})`);
+
+    res.status(201).json({
+      success: true,
+      data: candidate,
+      token: `demo-token-${candidate.id}`,
+      message: 'Registration successful! Your account is pending approval.',
+    });
+  } catch (error) {
+    logger.error('Telegram registration error:', error);
+    res.status(500).json({ success: false, error: error.message });
+  }
+});
+
+// Login via phone (for Telegram users)
+router.post('/worker/login/phone', (req, res) => {
+  try {
+    const { phone } = req.body;
+
+    if (!phone) {
+      return res.status(400).json({ success: false, error: 'Phone number is required' });
+    }
+
+    // Normalize phone number
+    const cleanPhone = phone.replace(/[\s\-()]/g, '');
+    let normalizedPhone = cleanPhone;
+    
+    if (cleanPhone.startsWith('+65')) {
+      normalizedPhone = cleanPhone;
+    } else if (cleanPhone.startsWith('65')) {
+      normalizedPhone = '+' + cleanPhone;
+    } else if (cleanPhone.match(/^[89]\d{7}$/)) {
+      normalizedPhone = '+65' + cleanPhone;
+    }
+
+    const candidate = db.prepare('SELECT * FROM candidates WHERE phone = ?').get(normalizedPhone);
+
+    if (!candidate) {
+      return res.status(401).json({ success: false, error: 'Phone number not found. Please sign up first.' });
+    }
+
+    candidate.certifications = JSON.parse(candidate.certifications || '[]');
+
+    res.json({
       success: true,
       data: candidate,
       token: `demo-token-${candidate.id}`,

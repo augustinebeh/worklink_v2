@@ -114,39 +114,41 @@ router.post('/', async (req, res) => {
   try {
     const {
       client_id, title, description, job_date, start_time, end_time,
-      location, address, pay_rate, total_slots, required_certifications,
-      xp_bonus, featured, auto_post_telegram = false
+      location, pay_rate, charge_rate, total_slots, required_skills,
+      xp_bonus, featured, urgent, auto_post_telegram = false
     } = req.body;
 
     const id = 'JOB' + Date.now().toString(36).toUpperCase();
+    // Use charge_rate if provided, otherwise default to pay_rate * 1.3 (30% markup)
+    const finalChargeRate = charge_rate || (pay_rate * 1.3);
 
     db.prepare(`
-      INSERT INTO jobs (id, client_id, title, description, job_date, start_time, end_time, location, address, pay_rate, total_slots, required_certifications, xp_bonus, featured, status)
-      VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, 'open')
+      INSERT INTO jobs (id, client_id, title, description, job_date, start_time, end_time, location, charge_rate, pay_rate, total_slots, required_skills, xp_bonus, featured, urgent, status)
+      VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, 'open')
     `).run(
       id, client_id, title, description, job_date, start_time, end_time,
-      location, address, pay_rate, total_slots,
-      JSON.stringify(required_certifications || []),
-      xp_bonus || 0, featured ? 1 : 0
+      location, finalChargeRate, pay_rate, total_slots,
+      JSON.stringify(required_skills || []),
+      xp_bonus || 0, featured ? 1 : 0, urgent ? 1 : 0
     );
 
     const job = db.prepare('SELECT * FROM jobs WHERE id = ?').get(id);
 
-    // Auto-post to Telegram if enabled
+    // Auto-post to Telegram if enabled (optional feature)
     let telegramResult = null;
-    const telegramPosting = getTelegramPosting();
-    if (telegramPosting) {
-      const settings = telegramPosting.getSettings();
-      if ((auto_post_telegram || settings.post_on_job_create) && settings.enabled) {
-        try {
+    try {
+      const telegramPosting = getTelegramPosting();
+      if (telegramPosting) {
+        const settings = telegramPosting.getSettings();
+        if ((auto_post_telegram || settings.post_on_job_create) && settings.enabled) {
           telegramResult = await telegramPosting.postJobToAllGroups(job, {
             useABTesting: true,
           });
-        } catch (error) {
-          console.error('Auto-post to Telegram failed:', error.message);
-          telegramResult = { success: false, error: error.message };
         }
       }
+    } catch (error) {
+      console.error('Auto-post to Telegram failed:', error.message);
+      // Don't fail job creation if telegram posting fails
     }
 
     res.status(201).json({

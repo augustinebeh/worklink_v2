@@ -8,10 +8,13 @@ import {
   CalendarIcon,
   CheckIcon,
   XIcon,
+  BriefcaseIcon,
+  DollarSignIcon,
 } from 'lucide-react';
 import { useAuth } from '../contexts/AuthContext';
+import { useToast } from '../components/ui/Toast';
 import { clsx } from 'clsx';
-import { DEFAULT_LOCALE, TIMEZONE, getSGDateString } from '../utils/constants';
+import { DEFAULT_LOCALE, TIMEZONE, getSGDateString, formatMoney } from '../utils/constants';
 
 const DAYS = ['Sun', 'Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat'];
 const MONTHS = ['January', 'February', 'March', 'April', 'May', 'June', 'July', 'August', 'September', 'October', 'November', 'December'];
@@ -24,12 +27,27 @@ function getFirstDayOfMonth(year, month) {
   return new Date(year, month, 1).getDay();
 }
 
+// Check if a day is a weekday (Mon-Fri)
+function isWeekday(year, month, day) {
+  const d = new Date(year, month, day).getDay();
+  return d >= 1 && d <= 5;
+}
+
+// Check if a day is a weekend (Sat-Sun)
+function isWeekend(year, month, day) {
+  const d = new Date(year, month, day).getDay();
+  return d === 0 || d === 6;
+}
+
 export default function Calendar() {
   const { user } = useAuth();
+  const toast = useToast();
   const [currentDate, setCurrentDate] = useState(new Date());
   const [selectedDate, setSelectedDate] = useState(new Date());
   const [deployments, setDeployments] = useState([]);
   const [availability, setAvailability] = useState([]);
+  const [availabilityMode, setAvailabilityMode] = useState('weekdays');
+  const [customDays, setCustomDays] = useState([]);
   const [loading, setLoading] = useState(true);
   const [mode, setMode] = useState('view');
   const [pendingChanges, setPendingChanges] = useState({});
@@ -47,14 +65,21 @@ export default function Calendar() {
   const fetchData = async () => {
     setLoading(true);
     try {
-      const [deploymentsRes, availabilityRes] = await Promise.all([
+      const [deploymentsRes, availabilityRes, modeRes] = await Promise.all([
         fetch(`/api/v1/candidates/${user.id}/deployments`),
-        fetch(`/api/v1/availability/${user.id}?days=60`),
+        fetch(`/api/v1/availability/${user.id}?days=90`),
+        fetch(`/api/v1/candidates/${user.id}/availability-mode`),
       ]);
       const deploymentsData = await deploymentsRes.json();
       const availabilityData = await availabilityRes.json();
-      if (deploymentsData.success) setDeployments(deploymentsData.data);
-      if (availabilityData.success) setAvailability(availabilityData.data.availability || []);
+      const modeData = await modeRes.json();
+      
+      if (deploymentsData.success) setDeployments(deploymentsData.data || []);
+      if (availabilityData.success) setAvailability(availabilityData.data?.availability || []);
+      if (modeData.success) {
+        setAvailabilityMode(modeData.data?.mode || 'weekdays');
+        setCustomDays(modeData.data?.customDays || []);
+      }
     } catch (error) {
       console.error('Failed to fetch data:', error);
     } finally {
@@ -71,16 +96,57 @@ export default function Calendar() {
   };
 
   const getDateString = (day) => `${year}-${String(month + 1).padStart(2, '0')}-${String(day).padStart(2, '0')}`;
-  const getDeploymentsForDate = (date) => deployments.filter(d => d.job_date === getSGDateString(date));
-  const getAvailabilityForDate = (dateStr) => {
-    if (pendingChanges[dateStr] !== undefined) return pendingChanges[dateStr];
-    return availability.find(a => a.date === dateStr)?.status || 'unset';
+  
+  // Get deployments for a specific date
+  const getDeploymentsForDate = (dateStr) => {
+    return deployments.filter(d => {
+      const jobDate = d.job_date?.split('T')[0];
+      return jobDate === dateStr;
+    });
   };
 
-  const selectedDeployments = getDeploymentsForDate(selectedDate);
+  // Determine if a date is available based on mode
+  const isDateAvailable = (day) => {
+    const dateStr = getDateString(day);
+    
+    // Check custom overrides first
+    const customOverride = availability.find(a => a.date === dateStr);
+    if (customOverride) {
+      return customOverride.status === 'available';
+    }
+    
+    // Check pending changes
+    if (pendingChanges[dateStr] !== undefined) {
+      return pendingChanges[dateStr] === 'available';
+    }
+    
+    // Check based on mode
+    switch (availabilityMode) {
+      case 'weekdays':
+        return isWeekday(year, month, day);
+      case 'weekends':
+        return isWeekend(year, month, day);
+      case 'all':
+        return true;
+      case 'custom':
+        const dayOfWeek = new Date(year, month, day).getDay();
+        return customDays.includes(dayOfWeek);
+      default:
+        return false;
+    }
+  };
+
+  const getAvailabilityForDate = (dateStr) => {
+    if (pendingChanges[dateStr] !== undefined) return pendingChanges[dateStr];
+    const custom = availability.find(a => a.date === dateStr);
+    if (custom) return custom.status;
+    return null; // No custom override, use mode-based
+  };
+
   const selectedDateStr = getSGDateString(selectedDate);
-  const selectedAvailability = getAvailabilityForDate(selectedDateStr);
-  const hasJobs = (day) => getDeploymentsForDate(new Date(year, month, day)).length > 0;
+  const selectedDeployments = getDeploymentsForDate(selectedDateStr);
+  const hasJobs = (day) => getDeploymentsForDate(getDateString(day)).length > 0;
+  const getJobCount = (day) => getDeploymentsForDate(getDateString(day)).length;
   const isToday = (day) => getDateString(day) === getSGDateString();
   const isSelected = (day) => day === selectedDate.getDate() && month === selectedDate.getMonth() && year === selectedDate.getFullYear();
   const isPast = (day) => getDateString(day) < getSGDateString();
@@ -88,8 +154,8 @@ export default function Calendar() {
   const handleDayClick = (day) => {
     const dateStr = getDateString(day);
     if (mode === 'edit' && !isPast(day)) {
-      const currentStatus = getAvailabilityForDate(dateStr);
-      const newStatus = currentStatus === 'available' ? 'unavailable' : 'available';
+      const isCurrentlyAvailable = isDateAvailable(day);
+      const newStatus = isCurrentlyAvailable ? 'unavailable' : 'available';
       setPendingChanges({ ...pendingChanges, [dateStr]: newStatus });
     } else {
       setSelectedDate(new Date(year, month, day));
@@ -107,12 +173,13 @@ export default function Calendar() {
         body: JSON.stringify({ dates }),
       });
       if ((await res.json()).success) {
+        toast.success('Saved!', 'Availability updated');
         setPendingChanges({});
         setMode('view');
         fetchData();
       }
     } catch (error) {
-      console.error('Failed to save:', error);
+      toast.error('Failed', 'Could not save');
     } finally {
       setSaving(false);
     }
@@ -125,23 +192,34 @@ export default function Calendar() {
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ dates: [{ date: selectedDateStr, status }] }),
       });
+      toast.success('Updated', `Marked as ${status}`);
       fetchData();
     } catch (error) {
-      console.error('Failed to set availability:', error);
+      toast.error('Failed', 'Could not update');
     }
   };
 
   const getDayStatus = (day) => {
     if (hasJobs(day)) return 'booked';
-    return getAvailabilityForDate(getDateString(day));
+    if (isDateAvailable(day)) return 'available';
+    return 'unavailable';
   };
+
+  // Calculate monthly stats
+  const monthlyDeployments = deployments.filter(d => {
+    const jobDate = new Date(d.job_date);
+    return jobDate.getMonth() === month && jobDate.getFullYear() === year;
+  });
+  const monthlyEarnings = monthlyDeployments.reduce((sum, d) => sum + (d.total_pay || 0), 0);
 
   return (
     <div className="min-h-screen bg-[#020817] pb-24">
       {/* Header */}
       <div className="sticky top-0 z-10 bg-[#020817]/95 backdrop-blur-xl px-4 pt-4 pb-4 border-b border-white/[0.05]">
         <div className="flex items-center justify-between mb-4">
-          <h1 className="text-2xl font-bold text-white">Calendar</h1>
+          <h1 className="text-2xl font-bold text-white flex items-center gap-2">
+            Calendar <span className="text-2xl">📅</span>
+          </h1>
           <div className="flex items-center gap-2">
             {mode === 'edit' ? (
               <>
@@ -169,6 +247,24 @@ export default function Calendar() {
                 </button>
               </>
             )}
+          </div>
+        </div>
+
+        {/* Month Stats */}
+        <div className="grid grid-cols-2 gap-3 mb-4">
+          <div className="p-3 rounded-2xl bg-violet-500/10 border border-violet-500/20">
+            <div className="flex items-center gap-2 text-violet-400 mb-1">
+              <BriefcaseIcon className="h-4 w-4" />
+              <span className="text-xs">Jobs This Month</span>
+            </div>
+            <p className="text-2xl font-bold text-white">{monthlyDeployments.length}</p>
+          </div>
+          <div className="p-3 rounded-2xl bg-emerald-500/10 border border-emerald-500/20">
+            <div className="flex items-center gap-2 text-emerald-400 mb-1">
+              <DollarSignIcon className="h-4 w-4" />
+              <span className="text-xs">Expected Earnings</span>
+            </div>
+            <p className="text-2xl font-bold text-white">${formatMoney(monthlyEarnings)}</p>
           </div>
         </div>
 
@@ -208,17 +304,17 @@ export default function Calendar() {
             const day = i + 1;
             const status = getDayStatus(day);
             const hasPending = pendingChanges[getDateString(day)] !== undefined;
+            const jobCount = getJobCount(day);
             
             const statusStyles = {
-              available: 'bg-emerald-500/20 border-emerald-500/40',
-              unavailable: 'bg-red-500/20 border-red-500/40',
+              available: 'bg-emerald-500/10 border-emerald-500/30',
+              unavailable: 'bg-white/[0.02] border-white/[0.03]',
               booked: 'bg-violet-500/20 border-violet-500/40',
-              unset: 'border-white/[0.05]',
             };
             
             const dotColors = {
               available: 'bg-emerald-400',
-              unavailable: 'bg-red-400',
+              unavailable: 'bg-white/20',
               booked: 'bg-violet-400',
             };
 
@@ -229,15 +325,25 @@ export default function Calendar() {
                 disabled={isPast(day) && mode === 'edit'}
                 className={clsx(
                   'aspect-square rounded-xl flex flex-col items-center justify-center relative transition-all border',
-                  isSelected(day) && mode !== 'edit' ? 'bg-emerald-500 text-white border-emerald-400' :
+                  isSelected(day) && mode !== 'edit' ? 'bg-emerald-500 text-white border-emerald-400 shadow-lg shadow-emerald-500/30' :
                   isToday(day) ? 'bg-emerald-500/20 text-emerald-400 border-emerald-500/40' :
                   isPast(day) ? 'text-white/20 border-transparent' :
                   statusStyles[status],
-                  hasPending && 'ring-2 ring-amber-400'
+                  hasPending && 'ring-2 ring-amber-400',
+                  !isPast(day) && !isSelected(day) && status === 'available' && 'hover:border-emerald-500/50'
                 )}
               >
-                <span className="text-sm font-medium">{day}</span>
-                {status !== 'unset' && !isSelected(day) && (
+                <span className={clsx('text-sm font-medium', isPast(day) && 'text-white/20')}>{day}</span>
+                
+                {/* Job count badge */}
+                {jobCount > 0 && (
+                  <span className="absolute top-0.5 right-0.5 min-w-[16px] h-4 px-1 rounded-full bg-violet-500 text-[10px] font-bold text-white flex items-center justify-center">
+                    {jobCount}
+                  </span>
+                )}
+                
+                {/* Status dot */}
+                {!isSelected(day) && !isPast(day) && status !== 'booked' && (
                   <span className={clsx('absolute bottom-1 w-1.5 h-1.5 rounded-full', dotColors[status])} />
                 )}
               </button>
@@ -248,8 +354,11 @@ export default function Calendar() {
         {/* Legend */}
         <div className="flex items-center justify-center gap-6 mt-4 text-xs text-white/40">
           <span className="flex items-center gap-1"><span className="w-2 h-2 rounded-full bg-emerald-400" /> Available</span>
-          <span className="flex items-center gap-1"><span className="w-2 h-2 rounded-full bg-violet-400" /> Booked</span>
-          <span className="flex items-center gap-1"><span className="w-2 h-2 rounded-full bg-red-400" /> Unavailable</span>
+          <span className="flex items-center gap-1">
+            <span className="w-4 h-4 rounded bg-violet-500 text-[8px] font-bold text-white flex items-center justify-center">1</span>
+            Scheduled Jobs
+          </span>
+          <span className="flex items-center gap-1"><span className="w-2 h-2 rounded-full bg-white/20" /> Unavailable</span>
         </div>
 
         {/* Selected Date Details */}
@@ -259,6 +368,7 @@ export default function Calendar() {
               {selectedDate.toLocaleDateString(DEFAULT_LOCALE, { weekday: 'long', day: 'numeric', month: 'long', timeZone: TIMEZONE })}
             </h3>
 
+            {/* Quick availability toggle */}
             {!isPast(selectedDate.getDate()) && selectedDeployments.length === 0 && (
               <div className="flex items-center gap-2 mb-4">
                 <span className="text-sm text-white/40">Set as:</span>
@@ -266,7 +376,7 @@ export default function Calendar() {
                   onClick={() => handleSetAvailability('available')}
                   className={clsx(
                     'flex items-center gap-1 px-4 py-2 rounded-xl text-sm font-medium transition-all',
-                    selectedAvailability === 'available'
+                    isDateAvailable(selectedDate.getDate())
                       ? 'bg-emerald-500 text-white'
                       : 'bg-emerald-500/20 border border-emerald-500/30 text-emerald-400'
                   )}
@@ -277,7 +387,7 @@ export default function Calendar() {
                   onClick={() => handleSetAvailability('unavailable')}
                   className={clsx(
                     'flex items-center gap-1 px-4 py-2 rounded-xl text-sm font-medium transition-all',
-                    selectedAvailability === 'unavailable'
+                    !isDateAvailable(selectedDate.getDate())
                       ? 'bg-red-500 text-white'
                       : 'bg-red-500/20 border border-red-500/30 text-red-400'
                   )}
@@ -287,6 +397,7 @@ export default function Calendar() {
               </div>
             )}
 
+            {/* Jobs for selected date */}
             {loading ? (
               <div className="flex justify-center py-8">
                 <div className="animate-spin h-6 w-6 border-2 border-emerald-500 border-t-transparent rounded-full" />
@@ -295,21 +406,28 @@ export default function Calendar() {
               <div className="text-center py-12 rounded-2xl bg-[#0a1628]/50 border border-white/[0.05]">
                 <CalendarIcon className="h-12 w-12 mx-auto mb-3 text-white/10" />
                 <p className="text-white/40">No jobs scheduled</p>
-                {selectedAvailability === 'available' && <p className="text-sm text-emerald-400 mt-1">You're marked as available</p>}
-                {selectedAvailability === 'unavailable' && <p className="text-sm text-red-400 mt-1">You're marked as unavailable</p>}
+                {isDateAvailable(selectedDate.getDate()) && (
+                  <p className="text-sm text-emerald-400 mt-1">You're available this day</p>
+                )}
               </div>
             ) : (
               <div className="space-y-3">
+                <p className="text-sm text-white/50 mb-2">{selectedDeployments.length} job{selectedDeployments.length !== 1 ? 's' : ''} scheduled</p>
                 {selectedDeployments.map(deployment => (
                   <Link
                     key={deployment.id}
                     to={`/jobs/${deployment.job_id}`}
-                    className="block p-4 rounded-2xl bg-[#0a1628]/80 border border-white/[0.05] hover:border-emerald-500/30 transition-all"
+                    className="block p-4 rounded-2xl bg-violet-500/10 border border-violet-500/30 hover:border-violet-500/50 transition-all"
                   >
-                    <div className="flex items-start justify-between">
-                      <div>
-                        <h4 className="font-semibold text-white">{deployment.job_title}</h4>
-                        <p className="text-sm text-white/40">{deployment.company_name || deployment.location}</p>
+                    <div className="flex items-start justify-between mb-2">
+                      <div className="flex items-center gap-3">
+                        <div className="w-10 h-10 rounded-xl bg-violet-500/20 flex items-center justify-center">
+                          <BriefcaseIcon className="h-5 w-5 text-violet-400" />
+                        </div>
+                        <div>
+                          <h4 className="font-semibold text-white">{deployment.job_title}</h4>
+                          <p className="text-sm text-white/40">{deployment.company_name || 'Client'}</p>
+                        </div>
                       </div>
                       <span className={clsx(
                         'px-2 py-1 rounded-full text-xs font-medium',
@@ -320,10 +438,21 @@ export default function Calendar() {
                         {deployment.status}
                       </span>
                     </div>
-                    <div className="flex items-center gap-4 mt-3 text-sm text-white/40">
-                      <span className="flex items-center gap-1"><ClockIcon className="h-4 w-4" /> {deployment.start_time || '09:00'} - {deployment.end_time || '17:00'}</span>
-                      <span className="flex items-center gap-1"><MapPinIcon className="h-4 w-4" /> {deployment.location}</span>
+                    <div className="flex items-center gap-4 text-sm text-white/50">
+                      <span className="flex items-center gap-1">
+                        <ClockIcon className="h-4 w-4" /> 
+                        {deployment.start_time || '09:00'} - {deployment.end_time || '17:00'}
+                      </span>
+                      <span className="flex items-center gap-1">
+                        <MapPinIcon className="h-4 w-4" /> 
+                        {deployment.location}
+                      </span>
                     </div>
+                    {deployment.total_pay && (
+                      <div className="mt-2 pt-2 border-t border-white/5">
+                        <span className="text-emerald-400 font-semibold">${formatMoney(deployment.total_pay)}</span>
+                      </div>
+                    )}
                   </Link>
                 ))}
               </div>

@@ -73,13 +73,13 @@ router.get('/:id/jobs', (req, res) => {
 // Create client
 router.post('/', (req, res) => {
   try {
-    const { company_name, uen, industry, contact_name, contact_email, contact_phone, billing_address, payment_terms, notes } = req.body;
+    const { company_name, uen, industry, contact_name, contact_email, contact_phone, payment_terms, notes } = req.body;
     const id = 'CLT' + Date.now().toString(36).toUpperCase();
 
     db.prepare(`
-      INSERT INTO clients (id, company_name, uen, industry, contact_name, contact_email, contact_phone, billing_address, payment_terms, notes)
-      VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
-    `).run(id, company_name, uen, industry, contact_name, contact_email, contact_phone, billing_address, payment_terms || 30, notes);
+      INSERT INTO clients (id, company_name, uen, industry, contact_name, contact_email, contact_phone, payment_terms, notes)
+      VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)
+    `).run(id, company_name, uen, industry, contact_name, contact_email, contact_phone, payment_terms || 30, notes);
 
     const client = db.prepare('SELECT * FROM clients WHERE id = ?').get(id);
     res.status(201).json({ success: true, data: client });
@@ -91,7 +91,7 @@ router.post('/', (req, res) => {
 // Update client
 router.put('/:id', (req, res) => {
   try {
-    const allowedFields = ['company_name', 'uen', 'industry', 'contact_name', 'contact_email', 'contact_phone', 'billing_address', 'payment_terms', 'status', 'notes'];
+    const allowedFields = ['company_name', 'uen', 'industry', 'contact_name', 'contact_email', 'contact_phone', 'payment_terms', 'status', 'notes'];
     
     const updates = [];
     const values = [];

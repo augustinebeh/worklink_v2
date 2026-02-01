@@ -1,22 +1,21 @@
-import { useState, useEffect, useCallback } from 'react';
+import { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
 import {
   ZapIcon,
   CheckCircleIcon,
   ClockIcon,
-  GiftIcon,
   StarIcon,
-  TrophyIcon,
-  FlameIcon,
-  TargetIcon,
   RefreshCwIcon,
   SparklesIcon,
   ChevronRightIcon,
+  FlameIcon,
+  TargetIcon,
+  CheckIcon,
 } from 'lucide-react';
 import { useAuth } from '../contexts/AuthContext';
 import { useToast } from '../components/ui/Toast';
 import { clsx } from 'clsx';
-import { QUEST_TYPE_LABELS, TIMEZONE } from '../utils/constants';
+import { QUEST_TYPE_LABELS } from '../utils/constants';
 
 const questTypeConfig = {
   daily: { color: 'text-cyan-400', bg: 'bg-cyan-500/20', border: 'border-cyan-500/30', icon: ClockIcon },
@@ -26,18 +25,36 @@ const questTypeConfig = {
   challenge: { color: 'text-red-400', bg: 'bg-red-500/20', border: 'border-red-500/30', icon: FlameIcon },
 };
 
-function QuestCard({ quest, onClaim, claiming }) {
+function QuestCard({ quest, onClaim, onCheckin, claiming }) {
   const navigate = useNavigate();
   const config = questTypeConfig[quest.type] || questTypeConfig.daily;
-  const typeLabel = QUEST_TYPE_LABELS[quest.type] || QUEST_TYPE_LABELS.daily;
+  const typeLabel = QUEST_TYPE_LABELS?.[quest.type] || 'Daily';
   const progress = quest.target > 0 ? (quest.progress / quest.target) * 100 : 0;
   const Icon = config.icon;
 
   const isClaimed = quest.status === 'claimed';
   const isClaimable = quest.status === 'claimable';
+  
+  // Check if this is a check-in type quest (like daily login)
+  const isCheckinQuest = quest.requirement?.type === 'checkin' || 
+                         quest.title?.toLowerCase().includes('check') ||
+                         quest.title?.toLowerCase().includes('login') ||
+                         quest.title?.toLowerCase().includes('daily');
+  const canCheckin = isCheckinQuest && !isClaimed && !isClaimable && quest.progress < quest.target;
 
   const handleQuestClick = () => {
-    if (isClaimed || isClaimable) return;
+    if (isClaimed) return;
+    
+    // If claimable, don't navigate - just let them claim
+    if (isClaimable) return;
+    
+    // If it's a check-in quest, trigger check-in
+    if (canCheckin) {
+      onCheckin(quest);
+      return;
+    }
+    
+    // Navigate based on requirement type
     const reqType = quest.requirement?.type || '';
     if (reqType.includes('job')) navigate('/jobs');
     else if (reqType.includes('training')) navigate('/training');
@@ -53,18 +70,22 @@ function QuestCard({ quest, onClaim, claiming }) {
         isClaimed
           ? 'bg-white/[0.02] border border-white/[0.03] opacity-40'
           : isClaimable
-            ? 'bg-emerald-500/10 border border-emerald-500/30 animate-pulse cursor-default'
-            : 'bg-[#0a1628]/80 border border-white/[0.05] hover:border-white/10 cursor-pointer'
+            ? 'bg-emerald-500/10 border border-emerald-500/30 cursor-default'
+            : canCheckin
+              ? 'bg-cyan-500/10 border border-cyan-500/30 cursor-pointer hover:bg-cyan-500/20'
+              : 'bg-[#0a1628]/80 border border-white/[0.05] hover:border-white/10 cursor-pointer'
       )}
     >
       <div className="flex items-start gap-4">
         {/* Icon */}
         <div className={clsx(
           'w-12 h-12 rounded-2xl flex items-center justify-center flex-shrink-0',
-          isClaimed ? 'bg-white/5' : isClaimable ? 'bg-emerald-500/20' : config.bg
+          isClaimed ? 'bg-white/5' : isClaimable ? 'bg-emerald-500/20' : canCheckin ? 'bg-cyan-500/20' : config.bg
         )}>
           {isClaimed ? (
             <CheckCircleIcon className="h-6 w-6 text-white/30" />
+          ) : canCheckin ? (
+            <CheckIcon className="h-6 w-6 text-cyan-400" />
           ) : (
             <Icon className={clsx('h-6 w-6', isClaimable ? 'text-emerald-400' : config.color)} />
           )}
@@ -82,6 +103,11 @@ function QuestCard({ quest, onClaim, claiming }) {
             {isClaimable && (
               <span className="px-2 py-0.5 rounded-md bg-emerald-500/20 text-emerald-400 text-xs font-medium animate-pulse">
                 Ready!
+              </span>
+            )}
+            {canCheckin && (
+              <span className="px-2 py-0.5 rounded-md bg-cyan-500/20 text-cyan-400 text-xs font-medium">
+                Tap to check in
               </span>
             )}
           </div>
@@ -140,7 +166,17 @@ function QuestCard({ quest, onClaim, claiming }) {
             </button>
           )}
           
-          {!isClaimed && !isClaimable && (
+          {canCheckin && (
+            <button
+              onClick={(e) => { e.stopPropagation(); onCheckin(quest); }}
+              disabled={claiming}
+              className="px-4 py-2 rounded-xl bg-gradient-to-r from-cyan-500 to-violet-500 text-white text-sm font-semibold shadow-lg shadow-cyan-500/25 disabled:opacity-50 active:scale-95 transition-transform"
+            >
+              {claiming ? '...' : 'Check In'}
+            </button>
+          )}
+          
+          {!isClaimed && !isClaimable && !canCheckin && (
             <ChevronRightIcon className="h-5 w-5 text-white/20" />
           )}
         </div>
@@ -184,6 +220,32 @@ export default function Quests() {
   const handleRefresh = () => {
     setRefreshing(true);
     fetchQuests();
+  };
+
+  const handleCheckin = async (quest) => {
+    setClaiming(quest.id);
+    try {
+      // Record the check-in progress
+      const res = await fetch(`/api/v1/gamification/quests/${quest.id}/progress`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ 
+          candidateId: user.id,
+          increment: 1
+        }),
+      });
+      const data = await res.json();
+      if (data.success) {
+        toast.success('Checked In!', 'Quest progress updated');
+        fetchQuests();
+      } else {
+        toast.error('Failed', data.error || 'Could not check in');
+      }
+    } catch (error) {
+      toast.error('Error', 'Please try again');
+    } finally {
+      setClaiming(null);
+    }
   };
 
   const handleClaim = async (quest) => {
@@ -298,6 +360,7 @@ export default function Quests() {
                 key={quest.id}
                 quest={quest}
                 onClaim={handleClaim}
+                onCheckin={handleCheckin}
                 claiming={claiming === quest.id}
               />
             ))}

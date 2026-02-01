@@ -10,14 +10,13 @@ import {
   CalendarIcon,
   TrophyIcon,
   UsersIcon,
-  ClockIcon,
-  MapPinIcon,
+  CheckIcon,
 } from 'lucide-react';
 import { useAuth } from '../contexts/AuthContext';
 import { useWebSocket } from '../contexts/WebSocketContext';
 import { useToast } from '../components/ui/Toast';
 import { clsx } from 'clsx';
-import { XP_THRESHOLDS as xpThresholds, LEVEL_TITLES as levelTitles, calculateLevel, getLevelTier } from '../utils/gamification';
+import { XP_THRESHOLDS as xpThresholds, LEVEL_TITLES as levelTitles, calculateLevel } from '../utils/gamification';
 import { FloatingXP, LevelUpCelebration, AchievementUnlock } from '../components/gamification/Confetti';
 import {
   formatMoney,
@@ -31,6 +30,90 @@ import {
   isTomorrow,
   getSGDateString,
 } from '../utils/constants';
+
+// Availability Quick Selector
+function AvailabilitySelector({ user, onUpdate }) {
+  const [selected, setSelected] = useState(user?.availability_mode || 'weekdays');
+  const [saving, setSaving] = useState(false);
+  const toast = useToast();
+
+  const options = [
+    { id: 'weekdays', label: 'Weekdays', desc: 'Mon-Fri' },
+    { id: 'weekends', label: 'Weekends', desc: 'Sat-Sun' },
+    { id: 'all', label: 'All Week', desc: 'Every day' },
+    { id: 'custom', label: 'Custom', desc: 'Pick days' },
+  ];
+
+  const handleSelect = async (mode) => {
+    if (mode === 'custom') {
+      // Navigate to calendar for custom selection
+      window.location.href = '/calendar';
+      return;
+    }
+    
+    if (mode === selected) return;
+    
+    setSaving(true);
+    setSelected(mode);
+    
+    try {
+      const res = await fetch(`/api/v1/candidates/${user.id}/availability-mode`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ mode }),
+      });
+      const data = await res.json();
+      if (data.success) {
+        toast.success('Availability Updated', `Set to ${options.find(o => o.id === mode)?.label}`);
+        onUpdate?.();
+      }
+    } catch (error) {
+      toast.error('Failed', 'Could not update availability');
+      setSelected(user?.availability_mode || 'weekdays');
+    } finally {
+      setSaving(false);
+    }
+  };
+
+  return (
+    <div className="px-4 mt-6">
+      <div className="flex items-center justify-between mb-3">
+        <h2 className="text-white font-semibold flex items-center gap-2">
+          My Availability <span className="text-lg">📅</span>
+        </h2>
+        <Link to="/calendar" className="text-emerald-400 text-sm font-medium">
+          View Calendar →
+        </Link>
+      </div>
+      <div className="grid grid-cols-4 gap-2">
+        {options.map(opt => (
+          <button
+            key={opt.id}
+            onClick={() => handleSelect(opt.id)}
+            disabled={saving}
+            className={clsx(
+              'p-3 rounded-2xl border transition-all text-center',
+              selected === opt.id
+                ? 'bg-emerald-500/20 border-emerald-500/40 ring-2 ring-emerald-500/30'
+                : 'bg-[#0a1628]/80 border-white/[0.05] hover:border-white/10'
+            )}
+          >
+            <div className={clsx(
+              'text-sm font-semibold',
+              selected === opt.id ? 'text-emerald-400' : 'text-white'
+            )}>
+              {opt.label}
+            </div>
+            <div className="text-xs text-white/40 mt-0.5">{opt.desc}</div>
+            {selected === opt.id && (
+              <CheckIcon className="h-4 w-4 text-emerald-400 mx-auto mt-1" />
+            )}
+          </button>
+        ))}
+      </div>
+    </div>
+  );
+}
 
 // League Header Card - Main pool-style banner
 function LeagueCard({ user, userLevel, userXP, thisMonthEarnings, totalJobs, poolEndsIn }) {
@@ -105,24 +188,9 @@ function LeagueCard({ user, userLevel, userXP, thisMonthEarnings, totalJobs, poo
 
         {/* Stats Cards Row */}
         <div className="grid grid-cols-3 gap-3">
-          <StatPod
-            label="This Month"
-            value={`$${formatMoney(thisMonthEarnings)}`}
-            emoji="💰"
-            color="emerald"
-          />
-          <StatPod
-            label="Jobs Done"
-            value={totalJobs.toString()}
-            emoji="📋"
-            color="violet"
-          />
-          <StatPod
-            label="Next Payout"
-            value={poolEndsIn}
-            emoji="⏰"
-            color="cyan"
-          />
+          <StatPod label="This Month" value={`$${formatMoney(thisMonthEarnings)}`} emoji="💰" color="emerald" />
+          <StatPod label="Jobs Done" value={totalJobs.toString()} emoji="📋" color="violet" />
+          <StatPod label="Next Payout" value={poolEndsIn} emoji="⏰" color="cyan" />
         </div>
       </div>
     </div>
@@ -138,14 +206,8 @@ function StatPod({ label, value, emoji, color = 'emerald' }) {
   };
 
   return (
-    <div className={clsx(
-      'relative rounded-2xl p-4 border backdrop-blur-sm',
-      'bg-gradient-to-br',
-      colorClasses[color]
-    )}>
-      <p className="text-white/50 text-xs mb-1 flex items-center gap-1.5">
-        {label} <span>{emoji}</span>
-      </p>
+    <div className={clsx('relative rounded-2xl p-4 border backdrop-blur-sm bg-gradient-to-br', colorClasses[color])}>
+      <p className="text-white/50 text-xs mb-1 flex items-center gap-1.5">{label} <span>{emoji}</span></p>
       <p className="text-white font-bold text-lg">{value}</p>
     </div>
   );
@@ -166,13 +228,10 @@ function ActivityItem({ job }) {
       to={`/jobs/${job.id}`}
       className="flex items-center gap-4 p-4 hover:bg-white/[0.02] transition-colors rounded-xl group"
     >
-      {/* Job Icon with glow */}
       <div className="relative">
         <div className={clsx(
           'w-12 h-12 rounded-2xl flex items-center justify-center',
-          job.featured 
-            ? 'bg-gradient-to-br from-emerald-500 to-cyan-500' 
-            : 'bg-gradient-to-br from-slate-700 to-slate-800'
+          job.featured ? 'bg-gradient-to-br from-emerald-500 to-cyan-500' : 'bg-gradient-to-br from-slate-700 to-slate-800'
         )}>
           <BriefcaseIcon className="h-5 w-5 text-white" />
         </div>
@@ -183,12 +242,9 @@ function ActivityItem({ job }) {
         )}
       </div>
 
-      {/* Job Info */}
       <div className="flex-1 min-w-0">
         <div className="flex items-center gap-2">
-          <span className="text-white/40 text-xs font-mono">
-            {job.client_name?.substring(0, 12) || 'Client'}...
-          </span>
+          <span className="text-white/40 text-xs font-mono">{job.client_name?.substring(0, 12) || 'Client'}...</span>
           <span className="text-white/20">•</span>
           <span className="text-white/40 text-xs">
             {isJobToday ? 'Today' : isJobTomorrow ? 'Tomorrow' : jobDate.toLocaleDateString(DEFAULT_LOCALE, { day: 'numeric', month: 'short', timeZone: TIMEZONE })}
@@ -198,16 +254,13 @@ function ActivityItem({ job }) {
         <div className="flex items-center gap-2 mt-1">
           <span className={clsx(
             'px-2 py-0.5 rounded-full text-xs font-medium',
-            slotsLeft <= 3 
-              ? 'bg-red-500/20 text-red-400' 
-              : 'bg-emerald-500/20 text-emerald-400'
+            slotsLeft <= 3 ? 'bg-red-500/20 text-red-400' : 'bg-emerald-500/20 text-emerald-400'
           )}>
             {slotsLeft <= 3 ? `${slotsLeft} left` : 'Open'}
           </span>
         </div>
       </div>
 
-      {/* Pay Amount */}
       <div className="text-right">
         <p className="text-emerald-400 font-bold text-lg">${formatMoney(totalPay)}</p>
         <p className="text-white/40 text-xs">{hours.toFixed(1)}h</p>
@@ -228,10 +281,7 @@ function QuickAction({ icon: Icon, label, to, badge, color = 'slate' }) {
   return (
     <Link
       to={to}
-      className={clsx(
-        'flex flex-col items-center gap-2 p-4 rounded-2xl border transition-all active:scale-95',
-        colorClasses[color]
-      )}
+      className={clsx('flex flex-col items-center gap-2 p-4 rounded-2xl border transition-all active:scale-95', colorClasses[color])}
     >
       <div className="relative">
         <Icon className="h-6 w-6 text-white" />
@@ -264,9 +314,7 @@ function Pagination({ currentPage, totalPages, onPageChange }) {
           onClick={() => onPageChange(i + 1)}
           className={clsx(
             'w-7 h-7 rounded-lg text-sm font-medium transition-all',
-            currentPage === i + 1
-              ? 'bg-white text-slate-900'
-              : 'text-white/40 hover:text-white hover:bg-white/5'
+            currentPage === i + 1 ? 'bg-white text-slate-900' : 'text-white/40 hover:text-white hover:bg-white/5'
           )}
         >
           {i + 1}
@@ -286,12 +334,11 @@ function Pagination({ currentPage, totalPages, onPageChange }) {
 
 // Main Home Component
 export default function Home() {
-  const { user } = useAuth();
+  const { user, refreshUser } = useAuth();
   const navigate = useNavigate();
   const ws = useWebSocket();
   const toast = useToast();
   const [jobs, setJobs] = useState([]);
-  const [recentPayments, setRecentPayments] = useState([]);
   const [quests, setQuests] = useState([]);
   const [thisMonthEarnings, setThisMonthEarnings] = useState(0);
   const [loading, setLoading] = useState(true);
@@ -307,34 +354,21 @@ export default function Home() {
     fetchData();
   }, [user]);
 
-  // Listen for real-time updates
   useEffect(() => {
     if (!ws) return;
-
     const unsubJob = ws.subscribe('job_created', (data) => {
       if (data.job) {
         setJobs(prev => [data.job, ...prev]);
         toast.info('New Job Available!', data.job.title);
       }
     });
-
     const unsubXP = ws.subscribe('xp_earned', (data) => {
-      if (data.amount) {
-        setXpGain({ amount: data.amount, trigger: Date.now() });
-      }
+      if (data.amount) setXpGain({ amount: data.amount, trigger: Date.now() });
     });
-
     const unsubLevelUp = ws.subscribe('level_up', (data) => {
-      if (data.newLevel) {
-        setLevelUp({ show: true, level: data.newLevel });
-      }
+      if (data.newLevel) setLevelUp({ show: true, level: data.newLevel });
     });
-
-    return () => {
-      unsubJob?.();
-      unsubXP?.();
-      unsubLevelUp?.();
-    };
+    return () => { unsubJob?.(); unsubXP?.(); unsubLevelUp?.(); };
   }, [ws, toast]);
 
   const fetchData = async () => {
@@ -355,7 +389,6 @@ export default function Home() {
       }
 
       if (paymentsData.success) {
-        setRecentPayments(paymentsData.data?.slice(0, 3) || []);
         const nowSG = getSGDateString();
         const currentMonth = nowSG.substring(0, 7);
         const monthlyTotal = (paymentsData.data || [])
@@ -387,7 +420,6 @@ export default function Home() {
   const userLevel = calculateLevel(userXP);
   const totalJobs = user?.total_jobs_completed || 0;
 
-  // Calculate next payout (example: end of week)
   const getNextPayout = () => {
     const now = new Date();
     const daysUntilSunday = 7 - now.getDay();
@@ -395,13 +427,11 @@ export default function Home() {
     return `${daysUntilSunday}d : ${hours}h`;
   };
 
-  // Pagination
   const totalPages = Math.ceil(jobs.length / jobsPerPage);
   const paginatedJobs = jobs.slice((currentPage - 1) * jobsPerPage, currentPage * jobsPerPage);
 
   return (
     <div className="min-h-screen bg-[#020817] pb-24">
-      {/* Main Content */}
       <div>
         {/* League Hero Card */}
         <LeagueCard
@@ -412,6 +442,9 @@ export default function Home() {
           totalJobs={totalJobs}
           poolEndsIn={getNextPayout()}
         />
+
+        {/* Availability Selector */}
+        <AvailabilitySelector user={user} onUpdate={refreshUser} />
 
         {/* Quick Actions */}
         <div className="px-4 mt-6">
@@ -431,15 +464,10 @@ export default function Home() {
               <span className="text-2xl">📋</span>
             </div>
             {totalPages > 1 && (
-              <Pagination
-                currentPage={currentPage}
-                totalPages={totalPages}
-                onPageChange={setCurrentPage}
-              />
+              <Pagination currentPage={currentPage} totalPages={totalPages} onPageChange={setCurrentPage} />
             )}
           </div>
 
-          {/* Activity List */}
           <div className="rounded-2xl border border-white/5 bg-[#0a1628]/50 overflow-hidden">
             {loading ? (
               <div className="p-8">
@@ -463,7 +491,7 @@ export default function Home() {
           </div>
         </div>
 
-        {/* Create Pool CTA - Bottom left floating button style element */}
+        {/* Floating Quest CTA */}
         <div className="fixed bottom-24 left-4">
           <Link
             to="/quests"
@@ -482,16 +510,8 @@ export default function Home() {
 
       {/* Gamification Animations */}
       <FloatingXP amount={xpGain.amount} trigger={xpGain.trigger} />
-      <LevelUpCelebration
-        show={levelUp.show}
-        level={levelUp.level}
-        onClose={() => setLevelUp({ show: false, level: 1 })}
-      />
-      <AchievementUnlock
-        show={achievementUnlock.show}
-        achievement={achievementUnlock.achievement}
-        onClose={() => setAchievementUnlock({ show: false, achievement: null })}
-      />
+      <LevelUpCelebration show={levelUp.show} level={levelUp.level} onClose={() => setLevelUp({ show: false, level: 1 })} />
+      <AchievementUnlock show={achievementUnlock.show} achievement={achievementUnlock.achievement} onClose={() => setAchievementUnlock({ show: false, achievement: null })} />
     </div>
   );
 }
