@@ -1,3 +1,4 @@
+import { lazy, Suspense } from 'react';
 import { BrowserRouter, Routes, Route, Navigate, useLocation } from 'react-router-dom';
 import { AuthProvider, useAuth } from './contexts/AuthContext';
 import { WebSocketProvider } from './contexts/WebSocketContext';
@@ -8,21 +9,30 @@ import BottomNav from './components/layout/BottomNav';
 import { PageTransition } from './components/layout/PageTransition';
 import InstallPrompt from './components/InstallPrompt';
 
-// Pages
-import Home from './pages/Home';
-import Jobs from './pages/Jobs';
-import JobDetail from './pages/JobDetail';
-import Calendar from './pages/Calendar';
-import Wallet from './pages/Wallet';
-import Profile from './pages/Profile';
-import Chat from './pages/Chat';
-import Login from './pages/Login';
-import Quests from './pages/Quests';
-import Achievements from './pages/Achievements';
-import Leaderboard from './pages/Leaderboard';
-import Training from './pages/Training';
-import Notifications from './pages/Notifications';
-import Referrals from './pages/Referrals';
+// Lazy load pages for code splitting
+const Home = lazy(() => import('./pages/Home'));
+const Jobs = lazy(() => import('./pages/Jobs'));
+const JobDetail = lazy(() => import('./pages/JobDetail'));
+const Calendar = lazy(() => import('./pages/Calendar'));
+const Wallet = lazy(() => import('./pages/Wallet'));
+const Profile = lazy(() => import('./pages/Profile'));
+const Chat = lazy(() => import('./pages/Chat'));
+const Login = lazy(() => import('./pages/Login'));
+const Quests = lazy(() => import('./pages/Quests'));
+const Achievements = lazy(() => import('./pages/Achievements'));
+const Leaderboard = lazy(() => import('./pages/Leaderboard'));
+const Training = lazy(() => import('./pages/Training'));
+const Notifications = lazy(() => import('./pages/Notifications'));
+const Referrals = lazy(() => import('./pages/Referrals'));
+
+// Loading spinner for lazy-loaded pages
+function PageLoader() {
+  return (
+    <div className="min-h-screen bg-dark-950 flex items-center justify-center">
+      <div className="animate-spin h-8 w-8 border-4 border-primary-500 border-t-transparent rounded-full" />
+    </div>
+  );
+}
 
 function AppLayout({ children }) {
   const location = useLocation();
@@ -34,9 +44,11 @@ function AppLayout({ children }) {
     <>
       {!isChatPage && <Header />}
       <main className="flex-1 min-h-screen">
-        <PageTransition key={location.pathname}>
-          {children}
-        </PageTransition>
+        <Suspense fallback={<PageLoader />}>
+          <PageTransition key={location.pathname}>
+            {children}
+          </PageTransition>
+        </Suspense>
       </main>
       {!isChatPage && <BottomNav />}
     </>

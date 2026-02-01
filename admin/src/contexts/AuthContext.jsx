@@ -11,28 +11,33 @@ export function AuthProvider({ children }) {
   useEffect(() => {
     // Check for existing session
     const storedUser = sessionStorage.getItem('admin_user');
-    if (storedUser) {
+    const storedToken = sessionStorage.getItem('admin_token');
+    if (storedUser && storedToken) {
       setUser(JSON.parse(storedUser));
+    } else {
+      // Clear incomplete auth state
+      sessionStorage.removeItem('admin_user');
+      sessionStorage.removeItem('admin_token');
     }
     setLoading(false);
   }, []);
 
   const login = async (email, password) => {
     try {
-      // For now, mock authentication
-      // TODO: Replace with actual API call
-      if (email && password) {
-        const mockUser = {
-          id: 'admin_001',
-          name: 'Augustine',
-          email: email,
-          role: 'admin',
-        };
-        setUser(mockUser);
-        sessionStorage.setItem('admin_user', JSON.stringify(mockUser));
+      const res = await fetch('/api/v1/auth/login', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ email, password, type: 'admin' }),
+      });
+      const data = await res.json();
+
+      if (data.success) {
+        setUser(data.data);
+        sessionStorage.setItem('admin_user', JSON.stringify(data.data));
+        sessionStorage.setItem('admin_token', data.token);
         return { success: true };
       }
-      return { success: false, error: 'Invalid credentials' };
+      return { success: false, error: data.error };
     } catch (error) {
       return { success: false, error: error.message };
     }
@@ -41,6 +46,7 @@ export function AuthProvider({ children }) {
   const logout = () => {
     setUser(null);
     sessionStorage.removeItem('admin_user');
+    sessionStorage.removeItem('admin_token');
     navigate('/login');
   };
 

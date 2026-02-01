@@ -20,7 +20,6 @@ import {
   SettingsIcon,
   CameraIcon,
   SparklesIcon,
-  CircleIcon,
   MessageCircleIcon,
   ExternalLinkIcon,
   XIcon,

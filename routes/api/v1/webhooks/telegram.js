@@ -8,6 +8,7 @@ const router = express.Router();
 const { db } = require('../../../../db/database');
 const messaging = require('../../../../services/messaging');
 const telegram = require('../../../../services/messaging/telegram');
+const logger = require('../../../../utils/logger');
 
 // Store for pending verifications (linking Telegram to candidate)
 // In production, this would be in Redis or database
@@ -20,7 +21,7 @@ router.post('/', async (req, res) => {
   try {
     const update = req.body;
 
-    console.log('Telegram webhook received:', JSON.stringify(update, null, 2));
+    logger.info('Telegram webhook received:', JSON.stringify(update, null, 2));
 
     // Handle different update types
     if (update.message) {
@@ -32,7 +33,7 @@ router.post('/', async (req, res) => {
     // Always respond 200 to Telegram
     res.sendStatus(200);
   } catch (error) {
-    console.error('Telegram webhook error:', error);
+    logger.error('Telegram webhook error:', error);
     // Still respond 200 to prevent Telegram from retrying
     res.sendStatus(200);
   }
@@ -46,7 +47,7 @@ async function handleMessage(message) {
   const text = message.text || '';
   const from = message.from;
 
-  console.log(`Telegram message from ${chatId}: ${text}`);
+  logger.info(`Telegram message from ${chatId}: ${text}`);
 
   // Check if this is a command
   if (text.startsWith('/')) {
@@ -85,7 +86,7 @@ async function handleMessage(message) {
   });
 
   if (result.success) {
-    console.log(`Message from ${candidate.name} forwarded to admin`);
+    logger.info(`Message from ${candidate.name} forwarded to admin`);
   }
 }
 
@@ -330,7 +331,7 @@ async function handleCallbackQuery(callbackQuery) {
   const chatId = callbackQuery.message.chat.id;
   const data = callbackQuery.data;
 
-  console.log(`Callback query from ${chatId}: ${data}`);
+  logger.info(`Callback query from ${chatId}: ${data}`);
 
   // Parse callback data
   const [action, ...params] = data.split(':');
@@ -351,7 +352,7 @@ async function handleCallbackQuery(callbackQuery) {
       break;
 
     default:
-      console.log('Unknown callback action:', action);
+      logger.info('Unknown callback action:', action);
   }
 }
 
@@ -360,7 +361,16 @@ async function handleCallbackQuery(callbackQuery) {
  * GET /api/v1/webhooks/telegram/setup
  */
 router.get('/setup', async (req, res) => {
-  const baseUrl = process.env.BASE_URL || `https://${req.headers.host}`;
+  // Require BASE_URL to be explicitly set - don't trust Host header
+  const baseUrl = process.env.BASE_URL;
+
+  if (!baseUrl) {
+    return res.status(500).json({
+      success: false,
+      error: 'BASE_URL environment variable not configured'
+    });
+  }
+
   const webhookUrl = `${baseUrl}/api/v1/webhooks/telegram`;
 
   const result = await telegram.setWebhook(webhookUrl);

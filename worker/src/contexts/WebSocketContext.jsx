@@ -20,8 +20,15 @@ export function WebSocketProvider({ children }) {
     if (!user?.id) return;
     if (wsRef.current?.readyState === WebSocket.OPEN) return;
 
+    // Get token from localStorage for authentication
+    const token = localStorage.getItem('token');
+    if (!token) {
+      logger.error('No authentication token found');
+      return;
+    }
+
     const protocol = window.location.protocol === 'https:' ? 'wss:' : 'ws:';
-    const wsUrl = `${protocol}//${window.location.host}/ws?candidateId=${user.id}`;
+    const wsUrl = `${protocol}//${window.location.host}/ws?candidateId=${user.id}&token=${encodeURIComponent(token)}`;
 
     try {
       wsRef.current = new WebSocket(wsUrl);

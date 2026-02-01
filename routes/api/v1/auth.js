@@ -2,6 +2,7 @@ const express = require('express');
 const router = express.Router();
 const { db } = require('../../../db/database');
 const { validate, schemas } = require('../../../middleware/validation');
+const logger = require('../../../utils/logger');
 
 // Login (simplified - no password for demo)
 router.post('/login', (req, res) => {
@@ -9,9 +10,16 @@ router.post('/login', (req, res) => {
     const { email, password, type = 'candidate' } = req.body;
 
     if (type === 'admin') {
-      // Admin login - requires specific credentials
-      const adminPassword = process.env.ADMIN_PASSWORD || 'admin123';
-      if (email === 'admin@talentvis.com' && password === adminPassword) {
+      // Admin login - requires specific credentials from environment
+      const adminPassword = process.env.ADMIN_PASSWORD;
+      const adminEmail = process.env.ADMIN_EMAIL || 'admin@talentvis.com';
+
+      if (!adminPassword) {
+        logger.error('SECURITY: ADMIN_PASSWORD environment variable not set');
+        return res.status(500).json({ success: false, error: 'Server configuration error' });
+      }
+
+      if (email === adminEmail && password === adminPassword) {
         return res.json({
           success: true,
           data: {
@@ -56,7 +64,7 @@ router.post('/worker/login', (req, res) => {
     if (email === 'sarah.tan@email.com') {
       if (!candidate) {
         // Create new demo account
-        console.log('🎭 Creating demo account: Sarah Tan');
+        logger.info('🎭 Creating demo account: Sarah Tan');
         db.prepare(`
           INSERT INTO candidates (
             id, name, email, phone, status, source,
@@ -78,7 +86,7 @@ router.post('/worker/login', (req, res) => {
         `).run();
       } else {
         // Update existing demo account with correct values
-        console.log('🔄 Updating demo account: Sarah Tan');
+        logger.info('🔄 Updating demo account: Sarah Tan');
         db.prepare(`
           UPDATE candidates SET
             xp = 15500,
@@ -112,7 +120,7 @@ router.post('/worker/login', (req, res) => {
             `).run(p[0], candidate.id, p[1], p[2], p[3], p[4], p[5], p[6]);
           });
         } catch (paymentErr) {
-          console.log('⚠️ Could not create demo payments:', paymentErr.message);
+          logger.info('⚠️ Could not create demo payments:', paymentErr.message);
         }
       }
     }

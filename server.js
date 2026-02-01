@@ -10,6 +10,7 @@ const compression = require('compression');
 const path = require('path');
 const fs = require('fs');
 const http = require('http');
+const logger = require('./utils/logger');
 
 // Initialize database
 const { db } = require('./db/database');
@@ -38,7 +39,7 @@ app.use((req, res, next) => {
   res.on('finish', () => {
     const duration = Date.now() - start;
     if (req.path.startsWith('/api')) {
-      console.log(`${req.method} ${req.path} ${res.statusCode} ${duration}ms`);
+      logger.api(req.method, req.path, res.statusCode, duration);
     }
   });
   next();
@@ -115,7 +116,7 @@ if (fs.existsSync(adminDistPath)) {
     res.sendFile(path.join(adminDistPath, 'index.html'));
   });
 } else {
-  console.log('⚠️  Admin dist folder not found. Run: cd admin && npm run build');
+  logger.warn('Admin dist folder not found. Run: cd admin && npm run build');
   app.get('/admin', (req, res) => {
     res.status(503).send('Admin portal not built. Please run: cd admin && npm run build');
   });
@@ -150,7 +151,7 @@ if (fs.existsSync(workerDistPath)) {
     res.sendFile(path.join(workerDistPath, 'index.html'));
   });
 } else {
-  console.log('⚠️  Worker dist folder not found. Run: cd worker && npm run build');
+  logger.warn('Worker dist folder not found. Run: cd worker && npm run build');
   app.get('/', (req, res) => {
     res.status(503).send('Worker app not built. Please run: cd worker && npm run build');
   });
@@ -167,9 +168,9 @@ app.use((req, res) => {
 
 // Error handling middleware
 app.use((err, req, res, next) => {
-  console.error('Error:', err);
-  res.status(err.status || 500).json({ 
-    success: false, 
+  logger.error('Server error:', err.message);
+  res.status(err.status || 500).json({
+    success: false,
     error: process.env.NODE_ENV === 'production' ? 'Internal Server Error' : err.message,
     ...(process.env.NODE_ENV !== 'production' && { stack: err.stack })
   });

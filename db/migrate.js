@@ -275,6 +275,48 @@ function runMigrations() {
     console.log('  ✅ Seeded quests');
   }
 
+  // Performance indexes
+  const createIndex = (name, table, columns) => {
+    try {
+      db.exec(`CREATE INDEX IF NOT EXISTS ${name} ON ${table}(${columns})`);
+    } catch (e) {
+      // Index may already exist or table doesn't exist yet
+    }
+  };
+
+  // Candidate indexes for filtering
+  createIndex('idx_candidates_status', 'candidates', 'status');
+  createIndex('idx_candidates_email', 'candidates', 'email');
+  createIndex('idx_candidates_online_status', 'candidates', 'online_status');
+  createIndex('idx_candidates_level', 'candidates', 'level');
+
+  // Jobs indexes for filtering and sorting
+  createIndex('idx_jobs_status', 'jobs', 'status');
+  createIndex('idx_jobs_client_status', 'jobs', 'client_id, status');
+  createIndex('idx_jobs_date', 'jobs', 'job_date');
+
+  // Chats indexes for message queries
+  createIndex('idx_chats_candidate', 'chats', 'candidate_id');
+  createIndex('idx_chats_candidate_read', 'chats', 'candidate_id, sender, read');
+  createIndex('idx_chats_created', 'chats', 'created_at');
+
+  // Deployments indexes
+  createIndex('idx_deployments_candidate', 'deployments', 'candidate_id');
+  createIndex('idx_deployments_job', 'deployments', 'job_id');
+  createIndex('idx_deployments_status', 'deployments', 'status');
+  createIndex('idx_deployments_candidate_status', 'deployments', 'candidate_id, status');
+
+  // Payments indexes
+  createIndex('idx_payments_candidate', 'payments', 'candidate_id');
+  createIndex('idx_payments_status', 'payments', 'status');
+  createIndex('idx_payments_created', 'payments', 'created_at');
+
+  // Notifications indexes
+  createIndex('idx_notifications_candidate', 'notifications', 'candidate_id');
+  createIndex('idx_notifications_read', 'notifications', 'candidate_id, read');
+
+  console.log('  ✅ Performance indexes created');
+
   console.log('✅ Migrations complete');
 }
 

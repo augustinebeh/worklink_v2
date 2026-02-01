@@ -20,5 +20,16 @@ export default defineConfig({
   build: {
     outDir: 'dist',
     sourcemap: false,
+    rollupOptions: {
+      output: {
+        manualChunks: {
+          // Split vendor chunks for better caching
+          'vendor-react': ['react', 'react-dom', 'react-router-dom'],
+          'vendor-ui': ['lucide-react', 'framer-motion', 'clsx'],
+          'vendor-misc': ['emoji-picker-react'],
+        },
+      },
+    },
+    chunkSizeWarningLimit: 600,
   },
 });

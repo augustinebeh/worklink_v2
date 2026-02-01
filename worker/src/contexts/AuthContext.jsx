@@ -7,10 +7,15 @@ export function AuthProvider({ children }) {
   const [loading, setLoading] = useState(true);
 
   useEffect(() => {
-    // Check for stored user
+    // Check for stored user and token
     const storedUser = localStorage.getItem('worker_user');
-    if (storedUser) {
+    const storedToken = localStorage.getItem('token');
+    if (storedUser && storedToken) {
       setUser(JSON.parse(storedUser));
+    } else {
+      // Clear incomplete auth state
+      localStorage.removeItem('worker_user');
+      localStorage.removeItem('token');
     }
     setLoading(false);
   }, []);
@@ -26,6 +31,7 @@ export function AuthProvider({ children }) {
       if (data.success) {
         setUser(data.data);
         localStorage.setItem('worker_user', JSON.stringify(data.data));
+        localStorage.setItem('token', data.token);
         return { success: true };
       }
       return { success: false, error: data.error };
@@ -37,6 +43,7 @@ export function AuthProvider({ children }) {
   const logout = () => {
     setUser(null);
     localStorage.removeItem('worker_user');
+    localStorage.removeItem('token');
   };
 
   const refreshUser = async () => {

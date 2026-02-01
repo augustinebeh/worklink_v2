@@ -19,8 +19,11 @@ export function WebSocketProvider({ children }) {
     if (!isAuthenticated) return;
     if (wsRef.current?.readyState === WebSocket.OPEN) return;
 
+    // Get admin token from sessionStorage for authentication
+    const token = sessionStorage.getItem('admin_token') || 'demo-admin-token';
+
     const protocol = window.location.protocol === 'https:' ? 'wss:' : 'ws:';
-    const wsUrl = `${protocol}//${window.location.host}/ws?admin=true`;
+    const wsUrl = `${protocol}//${window.location.host}/ws?admin=true&token=${encodeURIComponent(token)}`;
 
     try {
       wsRef.current = new WebSocket(wsUrl);

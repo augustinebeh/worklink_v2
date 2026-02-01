@@ -1,9 +1,7 @@
 import { useState, useEffect } from 'react';
 import { useNavigate, Link } from 'react-router-dom';
-import { 
-  PlusIcon, 
-  SearchIcon, 
-  FilterIcon, 
+import {
+  SearchIcon,
   DownloadIcon,
   StarIcon,
   TrophyIcon,

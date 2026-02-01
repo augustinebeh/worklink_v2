@@ -5,6 +5,7 @@
 
 const WebSocket = require('ws');
 const { db } = require('./db/database');
+const logger = require('./utils/logger');
 
 // Lazy-loaded messaging service to avoid circular dependency
 let messagingService = null;
@@ -65,6 +66,41 @@ const EventTypes = {
   CANDIDATE_UPDATED: 'candidate_updated',
 };
 
+/**
+ * Validate WebSocket connection token
+ * Returns { valid: boolean, role: 'admin'|'candidate', candidateId?: string }
+ */
+function validateConnection(token, candidateId, isAdmin) {
+  if (!token) {
+    return { valid: false, error: 'Missing authentication token' };
+  }
+
+  // Admin token validation
+  if (isAdmin) {
+    if (token === 'demo-admin-token') {
+      return { valid: true, role: 'admin' };
+    }
+    return { valid: false, error: 'Invalid admin token' };
+  }
+
+  // Candidate token validation
+  if (candidateId) {
+    // Token format: demo-token-{candidateId}
+    const expectedToken = `demo-token-${candidateId}`;
+    if (token === expectedToken) {
+      // Verify candidate exists in database
+      const candidate = db.prepare('SELECT id FROM candidates WHERE id = ?').get(candidateId);
+      if (candidate) {
+        return { valid: true, role: 'candidate', candidateId };
+      }
+      return { valid: false, error: 'Candidate not found' };
+    }
+    return { valid: false, error: 'Invalid token for candidate' };
+  }
+
+  return { valid: false, error: 'Invalid connection parameters' };
+}
+
 function setupWebSocket(server) {
   const wss = new WebSocket.Server({ server, path: '/ws' });
 
@@ -72,6 +108,14 @@ function setupWebSocket(server) {
     const url = new URL(req.url, `http://${req.headers.host}`);
     const candidateId = url.searchParams.get('candidateId');
     const isAdmin = url.searchParams.get('admin') === 'true';
+    const token = url.searchParams.get('token');
+
+    // Validate authentication
+    const authResult = validateConnection(token, candidateId, isAdmin);
+    if (!authResult.valid) {
+      ws.close(4001, authResult.error || 'Authentication failed');
+      return;
+    }
 
     if (isAdmin) {
       handleAdminConnection(ws);
@@ -88,13 +132,13 @@ function setupWebSocket(server) {
         const message = JSON.parse(data);
         handleMessage(ws, message, candidateId, isAdmin);
       } catch (error) {
-        console.error('WebSocket message error:', error);
+        logger.error('WebSocket message error:', error.message);
         ws.send(JSON.stringify({ type: 'error', message: 'Invalid message format' }));
       }
     });
 
     ws.on('error', (error) => {
-      console.error('WebSocket error:', error);
+      logger.error('WebSocket error:', error.message);
     });
 
     // Send initial connection success
@@ -106,13 +150,13 @@ function setupWebSocket(server) {
     }));
   });
 
-  console.log('🔌 WebSocket server initialized at /ws');
+  logger.info('WebSocket server initialized at /ws');
   return wss;
 }
 
 function handleAdminConnection(ws) {
   adminClients.add(ws);
-  console.log(`👤 Admin connected (total: ${adminClients.size})`);
+  logger.ws(`Admin connected (total: ${adminClients.size})`);
 
   // Send list of online candidates
   const onlineCandidates = Array.from(candidateClients.keys());
@@ -120,7 +164,7 @@ function handleAdminConnection(ws) {
 
   ws.on('close', () => {
     adminClients.delete(ws);
-    console.log(`👤 Admin disconnected (total: ${adminClients.size})`);
+    logger.ws(`Admin disconnected (total: ${adminClients.size})`);
   });
 }
 
@@ -132,7 +176,7 @@ function handleCandidateConnection(ws, candidateId) {
   }
 
   candidateClients.set(candidateId, ws);
-  console.log(`👤 Candidate ${candidateId} connected (total: ${candidateClients.size})`);
+  logger.ws(`Candidate ${candidateId} connected (total: ${candidateClients.size})`);
 
   // Update online status
   updateCandidateStatus(candidateId, 'online');
