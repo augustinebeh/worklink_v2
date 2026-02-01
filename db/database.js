@@ -1042,36 +1042,92 @@ function seedEssentialData() {
   // CHAT ML - Knowledge Base (Learned Q&A pairs)
   // ============================================
   const knowledgeBaseEntries = [
-    // High confidence entries (frequently approved)
-    ['when payment', 'Payments are processed every Friday! You should see the money in your bank account by Monday. Check your Wallet in the app for payment history.', 'pay_inquiry', 0.92, 45, 42, 2, 1, 'approved'],
-    ['how much pay', 'Your pay = hours worked × hourly rate, plus any bonuses. The exact rate is shown in each job listing. Check your Wallet for detailed breakdowns!', 'pay_inquiry', 0.89, 38, 35, 3, 0, 'approved'],
-    ['got job or not', 'Yes! Open the Jobs tab to see available positions. New jobs are posted daily. Filter by date and location to find ones near you!', 'job_search', 0.95, 67, 65, 2, 0, 'approved'],
-    ['how to apply', 'Easy! Go to Jobs tab → Find a job you like → Tap "Apply" → Done! Make sure your availability is updated first.', 'job_application', 0.91, 52, 48, 3, 1, 'approved'],
-    ['cannot make it tomorrow', "No worries, please cancel in the app ASAP and let us know the reason. The earlier you inform us, the better. We can find a replacement!", 'schedule_question', 0.88, 29, 26, 2, 1, 'approved'],
-    ['what time start', 'Start times vary by job! Check the specific job details in your Deployments tab. Always arrive 15 minutes early to sign in.', 'schedule_question', 0.87, 34, 30, 3, 1, 'approved'],
-    ['where is the job', "The job location and address are in the job details! Tap on your deployment to see the full address and map. Some jobs have reporting points different from the venue.", 'job_search', 0.86, 28, 25, 2, 1, 'approved'],
-    ['thanks', "You're welcome! Let me know if you need anything else. Good luck with your upcoming jobs! 💪", 'goodbye', 0.98, 89, 88, 1, 0, 'approved'],
-    ['hi', 'Hello! How can I help you today? Feel free to ask about jobs, payments, schedules, or anything else!', 'general_greeting', 0.97, 156, 154, 2, 0, 'approved'],
-    ['good morning', 'Good morning! Ready to find some great jobs today? How can I assist you?', 'general_greeting', 0.96, 78, 76, 2, 0, 'approved'],
+    // ============================================
+    // GREETINGS & COMMON PHRASES
+    // ============================================
+    ['hi', 'Hello! How can I help you today? 😊', 'general_greeting', 0.97, 156, 154, 2, 0, 'approved'],
+    ['hello', 'Hi there! What can I assist you with today? 👋', 'general_greeting', 0.97, 120, 118, 2, 0, 'approved'],
+    ['good morning', 'Good morning! Ready to find some great jobs today? ☀️', 'general_greeting', 0.96, 78, 76, 2, 0, 'approved'],
+    ['good afternoon', 'Good afternoon! How can I help you? 😊', 'general_greeting', 0.96, 45, 44, 1, 0, 'approved'],
+    ['good evening', 'Good evening! What can I do for you? 🌙', 'general_greeting', 0.96, 38, 37, 1, 0, 'approved'],
+    ['thanks', "You're welcome! Let me know if you need anything else. 💪", 'goodbye', 0.98, 89, 88, 1, 0, 'approved'],
+    ['thank you', "No problem! Happy to help. Good luck with your jobs! 🙌", 'goodbye', 0.98, 75, 74, 1, 0, 'approved'],
+    ['ok thanks', "You're welcome! All the best! 👍", 'goodbye', 0.97, 65, 64, 1, 0, 'approved'],
+    ['bye', "Goodbye! Have a great day! 👋", 'goodbye', 0.97, 50, 49, 1, 0, 'approved'],
 
-    // Medium confidence entries (some edits needed)
-    ['pay when ah', 'Friday every week! Jobs done Mon-Sun get paid the following Friday. Check Wallet for status.', 'pay_inquiry', 0.78, 23, 18, 4, 1, 'approved'],
-    ['any lobang', 'Got plenty! Check the Jobs tab - we have F&B, events, retail, warehouse and more. Apply to ones that suit your schedule!', 'job_search', 0.75, 19, 14, 4, 1, 'approved'],
-    ['mc how', 'If you need MC, inform us ASAP through the app chat. Provide your MC when you can. We hope you feel better soon! 🤒', 'schedule_question', 0.72, 15, 11, 3, 1, 'approved'],
-    ['late already', 'Thanks for letting us know! Please also contact your on-site supervisor directly. How late will you be?', 'urgent', 0.85, 21, 18, 2, 1, 'approved'],
-    ['need help', "I'm here to help! What do you need assistance with - jobs, payments, schedule, or something else?", 'general_question', 0.90, 45, 42, 3, 0, 'approved'],
-    ['bank wrong', 'No problem! Go to Profile → Bank Details to update your account. Changes take effect from the next payment cycle.', 'general_question', 0.82, 17, 14, 2, 1, 'approved'],
-    ['how to refer friend', 'Share your referral code from your Profile page! When your friend signs up and completes their first job, you both earn a bonus!', 'general_question', 0.88, 31, 28, 2, 1, 'approved'],
-    ['xp for what', 'XP helps you level up! Higher levels = priority job access + bonus multipliers. Earn XP by completing jobs and maintaining streaks.', 'general_question', 0.84, 25, 21, 3, 1, 'approved'],
-    ['my rating low', "Your rating reflects punctuality and job performance. Keep showing up on time and doing great work - it'll improve! Need tips?", 'complaint', 0.76, 14, 10, 3, 1, 'approved'],
-    ['confirm job', 'Jobs are confirmed when you see "Confirmed" status in your Deployments. If still pending, the client is finalizing numbers. Check back soon!', 'job_application', 0.83, 27, 23, 3, 1, 'approved'],
+    // ============================================
+    // PAYMENT INQUIRIES
+    // ============================================
+    ['when payment', 'Payments are processed every Friday! Money reaches your bank by Monday. Check Wallet for payment history. 💰', 'pay_inquiry', 0.92, 45, 42, 2, 1, 'approved'],
+    ['when is payday', 'Every Friday! We pay for jobs completed Mon-Sun the following Friday. 📅', 'pay_inquiry', 0.92, 40, 38, 2, 0, 'approved'],
+    ['pay when ah', 'Friday every week! Jobs done Mon-Sun get paid the following Friday. Check Wallet for status. 💵', 'pay_inquiry', 0.88, 23, 18, 4, 1, 'approved'],
+    ['how much pay', 'Your pay = hours worked × hourly rate, plus any bonuses. Check job listing for exact rate! 📊', 'pay_inquiry', 0.89, 38, 35, 3, 0, 'approved'],
+    ['salary not in', 'Payments process on Friday, arrive by Monday. If still missing by Tuesday, contact us with your job details! 🔍', 'pay_inquiry', 0.85, 25, 22, 2, 1, 'approved'],
+    ['payment less than expected', 'Check your Wallet breakdown - it shows hours worked, rate, and any deductions. Let me know if something looks wrong! 📋', 'pay_inquiry', 0.82, 18, 15, 2, 1, 'approved'],
+    ['cpf deduction', 'CPF is deducted if you are a Singaporean/PR earning above the threshold. Check Wallet for detailed breakdown. 🏛️', 'pay_inquiry', 0.80, 15, 12, 2, 1, 'approved'],
+    ['overtime pay', 'Overtime is usually 1.5x rate after 8 hours. Check your job details for exact OT terms! ⏰', 'pay_inquiry', 0.78, 12, 9, 2, 1, 'approved'],
+    ['can claim taxi', 'Transport claims depend on the job. Check job details - if allowed, keep your receipts! 🧾', 'pay_inquiry', 0.75, 10, 7, 2, 1, 'approved'],
+    ['transport claim', 'Some jobs offer transport reimbursement. Check job details and keep receipts if claims are allowed. 🚕', 'pay_inquiry', 0.75, 8, 6, 1, 1, 'approved'],
 
-    // Lower confidence (newer entries, still learning)
-    ['parking got', 'Parking availability varies by venue. Check the job details or ask the support team about specific locations.', 'general_question', 0.65, 8, 5, 2, 1, 'approved'],
-    ['can claim taxi', 'Transport claims depend on the specific job. Check job details for reimbursement info. Keep receipts if claims are allowed!', 'pay_inquiry', 0.62, 7, 4, 2, 1, 'approved'],
-    ['dress code', 'Most events require all-black attire. Specific dress codes are in the job details. When unsure, smart casual is safe!', 'job_search', 0.71, 12, 9, 2, 1, 'approved'],
-    ['break time', 'Breaks depend on shift length. 4-6hr shifts usually have 30min break, 6hr+ may have 1 hour. Check job details!', 'schedule_question', 0.68, 10, 7, 2, 1, 'approved'],
-    ['overtime pay', 'Overtime is usually at 1.5x rate after 8 hours. The exact terms are in your job assignment. Check with your supervisor on-site!', 'pay_inquiry', 0.66, 9, 6, 2, 1, 'approved'],
+    // ============================================
+    // JOB SEARCH & APPLICATIONS
+    // ============================================
+    ['got job or not', 'Yes! Check the Jobs tab for available positions. New jobs posted daily! 📱', 'job_search', 0.95, 67, 65, 2, 0, 'approved'],
+    ['any job', 'Plenty of jobs available! Open Jobs tab to browse. Filter by date and location. 🔍', 'job_search', 0.94, 55, 53, 2, 0, 'approved'],
+    ['any lobang', 'Got plenty! F&B, events, retail, warehouse and more. Check Jobs tab! 💼', 'job_search', 0.85, 19, 14, 4, 1, 'approved'],
+    ['weekend job', 'Weekend jobs are popular! Filter Jobs by Sat/Sun. Turn on notifications for new postings! 📅', 'job_search', 0.90, 35, 32, 2, 1, 'approved'],
+    ['job near me', 'Use the location filter in Jobs tab to find work near you! We have jobs across Singapore. 📍', 'job_search', 0.88, 28, 25, 2, 1, 'approved'],
+    ['urgent job today', 'Same-day jobs are marked with 🔥! Check Jobs tab now and apply quickly - they fill fast!', 'job_search', 0.86, 22, 19, 2, 1, 'approved'],
+    ['how to apply', 'Easy! Go to Jobs → Find a job → Tap "Apply" → Done! Make sure availability is updated first. ✅', 'job_application', 0.91, 52, 48, 3, 1, 'approved'],
+    ['application status', 'Check Deployments tab for your application status. Confirmations usually come 24-48hrs before job. 📋', 'job_application', 0.87, 30, 27, 2, 1, 'approved'],
+    ['confirm job', 'Jobs show "Confirmed" in Deployments when approved. Still pending? Client is finalizing numbers. 🕐', 'job_application', 0.83, 27, 23, 3, 1, 'approved'],
+    ['where is the job', 'Location and address are in job details! Tap your deployment to see full address and map. 🗺️', 'job_search', 0.86, 28, 25, 2, 1, 'approved'],
+    ['dress code', 'Most events require all-black attire. Check job details for specific requirements. When unsure, smart casual! 👔', 'job_search', 0.82, 20, 17, 2, 1, 'approved'],
+    ['what to wear', 'Dress code is in job details. Usually all-black for events. Some jobs provide uniform! 👕', 'job_search', 0.82, 18, 15, 2, 1, 'approved'],
+    ['what to bring', 'Bring NRIC for verification and wear required attire. Some jobs need specific items - check details! 📝', 'job_search', 0.80, 15, 12, 2, 1, 'approved'],
+
+    // ============================================
+    // SCHEDULE & AVAILABILITY
+    // ============================================
+    ['what time start', 'Start times vary! Check your Deployments for exact time. Arrive 15 mins early to sign in. ⏰', 'schedule_question', 0.87, 34, 30, 3, 1, 'approved'],
+    ['what time end', 'End times are in your job details. Some jobs may run slightly longer depending on the event. 🕐', 'schedule_question', 0.85, 25, 22, 2, 1, 'approved'],
+    ['break time', 'Breaks depend on shift length. 4-6hrs = 30min break. 6hrs+ may have 1 hour. Check job details! ☕', 'schedule_question', 0.78, 15, 12, 2, 1, 'approved'],
+    ['cannot make it tomorrow', "No worries! Cancel in app ASAP and let us know the reason. Earlier notice = better! 🙏", 'schedule_question', 0.88, 29, 26, 2, 1, 'approved'],
+    ['need cancel job', 'Go to Deployments → Find the job → Tap Cancel. Please do this at least 24hrs before! ⚠️', 'schedule_question', 0.86, 24, 21, 2, 1, 'approved'],
+    ['mc how', 'If you need MC, inform us ASAP through chat. Submit your MC when you can. Get well soon! 🤒', 'schedule_question', 0.82, 18, 14, 3, 1, 'approved'],
+    ['sick cannot work', "Sorry to hear! Please cancel in app and rest well. Send MC when you can. Take care! 🏥", 'schedule_question', 0.82, 16, 13, 2, 1, 'approved'],
+    ['late already', 'Thanks for letting us know! Contact your on-site supervisor too. How late will you be? ⏱️', 'urgent', 0.90, 25, 22, 2, 1, 'approved'],
+    ['running late', "Please inform your supervisor directly! Let us know ETA. Traffic happens, just communicate early! 🚗", 'urgent', 0.88, 20, 17, 2, 1, 'approved'],
+    ['can swap shift', 'Shift swaps need approval. Contact support with details of who you want to swap with! 🔄', 'schedule_question', 0.75, 12, 9, 2, 1, 'approved'],
+
+    // ============================================
+    // PROFILE & ACCOUNT
+    // ============================================
+    ['bank wrong', 'Go to Profile → Bank Details to update. Make sure name matches NRIC. Changes apply next payment cycle. 🏦', 'general_question', 0.85, 20, 17, 2, 1, 'approved'],
+    ['update bank', 'Profile → Bank Details → Edit. Ensure bank account name matches your NRIC name! 💳', 'general_question', 0.85, 18, 15, 2, 1, 'approved'],
+    ['change phone number', 'Go to Profile → Edit to update your contact details. Keep them current for job updates! 📱', 'general_question', 0.82, 12, 10, 1, 1, 'approved'],
+    ['forgot password', 'Tap "Forgot Password" on login screen. We will send a reset link to your email! 🔐', 'general_question', 0.88, 22, 20, 1, 1, 'approved'],
+    ['how to refer friend', 'Share your referral code from Profile → Referrals. Both earn bonus when friend completes first job! 🎁', 'general_question', 0.88, 31, 28, 2, 1, 'approved'],
+    ['referral code', 'Find your unique code in Profile → Referrals. Share it and earn when friends join! 💰', 'general_question', 0.87, 25, 22, 2, 1, 'approved'],
+
+    // ============================================
+    // XP, LEVELS & GAMIFICATION
+    // ============================================
+    ['xp for what', 'XP helps you level up! Higher levels = priority job access + bonus multipliers. Keep completing jobs! 🚀', 'general_question', 0.84, 25, 21, 3, 1, 'approved'],
+    ['how to get xp', 'Earn XP by completing jobs, maintaining streaks, and finishing quests! Check Quests tab. ⭐', 'general_question', 0.84, 22, 19, 2, 1, 'approved'],
+    ['what is streak', 'Work consecutive days to build a streak! Longer streak = bigger bonus multiplier. 🔥', 'general_question', 0.82, 18, 15, 2, 1, 'approved'],
+    ['my rating low', "Rating reflects punctuality and performance. Show up on time, do great work - it'll improve! 📈", 'complaint', 0.78, 14, 10, 3, 1, 'approved'],
+    ['how to improve rating', 'Be punctual, complete jobs well, be professional. Good feedback from clients boosts your rating! ⭐', 'general_question', 0.80, 16, 13, 2, 1, 'approved'],
+    ['what is level', 'Your level shows your experience. Higher levels get priority booking and better job matches! 🎯', 'general_question', 0.80, 14, 11, 2, 1, 'approved'],
+
+    // ============================================
+    // SUPPORT & HELP
+    // ============================================
+    ['need help', "I'm here to help! What do you need - jobs, payments, schedule, or something else? 🤝", 'general_question', 0.92, 50, 47, 3, 0, 'approved'],
+    ['got problem', "Sorry to hear! Tell me what happened and I'll do my best to help. 💪", 'general_question', 0.88, 30, 27, 2, 1, 'approved'],
+    ['contact support', 'You can reach us here in chat (fastest!), email support@worklink.sg, or WhatsApp! 💬', 'general_question', 0.90, 35, 32, 2, 1, 'approved'],
+    ['complaint', "I'm sorry you're facing issues. Please share the details and we'll look into it right away. 🔍", 'complaint', 0.85, 20, 17, 2, 1, 'approved'],
+    ['parking got', 'Parking varies by venue. Check job details or ask us about specific locations! 🅿️', 'general_question', 0.72, 12, 9, 2, 1, 'approved'],
   ];
 
   knowledgeBaseEntries.forEach(entry => {

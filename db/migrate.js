@@ -319,6 +319,69 @@ function runMigrations() {
 
   console.log('  ✅ Performance indexes created');
 
+  // =====================================================
+  // CLEANUP DUPLICATES IN FAQ AND KNOWLEDGE BASE
+  // =====================================================
+  console.log('  🧹 Cleaning up FAQ and Knowledge Base duplicates...');
+
+  // Remove duplicate FAQs - keep the one with highest priority or lowest ID
+  try {
+    const faqDupes = db.prepare(`
+      SELECT question, COUNT(*) as cnt, MIN(id) as keep_id
+      FROM ai_faq
+      GROUP BY question
+      HAVING cnt > 1
+    `).all();
+
+    if (faqDupes.length > 0) {
+      const deleteFaq = db.prepare('DELETE FROM ai_faq WHERE question = ? AND id != ?');
+      faqDupes.forEach(d => {
+        deleteFaq.run(d.question, d.keep_id);
+      });
+      console.log(`    ✅ Removed ${faqDupes.length} duplicate FAQ entries`);
+    }
+  } catch (e) {
+    console.log('    ⚠️ FAQ cleanup skipped:', e.message);
+  }
+
+  // Remove duplicate KB entries - keep the one with highest confidence or lowest ID
+  try {
+    const kbDupes = db.prepare(`
+      SELECT question, COUNT(*) as cnt,
+             (SELECT id FROM ml_knowledge_base kb2
+              WHERE kb2.question = ml_knowledge_base.question
+              ORDER BY confidence DESC, id ASC LIMIT 1) as keep_id
+      FROM ml_knowledge_base
+      GROUP BY question
+      HAVING cnt > 1
+    `).all();
+
+    if (kbDupes.length > 0) {
+      const deleteKb = db.prepare('DELETE FROM ml_knowledge_base WHERE question = ? AND id != ?');
+      kbDupes.forEach(d => {
+        deleteKb.run(d.question, d.keep_id);
+      });
+      console.log(`    ✅ Removed ${kbDupes.length} duplicate Knowledge Base entries`);
+    }
+  } catch (e) {
+    console.log('    ⚠️ KB cleanup skipped:', e.message);
+  }
+
+  // Create unique indexes to prevent future duplicates
+  try {
+    db.exec('CREATE UNIQUE INDEX IF NOT EXISTS idx_ai_faq_question ON ai_faq(question)');
+    console.log('    ✅ Created unique index on ai_faq.question');
+  } catch (e) {
+    // Index may already exist
+  }
+
+  try {
+    db.exec('CREATE UNIQUE INDEX IF NOT EXISTS idx_ml_kb_question ON ml_knowledge_base(question)');
+    console.log('    ✅ Created unique index on ml_knowledge_base.question');
+  } catch (e) {
+    // Index may already exist
+  }
+
   console.log('✅ Migrations complete');
 }
 
