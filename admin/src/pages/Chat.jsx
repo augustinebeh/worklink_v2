@@ -508,7 +508,9 @@ export default function AdminChat() {
 
   const connectWebSocket = () => {
     const protocol = window.location.protocol === 'https:' ? 'wss:' : 'ws:';
-    const wsUrl = `${protocol}//${window.location.host}/ws?admin=true`;
+    // Include admin token for authentication
+    const token = sessionStorage.getItem('admin_token') || 'demo-admin-token';
+    const wsUrl = `${protocol}//${window.location.host}/ws?admin=true&token=${encodeURIComponent(token)}`;
 
     try {
       wsRef.current = new WebSocket(wsUrl);
