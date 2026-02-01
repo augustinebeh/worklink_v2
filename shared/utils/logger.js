@@ -5,10 +5,8 @@
  * Development-only logging to keep production clean
  */
 
-// Check for development environment
-const isDev = typeof import.meta !== 'undefined'
-  ? import.meta.env?.DEV
-  : process.env.NODE_ENV !== 'production';
+// Check for development environment (CommonJS compatible)
+const isDev = process.env.NODE_ENV !== 'production';
 
 const logger = {
   /**
@@ -47,9 +45,5 @@ const logger = {
   },
 };
 
-// CommonJS exports for compatibility
-if (typeof module !== 'undefined' && module.exports) {
-  module.exports = logger;
-}
-
-export default logger;
+// CommonJS exports
+module.exports = logger;

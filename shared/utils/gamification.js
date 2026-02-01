@@ -168,22 +168,7 @@ function getXPForNextLevel(level) {
 }
 
 // CommonJS exports for backend
-if (typeof module !== 'undefined' && module.exports) {
-  module.exports = {
-    XP_THRESHOLDS,
-    LEVEL_TITLES,
-    LEVEL_TIERS,
-    calculateLevel,
-    calculateLevelProgress,
-    getLevelTitle,
-    getLevelTier,
-    formatXP,
-    getXPForNextLevel,
-  };
-}
-
-// ES6 exports for frontend (will be tree-shaken if not used)
-export {
+module.exports = {
   XP_THRESHOLDS,
   LEVEL_TITLES,
   LEVEL_TIERS,

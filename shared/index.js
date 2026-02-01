@@ -1,11 +1,15 @@
 /**
  * WorkLink Shared Package
- * Common utilities and components shared across Worker, Admin, and Backend
+ * Common utilities shared across Worker, Admin, and Backend
+ *
+ * Note: This file uses CommonJS for Node.js backend compatibility.
+ * Frontend apps should import directly from specific files.
  */
 
-// Utils
-export * from './utils/gamification.js';
-export { default as logger } from './utils/logger.js';
+const gamification = require('./utils/gamification');
+const logger = require('./utils/logger');
 
-// Components
-export * from './components/PageTransition.jsx';
+module.exports = {
+  ...gamification,
+  logger,
+};
