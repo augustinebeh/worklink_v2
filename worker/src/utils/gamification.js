@@ -112,13 +112,18 @@ export const LEVEL_TITLES = {
   50: 'WorkLink God',
 };
 
-// Tier colors for different level ranges
+// Tier colors for different level ranges (every 5 levels for quicker progression)
 export const LEVEL_TIERS = {
-  bronze: { min: 1, max: 9, color: 'amber' },
-  silver: { min: 10, max: 19, color: 'slate' },
-  gold: { min: 20, max: 29, color: 'yellow' },
-  platinum: { min: 30, max: 39, color: 'cyan' },
-  diamond: { min: 40, max: 49, color: 'violet' },
+  bronze: { min: 1, max: 4, color: 'amber' },
+  bronzeElite: { min: 5, max: 9, color: 'orange' },
+  silver: { min: 10, max: 14, color: 'slate' },
+  silverElite: { min: 15, max: 19, color: 'zinc' },
+  gold: { min: 20, max: 24, color: 'yellow' },
+  goldElite: { min: 25, max: 29, color: 'amber' },
+  platinum: { min: 30, max: 34, color: 'cyan' },
+  platinumElite: { min: 35, max: 39, color: 'teal' },
+  diamond: { min: 40, max: 44, color: 'violet' },
+  diamondElite: { min: 45, max: 49, color: 'purple' },
   mythic: { min: 50, max: 50, color: 'rose' },
 };
 

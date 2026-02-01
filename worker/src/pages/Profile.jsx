@@ -70,6 +70,15 @@ function BorderPreview({ tier, isLocked, isSelected, onClick, level }) {
           glow: isSelected ? 'shadow-lg shadow-rose-500/50' : '',
           label: 'Mythic',
           minLevel: 50,
+          animation: 'animate-pulse',
+        };
+      case 'diamondElite':
+        return {
+          gradient: 'bg-gradient-to-br from-violet-300 via-fuchsia-400 to-pink-500',
+          glow: isSelected ? 'shadow-lg shadow-purple-500/50' : '',
+          label: 'Diamond+',
+          minLevel: 45,
+          animation: '',
         };
       case 'diamond':
         return {
@@ -77,6 +86,15 @@ function BorderPreview({ tier, isLocked, isSelected, onClick, level }) {
           glow: isSelected ? 'shadow-lg shadow-violet-500/40' : '',
           label: 'Diamond',
           minLevel: 40,
+          animation: '',
+        };
+      case 'platinumElite':
+        return {
+          gradient: 'bg-gradient-to-br from-cyan-200 via-teal-400 to-emerald-500',
+          glow: isSelected ? 'shadow-md shadow-teal-500/40' : '',
+          label: 'Platinum+',
+          minLevel: 35,
+          animation: '',
         };
       case 'platinum':
         return {
@@ -84,6 +102,15 @@ function BorderPreview({ tier, isLocked, isSelected, onClick, level }) {
           glow: isSelected ? 'shadow-md shadow-cyan-500/30' : '',
           label: 'Platinum',
           minLevel: 30,
+          animation: '',
+        };
+      case 'goldElite':
+        return {
+          gradient: 'bg-gradient-to-br from-yellow-200 via-amber-400 to-yellow-500',
+          glow: isSelected ? 'shadow-md shadow-yellow-400/40' : '',
+          label: 'Gold+',
+          minLevel: 25,
+          animation: '',
         };
       case 'gold':
         return {
@@ -91,6 +118,15 @@ function BorderPreview({ tier, isLocked, isSelected, onClick, level }) {
           glow: isSelected ? 'shadow-md shadow-yellow-500/30' : '',
           label: 'Gold',
           minLevel: 20,
+          animation: '',
+        };
+      case 'silverElite':
+        return {
+          gradient: 'bg-gradient-to-br from-zinc-200 via-slate-300 to-zinc-400',
+          glow: isSelected ? 'shadow-sm shadow-zinc-400/30' : '',
+          label: 'Silver+',
+          minLevel: 15,
+          animation: '',
         };
       case 'silver':
         return {
@@ -98,6 +134,15 @@ function BorderPreview({ tier, isLocked, isSelected, onClick, level }) {
           glow: isSelected ? 'shadow-sm shadow-slate-400/20' : '',
           label: 'Silver',
           minLevel: 10,
+          animation: '',
+        };
+      case 'bronzeElite':
+        return {
+          gradient: 'bg-gradient-to-br from-amber-400 via-orange-500 to-amber-600',
+          glow: isSelected ? 'shadow-sm shadow-orange-500/30' : '',
+          label: 'Bronze+',
+          minLevel: 5,
+          animation: '',
         };
       default: // bronze
         return {
@@ -105,6 +150,7 @@ function BorderPreview({ tier, isLocked, isSelected, onClick, level }) {
           glow: '',
           label: 'Bronze',
           minLevel: 1,
+          animation: '',
         };
     }
   };
@@ -640,14 +686,15 @@ export default function Profile() {
             <h3 className={clsx('text-lg font-semibold', isDark ? 'text-white' : 'text-slate-900')}>Profile Border</h3>
           </div>
           <p className={clsx('text-sm mb-3', isDark ? 'text-dark-400' : 'text-slate-500')}>
-            Unlock premium borders by leveling up. Your current tier: <span className="font-semibold text-primary-400">{getLevelTier(userLevel).charAt(0).toUpperCase() + getLevelTier(userLevel).slice(1)}</span>
+            Unlock premium borders by leveling up. Your current tier: <span className="font-semibold text-primary-400">{getLevelTier(userLevel).replace('Elite', '+')}</span>
           </p>
-          <div className="grid grid-cols-3 gap-2">
-            {['bronze', 'silver', 'gold', 'platinum', 'diamond', 'mythic'].map((tier) => {
+          <div className="grid grid-cols-4 gap-2">
+            {['bronze', 'bronzeElite', 'silver', 'silverElite', 'gold', 'goldElite', 'platinum', 'platinumElite', 'diamond', 'diamondElite', 'mythic'].map((tier) => {
               const tierData = LEVEL_TIERS[tier];
               const isLocked = userLevel < tierData.min;
               const currentTier = getLevelTier(userLevel);
               const isSelected = currentTier === tier;
+              const displayName = tier.replace('Elite', '+');
 
               return (
                 <BorderPreview
@@ -658,7 +705,7 @@ export default function Profile() {
                   level={userLevel}
                   onClick={() => {
                     if (!isLocked) {
-                      toast.info('Border Applied', `Using ${tier.charAt(0).toUpperCase() + tier.slice(1)} border`);
+                      toast.info('Border Applied', `Using ${displayName.charAt(0).toUpperCase() + displayName.slice(1)} border`);
                     }
                   }}
                 />

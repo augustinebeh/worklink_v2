@@ -187,6 +187,56 @@ export default function Candidates() {
     inactive: 0,
   });
 
+  // Add Candidate Modal State
+  const [showAddModal, setShowAddModal] = useState(false);
+  const [addingCandidate, setAddingCandidate] = useState(false);
+  const [newCandidate, setNewCandidate] = useState({
+    name: '',
+    email: '',
+    phone: '',
+    date_of_birth: '',
+    source: 'direct',
+    status: 'lead',
+  });
+
+  const handleAddCandidate = async () => {
+    if (!newCandidate.name || !newCandidate.email) {
+      alert('Name and email are required');
+      return;
+    }
+
+    setAddingCandidate(true);
+    try {
+      const res = await fetch('/api/v1/candidates', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify(newCandidate),
+      });
+      const data = await res.json();
+
+      if (data.success) {
+        setShowAddModal(false);
+        setNewCandidate({
+          name: '',
+          email: '',
+          phone: '',
+          date_of_birth: '',
+          source: 'direct',
+          status: 'lead',
+        });
+        fetchCandidates();
+        fetchPipelineStats();
+      } else {
+        alert(data.error || 'Failed to add candidate');
+      }
+    } catch (error) {
+      console.error('Failed to add candidate:', error);
+      alert('Failed to add candidate');
+    } finally {
+      setAddingCandidate(false);
+    }
+  };
+
   useEffect(() => {
     fetchCandidates();
     fetchPipelineStats();
@@ -314,7 +364,7 @@ export default function Candidates() {
         </div>
         <div className="flex items-center gap-3">
           <Button variant="secondary" size="sm" icon={DownloadIcon}>Export</Button>
-          <Button size="sm" icon={UserPlusIcon}>Add Candidate</Button>
+          <Button size="sm" icon={UserPlusIcon} onClick={() => setShowAddModal(true)}>Add Candidate</Button>
         </div>
       </div>
 
@@ -444,7 +494,7 @@ export default function Candidates() {
           <p className="text-slate-500 mb-4">
             {searchQuery ? 'Try adjusting your search terms' : 'Start building your talent pool'}
           </p>
-          <Button icon={UserPlusIcon}>Add Your First Candidate</Button>
+          <Button icon={UserPlusIcon} onClick={() => setShowAddModal(true)}>Add Your First Candidate</Button>
         </Card>
       ) : view === 'grid' ? (
         <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
@@ -458,13 +508,117 @@ export default function Candidates() {
         </div>
       ) : (
         <Card padding="none">
-          <Table 
-            columns={columns} 
+          <Table
+            columns={columns}
             data={candidates}
             onRowClick={(row) => navigate(`/candidates/${row.id}`)}
           />
         </Card>
       )}
+
+      {/* Add Candidate Modal */}
+      <Modal
+        isOpen={showAddModal}
+        onClose={() => setShowAddModal(false)}
+        title="Add New Candidate"
+      >
+        <div className="space-y-4">
+          <div>
+            <label className="block text-sm font-medium text-slate-700 dark:text-slate-300 mb-1">
+              Full Name <span className="text-red-500">*</span>
+            </label>
+            <Input
+              placeholder="Enter full name"
+              value={newCandidate.name}
+              onChange={(e) => setNewCandidate({ ...newCandidate, name: e.target.value })}
+            />
+          </div>
+
+          <div>
+            <label className="block text-sm font-medium text-slate-700 dark:text-slate-300 mb-1">
+              Email <span className="text-red-500">*</span>
+            </label>
+            <Input
+              type="email"
+              placeholder="Enter email address"
+              value={newCandidate.email}
+              onChange={(e) => setNewCandidate({ ...newCandidate, email: e.target.value })}
+            />
+          </div>
+
+          <div>
+            <label className="block text-sm font-medium text-slate-700 dark:text-slate-300 mb-1">
+              Phone Number
+            </label>
+            <Input
+              type="tel"
+              placeholder="Enter phone number"
+              value={newCandidate.phone}
+              onChange={(e) => setNewCandidate({ ...newCandidate, phone: e.target.value })}
+            />
+          </div>
+
+          <div>
+            <label className="block text-sm font-medium text-slate-700 dark:text-slate-300 mb-1">
+              Date of Birth
+            </label>
+            <Input
+              type="date"
+              value={newCandidate.date_of_birth}
+              onChange={(e) => setNewCandidate({ ...newCandidate, date_of_birth: e.target.value })}
+            />
+          </div>
+
+          <div className="grid grid-cols-2 gap-4">
+            <div>
+              <label className="block text-sm font-medium text-slate-700 dark:text-slate-300 mb-1">
+                Source
+              </label>
+              <Select
+                value={newCandidate.source}
+                onChange={(value) => setNewCandidate({ ...newCandidate, source: value })}
+                options={[
+                  { value: 'direct', label: 'Direct' },
+                  { value: 'referral', label: 'Referral' },
+                  { value: 'job_portal', label: 'Job Portal' },
+                  { value: 'social_media', label: 'Social Media' },
+                  { value: 'walk_in', label: 'Walk-in' },
+                  { value: 'other', label: 'Other' },
+                ]}
+              />
+            </div>
+
+            <div>
+              <label className="block text-sm font-medium text-slate-700 dark:text-slate-300 mb-1">
+                Initial Status
+              </label>
+              <Select
+                value={newCandidate.status}
+                onChange={(value) => setNewCandidate({ ...newCandidate, status: value })}
+                options={[
+                  { value: 'lead', label: 'Lead' },
+                  { value: 'screening', label: 'Screening' },
+                  { value: 'onboarding', label: 'Onboarding' },
+                  { value: 'active', label: 'Active' },
+                ]}
+              />
+            </div>
+          </div>
+
+          <div className="flex justify-end gap-3 pt-4 border-t border-slate-200 dark:border-slate-700">
+            <Button variant="secondary" onClick={() => setShowAddModal(false)}>
+              Cancel
+            </Button>
+            <Button
+              onClick={handleAddCandidate}
+              loading={addingCandidate}
+              icon={UserPlusIcon}
+            >
+              Add Candidate
+            </Button>
+          </div>
+        </div>
+      </Modal>
     </div>
   );
 }

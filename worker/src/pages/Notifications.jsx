@@ -6,7 +6,6 @@ import {
   CheckCheckIcon,
   BriefcaseIcon,
   WalletIcon,
-  MessageCircleIcon,
   TrophyIcon,
   ZapIcon,
   GiftIcon,
@@ -20,7 +19,6 @@ import { DEFAULT_LOCALE, TIMEZONE } from '../utils/constants';
 const notificationTypeConfig = {
   job: { icon: BriefcaseIcon, color: 'text-blue-400', bg: 'bg-blue-500/20', link: '/jobs' },
   payment: { icon: WalletIcon, color: 'text-accent-400', bg: 'bg-accent-500/20', link: '/wallet' },
-  chat: { icon: MessageCircleIcon, color: 'text-primary-400', bg: 'bg-primary-500/20', link: '/chat' },
   gamification: { icon: TrophyIcon, color: 'text-gold-400', bg: 'bg-gold-500/20', link: '/achievements' },
   xp: { icon: ZapIcon, color: 'text-purple-400', bg: 'bg-purple-500/20', link: '/profile' },
   bonus: { icon: GiftIcon, color: 'text-pink-400', bg: 'bg-pink-500/20', link: '/wallet' },
@@ -165,12 +163,15 @@ export default function Notifications() {
     }
   };
 
-  const filteredNotifications = notifications.filter(n => {
+  // Filter out chat notifications (admin messages shown on chat bubble instead)
+  const nonChatNotifications = notifications.filter(n => n.type !== 'chat');
+
+  const filteredNotifications = nonChatNotifications.filter(n => {
     if (filter === 'unread') return n.read === 0;
     return true;
   });
 
-  const unreadCount = notifications.filter(n => n.read === 0).length;
+  const unreadCount = nonChatNotifications.filter(n => n.read === 0).length;
 
   if (!user) {
     return (

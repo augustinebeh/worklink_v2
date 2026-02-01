@@ -4,13 +4,18 @@ import { getLevelTier } from '../../utils/gamification';
 /**
  * ProfileAvatar - Avatar with level-based decorative borders
  *
- * Tiers:
- * - Bronze (1-9): Simple copper border
- * - Silver (10-19): Gradient silver border
- * - Gold (20-29): Animated gold shimmer border
- * - Platinum (30-39): Glowing cyan animated border
- * - Diamond (40-49): Multi-color animated border with glow
- * - Mythic (50): Rainbow animated border with outer glow
+ * Tiers (every 5 levels for quicker progression):
+ * - Bronze (1-4): Simple copper border
+ * - Bronze Elite (5-9): Copper border with subtle glow
+ * - Silver (10-14): Gradient silver border
+ * - Silver Elite (15-19): Silver with shimmer effect
+ * - Gold (20-24): Animated gold shimmer border
+ * - Gold Elite (25-29): Gold with intense glow
+ * - Platinum (30-34): Glowing cyan animated border
+ * - Platinum Elite (35-39): Platinum with pulse effect
+ * - Diamond (40-44): Multi-color animated border with glow
+ * - Diamond Elite (45-49): Diamond with rainbow shimmer
+ * - Mythic (50): Full rainbow animated border with outer glow
  */
 
 // Border configurations for each tier
@@ -21,13 +26,31 @@ const TIER_BORDERS = {
     glow: '',
     animation: '',
     badge: 'bg-amber-700 text-amber-100',
+    gradient: '',
+  },
+  bronzeElite: {
+    border: 'border-4 border-transparent',
+    ring: 'ring-2 ring-orange-400/40',
+    glow: 'shadow-md shadow-orange-500/30',
+    animation: '',
+    badge: 'bg-gradient-to-r from-amber-600 to-orange-500 text-white',
+    gradient: 'bg-gradient-to-br from-amber-500 via-orange-500 to-amber-600',
   },
   silver: {
-    border: 'border-4 border-transparent bg-gradient-to-br from-slate-300 via-slate-400 to-slate-300 bg-clip-border',
+    border: 'border-4 border-transparent',
     ring: 'ring-2 ring-slate-400/50',
     glow: '',
     animation: '',
     badge: 'bg-slate-500 text-white',
+    gradient: 'bg-gradient-to-br from-slate-300 via-slate-400 to-slate-300',
+  },
+  silverElite: {
+    border: 'border-4 border-transparent',
+    ring: 'ring-2 ring-zinc-300/60',
+    glow: 'shadow-md shadow-zinc-400/40',
+    animation: 'animate-shimmer-silver',
+    badge: 'bg-gradient-to-r from-slate-400 to-zinc-300 text-slate-800',
+    gradient: 'bg-gradient-to-br from-zinc-200 via-slate-300 to-zinc-400',
   },
   gold: {
     border: 'border-4 border-transparent',
@@ -35,6 +58,15 @@ const TIER_BORDERS = {
     glow: 'shadow-lg shadow-yellow-500/30',
     animation: 'animate-shimmer-gold',
     badge: 'bg-gradient-to-r from-yellow-500 to-amber-500 text-white',
+    gradient: 'bg-gradient-to-br from-yellow-300 via-yellow-500 to-amber-600',
+  },
+  goldElite: {
+    border: 'border-4 border-transparent',
+    ring: 'ring-2 ring-yellow-300/60',
+    glow: 'shadow-xl shadow-yellow-400/50',
+    animation: 'animate-shimmer-gold-intense',
+    badge: 'bg-gradient-to-r from-yellow-400 via-amber-400 to-yellow-500 text-amber-900',
+    gradient: 'bg-gradient-to-br from-yellow-200 via-amber-400 to-yellow-500',
   },
   platinum: {
     border: 'border-4 border-transparent',
@@ -42,6 +74,15 @@ const TIER_BORDERS = {
     glow: 'shadow-lg shadow-cyan-500/40',
     animation: 'animate-pulse-slow',
     badge: 'bg-gradient-to-r from-cyan-400 to-teal-400 text-white',
+    gradient: 'bg-gradient-to-br from-cyan-300 via-cyan-500 to-teal-500',
+  },
+  platinumElite: {
+    border: 'border-4 border-transparent',
+    ring: 'ring-3 ring-teal-300/60',
+    glow: 'shadow-xl shadow-teal-400/50',
+    animation: 'animate-glow-pulse',
+    badge: 'bg-gradient-to-r from-cyan-300 via-teal-400 to-emerald-400 text-white',
+    gradient: 'bg-gradient-to-br from-cyan-200 via-teal-400 to-emerald-500',
   },
   diamond: {
     border: 'border-4 border-transparent',
@@ -49,6 +90,15 @@ const TIER_BORDERS = {
     glow: 'shadow-xl shadow-violet-500/50',
     animation: 'animate-border-spin',
     badge: 'bg-gradient-to-r from-violet-500 via-purple-500 to-fuchsia-500 text-white',
+    gradient: 'bg-gradient-to-r from-violet-400 via-purple-500 to-fuchsia-500',
+  },
+  diamondElite: {
+    border: 'border-4 border-transparent',
+    ring: 'ring-3 ring-purple-300/70',
+    glow: 'shadow-2xl shadow-purple-500/60',
+    animation: 'animate-border-spin-fast',
+    badge: 'bg-gradient-to-r from-violet-400 via-fuchsia-400 to-pink-500 text-white animate-pulse',
+    gradient: 'bg-gradient-to-r from-violet-300 via-fuchsia-400 to-pink-500',
   },
   mythic: {
     border: 'border-4 border-transparent',
@@ -56,6 +106,7 @@ const TIER_BORDERS = {
     glow: 'shadow-2xl shadow-rose-500/60',
     animation: 'animate-rainbow',
     badge: 'bg-gradient-to-r from-rose-500 via-pink-500 to-rose-500 text-white animate-pulse',
+    gradient: 'bg-gradient-to-r from-rose-400 via-pink-500 to-rose-400',
   },
 };
 
@@ -86,22 +137,21 @@ export default function ProfileAvatar({
   return (
     <div className={clsx('relative inline-block', className)}>
       {/* Outer glow effect for higher tiers */}
-      {(tier === 'diamond' || tier === 'mythic') && (
+      {['diamond', 'diamondElite', 'mythic', 'platinumElite'].includes(tier) && (
         <div className={clsx(
           'absolute inset-0 rounded-full blur-md -z-10',
-          tier === 'diamond' ? 'bg-gradient-to-r from-violet-500 to-fuchsia-500 opacity-50' : '',
-          tier === 'mythic' ? 'bg-gradient-to-r from-rose-500 via-pink-500 to-rose-500 opacity-60 animate-pulse' : ''
+          tier === 'diamond' && 'bg-gradient-to-r from-violet-500 to-fuchsia-500 opacity-50',
+          tier === 'diamondElite' && 'bg-gradient-to-r from-violet-400 via-fuchsia-400 to-pink-500 opacity-60 animate-pulse',
+          tier === 'platinumElite' && 'bg-gradient-to-r from-cyan-400 to-emerald-400 opacity-40',
+          tier === 'mythic' && 'bg-gradient-to-r from-rose-500 via-pink-500 to-rose-500 opacity-70 animate-pulse'
         )} />
       )}
 
-      {/* Border container with gradient for gold+ tiers */}
+      {/* Border container with gradient for bronze elite+ tiers */}
       <div className={clsx(
         'relative rounded-full p-[3px]',
         config.animation,
-        tier === 'gold' && 'bg-gradient-to-br from-yellow-300 via-yellow-500 to-amber-600',
-        tier === 'platinum' && 'bg-gradient-to-br from-cyan-300 via-cyan-500 to-teal-500',
-        tier === 'diamond' && 'bg-gradient-to-r from-violet-400 via-purple-500 to-fuchsia-500',
-        tier === 'mythic' && 'bg-gradient-to-r from-rose-400 via-pink-500 to-rose-400',
+        config.gradient,
         config.glow
       )}>
         {/* Inner avatar container */}
@@ -109,7 +159,7 @@ export default function ProfileAvatar({
           'rounded-full flex items-center justify-center font-bold overflow-hidden',
           sizeConfig.container,
           sizeConfig.text,
-          tier === 'bronze' || tier === 'silver' ? config.border : 'bg-dark-900',
+          tier === 'bronze' ? config.border : 'bg-dark-900',
           config.ring,
           isCurrentUser ? 'text-white' : 'text-dark-300'
         )}>
@@ -147,9 +197,24 @@ export default function ProfileAvatar({
 
 // CSS animations to add to your global styles or tailwind config
 export const profileAvatarStyles = `
+  @keyframes shimmer-silver {
+    0%, 100% { filter: brightness(1); }
+    50% { filter: brightness(1.15); }
+  }
+
   @keyframes shimmer-gold {
     0%, 100% { filter: brightness(1); }
     50% { filter: brightness(1.2); }
+  }
+
+  @keyframes shimmer-gold-intense {
+    0%, 100% { filter: brightness(1) saturate(1); }
+    50% { filter: brightness(1.3) saturate(1.2); }
+  }
+
+  @keyframes glow-pulse {
+    0%, 100% { filter: brightness(1) drop-shadow(0 0 4px currentColor); }
+    50% { filter: brightness(1.15) drop-shadow(0 0 8px currentColor); }
   }
 
   @keyframes border-spin {
@@ -157,22 +222,43 @@ export const profileAvatarStyles = `
     100% { filter: hue-rotate(360deg); }
   }
 
+  @keyframes border-spin-fast {
+    0% { filter: hue-rotate(0deg) brightness(1.1); }
+    100% { filter: hue-rotate(360deg) brightness(1.1); }
+  }
+
   @keyframes rainbow {
     0% { filter: hue-rotate(0deg) brightness(1.1); }
-    50% { filter: hue-rotate(180deg) brightness(1.2); }
+    50% { filter: hue-rotate(180deg) brightness(1.3); }
     100% { filter: hue-rotate(360deg) brightness(1.1); }
+  }
+
+  .animate-shimmer-silver {
+    animation: shimmer-silver 2.5s ease-in-out infinite;
   }
 
   .animate-shimmer-gold {
     animation: shimmer-gold 2s ease-in-out infinite;
   }
 
+  .animate-shimmer-gold-intense {
+    animation: shimmer-gold-intense 1.5s ease-in-out infinite;
+  }
+
+  .animate-glow-pulse {
+    animation: glow-pulse 2s ease-in-out infinite;
+  }
+
   .animate-border-spin {
     animation: border-spin 3s linear infinite;
   }
 
+  .animate-border-spin-fast {
+    animation: border-spin-fast 2s linear infinite;
+  }
+
   .animate-rainbow {
-    animation: rainbow 4s linear infinite;
+    animation: rainbow 3s linear infinite;
   }
 
   .animate-pulse-slow {
