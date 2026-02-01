@@ -10,19 +10,15 @@ import {
   CalendarIcon,
   TrophyIcon,
   UsersIcon,
-  FlameIcon,
-  StarIcon,
   ClockIcon,
   MapPinIcon,
 } from 'lucide-react';
 import { useAuth } from '../contexts/AuthContext';
 import { useWebSocket } from '../contexts/WebSocketContext';
-import { useTheme } from '../contexts/ThemeContext';
 import { useToast } from '../components/ui/Toast';
 import { clsx } from 'clsx';
 import { XP_THRESHOLDS as xpThresholds, LEVEL_TITLES as levelTitles, calculateLevel, getLevelTier } from '../utils/gamification';
 import { FloatingXP, LevelUpCelebration, AchievementUnlock } from '../components/gamification/Confetti';
-import ProfileAvatar from '../components/ui/ProfileAvatar';
 import {
   formatMoney,
   DEFAULT_START_TIME,
@@ -33,14 +29,20 @@ import {
   DEFAULTS,
   isToday,
   isTomorrow,
-  getSGHour,
   getSGDateString,
 } from '../utils/constants';
 
 // League Header Card - Main pool-style banner
 function LeagueCard({ user, userLevel, userXP, thisMonthEarnings, totalJobs, poolEndsIn }) {
   const levelTitle = levelTitles[userLevel] || 'Newcomer';
-  const tier = getLevelTier(userLevel);
+  
+  // XP progress calculations
+  const maxLevel = xpThresholds.length;
+  const currentThreshold = xpThresholds[userLevel - 1] || 0;
+  const nextThreshold = xpThresholds[userLevel] || xpThresholds[maxLevel - 1];
+  const xpInLevel = Math.max(0, userXP - currentThreshold);
+  const xpNeeded = Math.max(1, nextThreshold - currentThreshold);
+  const progress = userLevel >= maxLevel ? 100 : Math.min((xpInLevel / xpNeeded) * 100, 100);
   
   return (
     <div className="relative mx-4 mt-4 rounded-3xl overflow-hidden">
@@ -57,18 +59,11 @@ function LeagueCard({ user, userLevel, userXP, thisMonthEarnings, totalJobs, poo
       
       {/* Content */}
       <div className="relative p-5">
-        {/* Top row - Creator info style */}
+        {/* Top row - User info */}
         <div className="flex items-center gap-3 mb-4">
-          <ProfileAvatar
-            name={user?.name || 'Worker'}
-            photoUrl={user?.photo_url}
-            level={userLevel}
-            size="md"
-            showLevel={false}
-          />
           <div className="flex-1">
             <p className="text-white/60 text-sm">Welcome back</p>
-            <p className="text-white font-semibold">{user?.name || 'Worker'}</p>
+            <p className="text-white font-semibold text-lg">{user?.name || 'Worker'}</p>
           </div>
           <div className="flex items-center gap-2 px-3 py-1.5 rounded-full bg-emerald-500/20 border border-emerald-500/30">
             <div className="w-2 h-2 rounded-full bg-emerald-400 animate-pulse" />
@@ -77,23 +72,35 @@ function LeagueCard({ user, userLevel, userXP, thisMonthEarnings, totalJobs, poo
         </div>
 
         {/* League Title Banner */}
-        <div className="flex items-center justify-between mb-6">
-          <div className="flex items-center gap-3">
-            <div className="w-1 h-10 rounded-full bg-gradient-to-b from-emerald-400 to-cyan-400" />
-            <div>
-              <h1 className="text-2xl font-bold text-white flex items-center gap-2">
-                {levelTitle} League
-                <span className="text-2xl">🏆</span>
-              </h1>
-              <p className="text-white/50 text-sm">Level {userLevel} • {userXP.toLocaleString()} XP</p>
-            </div>
+        <div className="flex items-center gap-3 mb-4">
+          <div className="w-1 h-10 rounded-full bg-gradient-to-b from-emerald-400 to-cyan-400" />
+          <div>
+            <h1 className="text-2xl font-bold text-white flex items-center gap-2">
+              {levelTitle} League
+              <span className="text-2xl">🏆</span>
+            </h1>
+            <p className="text-white/50 text-sm">Level {userLevel} • {userXP.toLocaleString()} XP</p>
           </div>
-          <Link
-            to="/jobs"
-            className="px-5 py-2.5 rounded-full bg-white text-slate-900 font-semibold text-sm hover:bg-white/90 transition-all active:scale-95"
-          >
-            Find Jobs
-          </Link>
+        </div>
+
+        {/* XP Progress Bar */}
+        <div className="mb-6">
+          <div className="flex items-center justify-between text-sm mb-2">
+            <span className="text-white/50">Level Progress</span>
+            <span className="text-white">
+              <span className="text-emerald-400 font-bold">{xpInLevel.toLocaleString()}</span>
+              <span className="text-white/30"> / {xpNeeded.toLocaleString()} XP</span>
+            </span>
+          </div>
+          <div className="h-3 rounded-full bg-white/5 overflow-hidden">
+            <div
+              className="h-full rounded-full bg-gradient-to-r from-emerald-500 via-cyan-500 to-violet-500 transition-all duration-500"
+              style={{ width: `${Math.max(progress, 2)}%` }}
+            />
+          </div>
+          <p className="text-xs text-white/40 mt-1.5 text-right">
+            {(xpNeeded - xpInLevel).toLocaleString()} XP to {levelTitles[userLevel + 1] || 'Max Level'}
+          </p>
         </div>
 
         {/* Stats Cards Row */}
@@ -145,7 +152,7 @@ function StatPod({ label, value, emoji, color = 'emerald' }) {
 }
 
 // Activity Item for the feed
-function ActivityItem({ job, index }) {
+function ActivityItem({ job }) {
   const slotsLeft = job.total_slots - job.filled_slots;
   const startTime = job.start_time || DEFAULT_START_TIME;
   const hours = calculateJobHours(startTime, job.end_time || DEFAULT_END_TIME, job.break_minutes);
@@ -282,7 +289,6 @@ export default function Home() {
   const { user } = useAuth();
   const navigate = useNavigate();
   const ws = useWebSocket();
-  const { isDark } = useTheme();
   const toast = useToast();
   const [jobs, setJobs] = useState([]);
   const [recentPayments, setRecentPayments] = useState([]);
@@ -379,7 +385,7 @@ export default function Home() {
 
   const userXP = user?.xp || DEFAULTS.xp;
   const userLevel = calculateLevel(userXP);
-  const totalJobs = user?.jobs_completed || 0;
+  const totalJobs = user?.total_jobs_completed || 0;
 
   // Calculate next payout (example: end of week)
   const getNextPayout = () => {
@@ -395,11 +401,8 @@ export default function Home() {
 
   return (
     <div className="min-h-screen bg-[#020817] pb-24">
-      {/* Sidebar hint for navigation - shown on larger screens */}
-      <div className="hidden lg:block fixed left-0 top-0 w-20 h-full bg-[#0a0f1a] border-r border-white/5" />
-
       {/* Main Content */}
-      <div className="lg:ml-20">
+      <div>
         {/* League Hero Card */}
         <LeagueCard
           user={user}
@@ -452,8 +455,8 @@ export default function Home() {
               </div>
             ) : (
               <div className="divide-y divide-white/5">
-                {paginatedJobs.map((job, index) => (
-                  <ActivityItem key={job.id} job={job} index={index} />
+                {paginatedJobs.map((job) => (
+                  <ActivityItem key={job.id} job={job} />
                 ))}
               </div>
             )}
@@ -461,7 +464,7 @@ export default function Home() {
         </div>
 
         {/* Create Pool CTA - Bottom left floating button style element */}
-        <div className="fixed bottom-24 left-4 lg:left-24">
+        <div className="fixed bottom-24 left-4">
           <Link
             to="/quests"
             className="flex items-center gap-3 px-4 py-3 rounded-2xl bg-gradient-to-r from-violet-600 to-indigo-600 border border-violet-500/30 shadow-lg shadow-violet-500/20 hover:shadow-violet-500/30 transition-all active:scale-95"

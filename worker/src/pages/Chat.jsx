@@ -7,11 +7,9 @@ import {
   CheckCheckIcon,
   ChevronLeftIcon,
   PaperclipIcon,
-  ImageIcon,
   FileTextIcon,
   XIcon,
   DownloadIcon,
-  EyeIcon,
 } from 'lucide-react';
 import { useAuth } from '../contexts/AuthContext';
 import { useWebSocket } from '../contexts/WebSocketContext';
@@ -23,7 +21,6 @@ import { DEFAULT_LOCALE, TIMEZONE, getSGDateString, MS_PER_DAY } from '../utils/
 // Parse DB timestamp (stored as UTC without timezone indicator)
 function parseUTCTimestamp(timestamp) {
   if (!timestamp) return new Date();
-  // If timestamp doesn't end with Z, append it to indicate UTC
   const utcTimestamp = timestamp.endsWith('Z') ? timestamp : timestamp.replace(' ', 'T') + 'Z';
   return new Date(utcTimestamp);
 }
@@ -34,12 +31,7 @@ function MessageAttachment({ attachment, isOwn }) {
 
   if (isImage) {
     return (
-      <a
-        href={attachment.url || attachment.file_url}
-        target="_blank"
-        rel="noopener noreferrer"
-        className="block mb-2"
-      >
+      <a href={attachment.url || attachment.file_url} target="_blank" rel="noopener noreferrer" className="block mb-2">
         <img
           src={attachment.thumbnail_url || attachment.url || attachment.file_url}
           alt={attachment.name || attachment.original_name || 'Image'}
@@ -54,10 +46,7 @@ function MessageAttachment({ attachment, isOwn }) {
       href={attachment.url || attachment.file_url}
       target="_blank"
       rel="noopener noreferrer"
-      className={clsx(
-        'flex items-center gap-2 p-2 rounded-lg mb-2',
-        isOwn ? 'bg-white/10' : 'bg-slate-300 dark:bg-dark-700'
-      )}
+      className={clsx('flex items-center gap-2 p-2 rounded-lg mb-2', isOwn ? 'bg-white/10' : 'bg-white/5')}
     >
       <FileTextIcon className="h-5 w-5 flex-shrink-0" />
       <span className="flex-1 truncate text-sm">{attachment.name || attachment.original_name || 'Document'}</span>
@@ -74,15 +63,12 @@ function MessageBubble({ message, isOwn }) {
     timeZone: TIMEZONE
   });
 
-  // Parse attachments if stored as JSON string
   const attachments = message.attachments
     ? (typeof message.attachments === 'string' ? JSON.parse(message.attachments) : message.attachments)
     : [];
 
-  // Single attachment from message fields
   const hasInlineAttachment = message.attachment_url && message.attachment_type;
 
-  // Read receipt with timestamp
   const readAt = message.read_at
     ? parseUTCTimestamp(message.read_at).toLocaleTimeString(DEFAULT_LOCALE, {
         hour: '2-digit',
@@ -97,46 +83,29 @@ function MessageBubble({ message, isOwn }) {
       <div className={clsx(
         'max-w-[80%] px-4 py-2.5 rounded-2xl relative',
         isOwn
-          ? 'bg-primary-500 text-white rounded-br-md'
-          : 'bg-slate-200 dark:bg-dark-800 text-slate-900 dark:text-white rounded-bl-md'
+          ? 'bg-gradient-to-r from-emerald-500 to-cyan-500 text-white rounded-br-md'
+          : 'bg-[#0a1628] text-white rounded-bl-md border border-white/[0.05]'
       )}>
-        {/* Inline attachment */}
         {hasInlineAttachment && (
           <MessageAttachment
-            attachment={{
-              url: message.attachment_url,
-              type: message.attachment_type,
-              name: message.attachment_name,
-            }}
+            attachment={{ url: message.attachment_url, type: message.attachment_type, name: message.attachment_name }}
             isOwn={isOwn}
           />
         )}
 
-        {/* Multiple attachments */}
         {attachments.map((att, idx) => (
           <MessageAttachment key={idx} attachment={att} isOwn={isOwn} />
         ))}
 
-        {/* Message content */}
-        {message.content && (
-          <p className="whitespace-pre-wrap break-words">{message.content}</p>
-        )}
+        {message.content && <p className="whitespace-pre-wrap break-words">{message.content}</p>}
 
-        {/* Time and read status */}
-        <div className={clsx(
-          'flex items-center gap-1 mt-1',
-          isOwn ? 'justify-end' : 'justify-start'
-        )}>
-          <span className={clsx('text-xs', isOwn ? 'text-white/60' : 'text-slate-500 dark:text-dark-500')}>
-            {time}
-          </span>
+        <div className={clsx('flex items-center gap-1 mt-1', isOwn ? 'justify-end' : 'justify-start')}>
+          <span className={clsx('text-xs', isOwn ? 'text-white/60' : 'text-white/40')}>{time}</span>
           {isOwn && (
             message.read ? (
               <div className="flex items-center gap-0.5">
                 <CheckCheckIcon className="h-3 w-3 text-cyan-300" />
-                {readAt && (
-                  <span className="text-[10px] text-white/50">Seen {readAt}</span>
-                )}
+                {readAt && <span className="text-[10px] text-white/50">Seen {readAt}</span>}
               </div>
             ) : (
               <CheckIcon className="h-3 w-3 text-white/60" />
@@ -154,48 +123,84 @@ function DateDivider({ date }) {
   const msgDateSG = getSGDateString(parseUTCTimestamp(date));
 
   let label;
-  if (msgDateSG === todaySG) {
-    label = 'Today';
-  } else if (msgDateSG === yesterdaySG) {
-    label = 'Yesterday';
-  } else {
-    label = parseUTCTimestamp(date).toLocaleDateString(DEFAULT_LOCALE, { day: 'numeric', month: 'short', year: 'numeric', timeZone: TIMEZONE });
-  }
+  if (msgDateSG === todaySG) label = 'Today';
+  else if (msgDateSG === yesterdaySG) label = 'Yesterday';
+  else label = parseUTCTimestamp(date).toLocaleDateString(DEFAULT_LOCALE, { day: 'numeric', month: 'short', year: 'numeric', timeZone: TIMEZONE });
 
   return (
     <div className="flex items-center justify-center my-4">
-      <span className="px-3 py-1 rounded-full bg-slate-200/80 dark:bg-white/[0.08] backdrop-blur-md text-slate-600 dark:text-dark-400 text-xs border border-transparent dark:border-white/[0.05]">
+      <span className="px-3 py-1 rounded-full bg-white/[0.05] text-white/40 text-xs border border-white/[0.05]">
         {label}
       </span>
     </div>
   );
 }
 
-// Typing indicator bubble like WhatsApp
 function TypingIndicator() {
   return (
     <div className="flex justify-start">
-      <div className="bg-slate-200 dark:bg-dark-800 px-4 py-3 rounded-2xl rounded-bl-md">
+      <div className="bg-[#0a1628] px-4 py-3 rounded-2xl rounded-bl-md border border-white/[0.05]">
         <div className="flex gap-1 items-center">
-          <span className="w-2 h-2 bg-slate-400 dark:bg-dark-500 rounded-full animate-bounce" style={{ animationDelay: '0ms' }} />
-          <span className="w-2 h-2 bg-slate-400 dark:bg-dark-500 rounded-full animate-bounce" style={{ animationDelay: '150ms' }} />
-          <span className="w-2 h-2 bg-slate-400 dark:bg-dark-500 rounded-full animate-bounce" style={{ animationDelay: '300ms' }} />
+          <span className="w-2 h-2 bg-white/30 rounded-full animate-bounce" style={{ animationDelay: '0ms' }} />
+          <span className="w-2 h-2 bg-white/30 rounded-full animate-bounce" style={{ animationDelay: '150ms' }} />
+          <span className="w-2 h-2 bg-white/30 rounded-full animate-bounce" style={{ animationDelay: '300ms' }} />
         </div>
       </div>
     </div>
   );
 }
 
-// Quick Reply Chip - Glassmorphism
 function QuickReplyChip({ text, onClick }) {
   return (
     <button
       onClick={() => onClick(text)}
-      className="px-4 py-2 rounded-xl bg-white/80 dark:bg-white/[0.05] backdrop-blur-md border border-slate-200 dark:border-white/[0.1] text-sm text-slate-700 dark:text-slate-300 hover:bg-slate-50 dark:hover:bg-white/[0.08] transition-all whitespace-nowrap"
+      className="px-4 py-2 rounded-xl bg-[#0a1628] border border-white/[0.08] text-sm text-white/70 hover:bg-white/5 hover:text-white transition-all whitespace-nowrap"
     >
       {text}
     </button>
   );
+}
+
+// Generate context-aware quick replies based on last message
+function generateQuickReplies(lastMessage) {
+  if (!lastMessage || lastMessage.sender === 'candidate') {
+    return ['Hi there!', 'I have a question', 'Help me with jobs'];
+  }
+
+  const content = (lastMessage.content || '').toLowerCase();
+  
+  // Job-related questions
+  if (content.includes('job') || content.includes('work') || content.includes('shift')) {
+    return ['Yes, I can work', "I'm available", 'What are the details?', 'Not available'];
+  }
+  
+  // Schedule/availability questions
+  if (content.includes('available') || content.includes('schedule') || content.includes('when')) {
+    return ['Yes, I am', 'Let me check', 'This week works', 'Not this week'];
+  }
+  
+  // Confirmation requests
+  if (content.includes('confirm') || content.includes('accept')) {
+    return ['Yes, confirmed', 'Need more info', 'Can we reschedule?'];
+  }
+  
+  // Questions
+  if (content.includes('?')) {
+    return ['Yes', 'No', 'Maybe', 'Let me check'];
+  }
+  
+  // Payment related
+  if (content.includes('pay') || content.includes('salary') || content.includes('money')) {
+    return ['Thanks!', 'When will I receive?', 'Got it'];
+  }
+  
+  // Greetings
+  if (content.includes('hi') || content.includes('hello') || content.includes('hey')) {
+    return ['Hi! How can I help?', "I'm doing well", 'Need assistance'];
+  }
+  
+  // Default responses
+  return ['Thanks!', 'Okay, noted', 'Got it', 'Need more info'];
 }
 
 export default function Chat() {
@@ -208,32 +213,28 @@ export default function Chat() {
   const [sending, setSending] = useState(false);
   const [showEmoji, setShowEmoji] = useState(false);
   const [isTyping, setIsTyping] = useState(false);
-  const [quickReplies, setQuickReplies] = useState([]);
+  const [quickReplies, setQuickReplies] = useState(['Hi there!', 'I have a question', 'Help me with jobs']);
   const [uploadingFile, setUploadingFile] = useState(false);
   const [selectedFile, setSelectedFile] = useState(null);
   const [filePreview, setFilePreview] = useState(null);
   const messagesEndRef = useRef(null);
-  const messagesContainerRef = useRef(null);
   const inputRef = useRef(null);
   const fileInputRef = useRef(null);
   const typingTimeoutRef = useRef(null);
   const isTypingSentRef = useRef(false);
 
   useEffect(() => {
-    if (user) {
-      fetchMessages();
-      fetchQuickReplies();
-    }
+    if (user) fetchMessages();
   }, [user]);
 
-  // Fetch quick replies when messages change (context-aware)
+  // Update quick replies when messages change
   useEffect(() => {
-    if (user && messages.length > 0) {
-      fetchQuickReplies();
+    if (messages.length > 0) {
+      const lastAdminMessage = [...messages].reverse().find(m => m.sender !== 'candidate');
+      setQuickReplies(generateQuickReplies(lastAdminMessage));
     }
-  }, [messages.length]);
+  }, [messages]);
 
-  // Listen to WebSocket messages
   useEffect(() => {
     if (!ws) return;
 
@@ -248,10 +249,6 @@ export default function Chat() {
       }
     });
 
-    const unsubSent = ws.subscribe('message_sent', (data) => {
-      // Message was sent successfully - already added optimistically
-    });
-
     const unsubTyping = ws.subscribe('typing', (data) => {
       setIsTyping(data.typing);
     });
@@ -263,7 +260,6 @@ export default function Chat() {
     return () => {
       unsubHistory?.();
       unsubMessage?.();
-      unsubSent?.();
       unsubTyping?.();
       unsubRead?.();
     };
@@ -273,22 +269,17 @@ export default function Chat() {
     scrollToBottom();
   }, [messages]);
 
-  // Mark messages as read when viewing chat
   useEffect(() => {
-    if (ws && messages.length > 0) {
-      ws.markMessagesRead();
-    }
+    if (ws && messages.length > 0) ws.markMessagesRead();
   }, [ws, messages.length]);
 
   const fetchMessages = async () => {
     if (!user?.id) return;
-
     try {
       const res = await fetch(`/api/v1/chat/${user.id}/messages`);
       const data = await res.json();
       if (data.success) {
         setMessages(data.data.messages || []);
-        // Mark as read
         fetch(`/api/v1/chat/${user.id}/read`, { method: 'POST' });
       }
     } catch (error) {
@@ -298,34 +289,14 @@ export default function Chat() {
     }
   };
 
-  const fetchQuickReplies = async () => {
-    if (!user?.id) return;
-
-    try {
-      const res = await fetch(`/api/v1/quick-replies/${user.id}`);
-      const data = await res.json();
-      if (data.success && data.data?.suggestions) {
-        setQuickReplies(data.data.suggestions.slice(0, 4));
-      }
-    } catch (error) {
-      // Use default suggestions
-      setQuickReplies(['Thanks!', 'Okay, noted', 'I have a question']);
-    }
-  };
-
   const handleFileSelect = (e) => {
     const file = e.target.files?.[0];
     if (!file) return;
-
-    // Validate file size (10MB max)
     if (file.size > 10 * 1024 * 1024) {
-      alert('File too large. Maximum size is 10MB.');
+      alert('File too large. Max 10MB.');
       return;
     }
-
     setSelectedFile(file);
-
-    // Create preview for images
     if (file.type.startsWith('image/')) {
       const reader = new FileReader();
       reader.onload = (e) => setFilePreview(e.target.result);
@@ -338,30 +309,19 @@ export default function Chat() {
   const clearFileSelection = () => {
     setSelectedFile(null);
     setFilePreview(null);
-    if (fileInputRef.current) {
-      fileInputRef.current.value = '';
-    }
+    if (fileInputRef.current) fileInputRef.current.value = '';
   };
 
   const uploadFile = async () => {
     if (!selectedFile || !user?.id) return null;
-
     setUploadingFile(true);
     try {
       const formData = new FormData();
       formData.append('file', selectedFile);
       formData.append('candidateId', user.id);
-
-      const res = await fetch('/api/v1/chat/attachments', {
-        method: 'POST',
-        body: formData,
-      });
-
+      const res = await fetch('/api/v1/chat/attachments', { method: 'POST', body: formData });
       const data = await res.json();
-      if (data.success) {
-        return data.data;
-      }
-      return null;
+      return data.success ? data.data : null;
     } catch (error) {
       console.error('Failed to upload file:', error);
       return null;
@@ -373,13 +333,6 @@ export default function Chat() {
   const handleQuickReply = (text) => {
     setNewMessage(text);
     inputRef.current?.focus();
-
-    // Track usage for learning
-    fetch(`/api/v1/quick-replies/${user.id}/track`, {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ suggestion: text }),
-    }).catch(() => {});
   };
 
   const scrollToBottom = useCallback(() => {
@@ -388,18 +341,11 @@ export default function Chat() {
 
   const handleTyping = () => {
     if (ws) {
-      // Only send typing: true if we haven't already (debounce)
       if (!isTypingSentRef.current) {
         ws.sendTyping(true);
         isTypingSentRef.current = true;
       }
-
-      // Clear existing timeout
-      if (typingTimeoutRef.current) {
-        clearTimeout(typingTimeoutRef.current);
-      }
-
-      // Stop typing indicator after 2 seconds of no typing
+      if (typingTimeoutRef.current) clearTimeout(typingTimeoutRef.current);
       typingTimeoutRef.current = setTimeout(() => {
         ws.sendTyping(false);
         isTypingSentRef.current = false;
@@ -415,20 +361,17 @@ export default function Chat() {
     setSending(true);
     setShowEmoji(false);
 
-    // Stop typing indicator
     if (ws) {
       ws.sendTyping(false);
       isTypingSentRef.current = false;
     }
 
-    // Upload file first if selected
     let attachment = null;
     if (selectedFile) {
       attachment = await uploadFile();
       clearFileSelection();
     }
 
-    // Optimistically add message
     const tempMessage = {
       id: Date.now(),
       content,
@@ -442,18 +385,13 @@ export default function Chat() {
     setMessages(prev => [...prev, tempMessage]);
 
     try {
-      // Send via WebSocket
       if (ws?.isConnected) {
         ws.sendChatMessage(content);
       } else {
-        // Fallback to REST
         await fetch(`/api/v1/chat/${user.id}/messages`, {
           method: 'POST',
           headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify({
-            content,
-            attachmentId: attachment?.id,
-          }),
+          body: JSON.stringify({ content, attachmentId: attachment?.id }),
         });
       }
     } catch (error) {
@@ -476,17 +414,10 @@ export default function Chat() {
     inputRef.current?.focus();
   };
 
-  const handleInputFocus = () => {
-    // Close emoji picker when focusing input
-    setShowEmoji(false);
-  };
-
-  // Sort messages by timestamp first, then group by date (Singapore timezone)
   const sortedMessages = [...messages].sort((a, b) => {
     const timeA = parseUTCTimestamp(a.created_at).getTime();
     const timeB = parseUTCTimestamp(b.created_at).getTime();
     if (timeA !== timeB) return timeA - timeB;
-    // Secondary sort by ID for stable ordering
     return (a.id || 0) - (b.id || 0);
   });
 
@@ -499,34 +430,29 @@ export default function Chat() {
 
   if (!user) {
     return (
-      <div className="h-screen bg-white dark:bg-dark-950 flex items-center justify-center">
-        <p className="text-slate-500 dark:text-dark-400">Please log in to chat</p>
+      <div className="h-screen bg-[#020817] flex items-center justify-center">
+        <p className="text-white/40">Please log in to chat</p>
       </div>
     );
   }
 
   return (
-    <div className="h-screen bg-[#F5F7FA] dark:bg-dark-950 flex flex-col">
-      {/* Fixed Header - Glassmorphism */}
-      <div className="flex-shrink-0 bg-white/90 dark:bg-dark-950/90 backdrop-blur-xl px-4 pt-safe pb-3 shadow-[0_1px_3px_rgba(0,0,0,0.03)] dark:shadow-none dark:border-b dark:border-white/[0.08] z-10">
+    <div className="h-screen bg-[#020817] flex flex-col">
+      {/* Fixed Header */}
+      <div className="flex-shrink-0 bg-[#0a1628]/95 backdrop-blur-xl px-4 pt-4 pb-3 border-b border-white/[0.05] z-10" style={{ paddingTop: 'calc(env(safe-area-inset-top, 0px) + 16px)' }}>
         <div className="flex items-center gap-3">
-          {/* Back button */}
           <button
             onClick={() => navigate(-1)}
-            className="p-2 -ml-2 rounded-full hover:bg-slate-200 dark:hover:bg-dark-800 transition-colors"
+            className="p-2 -ml-2 rounded-xl text-white/50 hover:text-white hover:bg-white/5 transition-colors"
           >
-            <ChevronLeftIcon className="h-6 w-6 text-slate-900 dark:text-white" />
+            <ChevronLeftIcon className="h-6 w-6" />
           </button>
-
           <LogoIcon size={36} />
           <div className="flex-1">
-            <h1 className="font-semibold text-slate-900 dark:text-white">WorkLink Support</h1>
+            <h1 className="font-semibold text-white">WorkLink Support</h1>
             <div className="flex items-center gap-1.5">
-              <span className={clsx(
-                'w-2 h-2 rounded-full',
-                ws?.isConnected ? 'bg-accent-400' : 'bg-slate-400 dark:bg-dark-500'
-              )} />
-              <span className="text-xs text-slate-500 dark:text-dark-400">
+              <span className={clsx('w-2 h-2 rounded-full', ws?.isConnected ? 'bg-emerald-400' : 'bg-white/30')} />
+              <span className="text-xs text-white/40">
                 {ws?.isConnected ? (isTyping ? 'Typing...' : 'Online') : 'Connecting...'}
               </span>
             </div>
@@ -534,22 +460,19 @@ export default function Chat() {
         </div>
       </div>
 
-      {/* Messages Area - Scrollable */}
-      <div
-        ref={messagesContainerRef}
-        className="flex-1 overflow-y-auto overscroll-contain px-4 py-4 bg-[#F5F7FA] dark:bg-dark-950"
-      >
+      {/* Messages Area */}
+      <div className="flex-1 overflow-y-auto overscroll-contain px-4 py-4">
         {loading ? (
           <div className="flex items-center justify-center h-full">
-            <div className="animate-spin h-6 w-6 border-2 border-primary-500 border-t-transparent rounded-full" />
+            <div className="animate-spin h-6 w-6 border-2 border-emerald-500 border-t-transparent rounded-full" />
           </div>
         ) : messages.length === 0 ? (
           <div className="flex flex-col items-center justify-center h-full text-center">
-            <div className="w-16 h-16 rounded-full bg-primary-500/20 flex items-center justify-center mb-4">
-              <SendIcon className="h-8 w-8 text-primary-400" />
+            <div className="w-16 h-16 rounded-full bg-emerald-500/20 flex items-center justify-center mb-4">
+              <SendIcon className="h-8 w-8 text-emerald-400" />
             </div>
-            <p className="text-slate-900 dark:text-white font-medium">Start a conversation</p>
-            <p className="text-slate-500 dark:text-dark-400 text-sm mt-1">Send a message to WorkLink support</p>
+            <p className="text-white font-medium">Start a conversation</p>
+            <p className="text-white/40 text-sm mt-1">Send a message to WorkLink support</p>
           </div>
         ) : (
           <div className="space-y-3">
@@ -558,25 +481,20 @@ export default function Chat() {
                 <DateDivider date={date} />
                 <div className="space-y-3">
                   {msgs.map(msg => (
-                    <MessageBubble
-                      key={msg.id}
-                      message={msg}
-                      isOwn={msg.sender === 'candidate'}
-                    />
+                    <MessageBubble key={msg.id} message={msg} isOwn={msg.sender === 'candidate'} />
                   ))}
                 </div>
               </div>
             ))}
-            {/* Typing indicator - shows when admin is typing */}
             {isTyping && <TypingIndicator />}
             <div ref={messagesEndRef} />
           </div>
         )}
       </div>
 
-      {/* Quick Replies - show when no message being typed */}
+      {/* Quick Replies */}
       {quickReplies.length > 0 && !newMessage && !selectedFile && !showEmoji && (
-        <div className="flex-shrink-0 px-3 py-2 border-t border-slate-200/60 dark:border-white/[0.08] bg-white/90 dark:bg-dark-950/90 backdrop-blur-xl">
+        <div className="flex-shrink-0 px-3 py-2 border-t border-white/[0.05] bg-[#020817]">
           <div className="flex gap-2 overflow-x-auto scrollbar-hide">
             {quickReplies.map((reply, idx) => (
               <QuickReplyChip key={idx} text={reply} onClick={handleQuickReply} />
@@ -587,39 +505,34 @@ export default function Chat() {
 
       {/* File Preview */}
       {selectedFile && (
-        <div className="flex-shrink-0 px-3 py-2 border-t border-slate-200/60 dark:border-white/5 bg-white/90 dark:bg-dark-900">
-          <div className="flex items-center gap-3 p-2 rounded-lg bg-white dark:bg-dark-800 border border-slate-200 dark:border-white/10">
+        <div className="flex-shrink-0 px-3 py-2 border-t border-white/[0.05] bg-[#0a1628]">
+          <div className="flex items-center gap-3 p-2 rounded-xl bg-white/5 border border-white/[0.08]">
             {filePreview ? (
               <img src={filePreview} alt="Preview" className="w-12 h-12 rounded object-cover" />
             ) : (
-              <div className="w-12 h-12 rounded bg-slate-100 dark:bg-dark-700 flex items-center justify-center">
-                <FileTextIcon className="h-6 w-6 text-slate-500 dark:text-dark-400" />
+              <div className="w-12 h-12 rounded bg-white/5 flex items-center justify-center">
+                <FileTextIcon className="h-6 w-6 text-white/40" />
               </div>
             )}
             <div className="flex-1 min-w-0">
-              <p className="text-sm font-medium text-slate-900 dark:text-white truncate">{selectedFile.name}</p>
-              <p className="text-xs text-slate-500 dark:text-dark-400">
-                {(selectedFile.size / 1024).toFixed(1)} KB
-              </p>
+              <p className="text-sm font-medium text-white truncate">{selectedFile.name}</p>
+              <p className="text-xs text-white/40">{(selectedFile.size / 1024).toFixed(1)} KB</p>
             </div>
-            <button
-              onClick={clearFileSelection}
-              className="p-1.5 rounded-full hover:bg-slate-100 dark:hover:bg-dark-700 text-slate-500 dark:text-dark-400"
-            >
+            <button onClick={clearFileSelection} className="p-1.5 rounded-lg hover:bg-white/5 text-white/40">
               <XIcon className="h-5 w-5" />
             </button>
           </div>
         </div>
       )}
 
-      {/* Emoji picker - positioned above input */}
+      {/* Emoji picker */}
       {showEmoji && (
-        <div className="flex-shrink-0 border-t border-slate-200/60 dark:border-white/5">
+        <div className="flex-shrink-0 border-t border-white/[0.05]">
           <EmojiPicker
             onEmojiClick={handleEmojiClick}
             width="100%"
             height={280}
-            theme="auto"
+            theme="dark"
             searchPlaceHolder="Search emoji..."
             previewConfig={{ showPreview: false }}
           />
@@ -627,26 +540,15 @@ export default function Chat() {
       )}
 
       {/* Hidden file input */}
-      <input
-        ref={fileInputRef}
-        type="file"
-        accept="image/*,.pdf,.doc,.docx,.txt"
-        onChange={handleFileSelect}
-        className="hidden"
-      />
+      <input ref={fileInputRef} type="file" accept="image/*,.pdf,.doc,.docx,.txt" onChange={handleFileSelect} className="hidden" />
 
-      {/* Input Area - Glassmorphism */}
-      <div className="flex-shrink-0 bg-white/90 dark:bg-dark-950/90 backdrop-blur-xl px-3 py-2 pb-safe border-t border-slate-200/60 dark:border-white/[0.08]">
+      {/* Input Area */}
+      <div className="flex-shrink-0 bg-[#0a1628]/95 backdrop-blur-xl px-3 py-2 border-t border-white/[0.05]" style={{ paddingBottom: 'calc(env(safe-area-inset-bottom, 0px) + 8px)' }}>
         <div className="flex items-center gap-2">
-          {/* File attachment button */}
           <button
             onClick={() => fileInputRef.current?.click()}
             disabled={uploadingFile}
-            className={clsx(
-              'p-2.5 rounded-full transition-colors flex-shrink-0',
-              'text-slate-500 dark:text-dark-400 hover:text-slate-700 dark:hover:text-white',
-              uploadingFile && 'opacity-50'
-            )}
+            className="p-2.5 rounded-xl text-white/40 hover:text-white hover:bg-white/5 transition-colors disabled:opacity-50"
           >
             <PaperclipIcon className="h-5 w-5" />
           </button>
@@ -654,8 +556,8 @@ export default function Chat() {
           <button
             onClick={() => setShowEmoji(!showEmoji)}
             className={clsx(
-              'p-2.5 rounded-full transition-colors flex-shrink-0',
-              showEmoji ? 'bg-primary-500 text-white' : 'text-slate-500 dark:text-dark-400 hover:text-slate-700 dark:hover:text-white'
+              'p-2.5 rounded-xl transition-colors',
+              showEmoji ? 'bg-emerald-500 text-white' : 'text-white/40 hover:text-white hover:bg-white/5'
             )}
           >
             <SmileIcon className="h-5 w-5" />
@@ -665,24 +567,21 @@ export default function Chat() {
             ref={inputRef}
             type="text"
             value={newMessage}
-            onChange={(e) => {
-              setNewMessage(e.target.value);
-              handleTyping();
-            }}
+            onChange={(e) => { setNewMessage(e.target.value); handleTyping(); }}
             onKeyPress={handleKeyPress}
-            onFocus={handleInputFocus}
+            onFocus={() => setShowEmoji(false)}
             placeholder="Message"
-            className="flex-1 h-10 px-4 rounded-full bg-slate-100 dark:bg-white/[0.05] backdrop-blur-md border border-slate-300 dark:border-white/[0.1] text-slate-900 dark:text-white placeholder-slate-500 dark:placeholder-dark-500 focus:outline-none focus:border-primary-500 text-sm transition-all"
+            className="flex-1 h-10 px-4 rounded-xl bg-white/5 border border-white/[0.08] text-white placeholder-white/30 focus:outline-none focus:border-emerald-500/50 text-sm transition-all"
           />
 
           <button
             onClick={handleSend}
             disabled={(!newMessage.trim() && !selectedFile) || sending || uploadingFile}
             className={clsx(
-              'p-2.5 rounded-full transition-all flex-shrink-0',
+              'p-2.5 rounded-xl transition-all',
               (newMessage.trim() || selectedFile)
-                ? 'bg-gradient-to-r from-primary-500 to-blue-500 text-white shadow-lg shadow-primary-500/30'
-                : 'text-slate-400 dark:text-dark-500'
+                ? 'bg-gradient-to-r from-emerald-500 to-cyan-500 text-white shadow-lg shadow-emerald-500/25'
+                : 'text-white/30'
             )}
           >
             {uploadingFile ? (

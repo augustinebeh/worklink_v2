@@ -12,22 +12,16 @@ import {
   SaveIcon,
 } from 'lucide-react';
 import { useAuth } from '../contexts/AuthContext';
-import { useTheme } from '../contexts/ThemeContext';
 import { useToast } from '../components/ui/Toast';
 import { clsx } from 'clsx';
 
 function FormField({ label, icon: Icon, children, error, completed }) {
-  const { isDark } = useTheme();
-
   return (
     <div className="space-y-2">
-      <label className={clsx(
-        'flex items-center gap-2 text-sm font-medium',
-        isDark ? 'text-dark-300' : 'text-slate-600'
-      )}>
+      <label className="flex items-center gap-2 text-sm font-medium text-white/60">
         <Icon className="h-4 w-4" />
         {label}
-        {completed && <CheckCircleIcon className="h-4 w-4 text-accent-400 ml-auto" />}
+        {completed && <CheckCircleIcon className="h-4 w-4 text-emerald-400 ml-auto" />}
       </label>
       {children}
       {error && (
@@ -43,7 +37,6 @@ function FormField({ label, icon: Icon, children, error, completed }) {
 export default function CompleteProfile() {
   const navigate = useNavigate();
   const { user, refreshUser } = useAuth();
-  const { isDark } = useTheme();
   const toast = useToast();
 
   const [formData, setFormData] = useState({
@@ -78,33 +71,46 @@ export default function CompleteProfile() {
     const file = e.target.files?.[0];
     if (!file || !user?.id) return;
 
+    if (!file.type.startsWith('image/')) {
+      toast.error('Invalid file', 'Please select an image file');
+      return;
+    }
+
     if (file.size > 5 * 1024 * 1024) {
       toast.error('File too large', 'Please select an image under 5MB');
       return;
     }
 
     setUploadingPhoto(true);
-    const formData = new FormData();
-    formData.append('photo', file);
 
-    try {
-      const res = await fetch(`/api/v1/candidates/${user.id}/photo`, {
-        method: 'POST',
-        body: formData,
-      });
-      const data = await res.json();
+    // Convert to base64
+    const reader = new FileReader();
+    reader.onload = async (event) => {
+      try {
+        const res = await fetch(`/api/v1/candidates/${user.id}/photo`, {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ photo: event.target?.result }),
+        });
+        const data = await res.json();
 
-      if (data.success) {
-        toast.success('Photo uploaded', 'Your profile picture has been updated');
-        refreshUser?.();
-      } else {
-        toast.error('Upload failed', data.error);
+        if (data.success) {
+          toast.success('Photo uploaded', 'Your profile picture has been updated');
+          await refreshUser?.();
+        } else {
+          toast.error('Upload failed', data.error || 'Please try again');
+        }
+      } catch (error) {
+        toast.error('Upload failed', 'Please try again');
+      } finally {
+        setUploadingPhoto(false);
       }
-    } catch (error) {
-      toast.error('Upload failed', 'Please try again');
-    } finally {
+    };
+    reader.onerror = () => {
+      toast.error('Upload failed', 'Could not read the image file');
       setUploadingPhoto(false);
-    }
+    };
+    reader.readAsDataURL(file);
   };
 
   const validate = () => {
@@ -137,7 +143,6 @@ export default function CompleteProfile() {
 
     setSaving(true);
     try {
-      console.log('Saving profile:', formData);
       const res = await fetch(`/api/v1/candidates/${user.id}`, {
         method: 'PATCH',
         headers: { 'Content-Type': 'application/json' },
@@ -145,7 +150,6 @@ export default function CompleteProfile() {
       });
 
       const data = await res.json();
-      console.log('Save response:', data);
 
       if (data.success) {
         toast.success('Profile saved', 'Your profile has been updated');
@@ -153,10 +157,8 @@ export default function CompleteProfile() {
         navigate('/profile');
       } else {
         toast.error('Save failed', data.error || 'Unknown error occurred');
-        console.error('Profile save failed:', data);
       }
     } catch (error) {
-      console.error('Profile save error:', error);
       toast.error('Save failed', error.message || 'Please try again');
     } finally {
       setSaving(false);
@@ -175,45 +177,37 @@ export default function CompleteProfile() {
 
   if (!user) {
     return (
-      <div className={clsx('min-h-screen flex items-center justify-center', isDark ? 'bg-dark-950' : 'bg-slate-50')}>
-        <p className={isDark ? 'text-dark-400' : 'text-slate-500'}>Please log in to edit your profile</p>
+      <div className="min-h-screen bg-[#020817] flex items-center justify-center">
+        <p className="text-white/40">Please log in to edit your profile</p>
       </div>
     );
   }
 
   return (
-    <div className={clsx('min-h-screen pb-24', isDark ? 'bg-dark-950' : 'bg-transparent')}>
+    <div className="min-h-screen bg-[#020817] pb-24">
       {/* Header */}
-      <div className={clsx(
-        'sticky top-0 z-10 backdrop-blur-lg px-4 pt-safe pb-4',
-        isDark ? 'bg-dark-950/95 border-b border-white/5' : 'bg-white/90 shadow-[0_1px_3px_rgba(0,0,0,0.03)]'
-      )}>
+      <div className="sticky top-0 z-10 bg-[#020817]/95 backdrop-blur-xl px-4 pt-4 pb-4 border-b border-white/[0.05]">
         <div className="flex items-center gap-3">
           <button
             onClick={() => navigate(-1)}
-            className={clsx(
-              'p-2 rounded-xl transition-colors',
-              isDark ? 'hover:bg-dark-800' : 'hover:bg-slate-100'
-            )}
+            className="p-2 rounded-xl text-white/50 hover:text-white hover:bg-white/5 transition-colors"
           >
-            <ChevronLeftIcon className={clsx('h-6 w-6', isDark ? 'text-white' : 'text-slate-900')} />
+            <ChevronLeftIcon className="h-6 w-6" />
           </button>
           <div className="flex-1">
-            <h1 className={clsx('text-xl font-bold', isDark ? 'text-white' : 'text-slate-900')}>
-              Complete Profile
-            </h1>
-            <p className={clsx('text-sm', isDark ? 'text-dark-400' : 'text-slate-500')}>
-              {completionPercent}% complete
-            </p>
+            <h1 className="text-xl font-bold text-white">Complete Profile</h1>
+            <p className="text-sm text-white/40">{completionPercent}% complete</p>
           </div>
         </div>
 
         {/* Progress bar */}
-        <div className={clsx('mt-3 h-2 rounded-full overflow-hidden', isDark ? 'bg-dark-800' : 'bg-slate-200')}>
+        <div className="mt-3 h-2 rounded-full bg-white/5 overflow-hidden">
           <div
             className={clsx(
               'h-full rounded-full transition-all duration-500',
-              completionPercent === 100 ? 'bg-accent-500' : 'bg-primary-500'
+              completionPercent === 100 
+                ? 'bg-gradient-to-r from-emerald-500 to-cyan-500' 
+                : 'bg-gradient-to-r from-violet-500 to-cyan-500'
             )}
             style={{ width: `${completionPercent}%` }}
           />
@@ -231,25 +225,20 @@ export default function CompleteProfile() {
               className="hidden"
               disabled={uploadingPhoto}
             />
-            <div className={clsx(
-              'w-28 h-28 rounded-2xl flex items-center justify-center border-2 border-dashed overflow-hidden transition-colors',
-              isDark
-                ? 'bg-dark-800 border-dark-600 hover:border-primary-500'
-                : 'bg-slate-100 border-slate-300 hover:border-primary-500'
-            )}>
+            <div className="w-28 h-28 rounded-2xl bg-[#0a1628] border-2 border-dashed border-white/10 flex items-center justify-center overflow-hidden hover:border-emerald-500/50 transition-colors">
               {uploadingPhoto ? (
-                <div className="animate-spin h-8 w-8 border-3 border-primary-500 border-t-transparent rounded-full" />
+                <div className="animate-spin h-8 w-8 border-2 border-emerald-500 border-t-transparent rounded-full" />
               ) : user.profile_photo ? (
                 <img src={user.profile_photo} alt="" className="w-full h-full object-cover" />
               ) : (
                 <div className="text-center">
-                  <CameraIcon className={clsx('h-8 w-8 mx-auto mb-1', isDark ? 'text-dark-400' : 'text-slate-400')} />
-                  <span className={clsx('text-xs', isDark ? 'text-dark-400' : 'text-slate-500')}>Add Photo</span>
+                  <CameraIcon className="h-8 w-8 mx-auto mb-1 text-white/30" />
+                  <span className="text-xs text-white/40">Add Photo</span>
                 </div>
               )}
             </div>
             {user.profile_photo && (
-              <div className="absolute -bottom-1 -right-1 w-6 h-6 rounded-full bg-accent-500 flex items-center justify-center">
+              <div className="absolute -bottom-1 -right-1 w-6 h-6 rounded-full bg-emerald-500 flex items-center justify-center">
                 <CheckCircleIcon className="h-4 w-4 text-white" />
               </div>
             )}
@@ -258,96 +247,57 @@ export default function CompleteProfile() {
 
         {/* Form Fields */}
         <div className="space-y-4">
-          <FormField
-            label="Full Name"
-            icon={UserIcon}
-            error={errors.name}
-            completed={!!formData.name}
-          >
+          <FormField label="Full Name" icon={UserIcon} error={errors.name} completed={!!formData.name}>
             <input
               type="text"
               value={formData.name}
               onChange={(e) => handleChange('name', e.target.value)}
               placeholder="Enter your full name"
               className={clsx(
-                'w-full px-4 py-3 rounded-xl border transition-colors focus:outline-none focus:ring-2',
-                isDark
-                  ? 'bg-dark-800 border-dark-700 text-white placeholder-dark-500 focus:border-primary-500 focus:ring-primary-500/20'
-                  : 'bg-white border-slate-200 text-slate-900 placeholder-slate-400 focus:border-primary-500 focus:ring-primary-500/20',
-                errors.name && 'border-red-500'
+                'w-full px-4 py-3 rounded-xl bg-[#0a1628] border text-white placeholder-white/30 focus:outline-none focus:border-emerald-500/50 transition-colors',
+                errors.name ? 'border-red-500' : 'border-white/[0.05]'
               )}
             />
           </FormField>
 
-          <FormField
-            label="Phone Number"
-            icon={PhoneIcon}
-            error={errors.phone}
-            completed={!!formData.phone}
-          >
+          <FormField label="Phone Number" icon={PhoneIcon} error={errors.phone} completed={!!formData.phone}>
             <input
               type="tel"
               value={formData.phone}
               onChange={(e) => handleChange('phone', e.target.value)}
               placeholder="+65 9XXX XXXX"
               className={clsx(
-                'w-full px-4 py-3 rounded-xl border transition-colors focus:outline-none focus:ring-2',
-                isDark
-                  ? 'bg-dark-800 border-dark-700 text-white placeholder-dark-500 focus:border-primary-500 focus:ring-primary-500/20'
-                  : 'bg-white border-slate-200 text-slate-900 placeholder-slate-400 focus:border-primary-500 focus:ring-primary-500/20',
-                errors.phone && 'border-red-500'
+                'w-full px-4 py-3 rounded-xl bg-[#0a1628] border text-white placeholder-white/30 focus:outline-none focus:border-emerald-500/50 transition-colors',
+                errors.phone ? 'border-red-500' : 'border-white/[0.05]'
               )}
             />
           </FormField>
 
-          <FormField
-            label="Address"
-            icon={MapPinIcon}
-            completed={!!formData.address}
-          >
+          <FormField label="Address" icon={MapPinIcon} completed={!!formData.address}>
             <input
               type="text"
               value={formData.address}
               onChange={(e) => handleChange('address', e.target.value)}
               placeholder="Enter your address (optional)"
-              className={clsx(
-                'w-full px-4 py-3 rounded-xl border transition-colors focus:outline-none focus:ring-2',
-                isDark
-                  ? 'bg-dark-800 border-dark-700 text-white placeholder-dark-500 focus:border-primary-500 focus:ring-primary-500/20'
-                  : 'bg-white border-slate-200 text-slate-900 placeholder-slate-400 focus:border-primary-500 focus:ring-primary-500/20'
-              )}
+              className="w-full px-4 py-3 rounded-xl bg-[#0a1628] border border-white/[0.05] text-white placeholder-white/30 focus:outline-none focus:border-emerald-500/50 transition-colors"
             />
           </FormField>
 
-          <FormField
-            label="Date of Birth"
-            icon={CalendarIcon}
-            completed={!!formData.date_of_birth}
-          >
+          <FormField label="Date of Birth" icon={CalendarIcon} completed={!!formData.date_of_birth}>
             <input
               type="date"
               value={formData.date_of_birth}
               onChange={(e) => handleChange('date_of_birth', e.target.value)}
-              className={clsx(
-                'w-full px-4 py-3 rounded-xl border transition-colors focus:outline-none focus:ring-2',
-                isDark
-                  ? 'bg-dark-800 border-dark-700 text-white focus:border-primary-500 focus:ring-primary-500/20'
-                  : 'bg-white border-slate-200 text-slate-900 focus:border-primary-500 focus:ring-primary-500/20'
-              )}
+              className="w-full px-4 py-3 rounded-xl bg-[#0a1628] border border-white/[0.05] text-white focus:outline-none focus:border-emerald-500/50 transition-colors"
             />
           </FormField>
         </div>
 
         {/* Completion Tips */}
         {completionPercent < 100 && (
-          <div className={clsx(
-            'p-4 rounded-xl border',
-            isDark ? 'bg-primary-900/20 border-primary-500/30' : 'bg-primary-50 border-primary-200'
-          )}>
-            <p className={clsx('text-sm font-medium mb-2', isDark ? 'text-white' : 'text-slate-900')}>
-              Complete your profile to:
-            </p>
-            <ul className={clsx('text-sm space-y-1', isDark ? 'text-dark-300' : 'text-slate-600')}>
+          <div className="p-4 rounded-2xl bg-violet-500/10 border border-violet-500/20">
+            <p className="text-sm font-medium mb-2 text-white">Complete your profile to:</p>
+            <ul className="text-sm space-y-1 text-white/60">
               <li>• Get matched with more jobs</li>
               <li>• Earn +100 XP bonus</li>
               <li>• Unlock special quests</li>
@@ -360,10 +310,10 @@ export default function CompleteProfile() {
           onClick={handleSave}
           disabled={saving}
           className={clsx(
-            'w-full py-4 rounded-xl font-semibold flex items-center justify-center gap-2 transition-colors',
+            'w-full py-4 rounded-xl font-semibold flex items-center justify-center gap-2 transition-all active:scale-[0.98]',
             saving
-              ? 'bg-primary-500/50 text-white/50'
-              : 'bg-primary-500 text-white hover:bg-primary-600 active:scale-[0.98]'
+              ? 'bg-emerald-500/50 text-white/50'
+              : 'bg-gradient-to-r from-emerald-500 to-cyan-500 text-white shadow-lg shadow-emerald-500/25'
           )}
         >
           {saving ? (
