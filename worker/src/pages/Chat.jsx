@@ -95,6 +95,7 @@ export default function Chat() {
   const messagesContainerRef = useRef(null);
   const inputRef = useRef(null);
   const typingTimeoutRef = useRef(null);
+  const isTypingSentRef = useRef(false);
   const containerRef = useRef(null);
 
   // Handle visual viewport changes (keyboard open/close)
@@ -206,16 +207,21 @@ export default function Chat() {
 
   const handleTyping = () => {
     if (ws) {
-      ws.sendTyping(true);
+      // Only send typing: true if we haven't already (debounce)
+      if (!isTypingSentRef.current) {
+        ws.sendTyping(true);
+        isTypingSentRef.current = true;
+      }
 
       // Clear existing timeout
       if (typingTimeoutRef.current) {
         clearTimeout(typingTimeoutRef.current);
       }
 
-      // Stop typing indicator after 2 seconds
+      // Stop typing indicator after 2 seconds of no typing
       typingTimeoutRef.current = setTimeout(() => {
         ws.sendTyping(false);
+        isTypingSentRef.current = false;
       }, 2000);
     }
   };
@@ -236,6 +242,7 @@ export default function Chat() {
     // Stop typing indicator
     if (ws) {
       ws.sendTyping(false);
+      isTypingSentRef.current = false;
     }
 
     // Optimistically add message
