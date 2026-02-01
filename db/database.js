@@ -551,12 +551,21 @@ function createSchema() {
       FOREIGN KEY (group_id) REFERENCES telegram_groups(id)
     );
 
-    -- Auto-post settings
+    -- Auto-post settings (key-value style)
     CREATE TABLE IF NOT EXISTS telegram_post_settings (
       id INTEGER PRIMARY KEY AUTOINCREMENT,
       key TEXT UNIQUE NOT NULL,
       value TEXT NOT NULL,
       updated_at DATETIME DEFAULT CURRENT_TIMESTAMP
+    );
+
+    -- Telegram auto-post settings (used by telegram-posting service)
+    CREATE TABLE IF NOT EXISTS telegram_auto_post_settings (
+      id INTEGER PRIMARY KEY AUTOINCREMENT,
+      enabled INTEGER DEFAULT 0,
+      post_on_job_create INTEGER DEFAULT 1,
+      default_groups TEXT,
+      created_at DATETIME DEFAULT CURRENT_TIMESTAMP
     );
 
     -- =====================================================

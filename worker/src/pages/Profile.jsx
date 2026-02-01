@@ -24,10 +24,12 @@ import {
   XIcon,
   SettingsIcon,
   FlameIcon,
+  BellIcon,
 } from 'lucide-react';
 import { useToast } from '../components/ui/Toast';
 import { useAuth } from '../contexts/AuthContext';
 import { useTheme } from '../contexts/ThemeContext';
+import { usePushNotifications } from '../hooks/usePushNotifications';
 import { clsx } from 'clsx';
 import { XP_THRESHOLDS as xpThresholds, LEVEL_TITLES as levelTitles, calculateLevel, getLevelTier, LEVEL_TIERS } from '../utils/gamification';
 import { DEFAULTS } from '../utils/constants';
@@ -123,6 +125,7 @@ export default function Profile() {
   const { user, logout, refreshUser } = useAuth();
   const { isDark, toggleTheme } = useTheme();
   const toast = useToast();
+  const pushNotifications = usePushNotifications();
   const [copied, setCopied] = useState(false);
   const [achievements, setAchievements] = useState([]);
   const [uploadingPhoto, setUploadingPhoto] = useState(false);
@@ -391,6 +394,36 @@ export default function Profile() {
           onClick={handleConnectTelegram}
           badge={user.telegram_chat_id ? '✓ Connected' : null}
         />
+        {pushNotifications.isSupported && (
+          <MenuLink
+            icon={BellIcon}
+            label="Push Notifications"
+            sublabel={
+              pushNotifications.permission === 'denied'
+                ? 'Blocked in browser settings'
+                : pushNotifications.isSubscribed
+                  ? 'Receive instant alerts'
+                  : 'Enable job alerts'
+            }
+            onClick={async () => {
+              if (pushNotifications.isSubscribed) {
+                const success = await pushNotifications.unsubscribe();
+                if (success) toast.info('Disabled', 'Push notifications turned off');
+              } else {
+                const success = await pushNotifications.subscribe();
+                if (success) {
+                  toast.success('Enabled!', 'You will receive push notifications');
+                } else if (pushNotifications.permission === 'denied') {
+                  toast.error('Blocked', 'Please enable notifications in browser settings');
+                }
+              }
+            }}
+            badge={
+              pushNotifications.isLoading ? '...' :
+              pushNotifications.isSubscribed ? '✓ Enabled' : null
+            }
+          />
+        )}
         <MenuLink icon={LogOutIcon} label="Log Out" onClick={handleLogout} danger />
       </div>
 

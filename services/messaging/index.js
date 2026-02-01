@@ -1,6 +1,11 @@
 /**
  * Unified Messaging Service
  * Routes messages to appropriate channels: app (WebSocket), telegram, whatsapp
+ * 
+ * CHANNEL ROUTING LOGIC:
+ * - Worker sends via PWA → Reply goes to PWA only
+ * - Worker sends via Telegram → Reply goes to Telegram only
+ * - Admin can override and send to specific channel or 'all'
  */
 
 const { db } = require('../../db/database');
@@ -13,18 +18,46 @@ const Channels = {
   APP: 'app',
   TELEGRAM: 'telegram',
   WHATSAPP: 'whatsapp',
+  AUTO: 'auto',  // Auto-detect based on last message
+  ALL: 'all',    // Send to all available channels
 };
 
 /**
- * Send a message from admin to candidate
- * Sends to BOTH PWA (WebSocket + Push) AND Telegram when linked
+ * Get the channel of the last message from a candidate
+ * Used to determine where to send the reply
+ */
+function getLastCandidateMessageChannel(candidateId) {
+  const lastMessage = db.prepare(`
+    SELECT channel FROM messages 
+    WHERE candidate_id = ? AND sender = 'candidate'
+    ORDER BY created_at DESC
+    LIMIT 1
+  `).get(candidateId);
+  
+  return lastMessage?.channel || 'app';
+}
+
+/**
+ * Send a message from admin/AI to candidate
+ * 
+ * Channel routing:
+ * - 'auto': Reply on the same channel worker last messaged from
+ * - 'app': PWA only (WebSocket + Push)
+ * - 'telegram': Telegram only
+ * - 'all': Send to all available channels
  *
  * @param {string} candidateId - Candidate ID
  * @param {string} content - Message content
- * @param {object} options - { channel, templateId }
+ * @param {object} options - { channel, templateId, aiGenerated, aiSource, replyToChannel }
  */
 async function sendToCandidate(candidateId, content, options = {}) {
-  const { channel = 'auto', templateId = null, aiGenerated = false, aiSource = null } = options;
+  const { 
+    channel = 'auto', 
+    templateId = null, 
+    aiGenerated = false, 
+    aiSource = null,
+    replyToChannel = null  // Explicit channel from AI processing
+  } = options;
 
   // Get candidate info
   const candidate = db.prepare(`
@@ -36,65 +69,93 @@ async function sendToCandidate(candidateId, content, options = {}) {
     return { success: false, error: 'Candidate not found' };
   }
 
+  // Determine target channel
+  let targetChannel = channel;
+  if (channel === 'auto') {
+    // Use explicit replyToChannel if provided, otherwise detect from last message
+    targetChannel = replyToChannel || getLastCandidateMessageChannel(candidateId);
+  }
+
+  console.log(`📤 [Messaging] Sending to ${candidateId} via ${targetChannel} (requested: ${channel})`);
+
   let externalId = null;
   let deliveryMethod = [];
+  let sentToTelegram = false;
+  let sentToApp = false;
 
-  // 1. Store message in database FIRST to get the ID
+  // 1. Store message in database FIRST
   const messageId = Date.now();
-  const timestamp = new Date().toISOString(); // Millisecond precision
+  const timestamp = new Date().toISOString();
   db.prepare(`
     INSERT INTO messages (id, candidate_id, sender, content, template_id, channel, read, ai_generated, ai_source, created_at)
-    VALUES (?, ?, 'admin', ?, ?, 'app', 0, ?, ?, ?)
-  `).run(messageId, candidateId, content, templateId, aiGenerated ? 1 : 0, aiSource, timestamp);
+    VALUES (?, ?, 'admin', ?, ?, ?, 0, ?, ?, ?)
+  `).run(messageId, candidateId, content, templateId, targetChannel, aiGenerated ? 1 : 0, aiSource, timestamp);
 
-  // 2. Send to Telegram if linked (do this early to get external_id)
-  if (candidate.telegram_chat_id && telegram.isConfigured()) {
+  // 2. Route to appropriate channel(s)
+  const shouldSendToTelegram = (targetChannel === 'telegram' || targetChannel === 'all') && 
+                                candidate.telegram_chat_id && 
+                                telegram.isConfigured();
+  
+  const shouldSendToApp = targetChannel === 'app' || targetChannel === 'all';
+
+  // Send to Telegram if needed
+  if (shouldSendToTelegram) {
     const telegramResult = await telegram.sendMessage(candidate.telegram_chat_id, content);
     if (telegramResult.success) {
       externalId = String(telegramResult.messageId);
       deliveryMethod.push('telegram');
-      // Update message with external ID
+      sentToTelegram = true;
       db.prepare(`UPDATE messages SET external_id = ? WHERE id = ?`).run(externalId, messageId);
+      console.log(`✅ [Telegram] Message sent to ${candidateId}`);
     } else {
-      console.error('Telegram send failed:', telegramResult.error);
+      console.error(`❌ [Telegram] Failed to send to ${candidateId}:`, telegramResult.error);
     }
   }
 
   // 3. Get the full message from DB
   const message = db.prepare('SELECT * FROM messages WHERE id = ?').get(messageId);
 
-  // 4. Send via WebSocket with FULL message (for PWA real-time)
-  broadcastToCandidate(candidateId, {
-    type: EventTypes.CHAT_MESSAGE,
-    message,
-  });
-  deliveryMethod.push('websocket');
+  // Send to PWA if needed
+  if (shouldSendToApp) {
+    // Send via WebSocket
+    broadcastToCandidate(candidateId, {
+      type: EventTypes.CHAT_MESSAGE,
+      message,
+    });
+    deliveryMethod.push('websocket');
+    sentToApp = true;
+    console.log(`✅ [WebSocket] Message broadcast to ${candidateId}`);
 
-  // 5. Create in-app notification
-  createNotification(candidateId, 'chat', 'New message from WorkLink', content);
+    // Create in-app notification
+    createNotification(candidateId, 'chat', 'New message from WorkLink', content);
 
-  // 6. Send push notification if offline
-  const isOnline = isCandidateOnline(candidateId);
-  if (!isOnline && candidate.push_token) {
-    const pushSent = await sendPushNotification(candidate, 'New Message', content);
-    if (pushSent) {
-      deliveryMethod.push('push');
+    // Send push notification if offline
+    const isOnline = isCandidateOnline(candidateId);
+    if (!isOnline && candidate.push_token) {
+      const pushSent = await sendPushNotification(candidate, 'New Message', content);
+      if (pushSent) {
+        deliveryMethod.push('push');
+        console.log(`✅ [Push] Notification sent to ${candidateId}`);
+      }
     }
   }
 
-  // 7. Notify all admin clients
+  // 4. Notify all admin clients
   broadcastToAdmins({
     type: 'message_sent',
     message,
     candidateId,
     deliveryMethod,
+    targetChannel,
   });
 
   return {
     success: true,
     message,
-    channel: 'app',
+    channel: targetChannel,
     deliveryMethod,
+    sentToTelegram,
+    sentToApp,
   };
 }
 
@@ -118,7 +179,6 @@ async function sendPushNotification(candidate, title, body) {
     return true;
   } catch (error) {
     console.error('Push notification failed:', error.message);
-    // If subscription is invalid, clear it
     if (error.statusCode === 410 || error.statusCode === 404) {
       db.prepare('UPDATE candidates SET push_token = NULL WHERE id = ?').run(candidate.id);
     }
@@ -130,29 +190,14 @@ async function sendPushNotification(candidate, title, body) {
  * Send via in-app WebSocket only (legacy support)
  */
 async function sendViaApp(candidateId, content) {
-  try {
-    // Store message first
-    const messageId = Date.now();
-    const timestamp = new Date().toISOString(); // Millisecond precision
-    db.prepare(`
-      INSERT INTO messages (id, candidate_id, sender, content, channel, read, created_at)
-      VALUES (?, ?, 'admin', ?, 'app', 0, ?)
-    `).run(messageId, candidateId, content, timestamp);
+  return sendToCandidate(candidateId, content, { channel: 'app' });
+}
 
-    const message = db.prepare('SELECT * FROM messages WHERE id = ?').get(messageId);
-
-    broadcastToCandidate(candidateId, {
-      type: EventTypes.CHAT_MESSAGE,
-      message,
-    });
-
-    // Create notification for offline candidates
-    createNotification(candidateId, 'chat', 'New message from WorkLink', content);
-
-    return { success: true, message };
-  } catch (error) {
-    return { success: false, error: error.message };
-  }
+/**
+ * Send via Telegram only
+ */
+async function sendViaTelegram(candidateId, content) {
+  return sendToCandidate(candidateId, content, { channel: 'telegram' });
 }
 
 /**
@@ -167,14 +212,12 @@ async function handleIncomingMessage(channel, data) {
 
   switch (channel) {
     case Channels.TELEGRAM:
-      // Find candidate by telegram_chat_id
       const chatId = String(data.chat.id);
       const candidate = db.prepare(`
         SELECT id FROM candidates WHERE telegram_chat_id = ?
       `).get(chatId);
 
       if (!candidate) {
-        // Unknown sender - could be new user trying to link
         return { success: false, error: 'Unknown telegram user', chatId };
       }
 
@@ -184,7 +227,6 @@ async function handleIncomingMessage(channel, data) {
       break;
 
     case Channels.WHATSAPP:
-      // Not yet implemented
       return { success: false, error: 'WhatsApp not implemented' };
 
     default:
@@ -195,9 +237,9 @@ async function handleIncomingMessage(channel, data) {
     return { success: false, error: 'Invalid message data' };
   }
 
-  // Store message
+  // Store message with channel info
   const messageId = Date.now();
-  const timestamp = new Date().toISOString(); // Millisecond precision
+  const timestamp = new Date().toISOString();
   db.prepare(`
     INSERT INTO messages (id, candidate_id, sender, content, channel, external_id, read, created_at)
     VALUES (?, ?, 'candidate', ?, ?, ?, 0, ?)
@@ -213,36 +255,35 @@ async function handleIncomingMessage(channel, data) {
     channel,
   });
 
-  // Trigger AI processing for incoming messages (non-blocking)
+  // Trigger AI processing with the channel info
   console.log(`📨 [${channel}] Candidate ${candidateId} sent: "${content.substring(0, 50)}..."`);
   try {
     const aiChat = require('../ai-chat');
-    console.log(`🤖 [${channel}] Triggering AI processing...`);
+    console.log(`🤖 [${channel}] Triggering AI processing (will reply on ${channel})...`);
+    
+    // Pass channel to AI so it knows where to reply
     aiChat.processIncomingMessage(candidateId, content, channel)
       .then(result => {
         if (result) {
-          console.log(`🤖 [${channel}] AI result: mode=${result.mode}, willSendIn=${result.willSendIn || 0}ms`);
+          console.log(`🤖 [${channel}] AI result: mode=${result.mode}`);
         } else {
           console.log(`🤖 [${channel}] AI mode is off for ${candidateId}`);
         }
       })
       .catch(err => {
-        console.error('AI processing error for incoming message:', err.message, err.stack);
+        console.error('AI processing error:', err.message);
       });
   } catch (error) {
     console.error('Failed to load AI chat service:', error.message);
   }
 
-  return { success: true, message, candidateId };
+  return { success: true, message, candidateId, channel };
 }
 
 /**
  * Link a Telegram chat to a candidate
- * @param {string} telegramChatId - Telegram chat ID
- * @param {string} verificationCode - Code provided in app
  */
 async function linkTelegram(telegramChatId, verificationCode) {
-  // Find pending verification
   const pending = db.prepare(`
     SELECT candidate_id FROM telegram_verifications
     WHERE code = ? AND used = 0 AND expires_at > datetime('now')
@@ -252,12 +293,10 @@ async function linkTelegram(telegramChatId, verificationCode) {
     return { success: false, error: 'Invalid or expired code' };
   }
 
-  // Update candidate
   db.prepare(`
     UPDATE candidates SET telegram_chat_id = ? WHERE id = ?
   `).run(String(telegramChatId), pending.candidate_id);
 
-  // Mark verification as used
   db.prepare(`
     UPDATE telegram_verifications SET used = 1 WHERE code = ?
   `).run(verificationCode);
@@ -267,12 +306,10 @@ async function linkTelegram(telegramChatId, verificationCode) {
 
 /**
  * Generate a verification code for Telegram linking
- * @param {string} candidateId - Candidate ID
  */
 function generateVerificationCode(candidateId) {
   const code = Math.random().toString(36).substring(2, 8).toUpperCase();
 
-  // Ensure table exists
   db.exec(`
     CREATE TABLE IF NOT EXISTS telegram_verifications (
       id INTEGER PRIMARY KEY AUTOINCREMENT,
@@ -284,7 +321,6 @@ function generateVerificationCode(candidateId) {
     )
   `);
 
-  // Insert verification code (expires in 10 minutes)
   db.prepare(`
     INSERT INTO telegram_verifications (candidate_id, code, expires_at)
     VALUES (?, ?, datetime('now', '+10 minutes'))
@@ -330,10 +366,11 @@ function getCandidateChannels(candidateId) {
   }
 
   return {
-    app: true, // Always available
+    app: true,
     telegram: !!candidate.telegram_chat_id,
     whatsapp: !!candidate.whatsapp_opted_in,
     preferred: candidate.preferred_contact || 'app',
+    lastChannel: getLastCandidateMessageChannel(candidateId),
   };
 }
 
@@ -344,13 +381,15 @@ function getConfiguredChannels() {
   return {
     app: true,
     telegram: telegram.isConfigured(),
-    whatsapp: false, // Not yet implemented
+    whatsapp: false,
   };
 }
 
 module.exports = {
   Channels,
   sendToCandidate,
+  sendViaApp,
+  sendViaTelegram,
   handleIncomingMessage,
   linkTelegram,
   generateVerificationCode,
@@ -358,5 +397,6 @@ module.exports = {
   postJobToTelegramGroups,
   getCandidateChannels,
   getConfiguredChannels,
+  getLastCandidateMessageChannel,
   telegram,
 };

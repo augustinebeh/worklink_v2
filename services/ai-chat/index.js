@@ -344,28 +344,29 @@ async function processIncomingMessage(candidateId, content, channel = 'app') {
 
 /**
  * Send an AI-generated response to a candidate
+ * Routes to the same channel the worker messaged from
  */
 async function sendAIResponse(candidateId, response, channel = 'app', originalQuestion = null) {
   console.log(`📤 [AI] Sending response to ${candidateId} via ${channel}: "${response.content.substring(0, 50)}..."`);
   const messaging = require('../messaging');
 
-  // Send via unified messaging service
-  // Include source (kb, faq, llm) for UI display
+  // Send via unified messaging service with explicit channel
+  // The messaging service will route to the correct channel
   const result = await messaging.sendToCandidate(candidateId, response.content, {
-    channel: channel === 'telegram' ? 'telegram' : 'auto',
+    channel: channel,  // Use the channel the worker messaged from
+    replyToChannel: channel,  // Explicit: reply on same channel
     aiGenerated: true,
-    aiSource: response.source || 'llm', // 'kb', 'faq', 'llm', 'knowledge_base'
+    aiSource: response.source || 'llm',
   });
-  console.log(`📤 [AI] Send result:`, result.success ? 'SUCCESS' : `FAILED: ${result.error}`);
+  console.log(`📤 [AI] Send result:`, result.success ? `SUCCESS via ${result.channel}` : `FAILED: ${result.error}`);
 
   // Update the log to mark as sent
   if (response.logId) {
     db.prepare(`
-      UPDATE ai_response_logs SET status = 'sent' WHERE id = ?
-    `).run(response.logId);
+      UPDATE ai_response_logs SET status = 'sent', channel = ? WHERE id = ?
+    `).run(channel, response.logId);
 
     // Store pending feedback for implicit learning (Auto mode)
-    // This will track the next few messages to see if worker was satisfied
     if (originalQuestion) {
       ml.storePendingFeedback(candidateId, response.logId, originalQuestion);
     }
@@ -380,6 +381,7 @@ async function sendAIResponse(candidateId, response, channel = 'app', originalQu
     message: result.message,
     aiLogId: response.logId,
     source: response.source,
+    channel: channel,
   });
 
   return result;

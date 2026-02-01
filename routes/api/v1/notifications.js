@@ -23,6 +23,22 @@ try {
   console.log('⚠️ Web Push not configured');
 }
 
+// Get VAPID public key for frontend subscription
+router.get('/vapid-public-key', (req, res) => {
+  try {
+    const publicKey = process.env.VAPID_PUBLIC_KEY;
+    if (!publicKey) {
+      return res.status(503).json({
+        success: false,
+        error: 'Push notifications not configured on server'
+      });
+    }
+    res.json({ success: true, publicKey });
+  } catch (error) {
+    res.status(500).json({ success: false, error: error.message });
+  }
+});
+
 // Register push subscription
 router.post('/subscribe', (req, res) => {
   try {
