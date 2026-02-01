@@ -1315,20 +1315,25 @@ function seedEssentialData() {
     ['JOB_SAMPLE_2', 'B', "📦 *WAREHOUSE PACKING JOB*\n\nGreat opportunity at Tuas warehouse!\n\n💰 $12 per hour\n🚌 Free transport from Jurong East\n📅 Immediate start available\n\nNo experience required - full training provided. Join our friendly team today!\n\nApply through WorkLink app now! 🎯", '{"tone":"friendly","emoji_count":"4","length":"long"}'],
   ];
 
-  sampleVariants.forEach(v => {
-    db.prepare(`
-      INSERT OR IGNORE INTO ad_variants (job_id, variant_key, content, variables)
-      VALUES (?, ?, ?, ?)
-    `).run(...v);
-  });
+  // Only seed ad variants if sample jobs exist (dev only)
+  try {
+    sampleVariants.forEach(v => {
+      db.prepare(`
+        INSERT OR IGNORE INTO ad_variants (job_id, variant_key, content, variables)
+        VALUES (?, ?, ?, ?)
+      `).run(...v);
+    });
 
-  // Add some performance data for the variants
-  db.prepare(`
-    INSERT OR IGNORE INTO ad_performance (variant_id, job_id, group_id, posted_at, post_hour, post_day, responses)
-    SELECT id, job_id, 1, datetime('now', '-3 days'), 19, 2,
-      CASE variant_key WHEN 'A' THEN 12 ELSE 4 END
-    FROM ad_variants
-  `).run();
+    // Add some performance data for the variants
+    db.prepare(`
+      INSERT OR IGNORE INTO ad_performance (variant_id, job_id, group_id, posted_at, post_hour, post_day, responses)
+      SELECT id, job_id, 1, datetime('now', '-3 days'), 19, 2,
+        CASE variant_key WHEN 'A' THEN 12 ELSE 4 END
+      FROM ad_variants
+    `).run();
+  } catch (e) {
+    // Skip if sample jobs don't exist (production)
+  }
 
   console.log('✅ Essential data seeded (including AI/ML training data)');
 }
