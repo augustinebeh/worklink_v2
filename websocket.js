@@ -300,6 +300,7 @@ function sendMessageToCandidate(candidateId, content, templateId = null, channel
 }
 
 async function sendMessageFromCandidate(candidateId, content, channel = 'app') {
+  console.log(`📨 Candidate ${candidateId} sent message: "${content.substring(0, 50)}..."`);
   const id = Date.now();
   db.prepare(`
     INSERT INTO messages (id, candidate_id, sender, content, channel, read, created_at)
@@ -333,9 +334,18 @@ async function sendMessageFromCandidate(candidateId, content, channel = 'app') {
   // Trigger AI processing (non-blocking)
   try {
     const aiChat = getAIChat();
-    aiChat.processIncomingMessage(candidateId, content, channel).catch(err => {
-      console.error('AI processing error:', err.message);
-    });
+    console.log(`🤖 Triggering AI processing for ${candidateId}...`);
+    aiChat.processIncomingMessage(candidateId, content, channel)
+      .then(result => {
+        if (result) {
+          console.log(`🤖 AI response mode: ${result.mode}, will send in: ${result.willSendIn || 0}ms`);
+        } else {
+          console.log(`🤖 AI mode is off for ${candidateId}`);
+        }
+      })
+      .catch(err => {
+        console.error('AI processing error:', err.message);
+      });
   } catch (error) {
     console.error('Failed to load AI chat service:', error.message);
   }
