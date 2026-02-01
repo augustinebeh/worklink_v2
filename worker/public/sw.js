@@ -3,9 +3,9 @@
  * Provides offline support and caching
  */
 
-const CACHE_NAME = 'worklink-v13';
-const STATIC_CACHE = 'worklink-static-v13';
-const DYNAMIC_CACHE = 'worklink-dynamic-v13';
+const CACHE_NAME = 'worklink-v14';
+const STATIC_CACHE = 'worklink-static-v14';
+const DYNAMIC_CACHE = 'worklink-dynamic-v14';
 
 // Static assets to cache immediately
 const STATIC_ASSETS = [
@@ -48,20 +48,35 @@ self.addEventListener('install', (event) => {
   );
 });
 
-// Activate event - clean old caches
+// Activate event - clear ALL old caches aggressively
 self.addEventListener('activate', (event) => {
-  console.log('[SW] Activating...');
+  console.log('[SW] Activating - clearing all old caches...');
   event.waitUntil(
     caches.keys()
       .then((keys) => {
+        // Delete ALL caches that don't match current version
         return Promise.all(
-          keys
-            .filter((key) => key !== STATIC_CACHE && key !== DYNAMIC_CACHE)
-            .map((key) => {
-              console.log('[SW] Removing old cache:', key);
+          keys.map((key) => {
+            if (key !== STATIC_CACHE && key !== DYNAMIC_CACHE) {
+              console.log('[SW] Deleting old cache:', key);
               return caches.delete(key);
-            })
+            }
+          })
         );
+      })
+      .then(() => {
+        // Force refresh all cached static assets
+        return caches.open(STATIC_CACHE).then((cache) => {
+          return Promise.all(
+            STATIC_ASSETS.map((url) => {
+              return fetch(url, { cache: 'reload' }).then((response) => {
+                if (response.ok) {
+                  return cache.put(url, response);
+                }
+              }).catch(() => {});
+            })
+          );
+        });
       })
       .then(() => self.clients.claim())
   );

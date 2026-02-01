@@ -132,7 +132,20 @@ if (fs.existsSync(adminDistPath)) {
 const workerDistPath = path.join(__dirname, 'worker', 'dist');
 if (fs.existsSync(workerDistPath)) {
   app.use(express.static(workerDistPath, {
-    maxAge: process.env.NODE_ENV === 'production' ? '1d' : 0
+    maxAge: process.env.NODE_ENV === 'production' ? '1d' : 0,
+    setHeaders: (res, filePath) => {
+      // Prevent caching of icons, manifest, and service worker
+      if (filePath.includes('icon-') ||
+          filePath.includes('apple-touch-icon') ||
+          filePath.includes('favicon') ||
+          filePath.includes('manifest.json') ||
+          filePath.includes('sw.js') ||
+          filePath.includes('splash')) {
+        res.setHeader('Cache-Control', 'no-cache, no-store, must-revalidate');
+        res.setHeader('Pragma', 'no-cache');
+        res.setHeader('Expires', '0');
+      }
+    }
   }));
   
   // SPA fallback for worker app
