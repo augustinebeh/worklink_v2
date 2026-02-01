@@ -731,6 +731,14 @@ function createSchema() {
   } catch (e) {
     // Column already exists, ignore
   }
+
+  // Add type column to telegram_groups if not exists
+  try {
+    db.exec(`ALTER TABLE telegram_groups ADD COLUMN type TEXT DEFAULT 'job_posting'`);
+  } catch (e) {
+    // Column already exists, ignore
+  }
+
   console.log('✅ Schema created successfully');
 }
 
