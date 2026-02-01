@@ -41,98 +41,142 @@ const questTypeConfig = {
   challenge: { color: 'text-red-400', bg: 'bg-red-500/20', border: 'border-red-500/30', icon: FlameIcon },
 };
 
+// Flying XP Animation Component
+function FlyingXP({ amount, startPos, targetPos, onComplete }) {
+  const [position, setPosition] = useState(startPos);
+  const [opacity, setOpacity] = useState(1);
+  const [scale, setScale] = useState(1);
+
+  useEffect(() => {
+    if (!startPos || !targetPos) return;
+
+    // Start animation after a tiny delay
+    const timeout = setTimeout(() => {
+      setPosition(targetPos);
+      setScale(0.5);
+    }, 50);
+
+    // Fade out near the end
+    const fadeTimeout = setTimeout(() => {
+      setOpacity(0);
+    }, 600);
+
+    // Complete callback
+    const completeTimeout = setTimeout(() => {
+      onComplete?.();
+    }, 800);
+
+    return () => {
+      clearTimeout(timeout);
+      clearTimeout(fadeTimeout);
+      clearTimeout(completeTimeout);
+    };
+  }, [startPos, targetPos, onComplete]);
+
+  if (!startPos || !targetPos) return null;
+
+  return (
+    <div
+      className="fixed z-[100] pointer-events-none flex items-center gap-1 px-3 py-1.5 rounded-full bg-violet-500 text-white font-bold shadow-lg shadow-violet-500/50"
+      style={{
+        left: position.x,
+        top: position.y,
+        transform: `translate(-50%, -50%) scale(${scale})`,
+        opacity,
+        transition: 'all 0.7s cubic-bezier(0.34, 1.56, 0.64, 1)',
+      }}
+    >
+      <ZapIcon className="h-4 w-4" />
+      <span>+{amount}</span>
+    </div>
+  );
+}
+
 // Animated Quest Card for Homepage
-function HomeQuestCard({ quest, onComplete, isCompleting, onAnimationComplete }) {
+function HomeQuestCard({ quest, onClaim, isClaiming, xpBadgeRef }) {
   const [isExiting, setIsExiting] = useState(false);
+  const claimButtonRef = useRef(null);
   const config = questTypeConfig[quest.type] || questTypeConfig.daily;
   const Icon = config.icon;
   
   const isClaimable = quest.status === 'claimable';
-  const isCheckinQuest = quest.requirement?.type === 'checkin' || 
-                         quest.title?.toLowerCase().includes('check') ||
-                         quest.title?.toLowerCase().includes('login') ||
-                         quest.title?.toLowerCase().includes('daily');
-  const canCheckin = isCheckinQuest && quest.status !== 'claimed' && !isClaimable && quest.progress < quest.target;
+  const progress = quest.target > 0 ? (quest.progress / quest.target) * 100 : 0;
 
-  const handleClick = async () => {
-    if (isCompleting) return;
-    
+  const handleClaim = (e) => {
+    e.stopPropagation();
+    if (isClaiming || !isClaimable) return;
+
+    // Get position of the XP badge on this card for flying animation
+    const rect = claimButtonRef.current?.getBoundingClientRect();
+    const startPos = rect ? { x: rect.left + rect.width / 2, y: rect.top + rect.height / 2 } : null;
+
     // Start exit animation
     setIsExiting(true);
-    
-    // Trigger the action
-    await onComplete(quest, isClaimable ? 'claim' : 'checkin');
-    
-    // Wait for animation then notify parent
-    setTimeout(() => {
-      onAnimationComplete(quest.id);
-    }, 400);
+
+    // Trigger claim with position info
+    onClaim(quest, startPos);
   };
 
-  const canInteract = isClaimable || canCheckin;
-  if (!canInteract && quest.status === 'claimed') return null;
+  // Don't show non-claimable or claimed quests
+  if (!isClaimable || quest.status === 'claimed') return null;
 
   return (
     <div
-      onClick={canInteract ? handleClick : undefined}
       className={clsx(
-        'relative p-4 rounded-2xl transition-all duration-400 ease-out',
-        isExiting && 'opacity-0 scale-95 -translate-y-2',
-        canInteract ? 'cursor-pointer active:scale-[0.98]' : '',
-        isClaimable
-          ? 'bg-gradient-to-r from-emerald-500/20 to-cyan-500/20 border border-emerald-500/40'
-          : canCheckin
-            ? 'bg-gradient-to-r from-cyan-500/10 to-violet-500/10 border border-cyan-500/30'
-            : 'bg-[#0a1628]/80 border border-white/[0.05]'
+        'relative p-4 rounded-2xl transition-all duration-500 ease-out',
+        isExiting && 'opacity-0 scale-95 -translate-y-4 h-0 p-0 mb-0 overflow-hidden',
+        'bg-gradient-to-r from-emerald-500/20 via-cyan-500/10 to-violet-500/20 border-2 border-emerald-500/40'
       )}
+      style={{
+        boxShadow: '0 0 30px rgba(16, 185, 129, 0.15)',
+      }}
     >
-      <div className="flex items-center gap-4">
+      {/* Animated glow border */}
+      <div className="absolute inset-0 rounded-2xl overflow-hidden">
+        <div className="absolute inset-0 bg-gradient-to-r from-emerald-500/0 via-emerald-500/20 to-emerald-500/0 animate-pulse" />
+      </div>
+
+      <div className="relative flex items-center gap-4">
         {/* Icon */}
-        <div className={clsx(
-          'w-12 h-12 rounded-2xl flex items-center justify-center flex-shrink-0',
-          isClaimable ? 'bg-emerald-500/30' : canCheckin ? 'bg-cyan-500/30' : config.bg
-        )}>
-          {isCompleting ? (
-            <div className="animate-spin h-5 w-5 border-2 border-white border-t-transparent rounded-full" />
-          ) : (
-            <Icon className={clsx('h-6 w-6', isClaimable ? 'text-emerald-400' : canCheckin ? 'text-cyan-400' : config.color)} />
-          )}
+        <div className="w-14 h-14 rounded-2xl bg-emerald-500/30 flex items-center justify-center flex-shrink-0">
+          <TrophyIcon className="h-7 w-7 text-emerald-400" />
         </div>
 
         {/* Content */}
         <div className="flex-1 min-w-0">
-          <div className="flex items-center gap-2 mb-0.5">
-            {isClaimable && (
-              <span className="px-2 py-0.5 rounded-md bg-emerald-500/30 text-emerald-400 text-xs font-bold animate-pulse">
-                READY!
-              </span>
-            )}
-            {canCheckin && (
-              <span className="px-2 py-0.5 rounded-md bg-cyan-500/30 text-cyan-400 text-xs font-bold">
-                TAP
-              </span>
-            )}
+          <div className="flex items-center gap-2 mb-1">
+            <span className="px-2 py-0.5 rounded-md bg-emerald-500/30 text-emerald-300 text-xs font-bold animate-pulse">
+              🎉 READY TO CLAIM!
+            </span>
           </div>
-          <h3 className="font-semibold text-white text-sm">{quest.title}</h3>
-          
-          {/* Mini progress */}
-          {!isClaimable && (
-            <div className="flex items-center gap-2 mt-1">
-              <div className="flex-1 h-1.5 rounded-full bg-white/10 overflow-hidden">
-                <div
-                  className="h-full rounded-full bg-gradient-to-r from-cyan-500 to-violet-500 transition-all duration-500"
-                  style={{ width: `${Math.min((quest.progress / quest.target) * 100, 100)}%` }}
-                />
-              </div>
-              <span className="text-xs text-white/40">{quest.progress}/{quest.target}</span>
-            </div>
-          )}
+          <h3 className="font-bold text-white">{quest.title}</h3>
+          <p className="text-sm text-white/50">{quest.description}</p>
         </div>
 
-        {/* XP Reward */}
-        <div className="flex items-center gap-1 px-3 py-1.5 rounded-xl bg-violet-500/20">
-          <ZapIcon className="h-4 w-4 text-violet-400" />
-          <span className="text-sm font-bold text-violet-400">+{quest.xp_reward}</span>
+        {/* Claim Button with XP */}
+        <div className="flex flex-col items-end gap-2">
+          <div 
+            ref={claimButtonRef}
+            className="flex items-center gap-1 px-3 py-1.5 rounded-xl bg-violet-500/30 border border-violet-500/40"
+          >
+            <ZapIcon className="h-4 w-4 text-violet-400" />
+            <span className="text-lg font-bold text-violet-300">+{quest.xp_reward}</span>
+          </div>
+          
+          <button
+            onClick={handleClaim}
+            disabled={isClaiming}
+            className="px-5 py-2.5 rounded-xl bg-gradient-to-r from-emerald-500 to-cyan-500 text-white font-bold shadow-lg shadow-emerald-500/30 hover:shadow-emerald-500/50 active:scale-95 transition-all disabled:opacity-50"
+          >
+            {isClaiming ? (
+              <div className="flex items-center gap-2">
+                <div className="animate-spin h-4 w-4 border-2 border-white border-t-transparent rounded-full" />
+                <span>Claiming...</span>
+              </div>
+            ) : (
+              <span>Claim Reward</span>
+            )}
+          </button>
         </div>
       </div>
     </div>
@@ -140,7 +184,7 @@ function HomeQuestCard({ quest, onComplete, isCompleting, onAnimationComplete })
 }
 
 // League Header Card - Main pool-style banner
-function LeagueCard({ user, userLevel, userXP, thisMonthEarnings, totalJobs, poolEndsIn, xpAnimating }) {
+function LeagueCard({ user, userLevel, userXP, thisMonthEarnings, totalJobs, poolEndsIn, xpAnimating, xpBarRef }) {
   const levelTitle = levelTitles[userLevel] || 'Newcomer';
   
   // XP progress calculations
@@ -162,7 +206,10 @@ function LeagueCard({ user, userLevel, userXP, thisMonthEarnings, totalJobs, poo
       <div className="absolute top-1/2 left-1/2 w-32 h-32 bg-cyan-500/10 rounded-full blur-[40px] -translate-x-1/2 -translate-y-1/2" />
       
       {/* Border glow effect */}
-      <div className="absolute inset-0 rounded-3xl border border-white/[0.08]" />
+      <div className={clsx(
+        'absolute inset-0 rounded-3xl border transition-all duration-500',
+        xpAnimating ? 'border-emerald-500/50 shadow-[0_0_30px_rgba(16,185,129,0.3)]' : 'border-white/[0.08]'
+      )} />
       
       {/* Content */}
       <div className="relative p-5">
@@ -191,17 +238,26 @@ function LeagueCard({ user, userLevel, userXP, thisMonthEarnings, totalJobs, poo
         </div>
 
         {/* XP Progress Bar - with animation support */}
-        <div className="mb-6">
+        <div className="mb-6" ref={xpBarRef}>
           <div className="flex items-center justify-between text-sm mb-2">
             <span className="text-white/50">Level Progress</span>
-            <span className="text-white">
-              <span className={clsx('font-bold transition-all duration-500', xpAnimating ? 'text-emerald-300 scale-110' : 'text-emerald-400')}>
+            <span className={clsx(
+              'text-white transition-all duration-300',
+              xpAnimating && 'scale-110'
+            )}>
+              <span className={clsx(
+                'font-bold transition-all duration-500',
+                xpAnimating ? 'text-emerald-300' : 'text-emerald-400'
+              )}>
                 {xpInLevel.toLocaleString()}
               </span>
               <span className="text-white/30"> / {xpNeeded.toLocaleString()} XP</span>
             </span>
           </div>
-          <div className="h-3 rounded-full bg-white/5 overflow-hidden">
+          <div className={clsx(
+            'h-3 rounded-full bg-white/5 overflow-hidden transition-all duration-300',
+            xpAnimating && 'shadow-[0_0_15px_rgba(16,185,129,0.5)]'
+          )}>
             <div
               className={clsx(
                 'h-full rounded-full bg-gradient-to-r from-emerald-500 via-cyan-500 to-violet-500 transition-all',
@@ -340,13 +396,15 @@ export default function Home() {
   const navigate = useNavigate();
   const ws = useWebSocket();
   const toast = useToast();
+  const xpBarRef = useRef(null);
   const [jobs, setJobs] = useState([]);
   const [quests, setQuests] = useState([]);
   const [thisMonthEarnings, setThisMonthEarnings] = useState(0);
   const [loading, setLoading] = useState(true);
   const [currentPage, setCurrentPage] = useState(1);
-  const [completingQuest, setCompletingQuest] = useState(null);
+  const [claimingQuest, setClaimingQuest] = useState(null);
   const [xpAnimating, setXpAnimating] = useState(false);
+  const [flyingXP, setFlyingXP] = useState(null);
   const jobsPerPage = 5;
 
   // Gamification animation states
@@ -405,23 +463,9 @@ export default function Home() {
       }
 
       if (questsData.success) {
-        // Filter to show only actionable quests (claimable or can check-in)
-        const actionable = (questsData.data || []).filter(q => {
-          if (q.status === 'claimed') return false;
-          if (q.status === 'claimable') return true;
-          // Check if it's a checkin quest that can be completed
-          const isCheckin = q.requirement?.type === 'checkin' || 
-                           q.title?.toLowerCase().includes('check') ||
-                           q.title?.toLowerCase().includes('login') ||
-                           q.title?.toLowerCase().includes('daily');
-          return isCheckin && q.progress < q.target;
-        });
-        
-        const sorted = actionable.sort((a, b) => {
-          const order = { claimable: 0, in_progress: 1, available: 2 };
-          return (order[a.status] ?? 3) - (order[b.status] ?? 3);
-        });
-        setQuests(sorted.slice(0, 3)); // Show max 3 quests
+        // Filter to show only claimable quests
+        const claimable = (questsData.data || []).filter(q => q.status === 'claimable');
+        setQuests(claimable.slice(0, 3)); // Show max 3 quests
       }
     } catch (error) {
       toast.error('Failed to load', 'Pull down to refresh');
@@ -430,41 +474,43 @@ export default function Home() {
     }
   };
 
-  const handleQuestComplete = async (quest, action) => {
-    setCompletingQuest(quest.id);
+  const handleQuestClaim = async (quest, startPos) => {
+    setClaimingQuest(quest.id);
     
     try {
-      let res;
-      if (action === 'claim') {
-        res = await fetch(`/api/v1/gamification/quests/${quest.id}/claim`, {
-          method: 'POST',
-          headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify({ candidateId: user.id }),
-        });
-      } else {
-        // Check-in action
-        res = await fetch(`/api/v1/gamification/quests/${quest.id}/progress`, {
-          method: 'POST',
-          headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify({ candidateId: user.id, increment: 1 }),
-        });
-      }
+      const res = await fetch(`/api/v1/gamification/quests/${quest.id}/claim`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ candidateId: user.id }),
+      });
       
       const data = await res.json();
       if (data.success) {
-        // Trigger XP bar animation
-        setXpAnimating(true);
-        setTimeout(() => setXpAnimating(false), 1500);
+        // Get XP bar position for flying animation target
+        const xpBarRect = xpBarRef.current?.getBoundingClientRect();
+        const targetPos = xpBarRect ? { 
+          x: xpBarRect.left + xpBarRect.width / 2, 
+          y: xpBarRect.top + 20 
+        } : null;
+
+        // Start flying XP animation
+        if (startPos && targetPos) {
+          setFlyingXP({
+            amount: quest.xp_reward,
+            startPos,
+            targetPos,
+          });
+        }
+
+        // Remove quest from list after short delay
+        setTimeout(() => {
+          setQuests(prev => prev.filter(q => q.id !== quest.id));
+        }, 300);
+
+        // Toast notification
+        toast.success('Quest Complete!', `+${quest.xp_reward} XP earned`);
         
-        // Show floating XP
-        setXpGain({ amount: quest.xp_reward, trigger: Date.now() });
-        
-        toast.success(
-          action === 'claim' ? 'Quest Complete!' : 'Checked In!', 
-          `+${quest.xp_reward} XP earned`
-        );
-        
-        // Refresh user data for updated XP
+        // Refresh user data
         refreshUser();
       } else {
         toast.error('Failed', data.error || 'Please try again');
@@ -472,12 +518,19 @@ export default function Home() {
     } catch (error) {
       toast.error('Error', 'Please try again');
     } finally {
-      setCompletingQuest(null);
+      setClaimingQuest(null);
     }
   };
 
-  const handleQuestAnimationComplete = (questId) => {
-    setQuests(prev => prev.filter(q => q.id !== questId));
+  const handleFlyingXPComplete = () => {
+    // Trigger XP bar glow animation when flying XP reaches it
+    setXpAnimating(true);
+    setXpGain({ amount: flyingXP?.amount || 0, trigger: Date.now() });
+    
+    setTimeout(() => {
+      setXpAnimating(false);
+      setFlyingXP(null);
+    }, 1500);
   };
 
   const userXP = user?.xp || DEFAULTS.xp;
@@ -506,27 +559,28 @@ export default function Home() {
           totalJobs={totalJobs}
           poolEndsIn={getNextPayout()}
           xpAnimating={xpAnimating}
+          xpBarRef={xpBarRef}
         />
 
-        {/* Daily Quests Section */}
+        {/* Claimable Quests Section */}
         {quests.length > 0 && (
           <div className="px-4 mt-6">
             <div className="flex items-center justify-between mb-3">
               <h2 className="text-white font-semibold flex items-center gap-2">
-                Daily Quests <span className="text-lg">🎯</span>
+                Rewards Ready! <span className="text-lg">🎁</span>
               </h2>
               <Link to="/quests" className="text-emerald-400 text-sm font-medium">
-                View All →
+                All Quests →
               </Link>
             </div>
-            <div className="space-y-3 transition-all duration-300">
+            <div className="space-y-3">
               {quests.map(quest => (
                 <HomeQuestCard
                   key={quest.id}
                   quest={quest}
-                  onComplete={handleQuestComplete}
-                  isCompleting={completingQuest === quest.id}
-                  onAnimationComplete={handleQuestAnimationComplete}
+                  onClaim={handleQuestClaim}
+                  isClaiming={claimingQuest === quest.id}
+                  xpBarRef={xpBarRef}
                 />
               ))}
             </div>
@@ -568,6 +622,16 @@ export default function Home() {
           </div>
         </div>
       </div>
+
+      {/* Flying XP Animation */}
+      {flyingXP && (
+        <FlyingXP
+          amount={flyingXP.amount}
+          startPos={flyingXP.startPos}
+          targetPos={flyingXP.targetPos}
+          onComplete={handleFlyingXPComplete}
+        />
+      )}
 
       {/* Gamification Animations */}
       <FloatingXP amount={xpGain.amount} trigger={xpGain.trigger} />
