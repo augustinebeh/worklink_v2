@@ -46,7 +46,7 @@ export function ChatProvider({ children }) {
               if (document.hidden && 'Notification' in window && Notification.permission === 'granted') {
                 new Notification('New Message from WorkLink', {
                   body: data.message.content,
-                  icon: '/icon-192.png',
+                  icon: '/icon-192x192.png',
                 });
               }
             }
