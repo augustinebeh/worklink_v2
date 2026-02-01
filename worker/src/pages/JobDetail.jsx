@@ -86,7 +86,7 @@ export default function JobDetail() {
 
   if (loading) {
     return (
-      <div className={clsx('min-h-screen flex items-center justify-center', isDark ? 'bg-dark-950' : 'bg-slate-50')}>
+      <div className={clsx('min-h-screen flex items-center justify-center', isDark ? 'bg-dark-950' : 'bg-transparent')}>
         <div className="animate-spin h-8 w-8 border-4 border-primary-500 border-t-transparent rounded-full" />
       </div>
     );
@@ -94,7 +94,7 @@ export default function JobDetail() {
 
   if (!job) {
     return (
-      <div className={clsx('min-h-screen flex flex-col items-center justify-center p-4', isDark ? 'bg-dark-950' : 'bg-slate-50')}>
+      <div className={clsx('min-h-screen flex flex-col items-center justify-center p-4', isDark ? 'bg-dark-950' : 'bg-transparent')}>
         <AlertCircleIcon className="h-12 w-12 text-red-500 mb-4" />
         <p className={clsx('text-lg', isDark ? 'text-white' : 'text-slate-900')}>Job not found</p>
         <button onClick={() => navigate('/jobs')} className="mt-4 text-primary-400">Back to Jobs</button>
@@ -110,11 +110,11 @@ export default function JobDetail() {
   const slotsLeft = job.total_slots - job.filled_slots;
 
   return (
-    <div className={clsx('min-h-screen pb-32', isDark ? 'bg-dark-950' : 'bg-slate-50')}>
+    <div className={clsx('min-h-screen pb-32', isDark ? 'bg-dark-950' : 'bg-transparent')}>
       {/* Header */}
       <div className={clsx(
-        'sticky top-0 z-10 backdrop-blur-lg px-4 pt-safe pb-4 border-b',
-        isDark ? 'bg-dark-950/95 border-white/5' : 'bg-white/95 border-slate-200'
+        'sticky top-0 z-10 backdrop-blur-lg px-4 pt-safe pb-4',
+        isDark ? 'bg-dark-950/95 border-b border-white/5' : 'bg-white/90 shadow-[0_1px_3px_rgba(0,0,0,0.03)]'
       )}>
         <button
           onClick={() => navigate(-1)}
@@ -147,61 +147,89 @@ export default function JobDetail() {
           </p>
         </div>
 
-        {/* Quick info cards */}
+        {/* Quick info cards - Glassmorphism */}
         <div className="grid grid-cols-2 gap-3">
           <div className={clsx(
-            'p-4 rounded-xl border',
-            isDark ? 'bg-dark-800/50 border-white/5' : 'bg-white border-slate-200 shadow-sm'
+            'p-4 rounded-xl backdrop-blur-md border',
+            isDark ? 'bg-white/[0.03] border-white/[0.08]' : 'bg-white border-slate-200 shadow-[0_4px_20px_rgba(0,0,0,0.05)]'
           )}>
-            <CalendarIcon className="h-5 w-5 text-primary-400 mb-2" />
+            <div className={clsx('p-2 rounded-lg w-fit mb-2', isDark ? 'bg-primary-500/20' : 'bg-primary-50')}>
+              <CalendarIcon className="h-5 w-5 text-primary-400" />
+            </div>
             <p className={clsx('text-xs', isDark ? 'text-dark-500' : 'text-slate-400')}>Date</p>
             <p className={clsx('font-medium', isDark ? 'text-white' : 'text-slate-900')}>{jobDate.toLocaleDateString(DEFAULT_LOCALE, { weekday: 'long', day: 'numeric', month: 'long', timeZone: TIMEZONE })}</p>
           </div>
           <div className={clsx(
-            'p-4 rounded-xl border',
-            isDark ? 'bg-dark-800/50 border-white/5' : 'bg-white border-slate-200 shadow-sm'
+            'p-4 rounded-xl backdrop-blur-md border',
+            isDark ? 'bg-white/[0.03] border-white/[0.08]' : 'bg-white border-slate-200 shadow-[0_4px_20px_rgba(0,0,0,0.05)]'
           )}>
-            <ClockIcon className="h-5 w-5 text-primary-400 mb-2" />
+            <div className={clsx('p-2 rounded-lg w-fit mb-2', isDark ? 'bg-primary-500/20' : 'bg-primary-50')}>
+              <ClockIcon className="h-5 w-5 text-primary-400" />
+            </div>
             <p className={clsx('text-xs', isDark ? 'text-dark-500' : 'text-slate-400')}>Time</p>
             <p className={clsx('font-medium', isDark ? 'text-white' : 'text-slate-900')}>{job.start_time} - {job.end_time}</p>
             <p className={clsx('text-xs', isDark ? 'text-dark-500' : 'text-slate-400')}>{hours.toFixed(1)} hours</p>
           </div>
           <div className={clsx(
-            'p-4 rounded-xl border',
-            isDark ? 'bg-dark-800/50 border-white/5' : 'bg-white border-slate-200 shadow-sm'
+            'p-4 rounded-xl backdrop-blur-md border',
+            isDark ? 'bg-white/[0.03] border-white/[0.08]' : 'bg-white border-slate-200 shadow-[0_4px_20px_rgba(0,0,0,0.05)]'
           )}>
-            <MapPinIcon className="h-5 w-5 text-primary-400 mb-2" />
+            <div className={clsx('p-2 rounded-lg w-fit mb-2', isDark ? 'bg-primary-500/20' : 'bg-primary-50')}>
+              <MapPinIcon className="h-5 w-5 text-primary-400" />
+            </div>
             <p className={clsx('text-xs', isDark ? 'text-dark-500' : 'text-slate-400')}>Location</p>
             <p className={clsx('font-medium', isDark ? 'text-white' : 'text-slate-900')}>{job.location}</p>
           </div>
           <div className={clsx(
-            'p-4 rounded-xl border',
-            isDark ? 'bg-dark-800/50 border-white/5' : 'bg-white border-slate-200 shadow-sm'
+            'p-4 rounded-xl backdrop-blur-md border',
+            isDark ? 'bg-white/[0.03] border-white/[0.08]' : 'bg-white border-slate-200 shadow-[0_4px_20px_rgba(0,0,0,0.05)]'
           )}>
-            <UsersIcon className="h-5 w-5 text-primary-400 mb-2" />
+            <div className={clsx('p-2 rounded-lg w-fit mb-2', isDark ? 'bg-primary-500/20' : 'bg-primary-50')}>
+              <UsersIcon className="h-5 w-5 text-primary-400" />
+            </div>
             <p className={clsx('text-xs', isDark ? 'text-dark-500' : 'text-slate-400')}>Slots</p>
             <p className={clsx('font-medium', isDark ? 'text-white' : 'text-slate-900')}>{slotsLeft} of {job.total_slots} left</p>
           </div>
         </div>
 
-        {/* Pay section */}
+        {/* Pay section - Glassmorphism with glow */}
         <div className={clsx(
-          'p-6 rounded-2xl border',
+          'relative p-6 rounded-2xl backdrop-blur-md border overflow-hidden',
           isDark
-            ? 'bg-gradient-to-br from-accent-900/30 to-accent-800/10 border-accent-500/20'
-            : 'bg-gradient-to-br from-emerald-50 to-teal-50 border-emerald-200'
+            ? 'bg-white/[0.03] border-accent-500/30'
+            : 'bg-gradient-to-br from-emerald-50 to-teal-50 border-emerald-200 shadow-[0_4px_20px_rgba(0,0,0,0.05)]'
         )}>
-          <div className="flex items-center justify-between">
+          {/* Background glow */}
+          {isDark && (
+            <>
+              <div className="absolute inset-0 bg-gradient-to-br from-accent-500/10 to-teal-500/5" />
+              <div className="absolute -top-10 -right-10 w-32 h-32 bg-accent-500/20 rounded-full blur-[40px]" />
+            </>
+          )}
+          <div className="relative flex items-center justify-between">
             <div>
               <p className="text-accent-400 text-sm font-medium">Total Earnings</p>
-              <p className={clsx('text-4xl font-bold', isDark ? 'text-white' : 'text-slate-900')}>${formatMoney(totalPay)}</p>
+              <p
+                className={clsx('text-4xl font-bold', isDark ? 'text-white' : 'text-slate-900')}
+                style={isDark ? { textShadow: '0 0 30px rgba(52,211,153,0.4)' } : undefined}
+              >
+                ${formatMoney(totalPay)}
+              </p>
               <p className={clsx('text-sm', isDark ? 'text-dark-400' : 'text-slate-500')}>${formatMoney(job.pay_rate)}/hr × {hours.toFixed(1)} hours</p>
             </div>
             {job.xp_bonus > 0 && (
-              <div className="text-right">
+              <div className={clsx(
+                'text-right px-4 py-3 rounded-xl backdrop-blur-md border',
+                isDark ? 'bg-primary-500/15 border-primary-500/30' : 'bg-primary-50 border-primary-200'
+              )}>
                 <div className="flex items-center gap-1 text-primary-400">
                   <ZapIcon className="h-5 w-5" />
-                  <span className="text-xl font-bold">+{job.xp_bonus}</span>
+                  <span
+                    className="text-xl font-bold"
+                    style={isDark ? { textShadow: '0 0 15px rgba(99,102,241,0.5)' } : undefined}
+                  >
+                    +{job.xp_bonus}
+                  </span>
                 </div>
                 <p className={clsx('text-xs', isDark ? 'text-dark-400' : 'text-slate-500')}>Bonus XP</p>
               </div>
@@ -238,10 +266,10 @@ export default function JobDetail() {
         )}
       </div>
 
-      {/* Fixed apply button */}
+      {/* Fixed apply button - Glassmorphism */}
       <div className={clsx(
-        'fixed bottom-20 left-0 right-0 p-4 backdrop-blur-lg border-t',
-        isDark ? 'bg-dark-950/95 border-white/5' : 'bg-white/95 border-slate-200'
+        'fixed bottom-20 left-0 right-0 p-4 backdrop-blur-xl',
+        isDark ? 'bg-dark-950/90 border-t border-white/[0.08]' : 'bg-white/90 shadow-[0_-4px_20px_rgba(0,0,0,0.05)]'
       )}>
         <button
           onClick={handleApply}
@@ -249,12 +277,12 @@ export default function JobDetail() {
           className={clsx(
             'w-full py-4 rounded-xl font-semibold text-lg transition-all',
             hasApplied
-              ? 'bg-accent-500/20 text-accent-400 cursor-default'
+              ? 'bg-accent-500/20 text-accent-400 cursor-default border border-accent-500/30'
               : slotsLeft === 0
                 ? isDark
                   ? 'bg-dark-800 text-dark-500 cursor-not-allowed'
                   : 'bg-slate-200 text-slate-400 cursor-not-allowed'
-                : 'bg-primary-500 text-white hover:bg-primary-600 active:scale-[0.98]'
+                : 'bg-gradient-to-r from-primary-500 to-blue-500 text-white shadow-lg shadow-primary-500/30 hover:shadow-primary-500/50 active:scale-[0.98]'
           )}
         >
           {applying ? (

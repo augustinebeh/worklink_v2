@@ -21,12 +21,18 @@ function TrainingCard({ training, completed, onStart, isDark }) {
 
   return (
     <div className={clsx(
-      'p-4 rounded-2xl border transition-all',
+      'p-4 rounded-2xl border backdrop-blur-md transition-all',
       completed
-        ? isDark ? 'bg-accent-900/20 border-accent-500/30' : 'bg-emerald-50 border-emerald-200'
+        ? isDark
+          ? 'bg-accent-500/10 border-accent-500/30 shadow-lg shadow-accent-500/5'
+          : 'bg-emerald-50 border-emerald-200 shadow-[0_4px_20px_rgba(0,0,0,0.05)]'
         : isLocked
-          ? isDark ? 'bg-dark-800/30 border-white/5 opacity-60' : 'bg-slate-100/50 border-slate-200 opacity-60'
-          : isDark ? 'bg-dark-800/50 border-white/5 hover:border-primary-500/30' : 'bg-white border-slate-200 shadow-sm hover:border-primary-300'
+          ? isDark
+            ? 'bg-white/[0.02] border-white/[0.05] opacity-60'
+            : 'bg-slate-50 border-slate-200 opacity-60'
+          : isDark
+            ? 'bg-white/[0.03] border-white/[0.08] hover:bg-white/[0.05] hover:border-primary-500/30'
+            : 'bg-white border-slate-200 shadow-[0_4px_15px_rgba(0,0,0,0.04)] hover:border-primary-300'
     )}>
       <div className="flex gap-4">
         {/* Icon */}
@@ -82,11 +88,11 @@ function TrainingCard({ training, completed, onStart, isDark }) {
             )}
           </div>
 
-          {/* Action button */}
+          {/* Action button - Neon style */}
           {!isLocked && !completed && (
             <button
               onClick={() => onStart(training.id)}
-              className="mt-3 flex items-center gap-2 px-4 py-2 rounded-lg bg-primary-500 text-white text-sm font-medium hover:bg-primary-600 transition-colors"
+              className="mt-3 flex items-center gap-2 px-4 py-2 rounded-xl bg-gradient-to-r from-primary-500 to-violet-500 text-white text-sm font-medium shadow-lg shadow-primary-500/25 hover:shadow-primary-500/40 transition-all active:scale-[0.98]"
             >
               <PlayCircleIcon className="h-4 w-4" />
               Start Training
@@ -119,17 +125,26 @@ function TrainingCard({ training, completed, onStart, isDark }) {
 function CertificationCard({ certification, isDark }) {
   return (
     <div className={clsx(
-      'p-4 rounded-xl border',
+      'relative p-4 rounded-xl border backdrop-blur-md overflow-hidden',
       isDark
-        ? 'bg-gradient-to-br from-gold-900/30 to-gold-800/10 border-gold-500/30'
-        : 'bg-gradient-to-br from-amber-50 to-yellow-50 border-amber-200'
+        ? 'bg-white/[0.03] border-gold-500/30'
+        : 'bg-gradient-to-br from-amber-50 to-yellow-50 border-amber-200 shadow-[0_4px_15px_rgba(0,0,0,0.04)]'
     )}>
-      <div className="flex items-center gap-3">
-        <div className="p-3 rounded-xl bg-gold-500/20">
+      {/* Gold glow for dark mode */}
+      {isDark && (
+        <div className="absolute inset-0 bg-gradient-to-br from-gold-500/10 to-amber-500/5" />
+      )}
+      <div className="relative flex items-center gap-3">
+        <div className={clsx('p-3 rounded-xl border', isDark ? 'bg-gold-500/20 border-gold-500/30' : 'bg-amber-100 border-amber-200')}>
           <AwardIcon className="h-6 w-6 text-gold-500" />
         </div>
         <div className="flex-1">
-          <h4 className={clsx('font-semibold', isDark ? 'text-white' : 'text-slate-900')}>{certification.name}</h4>
+          <h4
+            className={clsx('font-semibold', isDark ? 'text-white' : 'text-slate-900')}
+            style={isDark ? { textShadow: '0 0 15px rgba(251,191,36,0.3)' } : undefined}
+          >
+            {certification.name}
+          </h4>
           <p className={clsx('text-xs', isDark ? 'text-dark-400' : 'text-slate-500')}>
             {certification.earned_at
               ? `Earned ${new Date(certification.earned_at).toLocaleDateString(DEFAULT_LOCALE, {
@@ -143,7 +158,7 @@ function CertificationCard({ certification, isDark }) {
           </p>
         </div>
         <div className="flex items-center gap-1 text-gold-500">
-          <StarIcon className="h-4 w-4 fill-gold-400" />
+          <StarIcon className="h-5 w-5 fill-gold-400" />
         </div>
       </div>
     </div>
@@ -315,33 +330,52 @@ export default function Training() {
 
   return (
     <div className={clsx('min-h-screen pb-24', isDark ? 'bg-dark-950' : 'bg-transparent')}>
-      {/* Header */}
+      {/* Header - Glassmorphism */}
       <div className={clsx(
-        'sticky top-0 z-10 backdrop-blur-lg px-4 pt-safe pb-4 border-b',
-        isDark ? 'bg-dark-950/95 border-white/5' : 'bg-white/95 border-slate-200'
+        'sticky top-0 z-10 backdrop-blur-xl px-4 pt-safe pb-4',
+        isDark ? 'bg-dark-950/90 border-b border-white/[0.08]' : 'bg-white/90 shadow-[0_1px_3px_rgba(0,0,0,0.03)]'
       )}>
         <h1 className={clsx('text-2xl font-bold', isDark ? 'text-white' : 'text-slate-900')}>Training</h1>
         <p className={clsx('text-sm mt-1', isDark ? 'text-dark-400' : 'text-slate-500')}>Learn skills and earn certifications</p>
       </div>
 
       <div className="px-4 py-6 space-y-6">
-        {/* Progress summary */}
+        {/* Progress summary - Glassmorphism */}
         <div className={clsx(
-          'p-4 rounded-xl border',
+          'relative p-5 rounded-2xl border backdrop-blur-md overflow-hidden',
           isDark
-            ? 'bg-gradient-to-r from-primary-900/30 to-accent-900/30 border-primary-500/20'
-            : 'bg-gradient-to-r from-primary-50 to-accent-50 border-primary-200'
+            ? 'bg-white/[0.03] border-white/[0.08]'
+            : 'bg-gradient-to-r from-primary-50 to-accent-50 border-primary-200 shadow-[0_4px_20px_rgba(0,0,0,0.05)]'
         )}>
-          <div className="flex items-center justify-between">
+          {/* Background glow */}
+          {isDark && (
+            <>
+              <div className="absolute inset-0 bg-gradient-to-r from-primary-500/10 to-accent-500/10" />
+              <div className="absolute -top-10 -left-10 w-32 h-32 bg-primary-500/15 rounded-full blur-[40px]" />
+              <div className="absolute -bottom-10 -right-10 w-32 h-32 bg-gold-500/15 rounded-full blur-[40px]" />
+            </>
+          )}
+          <div className="relative flex items-center justify-between">
             <div>
-              <p className={clsx('text-2xl font-bold', isDark ? 'text-white' : 'text-slate-900')}>
-                {completedIds.length}/{trainings.length}
+              <p
+                className={clsx('text-3xl font-bold', isDark ? 'text-white' : 'text-slate-900')}
+                style={isDark ? { textShadow: '0 0 20px rgba(99,102,241,0.3)' } : undefined}
+              >
+                {completedIds.length}<span className={isDark ? 'text-dark-500' : 'text-slate-400'}>/{trainings.length}</span>
               </p>
               <p className={clsx('text-sm', isDark ? 'text-dark-400' : 'text-slate-500')}>Courses completed</p>
             </div>
-            <div className="text-right">
-              <p className="text-2xl font-bold text-gold-500">{certifications.length}</p>
-              <p className={clsx('text-sm', isDark ? 'text-dark-400' : 'text-slate-500')}>Certifications</p>
+            <div className={clsx(
+              'text-right px-4 py-3 rounded-xl backdrop-blur-md border',
+              isDark ? 'bg-gold-500/10 border-gold-500/20' : 'bg-amber-50 border-amber-200'
+            )}>
+              <p
+                className="text-2xl font-bold text-gold-500"
+                style={isDark ? { textShadow: '0 0 15px rgba(251,191,36,0.4)' } : undefined}
+              >
+                {certifications.length}
+              </p>
+              <p className={clsx('text-xs', isDark ? 'text-dark-400' : 'text-slate-500')}>Certifications</p>
             </div>
           </div>
         </div>
@@ -358,7 +392,7 @@ export default function Training() {
           </div>
         )}
 
-        {/* Filter tabs */}
+        {/* Filter tabs - Glass style */}
         <div className="flex gap-2">
           {[
             { id: 'all', label: 'All Courses' },
@@ -369,10 +403,12 @@ export default function Training() {
               key={tab.id}
               onClick={() => setFilter(tab.id)}
               className={clsx(
-                'px-4 py-2 rounded-full text-sm font-medium transition-colors',
+                'px-4 py-2 rounded-xl text-sm font-medium transition-all border',
                 filter === tab.id
-                  ? 'bg-primary-500 text-white'
-                  : isDark ? 'bg-dark-800 text-dark-400' : 'bg-slate-100 text-slate-500'
+                  ? 'bg-gradient-to-r from-primary-500 to-violet-500 text-white border-transparent shadow-lg shadow-primary-500/25'
+                  : isDark
+                    ? 'bg-white/[0.05] border-white/[0.1] text-dark-400 hover:bg-white/[0.08] hover:text-white'
+                    : 'bg-white border-slate-200 text-slate-500 shadow-sm'
               )}
             >
               {tab.label}

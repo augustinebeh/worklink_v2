@@ -36,10 +36,13 @@ import {
   CheckCircle2,
   Flag,
   Download,
+  Languages,
+  Briefcase,
 } from 'lucide-react';
 import EmojiPicker from 'emoji-picker-react';
 import Card from '../components/ui/Card';
 import Badge from '../components/ui/Badge';
+import { useToast } from '../components/ui/Toast';
 import { clsx } from 'clsx';
 import { useAdminWebSocket } from '../contexts/WebSocketContext';
 
@@ -745,6 +748,7 @@ function QuickReplyChip({ template, onClick }) {
 
 export default function AdminChat() {
   const { fetchUnreadTotal, subscribe, send, isConnected, markMessagesRead } = useAdminWebSocket();
+  const toast = useToast();
   const [conversations, setConversations] = useState([]);
   const [candidates, setCandidates] = useState([]);
   const [templates, setTemplates] = useState([]);
@@ -768,6 +772,7 @@ export default function AdminChat() {
   const [aiLoading, setAiLoading] = useState(false);
   const [typingDelayEnabled, setTypingDelayEnabled] = useState(true);
   const [responseStyle, setResponseStyle] = useState('concise'); // 'concise' or 'normal'
+  const [languageStyle, setLanguageStyle] = useState('singlish'); // 'singlish' or 'professional'
 
   // New feature states
   const [messageSearchQuery, setMessageSearchQuery] = useState('');
@@ -796,6 +801,7 @@ export default function AdminChat() {
       if (data.success) {
         setTypingDelayEnabled(data.data.typing_delay_enabled !== false);
         setResponseStyle(data.data.response_style || 'concise');
+        setLanguageStyle(data.data.language_style || 'singlish');
       }
     } catch (error) {
       console.error('Failed to fetch AI settings:', error);
@@ -833,6 +839,22 @@ export default function AdminChat() {
       setResponseStyle(responseStyle); // Revert on error
     }
   }, [responseStyle]);
+
+  // Toggle language style (singlish <-> professional)
+  const toggleLanguageStyle = useCallback(async () => {
+    const newValue = languageStyle === 'singlish' ? 'professional' : 'singlish';
+    setLanguageStyle(newValue);
+    try {
+      await fetch('/api/v1/ai-chat/settings', {
+        method: 'PUT',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ key: 'language_style', value: newValue }),
+      });
+    } catch (error) {
+      console.error('Failed to update language style:', error);
+      setLanguageStyle(languageStyle); // Revert on error
+    }
+  }, [languageStyle]);
 
   const messagesEndRef = useRef(null);
   const inputRef = useRef(null);
@@ -931,6 +953,32 @@ export default function AdminChat() {
       }
     });
 
+    // AI action notifications
+    const unsubAiAction = subscribe('ai_action', (data) => {
+      console.log('AI action:', data);
+      const name = data.candidateName || 'a worker';
+      const actionMessages = {
+        'conversation_status_updated': `Changed ${name}'s conversation status to "${data.newStatus}"`,
+      };
+      const message = actionMessages[data.action] || `AI performed: ${data.action}`;
+      toast.info('AI Action', message);
+
+      // Refresh conversations if status changed
+      if (data.action === 'conversation_status_updated') {
+        fetchConversations();
+      }
+    });
+
+    const unsubEscalation = subscribe('conversation_escalated', (data) => {
+      console.log('Conversation escalated:', data);
+      const name = data.candidateName || 'Worker';
+      toast.warning('Escalation', `${name}: ${data.reason}`);
+      if (soundEnabledRef.current) {
+        playNotificationSound();
+      }
+      fetchConversations();
+    });
+
     return () => {
       unsubNewMessage();
       unsubMessageSent();
@@ -939,8 +987,10 @@ export default function AdminChat() {
       unsubAiUpdate();
       unsubAiMessageSent();
       unsubAiModeUpdated();
+      unsubAiAction();
+      unsubEscalation();
     };
-  }, [subscribe]);
+  }, [subscribe, toast]);
 
   useEffect(() => {
     messagesEndRef.current?.scrollIntoView({ behavior: 'smooth' });
@@ -1557,6 +1607,18 @@ export default function AdminChat() {
                       title={responseStyle === 'normal' ? 'Normal replies (detailed) - Click for concise' : 'Concise replies (short) - Click for normal'}
                     >
                       {responseStyle === 'normal' ? <AlignJustify className="h-5 w-5" /> : <AlignLeft className="h-5 w-5" />}
+                    </button>
+                    <button
+                      onClick={toggleLanguageStyle}
+                      className={clsx(
+                        'p-2 rounded-lg transition-colors',
+                        languageStyle === 'singlish'
+                          ? 'text-orange-500 hover:bg-orange-50 dark:hover:bg-orange-900/20'
+                          : 'text-slate-400 hover:text-slate-600 hover:bg-slate-100 dark:hover:bg-slate-800'
+                      )}
+                      title={languageStyle === 'singlish' ? 'Singlish mode (lah, leh, lor) - Click for professional' : 'Professional mode - Click for Singlish'}
+                    >
+                      {languageStyle === 'singlish' ? <Languages className="h-5 w-5" /> : <Briefcase className="h-5 w-5" />}
                     </button>
                     <button
                       onClick={toggleSound}

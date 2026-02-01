@@ -20,7 +20,7 @@ export function ThemeProvider({ children }) {
       root.classList.remove('dark');
       root.classList.add('light');
       // Update theme-color meta tag for iOS status bar (soft blue)
-      document.querySelector('meta[name="theme-color"]')?.setAttribute('content', '#DAEBF2');
+      document.querySelector('meta[name="theme-color"]')?.setAttribute('content', '#F5F7FA');
     } else {
       root.classList.remove('light');
       root.classList.add('dark');

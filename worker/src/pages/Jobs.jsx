@@ -38,14 +38,14 @@ function JobCard({ job, applied, isDark }) {
     <Link
       to={`/jobs/${job.id}`}
       className={clsx(
-        'block p-4 rounded-2xl border transition-all',
+        'block p-4 rounded-2xl border backdrop-blur-md transition-all',
         isDark
           ? applied
-            ? 'bg-accent-900/10 border-accent-500/30'
-            : 'bg-dark-900/50 border-white/5 hover:border-primary-500/30'
+            ? 'bg-accent-500/10 border-accent-500/30 shadow-lg shadow-accent-500/5'
+            : 'bg-white/[0.03] border-white/[0.08] hover:bg-white/[0.05] hover:border-primary-500/30'
           : applied
-            ? 'bg-[#B0DEED]/30 border-[#80CCE3]'
-            : 'bg-white border-[#C2DAE6] shadow-sm hover:border-[#80CCE3]'
+            ? 'bg-primary-50/50 border-primary-200 shadow-[0_4px_20px_rgba(0,122,255,0.08)]'
+            : 'bg-white border-slate-200 shadow-[0_4px_20px_rgba(0,0,0,0.05)] hover:shadow-[0_10px_40px_rgba(0,0,0,0.08)]'
       )}
     >
       {/* Status badges */}
@@ -89,9 +89,14 @@ function JobCard({ job, applied, isDark }) {
       </div>
 
       {/* Pay & Slots */}
-      <div className={clsx('flex items-center justify-between mt-4 pt-3 border-t', isDark ? 'border-white/5' : 'border-slate-100')}>
+      <div className={clsx('flex items-center justify-between mt-4 pt-3 border-t', isDark ? 'border-white/[0.08]' : 'border-slate-100')}>
         <div>
-          <p className="text-xl font-bold text-accent-400">${formatMoney(totalPay)}</p>
+          <p
+            className="text-xl font-bold text-accent-400"
+            style={isDark ? { textShadow: '0 0 20px rgba(52,211,153,0.4)' } : undefined}
+          >
+            ${formatMoney(totalPay)}
+          </p>
           <p className={clsx('text-xs', isDark ? 'text-dark-500' : 'text-slate-400')}>${formatMoney(job.pay_rate)}/hr • {hours.toFixed(1)}h</p>
         </div>
         <div className="flex items-center gap-3">
@@ -168,29 +173,29 @@ export default function Jobs() {
 
   return (
     <div className={clsx('min-h-screen pb-24', isDark ? 'bg-dark-950' : 'bg-transparent')}>
-      {/* Search & Filters */}
+      {/* Search & Filters - Glassmorphism */}
       <div className={clsx(
-        'px-4 pt-4 pb-4',
+        'relative px-4 pt-4 pb-4',
         isDark ? 'bg-dark-950' : 'bg-transparent'
       )}>
         {/* Search */}
         <div className="relative mb-4">
-          <SearchIcon className={clsx('absolute left-3 top-1/2 -translate-y-1/2 h-5 w-5', isDark ? 'text-dark-500' : 'text-[#94BDCF]')} />
+          <SearchIcon className={clsx('absolute left-4 top-1/2 -translate-y-1/2 h-5 w-5', isDark ? 'text-dark-500' : 'text-slate-400')} />
           <input
             type="text"
             placeholder="Search jobs, locations..."
             value={search}
             onChange={(e) => setSearch(e.target.value)}
             className={clsx(
-              'w-full pl-10 pr-4 py-3 rounded-xl border focus:outline-none focus:border-primary-500',
+              'w-full pl-12 pr-4 py-3 rounded-xl border focus:outline-none focus:border-primary-500 backdrop-blur-md transition-all',
               isDark
-                ? 'bg-dark-800 border-white/10 text-white placeholder-dark-500'
-                : 'bg-white border-[#C2DAE6] text-slate-900 placeholder-[#94BDCF]'
+                ? 'bg-white/[0.05] border-white/[0.1] text-white placeholder-dark-500 focus:bg-white/[0.08]'
+                : 'bg-white/80 text-slate-900 placeholder-slate-400 shadow-[0_4px_15px_rgba(0,0,0,0.04)] border-slate-200 focus:shadow-[0_4px_20px_rgba(0,122,255,0.1)]'
             )}
           />
         </div>
 
-        {/* Filter tabs */}
+        {/* Filter tabs - Glass style */}
         <div className="flex gap-2">
           {[
             { id: 'all', label: 'All Jobs' },
@@ -201,12 +206,12 @@ export default function Jobs() {
               key={tab.id}
               onClick={() => setFilter(tab.id)}
               className={clsx(
-                'px-4 py-2 rounded-full text-sm font-medium transition-colors',
+                'px-4 py-2 rounded-xl text-sm font-medium transition-all border',
                 filter === tab.id
-                  ? 'bg-primary-500 text-white'
+                  ? 'bg-gradient-to-r from-primary-500 to-blue-500 text-white border-transparent shadow-lg shadow-primary-500/25'
                   : isDark
-                    ? 'bg-dark-800 text-dark-400 hover:text-white'
-                    : 'bg-white text-[#94BDCF] hover:text-slate-700 border border-[#C2DAE6]'
+                    ? 'bg-white/[0.05] border-white/[0.1] text-dark-400 hover:bg-white/[0.08] hover:text-white'
+                    : 'bg-white border-slate-200 text-slate-500 hover:text-slate-700 shadow-sm'
               )}
             >
               {tab.label}
@@ -223,10 +228,10 @@ export default function Jobs() {
           </div>
         ) : sortedJobs.length === 0 ? (
           <div className={clsx(
-            'text-center py-12 rounded-2xl border',
-            isDark ? 'bg-dark-900/50 border-white/5' : 'bg-white border-slate-200'
+            'text-center py-12 rounded-2xl backdrop-blur-md border',
+            isDark ? 'bg-white/[0.03] border-white/[0.08]' : 'bg-white border-slate-200 shadow-[0_4px_20px_rgba(0,0,0,0.05)]'
           )}>
-            <BriefcaseIcon className={clsx('h-12 w-12 mx-auto mb-4', isDark ? 'text-dark-600' : 'text-slate-300')} />
+            <BriefcaseIcon className={clsx('h-12 w-12 mx-auto mb-4', isDark ? 'text-dark-500' : 'text-slate-300')} />
             <p className={isDark ? 'text-dark-400' : 'text-slate-500'}>No jobs found</p>
           </div>
         ) : (

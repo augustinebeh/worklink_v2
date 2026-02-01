@@ -153,6 +153,14 @@ export function WebSocketProvider({ children }) {
         notifyListeners('ai_mode_updated', data);
         break;
 
+      case 'ai_action':
+        notifyListeners('ai_action', data);
+        break;
+
+      case 'conversation_escalated':
+        notifyListeners('conversation_escalated', data);
+        break;
+
       default:
         logger.debug('Unknown admin WebSocket message:', data.type);
     }

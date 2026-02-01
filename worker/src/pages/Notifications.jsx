@@ -56,10 +56,10 @@ function NotificationItem({ notification, onRead }) {
     <button
       onClick={handleClick}
       className={clsx(
-        'w-full flex items-start gap-3 p-4 rounded-xl text-left transition-colors',
+        'w-full flex items-start gap-3 p-4 rounded-xl text-left transition-all backdrop-blur-md border',
         isRead
-          ? 'bg-slate-100/50 dark:bg-dark-800/30'
-          : 'bg-slate-100 dark:bg-dark-800/80 border border-primary-500/20'
+          ? 'bg-slate-50/50 dark:bg-white/[0.02] border-transparent dark:border-white/[0.05]'
+          : 'bg-white dark:bg-white/[0.05] border-slate-200 dark:border-primary-500/30 shadow-sm dark:shadow-lg dark:shadow-primary-500/5'
       )}
     >
       {/* Icon */}
@@ -192,8 +192,8 @@ export default function Notifications() {
 
   return (
     <div className="min-h-screen bg-transparent dark:bg-dark-950 pb-24">
-      {/* Header */}
-      <div className="sticky top-0 z-10 bg-white/90 dark:bg-dark-950/95 backdrop-blur-lg px-4 pt-safe pb-4 border-b border-[#C2DAE6] dark:border-white/5">
+      {/* Header - Glassmorphism */}
+      <div className="sticky top-0 z-10 bg-white/90 dark:bg-dark-950/90 backdrop-blur-xl px-4 pt-safe pb-4 shadow-[0_1px_3px_rgba(0,0,0,0.03)] dark:shadow-none dark:border-b dark:border-white/[0.08]">
         <div className="flex items-center justify-between">
           <div>
             <h1 className="text-2xl font-bold text-slate-900 dark:text-white">Notifications</h1>
@@ -204,7 +204,7 @@ export default function Notifications() {
           {unreadCount > 0 && (
             <button
               onClick={handleMarkAllRead}
-              className="flex items-center gap-2 px-3 py-2 rounded-lg bg-slate-100 dark:bg-dark-800 text-slate-600 dark:text-dark-400 hover:text-slate-900 dark:hover:text-white text-sm"
+              className="flex items-center gap-2 px-4 py-2 rounded-xl bg-white dark:bg-white/[0.05] border border-slate-200 dark:border-white/[0.1] text-slate-600 dark:text-dark-400 hover:text-slate-900 dark:hover:text-white text-sm backdrop-blur-md transition-all"
             >
               <CheckCheckIcon className="h-4 w-4" />
               Mark all read
@@ -212,7 +212,7 @@ export default function Notifications() {
           )}
         </div>
 
-        {/* Filter tabs */}
+        {/* Filter tabs - Glass style */}
         <div className="flex gap-2 mt-4">
           {[
             { id: 'all', label: 'All' },
@@ -222,10 +222,10 @@ export default function Notifications() {
               key={tab.id}
               onClick={() => setFilter(tab.id)}
               className={clsx(
-                'px-4 py-2 rounded-full text-sm font-medium transition-colors',
+                'px-4 py-2 rounded-xl text-sm font-medium transition-all border',
                 filter === tab.id
-                  ? 'bg-primary-500 text-white'
-                  : 'bg-slate-100 dark:bg-dark-800 text-slate-600 dark:text-dark-400'
+                  ? 'bg-gradient-to-r from-primary-500 to-blue-500 text-white border-transparent shadow-lg shadow-primary-500/25'
+                  : 'bg-white dark:bg-white/[0.05] border-slate-200 dark:border-white/[0.1] text-slate-600 dark:text-dark-400'
               )}
             >
               {tab.label}
@@ -241,8 +241,8 @@ export default function Notifications() {
             <div className="animate-spin h-8 w-8 border-4 border-primary-500 border-t-transparent rounded-full" />
           </div>
         ) : filteredNotifications.length === 0 ? (
-          <div className="text-center py-12">
-            <BellIcon className="h-12 w-12 text-slate-300 dark:text-dark-600 mx-auto mb-4" />
+          <div className="text-center py-12 rounded-2xl bg-white dark:bg-white/[0.03] border border-slate-200 dark:border-white/[0.08] backdrop-blur-md shadow-[0_4px_20px_rgba(0,0,0,0.05)] dark:shadow-none">
+            <BellIcon className="h-12 w-12 text-slate-300 dark:text-dark-500 mx-auto mb-4" />
             <p className="text-slate-500 dark:text-dark-400">
               {filter === 'unread' ? 'No unread notifications' : 'No notifications yet'}
             </p>

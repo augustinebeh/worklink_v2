@@ -30,12 +30,16 @@ function LeaderboardRow({ entry, rank, isCurrentUser, isDark }) {
 
   return (
     <div className={clsx(
-      'flex items-center gap-3 p-4 rounded-xl transition-colors',
+      'flex items-center gap-3 p-4 rounded-xl transition-all backdrop-blur-md border',
       isCurrentUser
-        ? 'bg-primary-900/30 border border-primary-500/30'
+        ? isDark
+          ? 'bg-primary-500/15 border-primary-500/40 shadow-lg shadow-primary-500/10'
+          : 'bg-primary-50 border-primary-300 shadow-[0_4px_20px_rgba(0,122,255,0.1)]'
         : config
           ? `${config.bg} border ${config.border}`
-          : isDark ? 'bg-dark-800/50 border border-white/5' : 'bg-white border border-slate-200 shadow-sm'
+          : isDark
+            ? 'bg-white/[0.03] border-white/[0.08] hover:bg-white/[0.05]'
+            : 'bg-white border-slate-200 shadow-[0_4px_15px_rgba(0,0,0,0.04)]'
     )}>
       {/* Rank */}
       <div className={clsx(
@@ -84,7 +88,12 @@ function LeaderboardRow({ entry, rank, isCurrentUser, isDark }) {
       <div className="text-right">
         <div className="flex items-center gap-1 text-primary-400">
           <ZapIcon className="h-4 w-4" />
-          <span className="font-bold">{entry.xp?.toLocaleString()}</span>
+          <span
+            className="font-bold text-lg"
+            style={isDark ? { textShadow: '0 0 15px rgba(99,102,241,0.4)' } : undefined}
+          >
+            {entry.xp?.toLocaleString()}
+          </span>
         </div>
         <div className={clsx('flex items-center gap-0.5 text-xs', changeColor)}>
           {React.createElement(changeIcon, { className: 'h-3 w-3' })}
@@ -100,7 +109,19 @@ function TopThree({ entries, currentUserId, isDark }) {
   const displayOrder = [entries[1], entries[0], entries[2]].filter(Boolean);
 
   return (
-    <div className="flex items-end justify-center gap-4 px-4 py-6">
+    <div className={clsx(
+      'relative flex items-end justify-center gap-4 px-4 py-8 mx-4 rounded-2xl backdrop-blur-md border overflow-hidden',
+      isDark
+        ? 'bg-white/[0.03] border-white/[0.08]'
+        : 'bg-white/80 border-slate-200 shadow-[0_4px_20px_rgba(0,0,0,0.05)]'
+    )}>
+      {/* Background glow for dark mode */}
+      {isDark && (
+        <>
+          <div className="absolute top-0 left-1/4 w-32 h-32 bg-gold-500/20 rounded-full blur-[60px]" />
+          <div className="absolute top-0 right-1/4 w-32 h-32 bg-primary-500/15 rounded-full blur-[60px]" />
+        </>
+      )}
       {displayOrder.map((entry, idx) => {
         const actualRank = idx === 0 ? 2 : idx === 1 ? 1 : 3;
         const config = rankConfig[actualRank];
@@ -151,7 +172,12 @@ function TopThree({ entries, currentUserId, isDark }) {
             </p>
             <div className="flex items-center gap-1 text-primary-400 mt-1">
               <ZapIcon className="h-4 w-4" />
-              <span className="font-bold">{entry.xp?.toLocaleString()}</span>
+              <span
+                className="font-bold"
+                style={isDark ? { textShadow: '0 0 12px rgba(99,102,241,0.5)' } : undefined}
+              >
+                {entry.xp?.toLocaleString()}
+              </span>
             </div>
           </div>
         );
@@ -199,27 +225,42 @@ export default function Leaderboard() {
   const restOfLeaderboard = leaderboard.slice(3);
 
   return (
-    <div className={clsx('min-h-screen pb-24', isDark ? 'bg-dark-950' : 'bg-slate-50')}>
-      {/* Header */}
+    <div className={clsx('min-h-screen pb-24', isDark ? 'bg-dark-950' : 'bg-transparent')}>
+      {/* Header - Glassmorphism */}
       <div className={clsx(
-        'px-4 pt-safe pb-2',
-        isDark ? 'bg-gradient-to-b from-primary-900/50 to-dark-950' : 'bg-gradient-to-b from-primary-100 to-slate-50'
+        'relative px-4 pt-safe pb-2 overflow-hidden',
+        isDark ? 'bg-gradient-to-b from-[#080810] via-[#0c0d1a] to-dark-950' : 'bg-gradient-to-b from-[#EFF6FF] to-transparent'
       )}>
-        <div className="flex items-center justify-between mb-4">
+        {/* Background glow */}
+        {isDark && (
+          <>
+            <div className="absolute top-0 right-0 w-48 h-48 bg-gold-500/15 rounded-full blur-[80px] -translate-y-1/2 translate-x-1/4" />
+            <div className="absolute bottom-0 left-0 w-40 h-40 bg-primary-500/10 rounded-full blur-[60px] translate-y-1/2 -translate-x-1/4" />
+          </>
+        )}
+        <div className="relative flex items-center justify-between mb-4">
           <div>
             <h1 className={clsx('text-2xl font-bold', isDark ? 'text-white' : 'text-slate-900')}>Leaderboard</h1>
             <p className={clsx('text-sm mt-1', isDark ? 'text-dark-400' : 'text-slate-500')}>Compete with other workers</p>
           </div>
           {userRank && (
-            <div className="text-right">
-              <p className={clsx('text-sm', isDark ? 'text-dark-400' : 'text-slate-500')}>Your Rank</p>
-              <p className="text-2xl font-bold text-primary-400">#{userRank}</p>
+            <div className={clsx(
+              'text-right px-4 py-2 rounded-xl backdrop-blur-md border',
+              isDark ? 'bg-white/[0.05] border-white/[0.1]' : 'bg-white border-slate-200 shadow-sm'
+            )}>
+              <p className={clsx('text-xs', isDark ? 'text-dark-400' : 'text-slate-500')}>Your Rank</p>
+              <p
+                className="text-2xl font-bold text-primary-400"
+                style={isDark ? { textShadow: '0 0 20px rgba(99,102,241,0.5)' } : undefined}
+              >
+                #{userRank}
+              </p>
             </div>
           )}
         </div>
 
-        {/* Period filter */}
-        <div className="flex gap-2 mb-4">
+        {/* Period filter - Glass style */}
+        <div className="relative flex gap-2 mb-4">
           {[
             { id: 'all', label: 'All Time' },
             { id: 'monthly', label: 'This Month' },
@@ -229,10 +270,12 @@ export default function Leaderboard() {
               key={tab.id}
               onClick={() => setPeriod(tab.id)}
               className={clsx(
-                'flex-1 py-2 rounded-lg text-sm font-medium transition-colors',
+                'flex-1 py-2 rounded-xl text-sm font-medium transition-all border',
                 period === tab.id
-                  ? 'bg-primary-500 text-white'
-                  : isDark ? 'bg-dark-800/50 text-dark-400' : 'bg-white text-slate-500 shadow-sm'
+                  ? 'bg-gradient-to-r from-primary-500 to-violet-500 text-white border-transparent shadow-lg shadow-primary-500/25'
+                  : isDark
+                    ? 'bg-white/[0.05] border-white/[0.1] text-dark-400 hover:bg-white/[0.08] hover:text-white'
+                    : 'bg-white border-slate-200 text-slate-500 hover:text-slate-700 shadow-sm'
               )}
             >
               {tab.label}
@@ -240,11 +283,12 @@ export default function Leaderboard() {
           ))}
         </div>
 
-        {/* Top 3 Podium */}
-        {!loading && topThree.length > 0 && (
-          <TopThree entries={topThree} currentUserId={user?.id} isDark={isDark} />
-        )}
       </div>
+
+      {/* Top 3 Podium - Outside header for better visual separation */}
+      {!loading && topThree.length > 0 && (
+        <TopThree entries={topThree} currentUserId={user?.id} isDark={isDark} />
+      )}
 
       {/* Rest of leaderboard */}
       <div className="px-4 py-4">
@@ -253,9 +297,12 @@ export default function Leaderboard() {
             <div className="animate-spin h-8 w-8 border-4 border-primary-500 border-t-transparent rounded-full" />
           </div>
         ) : restOfLeaderboard.length === 0 ? (
-          <div className={clsx('text-center py-8', isDark ? 'text-dark-400' : 'text-slate-500')}>
-            <TrophyIcon className={clsx('h-12 w-12 mx-auto mb-4', isDark ? 'opacity-50' : 'text-slate-300')} />
-            <p>No more entries</p>
+          <div className={clsx(
+            'text-center py-12 rounded-2xl backdrop-blur-md border',
+            isDark ? 'bg-white/[0.03] border-white/[0.08]' : 'bg-white border-slate-200 shadow-[0_4px_20px_rgba(0,0,0,0.05)]'
+          )}>
+            <TrophyIcon className={clsx('h-12 w-12 mx-auto mb-4', isDark ? 'text-dark-500' : 'text-slate-300')} />
+            <p className={isDark ? 'text-dark-400' : 'text-slate-500'}>No more entries</p>
           </div>
         ) : (
           <div className="space-y-3">
@@ -273,7 +320,7 @@ export default function Leaderboard() {
 
         {/* User's position if not in top */}
         {userRank && userRank > 10 && user && (
-          <div className={clsx('mt-6 pt-6 border-t', isDark ? 'border-white/5' : 'border-slate-200')}>
+          <div className={clsx('mt-6 pt-6 border-t', isDark ? 'border-white/[0.08]' : 'border-slate-200')}>
             <p className={clsx('text-center text-sm mb-3', isDark ? 'text-dark-400' : 'text-slate-500')}>Your Position</p>
             <LeaderboardRow
               entry={{

@@ -14,6 +14,7 @@ const { db } = require('../../db/database');
 const { askClaude } = require('../../utils/claude');
 const ml = require('../ml');
 const prompts = require('./prompts');
+const tools = require('./tools');
 
 /**
  * Get AI settings
@@ -188,25 +189,35 @@ async function generateResponse(candidateId, message, options = {}) {
     const history = getConversationHistory(candidateId, settings.max_context_messages || 10);
     const jobs = settings.include_job_suggestions ? getAvailableJobs(5) : [];
 
-    // Build prompts
-    const candidateContext = prompts.buildCandidateContext(candidate);
-    const jobsContext = prompts.buildJobsContext(jobs);
-    const conversationContext = prompts.buildConversationContext(history);
-    const responseStyle = settings.response_style || 'concise';
-
-    const systemPrompt = prompts.buildSystemPrompt(
-      candidateContext + conversationContext,
-      jobsContext,
-      responseStyle
-    );
-
-    // Detect intent for logging
+    // Detect intent first (needed for tool selection)
     console.log(`🤖 [AI] Detecting intent...`);
     const intentResult = await detectIntent(message);
     console.log(`🤖 [AI] Intent: ${intentResult.intent}`);
 
-    // Generate response - use more tokens for normal style
-    const maxTokens = responseStyle === 'normal' ? 300 : 150;
+    // Execute tools based on intent to get real data
+    console.log(`🤖 [AI] Checking if tools needed...`);
+    const toolResult = tools.executeToolForIntent(candidateId, intentResult.intent, message);
+    const toolContext = toolResult ? tools.formatToolResultAsContext(toolResult) : '';
+    if (toolResult) {
+      console.log(`🤖 [AI] Tool executed: ${toolResult.tool}`);
+    }
+
+    // Build prompts with tool context
+    const candidateContext = prompts.buildCandidateContext(candidate);
+    const jobsContext = prompts.buildJobsContext(jobs);
+    const conversationContext = prompts.buildConversationContext(history);
+    const responseStyle = settings.response_style || 'concise';
+    const languageStyle = settings.language_style || 'singlish';
+
+    const systemPrompt = prompts.buildSystemPrompt(
+      candidateContext + conversationContext + toolContext,
+      jobsContext,
+      responseStyle,
+      languageStyle
+    );
+
+    // Generate response - slightly more tokens for normal style
+    const maxTokens = responseStyle === 'normal' ? 200 : 150;
     console.log(`🤖 [AI] Calling askClaude (style: ${responseStyle}, maxTokens: ${maxTokens})...`);
     const response = await askClaude(message, systemPrompt, { maxTokens });
     console.log(`🤖 [AI] LLM response received: "${response.substring(0, 50)}..."`)

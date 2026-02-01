@@ -12,6 +12,7 @@ import {
   TargetIcon,
   RefreshCwIcon,
   Loader2Icon,
+  SparklesIcon,
 } from 'lucide-react';
 import { useAuth } from '../contexts/AuthContext';
 import { useTheme } from '../contexts/ThemeContext';
@@ -56,17 +57,13 @@ function QuestCard({ quest, onClaim, claiming, isDark }) {
     } else if (reqType === 'referral') {
       navigate('/referrals');
     } else if (reqType === 'streak' || reqType === 'daily_check_in' || reqType === 'check_in') {
-      // Daily check-in quest - already counted by visiting quests page
-      // Show feedback to user
       return;
     } else if (reqType === 'profile_complete') {
       navigate('/complete-profile');
     } else if (reqType === 'rating' || reqType === 'five_star' || reqType === 'review' || reqType === 'five_star_rating') {
-      // Rating quests are completed when the user receives a 5-star rating from employers
-      // Can't navigate anywhere - this is tracked automatically by the system
       return;
     } else if (reqType === 'hours_worked') {
-      navigate('/wallet'); // Show work history
+      navigate('/wallet');
     }
   };
 
@@ -74,92 +71,132 @@ function QuestCard({ quest, onClaim, claiming, isDark }) {
     <div
       onClick={handleQuestClick}
       className={clsx(
-        'p-4 rounded-2xl border transition-all',
+        'relative p-4 rounded-2xl backdrop-blur-md transition-all duration-300',
         isClaimed
-          ? (isDark ? 'bg-dark-800/30 border-white/5 opacity-60' : 'bg-slate-100/50 border-slate-200 opacity-60')
+          ? (isDark ? 'bg-dark-800/20 border border-white/5 opacity-50' : 'bg-slate-100/50 border border-slate-200 opacity-50')
           : isClaimable
-            ? 'bg-gold-900/20 border-gold-500/30 animate-pulse cursor-default'
+            ? 'quest-card-glow quest-card-claimable cursor-default'
             : isDark
-              ? 'bg-dark-800/50 border-white/5 hover:border-primary-500/30 cursor-pointer'
-              : 'bg-white border-slate-200 shadow-sm hover:border-primary-300 cursor-pointer'
+              ? 'quest-card-glow cursor-pointer'
+              : 'bg-white border border-slate-200 shadow-[0_4px_20px_rgba(0,0,0,0.05)] hover:shadow-[0_8px_30px_rgba(0,0,0,0.08)] cursor-pointer'
       )}
     >
-      <div className="flex items-start justify-between gap-3">
-        <div className="flex-1">
-          {/* Type badge */}
-          <div className="flex items-center gap-2 mb-2">
-            <span className={clsx(
-              'px-2 py-0.5 rounded-full text-xs font-medium',
-              config.bg, config.color
-            )}>
-              {typeLabel}
-            </span>
-            {isClaimed && (
-              <span className="flex items-center gap-1 px-2 py-0.5 rounded-full bg-accent-500/20 text-accent-400 text-xs">
-                <CheckCircleIcon className="h-3 w-3" />
-                Claimed
-              </span>
-            )}
-            {isClaimable && (
-              <span className="flex items-center gap-1 px-2 py-0.5 rounded-full bg-gold-500/20 text-gold-400 text-xs">
-                <GiftIcon className="h-3 w-3" />
-                Ready!
-              </span>
+      {/* Glow effect for claimable */}
+      {isClaimable && isDark && (
+        <div className="absolute inset-0 rounded-2xl bg-emerald-500/10 blur-xl -z-10" />
+      )}
+
+      <div className="flex items-start justify-between gap-4">
+        {/* Left: Icon + Content */}
+        <div className="flex items-start gap-3 flex-1">
+          {/* Quest Icon */}
+          <div className={clsx(
+            'w-12 h-12 rounded-xl flex items-center justify-center flex-shrink-0 border',
+            isClaimed
+              ? (isDark ? 'bg-dark-700 border-dark-600' : 'bg-slate-100 border-slate-200')
+              : isClaimable
+                ? 'bg-emerald-500/20 border-emerald-500/30'
+                : `${config.bg} ${config.border}`
+          )}>
+            {isClaimed ? (
+              <CheckCircleIcon className={clsx('h-6 w-6', isDark ? 'text-dark-500' : 'text-slate-400')} />
+            ) : isClaimable ? (
+              <GiftIcon className="h-6 w-6 text-emerald-400" />
+            ) : (
+              <TargetIcon className={clsx('h-6 w-6', config.color)} />
             )}
           </div>
 
-          {/* Title & Description - Only strikethrough if CLAIMED */}
-          <h3 className={clsx(
-            'font-semibold text-lg',
-            isClaimed
-              ? (isDark ? 'text-dark-500' : 'text-slate-400') + ' line-through'
-              : (isDark ? 'text-white' : 'text-slate-900')
-          )}>
-            {quest.title}
-          </h3>
-          <p className={clsx('text-sm mt-1', isDark ? 'text-dark-400' : 'text-slate-500')}>{quest.description}</p>
-
-          {/* Progress bar - show for in-progress quests or those with target > 1 */}
-          {!isClaimed && quest.target > 1 && (
-            <div className="mt-3">
-              <div className="flex items-center justify-between text-xs mb-1">
-                <span className={isDark ? 'text-dark-400' : 'text-slate-500'}>Progress</span>
-                <span className={clsx('font-medium', isDark ? 'text-white' : 'text-slate-900')}>
-                  {quest.progress}/{quest.target}
+          <div className="flex-1 min-w-0">
+            {/* Type badge */}
+            <div className="flex items-center gap-2 mb-1.5">
+              <span className={clsx(
+                'px-2 py-0.5 rounded-full text-2xs font-semibold uppercase tracking-wide',
+                config.bg, config.color
+              )}>
+                {typeLabel}
+              </span>
+              {isClaimable && (
+                <span className="flex items-center gap-1 px-2 py-0.5 rounded-full bg-emerald-500/20 text-emerald-400 text-2xs font-semibold">
+                  <SparklesIcon className="h-3 w-3" />
+                  Ready!
                 </span>
-              </div>
-              <div className={clsx('h-2 rounded-full overflow-hidden', isDark ? 'bg-dark-700' : 'bg-slate-200')}>
-                <div
-                  className={clsx(
-                    'h-full rounded-full transition-all duration-500',
-                    isClaimable ? 'bg-gold-500' : 'bg-primary-500'
-                  )}
-                  style={{ width: `${Math.min(progress, 100)}%` }}
-                />
-              </div>
+              )}
             </div>
-          )}
 
-          {/* Hint for where to go */}
-          {!isClaimed && !isClaimable && quest.requirement?.type && (
-            <p className={clsx('text-xs mt-2', isDark ? 'text-primary-400' : 'text-primary-600')}>
-              Tap to go →
+            {/* Title */}
+            <h3 className={clsx(
+              'font-semibold',
+              isClaimed
+                ? (isDark ? 'text-dark-500' : 'text-slate-400') + ' line-through'
+                : (isDark ? 'text-white' : 'text-slate-900')
+            )}>
+              {quest.title}
+            </h3>
+            <p className={clsx('text-sm mt-0.5 line-clamp-2', isDark ? 'text-dark-400' : 'text-slate-500')}>
+              {quest.description}
             </p>
-          )}
+
+            {/* Progress bar */}
+            {!isClaimed && quest.target > 1 && (
+              <div className="mt-3">
+                <div className={clsx(
+                  'h-2 rounded-full overflow-hidden',
+                  isDark ? 'bg-dark-700' : 'bg-slate-200'
+                )}>
+                  <div
+                    className={clsx(
+                      'h-full rounded-full transition-all duration-500',
+                      isClaimable
+                        ? 'bg-gradient-to-r from-emerald-500 to-emerald-400'
+                        : 'bg-gradient-to-r from-violet-500 via-primary-500 to-cyan-400'
+                    )}
+                    style={{ width: `${Math.min(progress, 100)}%` }}
+                  />
+                </div>
+                <p className={clsx('text-xs mt-1', isDark ? 'text-dark-400' : 'text-slate-500')}>
+                  {quest.progress} / {quest.target}
+                </p>
+              </div>
+            )}
+
+            {/* Tap hint */}
+            {!isClaimed && !isClaimable && quest.requirement?.type && (
+              <p className={clsx('text-xs mt-2 font-medium', isDark ? 'text-primary-400' : 'text-primary-600')}>
+                Tap to start →
+              </p>
+            )}
+          </div>
         </div>
 
-        {/* Reward */}
-        <div className="flex flex-col items-end gap-2">
+        {/* Right: XP Reward + Action */}
+        <div className="flex flex-col items-end gap-2 flex-shrink-0">
+          {/* XP Display */}
           <div className={clsx(
-            'flex items-center gap-1.5 px-3 py-1.5 rounded-lg',
+            'flex items-center gap-1.5 px-3 py-2 rounded-xl border',
             isClaimed
-              ? (isDark ? 'bg-dark-700 text-dark-500' : 'bg-slate-200 text-slate-400')
-              : 'bg-primary-500/20 text-primary-400'
+              ? (isDark ? 'bg-dark-700 border-dark-600 text-dark-500' : 'bg-slate-100 border-slate-200 text-slate-400')
+              : isClaimable
+                ? 'bg-emerald-500/20 border-emerald-500/30'
+                : 'bg-gradient-to-r from-violet-500/20 to-primary-500/20 border-violet-500/30'
           )}>
-            <ZapIcon className="h-4 w-4" />
-            <span className="font-bold">+{quest.xp_reward}</span>
+            <ZapIcon className={clsx(
+              'h-5 w-5',
+              isClaimed ? '' : 'text-amber-400'
+            )} />
+            <span className={clsx(
+              'text-lg font-bold',
+              isClaimed
+                ? ''
+                : isClaimable
+                  ? 'text-emerald-400'
+                  : 'text-violet-400'
+            )}>
+              +{quest.xp_reward}
+            </span>
           </div>
 
+          {/* Claim Button */}
           {isClaimable && (
             <button
               onClick={(e) => {
@@ -167,15 +204,18 @@ function QuestCard({ quest, onClaim, claiming, isDark }) {
                 onClaim(quest.id, quest.xp_reward);
               }}
               disabled={claiming === quest.id}
-              className="px-4 py-2 rounded-lg bg-gold-500 text-dark-900 font-semibold text-sm hover:bg-gold-400 transition-colors disabled:opacity-50 flex items-center gap-2"
+              className="btn-neon-claim flex items-center gap-2"
             >
               {claiming === quest.id ? (
                 <>
                   <Loader2Icon className="h-4 w-4 animate-spin" />
-                  Claiming...
+                  <span>Claiming...</span>
                 </>
               ) : (
-                'Claim!'
+                <>
+                  <GiftIcon className="h-4 w-4" />
+                  <span>Claim!</span>
+                </>
               )}
             </button>
           )}
@@ -186,14 +226,31 @@ function QuestCard({ quest, onClaim, claiming, isDark }) {
 }
 
 function StatCard({ icon: Icon, label, value, color, isDark }) {
+  const colorMap = {
+    'text-primary-400': { bg: 'bg-primary-500/20', border: 'border-primary-500/30', glow: 'shadow-primary-500/20' },
+    'text-accent-400': { bg: 'bg-emerald-500/20', border: 'border-emerald-500/30', glow: 'shadow-emerald-500/20' },
+    'text-gold-400': { bg: 'bg-amber-500/20', border: 'border-amber-500/30', glow: 'shadow-amber-500/20' },
+  };
+  const styles = colorMap[color] || colorMap['text-primary-400'];
+
   return (
     <div className={clsx(
-      'flex flex-col items-center p-4 rounded-xl border',
-      isDark ? 'bg-dark-800/50 border-white/5' : 'bg-white border-slate-200 shadow-sm'
+      'glass-stat-pod flex flex-col items-center text-center',
+      isDark && `shadow-lg ${styles.glow}`
     )}>
-      <Icon className={clsx('h-6 w-6 mb-2', color)} />
-      <p className={clsx('text-2xl font-bold', isDark ? 'text-white' : 'text-slate-900')}>{value}</p>
-      <p className={clsx('text-xs text-center', isDark ? 'text-dark-500' : 'text-slate-500')}>{label}</p>
+      <div className={clsx(
+        'w-10 h-10 rounded-xl flex items-center justify-center mb-2 border',
+        styles.bg, styles.border
+      )}>
+        <Icon className={clsx('h-5 w-5', color)} />
+      </div>
+      <p className={clsx(
+        'text-2xl font-bold',
+        isDark ? 'text-white' : 'text-slate-900'
+      )}>
+        {value}
+      </p>
+      <p className={clsx('text-xs', isDark ? 'text-dark-400' : 'text-slate-500')}>{label}</p>
     </div>
   );
 }
@@ -358,22 +415,31 @@ export default function Quests() {
 
   return (
     <div className={clsx('min-h-screen pb-24', isDark ? 'bg-dark-950' : 'bg-transparent')}>
-      {/* Header */}
+      {/* Header with gradient background */}
       <div className={clsx(
-        'sticky top-0 z-10 backdrop-blur-lg px-4 pt-safe pb-4 border-b',
-        isDark ? 'bg-dark-950/95 border-white/5' : 'bg-white/95 border-slate-200'
+        'sticky top-0 z-10 backdrop-blur-xl px-4 pt-safe pb-4',
+        isDark
+          ? 'bg-gradient-to-b from-dark-950/98 to-dark-950/95 border-b border-white/5'
+          : 'bg-white/95 shadow-[0_1px_3px_rgba(0,0,0,0.03)]'
       )}>
         <div className="flex items-center justify-between">
           <div>
-            <h1 className={clsx('text-2xl font-bold', isDark ? 'text-white' : 'text-slate-900')}>Quests</h1>
-            <p className={clsx('text-sm mt-1', isDark ? 'text-dark-400' : 'text-slate-500')}>Complete quests to earn XP rewards</p>
+            <div className="flex items-center gap-2">
+              <SwordIcon className={clsx('h-6 w-6', isDark ? 'text-violet-400' : 'text-violet-500')} />
+              <h1 className={clsx('text-2xl font-bold', isDark ? 'text-white' : 'text-slate-900')}>Quests</h1>
+            </div>
+            <p className={clsx('text-sm mt-1', isDark ? 'text-dark-400' : 'text-slate-500')}>
+              Complete quests to earn XP rewards
+            </p>
           </div>
           <button
             onClick={fetchQuests}
             disabled={loading}
             className={clsx(
-              'p-2 rounded-lg transition-colors',
-              isDark ? 'bg-dark-800 text-dark-400 hover:text-white' : 'bg-slate-100 text-slate-500 hover:text-slate-700'
+              'p-2.5 rounded-xl transition-all border',
+              isDark
+                ? 'bg-white/5 border-white/10 text-dark-400 hover:bg-white/10 hover:text-white'
+                : 'bg-slate-100 border-slate-200 text-slate-500 hover:text-slate-700'
             )}
           >
             <RefreshCwIcon className={clsx('h-5 w-5', loading && 'animate-spin')} />
@@ -382,32 +448,48 @@ export default function Quests() {
       </div>
 
       <div className="px-4 py-6 space-y-6">
-        {/* Stats */}
+        {/* Stats - Glass Pods */}
         <div className="grid grid-cols-3 gap-3">
           <StatCard icon={TargetIcon} label="Available" value={stats.available} color="text-primary-400" isDark={isDark} />
           <StatCard icon={CheckCircleIcon} label="Claimed" value={stats.completed} color="text-accent-400" isDark={isDark} />
           <StatCard icon={ZapIcon} label="XP Earned" value={stats.totalXP} color="text-gold-400" isDark={isDark} />
         </div>
 
-        {/* Daily Reset Timer - Dynamic */}
+        {/* Daily Reset Timer - Glassmorphism */}
         <div className={clsx(
-          'p-4 rounded-xl border',
+          'relative p-4 rounded-2xl backdrop-blur-md border overflow-hidden',
           isDark
-            ? 'bg-gradient-to-r from-primary-900/30 to-accent-900/30 border-primary-500/20'
-            : 'bg-gradient-to-r from-primary-50 to-accent-50 border-primary-200'
+            ? 'bg-white/[0.03] border-white/[0.08]'
+            : 'bg-white border-slate-200 shadow-[0_4px_20px_rgba(0,0,0,0.05)]'
         )}>
-          <div className="flex items-center justify-between">
+          {/* Background glow */}
+          {isDark && (
+            <>
+              <div className="absolute top-0 right-0 w-32 h-32 bg-violet-500/10 rounded-full blur-3xl -translate-y-1/2 translate-x-1/2" />
+              <div className="absolute bottom-0 left-0 w-24 h-24 bg-emerald-500/10 rounded-full blur-3xl translate-y-1/2 -translate-x-1/2" />
+            </>
+          )}
+
+          <div className="relative flex items-center justify-between">
             <div className="flex items-center gap-3">
-              <div className="p-2 rounded-lg bg-primary-500/20">
-                <ClockIcon className="h-5 w-5 text-primary-400" />
+              <div className={clsx(
+                'p-3 rounded-xl border',
+                isDark
+                  ? 'bg-violet-500/20 border-violet-500/30'
+                  : 'bg-violet-100 border-violet-200'
+              )}>
+                <ClockIcon className={clsx('h-5 w-5', isDark ? 'text-violet-400' : 'text-violet-600')} />
               </div>
               <div>
-                <p className={clsx('font-medium', isDark ? 'text-white' : 'text-slate-900')}>Daily Quests Reset</p>
-                <p className={clsx('text-sm', isDark ? 'text-dark-400' : 'text-slate-500')}>New quests at midnight SGT</p>
+                <p className={clsx('font-semibold', isDark ? 'text-white' : 'text-slate-900')}>Daily Reset</p>
+                <p className={clsx('text-sm', isDark ? 'text-dark-400' : 'text-slate-500')}>New quests at midnight</p>
               </div>
             </div>
             <div className="text-right">
-              <p className={clsx('text-xl font-bold font-mono', isDark ? 'text-white' : 'text-slate-900')}>
+              <p className={clsx(
+                'text-2xl font-bold font-mono tracking-wider',
+                isDark ? 'text-emerald-400' : 'text-emerald-600'
+              )}>
                 {resetTimer.hours}:{resetTimer.minutes}:{resetTimer.seconds}
               </p>
               <p className={clsx('text-xs', isDark ? 'text-dark-500' : 'text-slate-400')}>remaining</p>
@@ -415,8 +497,8 @@ export default function Quests() {
           </div>
         </div>
 
-        {/* Filter tabs */}
-        <div className="flex gap-2 overflow-x-auto pb-2 -mx-4 px-4">
+        {/* Filter tabs - Glass style */}
+        <div className="flex gap-2 overflow-x-auto pb-2 -mx-4 px-4 scrollbar-hide">
           {[
             { id: 'all', label: 'All' },
             { id: 'available', label: 'Available' },
@@ -429,10 +511,12 @@ export default function Quests() {
               key={tab.id}
               onClick={() => setFilter(tab.id)}
               className={clsx(
-                'px-4 py-2 rounded-full text-sm font-medium whitespace-nowrap transition-colors',
+                'px-4 py-2 rounded-xl text-sm font-medium whitespace-nowrap transition-all border',
                 filter === tab.id
-                  ? 'bg-primary-500 text-white'
-                  : isDark ? 'bg-dark-800 text-dark-400' : 'bg-slate-100 text-slate-500'
+                  ? 'bg-gradient-to-r from-violet-500 to-primary-500 text-white border-transparent shadow-lg shadow-violet-500/25'
+                  : isDark
+                    ? 'bg-white/5 border-white/10 text-dark-400 hover:bg-white/10 hover:text-white'
+                    : 'bg-white border-slate-200 text-slate-500 hover:text-slate-700 shadow-sm'
               )}
             >
               {tab.label}

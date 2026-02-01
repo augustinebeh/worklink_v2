@@ -164,7 +164,7 @@ function DateDivider({ date }) {
 
   return (
     <div className="flex items-center justify-center my-4">
-      <span className="px-3 py-1 rounded-full bg-slate-200 dark:bg-dark-800 text-slate-600 dark:text-dark-400 text-xs">
+      <span className="px-3 py-1 rounded-full bg-slate-200/80 dark:bg-white/[0.08] backdrop-blur-md text-slate-600 dark:text-dark-400 text-xs border border-transparent dark:border-white/[0.05]">
         {label}
       </span>
     </div>
@@ -186,12 +186,12 @@ function TypingIndicator() {
   );
 }
 
-// Quick Reply Chip
+// Quick Reply Chip - Glassmorphism
 function QuickReplyChip({ text, onClick }) {
   return (
     <button
       onClick={() => onClick(text)}
-      className="px-3 py-1.5 rounded-full bg-white dark:bg-dark-800 border border-slate-200 dark:border-white/10 text-sm text-slate-700 dark:text-slate-300 hover:bg-slate-50 dark:hover:bg-dark-700 transition-colors whitespace-nowrap"
+      className="px-4 py-2 rounded-xl bg-white/80 dark:bg-white/[0.05] backdrop-blur-md border border-slate-200 dark:border-white/[0.1] text-sm text-slate-700 dark:text-slate-300 hover:bg-slate-50 dark:hover:bg-white/[0.08] transition-all whitespace-nowrap"
     >
       {text}
     </button>
@@ -498,9 +498,9 @@ export default function Chat() {
   }
 
   return (
-    <div className="h-screen bg-white dark:bg-dark-950 flex flex-col">
-      {/* Fixed Header */}
-      <div className="flex-shrink-0 bg-slate-50 dark:bg-dark-900 px-4 pt-safe pb-3 border-b border-slate-200 dark:border-white/5 z-10">
+    <div className="h-screen bg-[#F5F7FA] dark:bg-dark-950 flex flex-col">
+      {/* Fixed Header - Glassmorphism */}
+      <div className="flex-shrink-0 bg-white/90 dark:bg-dark-950/90 backdrop-blur-xl px-4 pt-safe pb-3 shadow-[0_1px_3px_rgba(0,0,0,0.03)] dark:shadow-none dark:border-b dark:border-white/[0.08] z-10">
         <div className="flex items-center gap-3">
           {/* Back button */}
           <button
@@ -529,7 +529,7 @@ export default function Chat() {
       {/* Messages Area - Scrollable */}
       <div
         ref={messagesContainerRef}
-        className="flex-1 overflow-y-auto overscroll-contain px-4 py-4 bg-slate-100 dark:bg-dark-950"
+        className="flex-1 overflow-y-auto overscroll-contain px-4 py-4 bg-[#F5F7FA] dark:bg-dark-950"
       >
         {loading ? (
           <div className="flex items-center justify-center h-full">
@@ -568,7 +568,7 @@ export default function Chat() {
 
       {/* Quick Replies - show when no message being typed */}
       {quickReplies.length > 0 && !newMessage && !selectedFile && !showEmoji && (
-        <div className="flex-shrink-0 px-3 py-2 border-t border-slate-200 dark:border-white/5 bg-slate-50 dark:bg-dark-900">
+        <div className="flex-shrink-0 px-3 py-2 border-t border-slate-200/60 dark:border-white/[0.08] bg-white/90 dark:bg-dark-950/90 backdrop-blur-xl">
           <div className="flex gap-2 overflow-x-auto scrollbar-hide">
             {quickReplies.map((reply, idx) => (
               <QuickReplyChip key={idx} text={reply} onClick={handleQuickReply} />
@@ -579,7 +579,7 @@ export default function Chat() {
 
       {/* File Preview */}
       {selectedFile && (
-        <div className="flex-shrink-0 px-3 py-2 border-t border-slate-200 dark:border-white/5 bg-slate-50 dark:bg-dark-900">
+        <div className="flex-shrink-0 px-3 py-2 border-t border-slate-200/60 dark:border-white/5 bg-white/90 dark:bg-dark-900">
           <div className="flex items-center gap-3 p-2 rounded-lg bg-white dark:bg-dark-800 border border-slate-200 dark:border-white/10">
             {filePreview ? (
               <img src={filePreview} alt="Preview" className="w-12 h-12 rounded object-cover" />
@@ -606,7 +606,7 @@ export default function Chat() {
 
       {/* Emoji picker - positioned above input */}
       {showEmoji && (
-        <div className="flex-shrink-0 border-t border-slate-200 dark:border-white/5">
+        <div className="flex-shrink-0 border-t border-slate-200/60 dark:border-white/5">
           <EmojiPicker
             onEmojiClick={handleEmojiClick}
             width="100%"
@@ -627,8 +627,8 @@ export default function Chat() {
         className="hidden"
       />
 
-      {/* Input Area */}
-      <div className="flex-shrink-0 bg-white dark:bg-dark-950 px-3 py-2 pb-safe border-t border-slate-200 dark:border-white/5">
+      {/* Input Area - Glassmorphism */}
+      <div className="flex-shrink-0 bg-white/90 dark:bg-dark-950/90 backdrop-blur-xl px-3 py-2 pb-safe border-t border-slate-200/60 dark:border-white/[0.08]">
         <div className="flex items-center gap-2">
           {/* File attachment button */}
           <button
@@ -664,16 +664,16 @@ export default function Chat() {
             onKeyPress={handleKeyPress}
             onFocus={handleInputFocus}
             placeholder="Message"
-            className="flex-1 h-10 px-4 rounded-full bg-slate-100 dark:bg-dark-800 border border-slate-300 dark:border-white/10 text-slate-900 dark:text-white placeholder-slate-500 dark:placeholder-dark-500 focus:outline-none focus:border-primary-500 text-sm"
+            className="flex-1 h-10 px-4 rounded-full bg-slate-100 dark:bg-white/[0.05] backdrop-blur-md border border-slate-300 dark:border-white/[0.1] text-slate-900 dark:text-white placeholder-slate-500 dark:placeholder-dark-500 focus:outline-none focus:border-primary-500 text-sm transition-all"
           />
 
           <button
             onClick={handleSend}
             disabled={(!newMessage.trim() && !selectedFile) || sending || uploadingFile}
             className={clsx(
-              'p-2.5 rounded-full transition-colors flex-shrink-0',
+              'p-2.5 rounded-full transition-all flex-shrink-0',
               (newMessage.trim() || selectedFile)
-                ? 'bg-primary-500 text-white'
+                ? 'bg-gradient-to-r from-primary-500 to-blue-500 text-white shadow-lg shadow-primary-500/30'
                 : 'text-slate-400 dark:text-dark-500'
             )}
           >

@@ -191,11 +191,11 @@ export default function Calendar() {
   };
 
   return (
-    <div className={clsx('min-h-screen pb-24', isDark ? 'bg-dark-950' : 'bg-slate-50')}>
-      {/* Header */}
+    <div className={clsx('min-h-screen pb-24', isDark ? 'bg-dark-950' : 'bg-transparent')}>
+      {/* Header - Glassmorphism */}
       <div className={clsx(
-        'sticky top-0 z-10 backdrop-blur-lg px-4 pt-safe pb-4 border-b',
-        isDark ? 'bg-dark-950/95 border-white/5' : 'bg-white/95 border-slate-200'
+        'sticky top-0 z-10 backdrop-blur-xl px-4 pt-safe pb-4',
+        isDark ? 'bg-dark-950/90 border-b border-white/[0.08]' : 'bg-white/90 shadow-[0_1px_3px_rgba(0,0,0,0.03)]'
       )}>
         <div className="flex items-center justify-between mb-4">
           <h1 className={clsx('text-2xl font-bold', isDark ? 'text-white' : 'text-slate-900')}>Calendar</h1>
@@ -205,8 +205,8 @@ export default function Calendar() {
                 <button
                   onClick={() => { setPendingChanges({}); setMode('view'); }}
                   className={clsx(
-                    'px-3 py-1.5 rounded-lg text-sm font-medium',
-                    isDark ? 'bg-dark-800 text-dark-400' : 'bg-slate-100 text-slate-500'
+                    'px-3 py-1.5 rounded-xl text-sm font-medium border backdrop-blur-md',
+                    isDark ? 'bg-white/[0.05] border-white/[0.1] text-dark-400' : 'bg-slate-100 border-slate-200 text-slate-500'
                   )}
                 >
                   Cancel
@@ -214,7 +214,7 @@ export default function Calendar() {
                 <button
                   onClick={handleSaveAvailability}
                   disabled={saving}
-                  className="px-3 py-1.5 rounded-lg bg-primary-500 text-white text-sm font-medium disabled:opacity-50"
+                  className="px-3 py-1.5 rounded-xl bg-gradient-to-r from-primary-500 to-blue-500 text-white text-sm font-medium shadow-lg shadow-primary-500/25 disabled:opacity-50"
                 >
                   {saving ? 'Saving...' : `Save (${Object.keys(pendingChanges).length})`}
                 </button>
@@ -224,15 +224,18 @@ export default function Calendar() {
                 <button
                   onClick={goToToday}
                   className={clsx(
-                    'px-3 py-1.5 rounded-lg text-sm font-medium',
-                    isDark ? 'bg-dark-800 text-dark-300' : 'bg-slate-100 text-slate-600'
+                    'px-3 py-1.5 rounded-xl text-sm font-medium border backdrop-blur-md',
+                    isDark ? 'bg-white/[0.05] border-white/[0.1] text-dark-300' : 'bg-slate-100 border-slate-200 text-slate-600'
                   )}
                 >
                   Today
                 </button>
                 <button
                   onClick={() => setMode('edit')}
-                  className="px-3 py-1.5 rounded-lg bg-primary-500/20 text-primary-400 text-sm font-medium"
+                  className={clsx(
+                    'px-3 py-1.5 rounded-xl text-sm font-medium border',
+                    isDark ? 'bg-primary-500/20 border-primary-500/30 text-primary-400' : 'bg-primary-50 border-primary-200 text-primary-600'
+                  )}
                 >
                   Edit
                 </button>
@@ -348,17 +351,19 @@ export default function Calendar() {
               </h3>
             </div>
 
-            {/* Quick availability buttons */}
+            {/* Quick availability buttons - Glass style */}
             {!isPast(selectedDate.getDate()) && selectedDeployments.length === 0 && (
               <div className="flex items-center gap-2 mb-4">
                 <span className={clsx('text-sm', isDark ? 'text-dark-400' : 'text-slate-500')}>Set as:</span>
                 <button
                   onClick={() => handleSetAvailability('available')}
                   className={clsx(
-                    'flex items-center gap-1 px-3 py-1.5 rounded-lg text-sm font-medium transition-colors',
-                    selectedAvailability === 'available' 
-                      ? 'bg-emerald-500 text-white' 
-                      : 'bg-emerald-500/20 text-emerald-400 hover:bg-emerald-500/30'
+                    'flex items-center gap-1 px-4 py-2 rounded-xl text-sm font-medium transition-all border',
+                    selectedAvailability === 'available'
+                      ? 'bg-gradient-to-r from-emerald-500 to-teal-500 text-white border-transparent shadow-lg shadow-emerald-500/25'
+                      : isDark
+                        ? 'bg-emerald-500/15 border-emerald-500/30 text-emerald-400 hover:bg-emerald-500/25'
+                        : 'bg-emerald-50 border-emerald-200 text-emerald-600 hover:bg-emerald-100'
                   )}
                 >
                   <CheckIcon className="h-4 w-4" />
@@ -367,10 +372,12 @@ export default function Calendar() {
                 <button
                   onClick={() => handleSetAvailability('unavailable')}
                   className={clsx(
-                    'flex items-center gap-1 px-3 py-1.5 rounded-lg text-sm font-medium transition-colors',
-                    selectedAvailability === 'unavailable' 
-                      ? 'bg-red-500 text-white' 
-                      : 'bg-red-500/20 text-red-400 hover:bg-red-500/30'
+                    'flex items-center gap-1 px-4 py-2 rounded-xl text-sm font-medium transition-all border',
+                    selectedAvailability === 'unavailable'
+                      ? 'bg-gradient-to-r from-red-500 to-rose-500 text-white border-transparent shadow-lg shadow-red-500/25'
+                      : isDark
+                        ? 'bg-red-500/15 border-red-500/30 text-red-400 hover:bg-red-500/25'
+                        : 'bg-red-50 border-red-200 text-red-600 hover:bg-red-100'
                   )}
                 >
                   <XIcon className="h-4 w-4" />
@@ -384,9 +391,12 @@ export default function Calendar() {
                 <div className="animate-spin h-6 w-6 border-2 border-primary-500 border-t-transparent rounded-full" />
               </div>
             ) : selectedDeployments.length === 0 ? (
-              <div className={clsx('text-center py-8', isDark ? 'text-dark-500' : 'text-slate-400')}>
-                <CalendarIcon className={clsx('h-10 w-10 mx-auto mb-2', isDark ? 'opacity-50' : 'text-slate-300')} />
-                <p>No jobs scheduled</p>
+              <div className={clsx(
+                'text-center py-10 rounded-2xl backdrop-blur-md border',
+                isDark ? 'bg-white/[0.03] border-white/[0.08]' : 'bg-white border-slate-200 shadow-[0_4px_20px_rgba(0,0,0,0.05)]'
+              )}>
+                <CalendarIcon className={clsx('h-10 w-10 mx-auto mb-2', isDark ? 'text-dark-500' : 'text-slate-300')} />
+                <p className={isDark ? 'text-dark-400' : 'text-slate-500'}>No jobs scheduled</p>
                 {selectedAvailability === 'available' && (
                   <p className="text-sm text-emerald-400 mt-1">You're marked as available</p>
                 )}
@@ -401,8 +411,10 @@ export default function Calendar() {
                     key={deployment.id}
                     to={`/jobs/${deployment.job_id}`}
                     className={clsx(
-                      'block p-4 rounded-xl border',
-                      isDark ? 'bg-dark-800/50 border-white/5 hover:border-primary-500/30' : 'bg-white border-slate-200 shadow-sm hover:border-primary-300'
+                      'block p-4 rounded-xl backdrop-blur-md border transition-all',
+                      isDark
+                        ? 'bg-white/[0.03] border-white/[0.08] hover:bg-white/[0.05] hover:border-primary-500/30'
+                        : 'bg-white border-slate-200 shadow-[0_4px_20px_rgba(0,0,0,0.05)] hover:shadow-[0_10px_40px_rgba(0,0,0,0.08)]'
                     )}
                   >
                     <div className="flex items-start justify-between">

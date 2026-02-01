@@ -945,6 +945,7 @@ function seedEssentialData() {
     ['response_delay_ms', '1500', 'Delay before AI responds (ms) for natural feel'],
     ['typing_delay_enabled', 'true', 'Show typing indicator with 3-5s delay before AI responds'],
     ['response_style', 'concise', 'AI response style: concise | normal'],
+    ['language_style', 'singlish', 'AI language style: singlish | professional'],
     ['max_context_messages', '10', 'Number of previous messages to include in context'],
     ['include_candidate_profile', 'true', 'Include candidate info in AI context'],
     ['include_job_suggestions', 'true', 'Allow AI to suggest relevant jobs'],
@@ -1192,6 +1193,46 @@ function seedEssentialData() {
       INSERT OR IGNORE INTO ml_metrics (date, total_queries, kb_hits, llm_calls, avg_confidence, estimated_cost_saved)
       VALUES (?, ?, ?, ?, ?, ?)
     `).run(dateStr, baseQueries, kbHits, llmCalls, 0.75 + Math.random() * 0.15, costSaved);
+  }
+
+  // ============================================
+  // SLM TRAINING DATA - Auto-seed & dedupe for production
+  // ============================================
+  try {
+    const slmSeeder = require('./seed-slm-data');
+    slmSeeder.setDb(db); // Pass db to avoid circular dependency
+
+    // Always dedupe on startup to keep data clean
+    const kbCount = db.prepare('SELECT COUNT(*) as c FROM ml_knowledge_base').get().c;
+    if (kbCount > 50) {
+      console.log('  🧹 Deduplicating SLM data...');
+      slmSeeder.deduplicateKnowledgeBase();
+      slmSeeder.deduplicateTrainingData();
+    }
+
+    // Seed if missing
+    const slmSeedCount = db.prepare(`
+      SELECT COUNT(*) as c FROM ml_knowledge_base WHERE source IN ('seed', 'singlish_seed')
+    `).get().c;
+
+    if (slmSeedCount < 10) {
+      console.log('  🤖 Seeding SLM training data (additive)...');
+      slmSeeder.importToKnowledgeBase(slmSeeder.seedData);
+      const generated = slmSeeder.generateFromTemplates(300);
+      slmSeeder.importToTrainingData([...slmSeeder.seedData, ...generated]);
+      console.log('  ✅ SLM data seeded');
+    }
+  } catch (e) {
+    console.log('  ⚠️ SLM seeder not available:', e.message);
+  }
+
+  // ============================================
+  // AD ML - Skip if already seeded to prevent duplicates
+  // ============================================
+  const adDataExists = db.prepare('SELECT COUNT(*) as c FROM ad_training_data').get().c > 0;
+  if (adDataExists) {
+    console.log('✅ Essential data seeded (including AI/ML training data)');
+    return;
   }
 
   // ============================================

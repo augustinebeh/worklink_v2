@@ -185,8 +185,8 @@ export default function CompleteProfile() {
     <div className={clsx('min-h-screen pb-24', isDark ? 'bg-dark-950' : 'bg-transparent')}>
       {/* Header */}
       <div className={clsx(
-        'sticky top-0 z-10 backdrop-blur-lg px-4 pt-safe pb-4 border-b',
-        isDark ? 'bg-dark-950/95 border-white/5' : 'bg-white/95 border-slate-200'
+        'sticky top-0 z-10 backdrop-blur-lg px-4 pt-safe pb-4',
+        isDark ? 'bg-dark-950/95 border-b border-white/5' : 'bg-white/90 shadow-[0_1px_3px_rgba(0,0,0,0.03)]'
       )}>
         <div className="flex items-center gap-3">
           <button

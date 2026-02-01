@@ -28,21 +28,28 @@ const tierColors = {
 
 function StatCard({ icon: Icon, label, value, color = 'primary', isDark }) {
   const colors = {
-    primary: 'text-primary-400 bg-primary-500/20',
-    accent: 'text-accent-400 bg-accent-500/20',
-    gold: 'text-yellow-400 bg-yellow-500/20',
-    green: 'text-emerald-400 bg-emerald-500/20',
+    primary: { icon: 'text-primary-400', bg: 'bg-primary-500/20', border: 'border-primary-500/30' },
+    accent: { icon: 'text-accent-400', bg: 'bg-accent-500/20', border: 'border-accent-500/30' },
+    gold: { icon: 'text-yellow-400', bg: 'bg-yellow-500/20', border: 'border-yellow-500/30' },
+    green: { icon: 'text-emerald-400', bg: 'bg-emerald-500/20', border: 'border-emerald-500/30' },
   };
+
+  const colorStyle = colors[color] || colors.primary;
 
   return (
     <div className={clsx(
-      'p-4 rounded-xl border',
-      isDark ? 'bg-dark-800/50 border-white/5' : 'bg-white border-slate-200 shadow-sm'
+      'p-4 rounded-xl border backdrop-blur-md',
+      isDark ? 'bg-white/[0.03] border-white/[0.08]' : 'bg-white border-slate-200 shadow-[0_4px_15px_rgba(0,0,0,0.04)]'
     )}>
-      <div className={clsx('p-2 rounded-lg w-fit mb-2', colors[color])}>
-        <Icon className="h-5 w-5" />
+      <div className={clsx('p-2 rounded-lg w-fit mb-2 border', colorStyle.bg, colorStyle.border)}>
+        <Icon className={clsx('h-5 w-5', colorStyle.icon)} />
       </div>
-      <p className={clsx('text-2xl font-bold', isDark ? 'text-white' : 'text-slate-900')}>{value}</p>
+      <p
+        className={clsx('text-2xl font-bold', isDark ? 'text-white' : 'text-slate-900')}
+        style={isDark && color === 'green' ? { textShadow: '0 0 15px rgba(52,211,153,0.4)' } : undefined}
+      >
+        {value}
+      </p>
       <p className={clsx('text-sm', isDark ? 'text-dark-400' : 'text-slate-500')}>{label}</p>
     </div>
   );
@@ -54,31 +61,37 @@ function TierProgress({ currentTier, tiers, totalEarned, isDark }) {
 
   return (
     <div className={clsx(
-      'p-4 rounded-2xl border',
+      'relative p-5 rounded-2xl border backdrop-blur-md overflow-hidden',
       isDark
-        ? 'bg-gradient-to-br from-primary-900/40 to-dark-900 border-primary-500/20'
-        : 'bg-gradient-to-br from-primary-50 to-white border-primary-200'
+        ? 'bg-white/[0.03] border-white/[0.08]'
+        : 'bg-gradient-to-br from-primary-50 to-white border-primary-200 shadow-[0_4px_20px_rgba(0,0,0,0.05)]'
     )}>
-      <div className="flex items-center justify-between mb-3">
+      {/* Background glow */}
+      {isDark && (
+        <div className="absolute inset-0 bg-gradient-to-br from-primary-500/10 to-violet-500/5" />
+      )}
+      <div className="relative flex items-center justify-between mb-4">
         <div className="flex items-center gap-2">
-          <TrophyIcon className="h-5 w-5 text-primary-400" />
+          <div className={clsx('p-2 rounded-lg', isDark ? 'bg-primary-500/20' : 'bg-primary-100')}>
+            <TrophyIcon className="h-5 w-5 text-primary-400" />
+          </div>
           <span className={clsx('font-semibold', isDark ? 'text-white' : 'text-slate-900')}>Your Tier</span>
         </div>
-        <span className={clsx('px-3 py-1 rounded-full text-sm font-medium', tierColors[currentTier]?.bg, tierColors[currentTier]?.text)}>
+        <span className={clsx('px-3 py-1.5 rounded-xl text-sm font-medium border', tierColors[currentTier]?.bg, tierColors[currentTier]?.text, tierColors[currentTier]?.border)}>
           {tierColors[currentTier]?.label || 'Bronze'}
         </span>
       </div>
 
       {/* Tier badges */}
-      <div className="flex justify-between mb-4">
+      <div className="relative flex justify-between mb-4">
         {tiers?.map((tier) => (
           <div key={tier.tier_level} className="flex flex-col items-center">
             <div className={clsx(
-              'w-10 h-10 rounded-full flex items-center justify-center text-sm font-bold border-2',
+              'w-11 h-11 rounded-xl flex items-center justify-center text-sm font-bold border-2 backdrop-blur-md transition-all',
               tier.tier_level <= currentTier
                 ? `${tierColors[tier.tier_level]?.bg} ${tierColors[tier.tier_level]?.text} ${tierColors[tier.tier_level]?.border}`
                 : isDark
-                  ? 'bg-dark-800 text-dark-500 border-dark-700'
+                  ? 'bg-white/[0.03] text-dark-500 border-white/[0.1]'
                   : 'bg-slate-100 text-slate-400 border-slate-200'
             )}>
               ${Number(tier.bonus_amount).toFixed(0)}
@@ -101,15 +114,17 @@ function TierProgress({ currentTier, tiers, totalEarned, isDark }) {
 
 function ReferralCard({ referral, isDark }) {
   const statusColors = {
-    pending: 'bg-amber-500/20 text-amber-400',
-    registered: 'bg-blue-500/20 text-blue-400',
-    bonus_paid: 'bg-emerald-500/20 text-emerald-400',
+    pending: { bg: 'bg-amber-500/20', text: 'text-amber-400', border: 'border-amber-500/30' },
+    registered: { bg: 'bg-blue-500/20', text: 'text-blue-400', border: 'border-blue-500/30' },
+    bonus_paid: { bg: 'bg-emerald-500/20', text: 'text-emerald-400', border: 'border-emerald-500/30' },
   };
+
+  const statusStyle = statusColors[referral.status] || statusColors.pending;
 
   return (
     <div className={clsx(
-      'p-4 rounded-xl border',
-      isDark ? 'bg-dark-800/50 border-white/5' : 'bg-white border-slate-200 shadow-sm'
+      'p-4 rounded-xl border backdrop-blur-md',
+      isDark ? 'bg-white/[0.03] border-white/[0.08]' : 'bg-white border-slate-200 shadow-[0_4px_15px_rgba(0,0,0,0.04)]'
     )}>
       <div className="flex items-center justify-between">
         <div className="flex items-center gap-3">
@@ -121,17 +136,22 @@ function ReferralCard({ referral, isDark }) {
             <p className={clsx('text-xs', isDark ? 'text-dark-500' : 'text-slate-400')}>{referral.referred_jobs || 0} jobs completed</p>
           </div>
         </div>
-        <span className={clsx('px-2 py-1 rounded-full text-xs font-medium', statusColors[referral.status])}>
+        <span className={clsx('px-2.5 py-1 rounded-lg text-xs font-medium border', statusStyle.bg, statusStyle.text, statusStyle.border)}>
           {REFERRAL_STATUS_LABELS[referral.status] || 'Pending'}
         </span>
       </div>
       {referral.total_bonus_paid > 0 && (
         <div className={clsx(
           'mt-3 pt-3 border-t flex items-center justify-between',
-          isDark ? 'border-white/5' : 'border-slate-100'
+          isDark ? 'border-white/[0.08]' : 'border-slate-100'
         )}>
           <span className={clsx('text-sm', isDark ? 'text-dark-400' : 'text-slate-500')}>You earned</span>
-          <span className="font-semibold text-emerald-400">${formatMoney(referral.total_bonus_paid)}</span>
+          <span
+            className="font-bold text-emerald-400"
+            style={isDark ? { textShadow: '0 0 12px rgba(52,211,153,0.4)' } : undefined}
+          >
+            ${formatMoney(referral.total_bonus_paid)}
+          </span>
         </div>
       )}
     </div>
@@ -225,7 +245,7 @@ export default function Referrals() {
 
   if (!user) {
     return (
-      <div className={clsx('min-h-screen flex items-center justify-center pb-24', isDark ? 'bg-dark-950' : 'bg-slate-50')}>
+      <div className={clsx('min-h-screen flex items-center justify-center pb-24', isDark ? 'bg-dark-950' : 'bg-transparent')}>
         <p className={isDark ? 'text-dark-400' : 'text-slate-500'}>Please log in to view referrals</p>
       </div>
     );
@@ -233,7 +253,7 @@ export default function Referrals() {
 
   if (loading) {
     return (
-      <div className={clsx('min-h-screen flex items-center justify-center pb-24', isDark ? 'bg-dark-950' : 'bg-slate-50')}>
+      <div className={clsx('min-h-screen flex items-center justify-center pb-24', isDark ? 'bg-dark-950' : 'bg-transparent')}>
         <div className="animate-spin h-8 w-8 border-4 border-primary-500 border-t-transparent rounded-full" />
       </div>
     );
@@ -241,48 +261,66 @@ export default function Referrals() {
 
   return (
     <div className={clsx('min-h-screen pb-24', isDark ? 'bg-dark-950' : 'bg-transparent')}>
-      {/* Header */}
+      {/* Header - Glassmorphism */}
       <div className={clsx(
-        'px-4 pt-4 pb-6',
+        'relative px-4 pt-4 pb-6 overflow-hidden',
         isDark
-          ? 'bg-gradient-to-b from-accent-900/30 to-dark-950'
-          : 'bg-gradient-to-b from-emerald-100 to-slate-50'
+          ? 'bg-gradient-to-b from-[#080810] via-[#0c0d1a] to-dark-950'
+          : 'bg-gradient-to-b from-emerald-100/70 to-transparent'
       )}>
-        <h1 className={clsx('text-2xl font-bold mb-2', isDark ? 'text-white' : 'text-slate-900')}>Refer & Earn</h1>
-        <p className={isDark ? 'text-dark-400' : 'text-slate-500'}>Invite friends and earn bonuses together!</p>
+        {/* Background glow */}
+        {isDark && (
+          <>
+            <div className="absolute top-0 right-0 w-48 h-48 bg-accent-500/15 rounded-full blur-[80px] -translate-y-1/2 translate-x-1/4" />
+            <div className="absolute bottom-0 left-0 w-40 h-40 bg-teal-500/10 rounded-full blur-[60px] translate-y-1/2 -translate-x-1/4" />
+          </>
+        )}
+        <div className="relative">
+          <h1 className={clsx('text-2xl font-bold mb-2', isDark ? 'text-white' : 'text-slate-900')}>Refer & Earn</h1>
+          <p className={isDark ? 'text-dark-400' : 'text-slate-500'}>Invite friends and earn bonuses together!</p>
+        </div>
       </div>
 
       <div className="px-4 space-y-6">
-        {/* Referral Code Card */}
+        {/* Referral Code Card - Glassmorphism */}
         <div className={clsx(
-          'p-5 rounded-2xl border',
+          'relative p-5 rounded-2xl border backdrop-blur-md overflow-hidden',
           isDark
-            ? 'bg-gradient-to-r from-accent-900/40 to-accent-800/20 border-accent-500/20'
-            : 'bg-gradient-to-r from-emerald-50 to-teal-50 border-emerald-200'
+            ? 'bg-white/[0.03] border-accent-500/30'
+            : 'bg-gradient-to-r from-emerald-50 to-teal-50 border-emerald-200 shadow-[0_4px_20px_rgba(0,0,0,0.05)]'
         )}>
-          <div className="flex items-center gap-2 mb-3">
-            <GiftIcon className="h-5 w-5 text-accent-400" />
-            <span className={clsx('font-medium', isDark ? 'text-white' : 'text-slate-900')}>Your Referral Code</span>
+          {/* Background glow */}
+          {isDark && (
+            <div className="absolute inset-0 bg-gradient-to-r from-accent-500/10 to-teal-500/10" />
+          )}
+          <div className="relative flex items-center gap-2 mb-3">
+            <div className={clsx('p-2 rounded-lg', isDark ? 'bg-accent-500/20' : 'bg-emerald-100')}>
+              <GiftIcon className="h-5 w-5 text-accent-400" />
+            </div>
+            <span className={clsx('font-semibold', isDark ? 'text-white' : 'text-slate-900')}>Your Referral Code</span>
           </div>
 
-          <div className="flex items-center gap-3 mb-4">
+          <div className="relative flex items-center gap-3 mb-4">
             <div className={clsx(
-              'flex-1 px-4 py-3 rounded-xl border',
-              isDark ? 'bg-dark-900/80 border-white/10' : 'bg-white border-slate-200'
+              'flex-1 px-4 py-3 rounded-xl border backdrop-blur-md',
+              isDark ? 'bg-white/[0.05] border-white/[0.1]' : 'bg-white border-slate-200'
             )}>
-              <p className={clsx('font-mono text-xl text-center tracking-wider', isDark ? 'text-white' : 'text-slate-900')}>
+              <p
+                className={clsx('font-mono text-xl text-center tracking-wider', isDark ? 'text-white' : 'text-slate-900')}
+                style={isDark ? { textShadow: '0 0 20px rgba(52,211,153,0.3)' } : undefined}
+              >
                 {data?.referralCode || 'N/A'}
               </p>
             </div>
             <button
               onClick={handleCopy}
-              className="p-3 rounded-xl bg-accent-500 text-white"
+              className="p-3 rounded-xl bg-gradient-to-r from-accent-500 to-teal-500 text-white shadow-lg shadow-accent-500/25 hover:shadow-accent-500/40 transition-shadow"
             >
               {copied ? <CheckIcon className="h-6 w-6" /> : <CopyIcon className="h-6 w-6" />}
             </button>
           </div>
 
-          <p className={clsx('text-sm text-center', isDark ? 'text-accent-300' : 'text-emerald-600')}>
+          <p className={clsx('relative text-sm text-center', isDark ? 'text-accent-300' : 'text-emerald-600')}>
             You both get <span className="font-bold">${formatMoney(data?.currentTier?.bonus_amount || 30)}</span> when they complete their first job!
           </p>
         </div>
@@ -351,10 +389,10 @@ export default function Referrals() {
             </div>
           ) : (
             <div className={clsx(
-              'text-center py-8 rounded-xl border',
-              isDark ? 'bg-dark-800/50 border-white/5' : 'bg-white border-slate-200'
+              'text-center py-10 rounded-xl border backdrop-blur-md',
+              isDark ? 'bg-white/[0.03] border-white/[0.08]' : 'bg-white border-slate-200 shadow-[0_4px_20px_rgba(0,0,0,0.05)]'
             )}>
-              <UsersIcon className={clsx('h-10 w-10 mx-auto mb-2', isDark ? 'text-dark-600' : 'text-slate-300')} />
+              <UsersIcon className={clsx('h-10 w-10 mx-auto mb-2', isDark ? 'text-dark-500' : 'text-slate-300')} />
               <p className={isDark ? 'text-dark-400' : 'text-slate-500'}>No referrals yet</p>
               <p className={clsx('text-sm mt-1', isDark ? 'text-dark-500' : 'text-slate-400')}>Share your code to start earning!</p>
             </div>
@@ -374,11 +412,22 @@ export default function Referrals() {
                 <div
                   key={leader.id}
                   className={clsx(
-                    'flex items-center justify-between p-3 rounded-xl border',
-                    idx === 0 ? 'bg-yellow-500/10 border-yellow-500/20' :
-                    idx === 1 ? 'bg-slate-400/10 border-slate-400/20' :
-                    idx === 2 ? 'bg-amber-600/10 border-amber-600/20' :
-                    isDark ? 'bg-dark-800/50 border-white/5' : 'bg-white border-slate-200'
+                    'flex items-center justify-between p-3 rounded-xl border backdrop-blur-md',
+                    idx === 0
+                      ? isDark
+                        ? 'bg-yellow-500/10 border-yellow-500/30 shadow-lg shadow-yellow-500/5'
+                        : 'bg-yellow-50 border-yellow-200'
+                      : idx === 1
+                        ? isDark
+                          ? 'bg-slate-400/10 border-slate-400/30'
+                          : 'bg-slate-50 border-slate-200'
+                        : idx === 2
+                          ? isDark
+                            ? 'bg-amber-600/10 border-amber-500/30'
+                            : 'bg-amber-50 border-amber-200'
+                          : isDark
+                            ? 'bg-white/[0.03] border-white/[0.08]'
+                            : 'bg-white border-slate-200'
                   )}
                 >
                   <div className="flex items-center gap-3">

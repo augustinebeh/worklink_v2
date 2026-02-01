@@ -37,22 +37,26 @@ function StatItem({ icon: Icon, label, value, color = 'primary' }) {
   const { isDark } = useTheme();
 
   const colorClasses = {
-    primary: 'text-primary-400 bg-primary-500/20',
-    accent: 'text-accent-400 bg-accent-500/20',
-    gold: 'text-gold-400 bg-gold-500/20',
+    primary: { icon: 'text-primary-400', bg: 'bg-primary-500/20', border: 'border-primary-500/30' },
+    accent: { icon: 'text-emerald-400', bg: 'bg-emerald-500/20', border: 'border-emerald-500/30' },
+    gold: { icon: 'text-amber-400', bg: 'bg-amber-500/20', border: 'border-amber-500/30' },
   };
+
+  const styles = colorClasses[color] || colorClasses.primary;
 
   return (
     <div className={clsx(
-      'flex items-center gap-3 p-3 rounded-xl',
-      isDark ? 'bg-dark-800/50' : 'bg-slate-100'
+      'flex items-center gap-3 p-4 rounded-xl backdrop-blur-md border',
+      isDark
+        ? 'bg-white/[0.03] border-white/[0.08]'
+        : 'bg-white border-slate-200 shadow-[0_4px_15px_rgba(0,0,0,0.04)]'
     )}>
-      <div className={clsx('p-2 rounded-lg', colorClasses[color])}>
-        <Icon className="h-4 w-4" />
+      <div className={clsx('p-2.5 rounded-xl border', styles.bg, styles.border)}>
+        <Icon className={clsx('h-4 w-4', styles.icon)} />
       </div>
       <div>
-        <p className={clsx('text-xs', isDark ? 'text-dark-500' : 'text-slate-500')}>{label}</p>
-        <p className={clsx('font-semibold', isDark ? 'text-white' : 'text-slate-900')}>{value}</p>
+        <p className={clsx('text-xs', isDark ? 'text-dark-400' : 'text-slate-500')}>{label}</p>
+        <p className={clsx('font-bold', isDark ? 'text-white' : 'text-slate-900')}>{value}</p>
       </div>
     </div>
   );
@@ -205,16 +209,23 @@ function MenuLink({ icon: Icon, label, sublabel, onClick, danger, rightElement }
     <button
       onClick={onClick}
       className={clsx(
-        'w-full flex items-center justify-between p-4 rounded-xl transition-colors',
+        'w-full flex items-center justify-between p-4 rounded-xl transition-all backdrop-blur-md border',
         danger
-          ? 'bg-red-500/10 hover:bg-red-500/20'
+          ? 'bg-red-500/10 hover:bg-red-500/20 border-red-500/20'
           : isDark
-            ? 'bg-dark-800/50 hover:bg-dark-800'
-            : 'bg-white hover:bg-slate-50 border border-slate-200'
+            ? 'bg-white/[0.03] border-white/[0.08] hover:bg-white/[0.06] hover:border-white/[0.12]'
+            : 'bg-white border-slate-200 shadow-[0_4px_15px_rgba(0,0,0,0.04)] hover:shadow-[0_6px_20px_rgba(0,0,0,0.06)]'
       )}
     >
       <div className="flex items-center gap-3">
-        <Icon className={clsx('h-5 w-5', danger ? 'text-red-400' : isDark ? 'text-dark-400' : 'text-slate-500')} />
+        <div className={clsx(
+          'p-2 rounded-lg',
+          danger
+            ? 'bg-red-500/20'
+            : isDark ? 'bg-white/[0.05]' : 'bg-slate-100'
+        )}>
+          <Icon className={clsx('h-5 w-5', danger ? 'text-red-400' : isDark ? 'text-primary-400' : 'text-slate-500')} />
+        </div>
         <div className="text-left">
           <span className={danger ? 'text-red-400' : isDark ? 'text-white' : 'text-slate-900'}>{label}</span>
           {sublabel && (
@@ -283,11 +294,11 @@ function XPProgressBar({ currentXP }) {
 
   // Level tier styling
   const getLevelStyle = (level) => {
-    if (level >= 40) return 'bg-violet-900/50 text-violet-300 border border-violet-500/30';
-    if (level >= 30) return 'bg-cyan-900/50 text-cyan-300 border border-cyan-500/30';
-    if (level >= 20) return 'bg-yellow-900/50 text-yellow-300 border border-yellow-500/30';
-    if (level >= 10) return 'bg-slate-700/50 text-slate-300 border border-slate-500/30';
-    return isDark ? 'bg-dark-700 text-dark-300' : 'bg-slate-200 text-slate-600';
+    if (level >= 40) return 'bg-violet-500/20 text-violet-300 border border-violet-500/40 shadow-lg shadow-violet-500/20';
+    if (level >= 30) return 'bg-cyan-500/20 text-cyan-300 border border-cyan-500/40 shadow-lg shadow-cyan-500/20';
+    if (level >= 20) return 'bg-yellow-500/20 text-yellow-300 border border-yellow-500/40 shadow-lg shadow-yellow-500/20';
+    if (level >= 10) return 'bg-slate-500/20 text-slate-300 border border-slate-500/40';
+    return isDark ? 'bg-amber-500/20 text-amber-300 border border-amber-500/40' : 'bg-amber-100 text-amber-700 border border-amber-200';
   };
 
   return (
@@ -295,31 +306,32 @@ function XPProgressBar({ currentXP }) {
       <div className="flex items-center justify-between mb-2">
         <div className="flex items-center gap-2">
           <span className={clsx(
-            'inline-flex items-center justify-center px-3 py-1 rounded-full font-bold text-sm',
+            'inline-flex items-center justify-center px-3 py-1 rounded-lg font-bold text-sm',
             getLevelStyle(safeLevel)
           )}>
             Lv.{safeLevel}
           </span>
-          <span className={clsx('text-sm', isDark ? 'text-dark-300' : 'text-slate-600')}>
+          <span className={clsx('text-sm font-medium', isDark ? 'text-violet-300' : 'text-slate-600')}>
             {levelTitles[safeLevel] || 'Newcomer'}
           </span>
         </div>
         <div className="text-sm">
-          <span className="font-semibold text-accent-400">{xpInLevel.toLocaleString()}</span>
-          <span className={isDark ? 'text-dark-400' : 'text-slate-500'}> / {xpNeeded.toLocaleString()} XP</span>
+          <span className="font-bold text-emerald-400">{xpInLevel.toLocaleString()}</span>
+          <span className={isDark ? 'text-dark-400' : 'text-slate-500'}> / {xpNeeded.toLocaleString()}</span>
         </div>
       </div>
 
-      <div className={clsx('h-3 rounded-full overflow-hidden', isDark ? 'bg-dark-800' : 'bg-slate-200')}>
+      {/* Glow-track XP Bar */}
+      <div className="xp-bar-command-center">
         <div
-          className="h-full bg-gradient-to-r from-accent-400 to-accent-500 rounded-full transition-all duration-500"
-          style={{ width: `${progress}%` }}
+          className="xp-bar-fill-command-center"
+          style={{ width: `${Math.max(progress, 2)}%` }}
         />
       </div>
 
       {!isMaxLevel && (
-        <p className={clsx('text-xs mt-1.5 text-right', isDark ? 'text-dark-500' : 'text-slate-500')}>
-          {(xpNeeded - xpInLevel).toLocaleString()} XP to {levelTitles[safeLevel + 1] || 'Next Level'}
+        <p className={clsx('text-xs mt-2 text-right', isDark ? 'text-dark-400' : 'text-slate-500')}>
+          <span className="text-violet-400 font-medium">{(xpNeeded - xpInLevel).toLocaleString()}</span> XP to {levelTitles[safeLevel + 1] || 'Next Level'}
         </p>
       )}
     </div>
@@ -612,15 +624,22 @@ export default function Profile() {
 
   return (
     <div className={clsx('min-h-screen pb-24', isDark ? 'bg-dark-950' : 'bg-transparent')}>
-      {/* Profile Header Section */}
+      {/* Profile Header Section - Glassmorphism */}
       <div className={clsx(
-        'px-4 pt-4 pb-6',
+        'relative px-4 pt-4 pb-6 overflow-hidden',
         isDark
-          ? 'bg-gradient-to-b from-primary-900/30 to-dark-950'
-          : 'bg-gradient-to-b from-[#C2DAE6] to-transparent'
+          ? 'bg-gradient-to-b from-[#080810] via-[#0c0d1a] to-dark-950'
+          : 'bg-gradient-to-b from-[#EFF6FF] to-transparent'
       )}>
+        {/* Background gradient blobs for depth */}
+        {isDark && (
+          <>
+            <div className="absolute top-0 right-0 w-64 h-64 bg-primary-500/15 rounded-full blur-[80px] -translate-y-1/2 translate-x-1/4" />
+            <div className="absolute bottom-0 left-0 w-48 h-48 bg-violet-500/10 rounded-full blur-[60px] translate-y-1/2 -translate-x-1/4" />
+          </>
+        )}
         {/* Profile card */}
-        <div className="flex items-center gap-4">
+        <div className="relative flex items-center gap-4">
           {/* Avatar with photo upload */}
           <div className="relative">
             <label className="cursor-pointer block">
@@ -714,33 +733,48 @@ export default function Profile() {
           </div>
         </div>
 
-        {/* Referral Code */}
+        {/* Referral Code - Glassmorphism */}
         <div className={clsx(
-          'p-4 rounded-2xl border',
+          'relative p-5 rounded-2xl border backdrop-blur-md overflow-hidden',
           isDark
-            ? 'bg-gradient-to-r from-emerald-900/50 to-teal-900/30 border-emerald-500/20'
-            : 'bg-gradient-to-r from-emerald-50 to-teal-50 border-emerald-200'
+            ? 'bg-white/[0.03] border-emerald-500/30'
+            : 'bg-gradient-to-r from-emerald-50 to-teal-50 border-emerald-200 shadow-[0_4px_20px_rgba(0,0,0,0.05)]'
         )}>
-          <div className="flex items-center justify-between mb-2">
+          {/* Glow effect */}
+          {isDark && (
+            <div className="absolute inset-0 bg-gradient-to-r from-emerald-500/10 to-teal-500/10 rounded-2xl" />
+          )}
+          <div className="relative flex items-center justify-between mb-3">
             <div className="flex items-center gap-2">
-              <ShareIcon className={clsx('h-5 w-5', isDark ? 'text-emerald-400' : 'text-emerald-600')} />
-              <span className={clsx('font-medium', isDark ? 'text-white' : 'text-slate-900')}>Referral Code</span>
+              <div className={clsx('p-2 rounded-lg', isDark ? 'bg-emerald-500/20' : 'bg-emerald-100')}>
+                <ShareIcon className={clsx('h-5 w-5', isDark ? 'text-emerald-400' : 'text-emerald-600')} />
+              </div>
+              <span className={clsx('font-semibold', isDark ? 'text-white' : 'text-slate-900')}>Referral Code</span>
             </div>
-            <span className={clsx('text-xs', isDark ? 'text-emerald-400' : 'text-emerald-600')}>Earn $30 per referral</span>
-          </div>
-          <div className="flex items-center gap-2">
-            <div className={clsx(
-              'flex-1 px-4 py-3 rounded-xl border',
-              isDark ? 'bg-dark-800 border-white/10' : 'bg-white border-slate-200'
+            <span className={clsx(
+              'px-2 py-1 rounded-lg text-xs font-medium',
+              isDark ? 'bg-emerald-500/20 text-emerald-400' : 'bg-emerald-100 text-emerald-600'
             )}>
-              <p className={clsx('font-mono text-lg', isDark ? 'text-white' : 'text-slate-900')}>{referralCode}</p>
+              Earn $30
+            </span>
+          </div>
+          <div className="relative flex items-center gap-3">
+            <div className={clsx(
+              'flex-1 px-4 py-3 rounded-xl border backdrop-blur-md',
+              isDark ? 'bg-white/[0.05] border-white/[0.1]' : 'bg-white border-slate-200'
+            )}>
+              <p className={clsx(
+                'font-mono text-xl tracking-wider text-center',
+                isDark ? 'text-white' : 'text-slate-900'
+              )}
+              style={isDark ? { textShadow: '0 0 20px rgba(52,211,153,0.3)' } : undefined}
+              >
+                {referralCode}
+              </p>
             </div>
             <button
               onClick={handleCopyReferral}
-              className={clsx(
-                'p-3 rounded-xl text-white',
-                isDark ? 'bg-emerald-500' : 'bg-emerald-600'
-              )}
+              className="p-3 rounded-xl bg-gradient-to-r from-emerald-500 to-teal-500 text-white shadow-lg shadow-emerald-500/25 hover:shadow-emerald-500/40 transition-shadow"
             >
               {copied ? <CheckIcon className="h-5 w-5" /> : <CopyIcon className="h-5 w-5" />}
             </button>
@@ -765,22 +799,26 @@ export default function Profile() {
           </div>
         )}
 
-        {/* Contact Info */}
+        {/* Contact Info - Glassmorphism */}
         <div>
           <h3 className={clsx('text-lg font-semibold mb-3', isDark ? 'text-white' : 'text-slate-900')}>Contact Info</h3>
           <div className="space-y-3">
             <div className={clsx(
-              'flex items-center gap-3 p-4 rounded-xl',
-              isDark ? 'bg-dark-800/50' : 'bg-white border border-slate-200'
+              'flex items-center gap-3 p-4 rounded-xl backdrop-blur-md border',
+              isDark ? 'bg-white/[0.03] border-white/[0.08]' : 'bg-white border-slate-200 shadow-[0_4px_15px_rgba(0,0,0,0.04)]'
             )}>
-              <MailIcon className={clsx('h-5 w-5', isDark ? 'text-dark-400' : 'text-slate-500')} />
+              <div className={clsx('p-2 rounded-lg', isDark ? 'bg-primary-500/20' : 'bg-slate-100')}>
+                <MailIcon className={clsx('h-4 w-4', isDark ? 'text-primary-400' : 'text-slate-500')} />
+              </div>
               <span className={isDark ? 'text-white' : 'text-slate-900'}>{userEmail}</span>
             </div>
             <div className={clsx(
-              'flex items-center gap-3 p-4 rounded-xl',
-              isDark ? 'bg-dark-800/50' : 'bg-white border border-slate-200'
+              'flex items-center gap-3 p-4 rounded-xl backdrop-blur-md border',
+              isDark ? 'bg-white/[0.03] border-white/[0.08]' : 'bg-white border-slate-200 shadow-[0_4px_15px_rgba(0,0,0,0.04)]'
             )}>
-              <PhoneIcon className={clsx('h-5 w-5', isDark ? 'text-dark-400' : 'text-slate-500')} />
+              <div className={clsx('p-2 rounded-lg', isDark ? 'bg-primary-500/20' : 'bg-slate-100')}>
+                <PhoneIcon className={clsx('h-4 w-4', isDark ? 'text-primary-400' : 'text-slate-500')} />
+              </div>
               <span className={isDark ? 'text-white' : 'text-slate-900'}>{userPhone}</span>
             </div>
           </div>

@@ -4,19 +4,12 @@ import {
   ChevronRightIcon,
   BriefcaseIcon,
   ZapIcon,
-  FlameIcon,
-  GiftIcon,
-  CalendarIcon,
-  ArrowDownLeftIcon,
   SparklesIcon,
-  EyeIcon,
-  EyeOffIcon,
-  HistoryIcon,
   StarIcon,
   ClockIcon,
-  TargetIcon,
-  CheckCircleIcon,
-  SwordIcon,
+  ArrowDownLeftIcon,
+  RocketIcon,
+  GiftIcon,
 } from 'lucide-react';
 import { useAuth } from '../contexts/AuthContext';
 import { useWebSocket } from '../contexts/WebSocketContext';
@@ -31,7 +24,6 @@ import {
   DEFAULT_END_TIME,
   DEFAULT_LOCALE,
   TIMEZONE,
-  DATE_FORMAT_SHORT,
   calculateJobHours,
   DEFAULTS,
   isToday,
@@ -39,44 +31,11 @@ import {
   getSGHour,
   getSGDateString,
 } from '../utils/constants';
-import { iconBadgeStyles, cardStyles, textStyles } from '../utils/styles';
 
-// Quick Action Button (Crypto.com style circular)
-function QuickActionCircle({ icon: Icon, label, onClick, color = 'primary', isDark }) {
-  // Different color palettes for dark vs light mode inside the balance card
-  const darkColors = {
-    primary: 'bg-primary-500/20 text-primary-400',
-    green: 'bg-emerald-500/20 text-emerald-400',
-    blue: 'bg-blue-500/20 text-blue-400',
-    cyan: 'bg-cyan-500/20 text-cyan-400',
-    purple: 'bg-violet-500/20 text-violet-400',
-    orange: 'bg-orange-500/20 text-orange-400',
-  };
-
-  // Light mode uses white-based circles with colored icons (inside the blue card)
-  const lightColors = {
-    primary: 'bg-white/25 text-white',
-    green: 'bg-white/25 text-emerald-100',
-    blue: 'bg-white/25 text-sky-100',
-    cyan: 'bg-white/25 text-cyan-100',
-    purple: 'bg-white/25 text-violet-100',
-    orange: 'bg-white/25 text-amber-100',
-  };
-
-  const colors = isDark ? darkColors : lightColors;
-
-  return (
-    <button onClick={onClick} className="flex flex-col items-center gap-2">
-      <div className={clsx(
-        'w-14 h-14 rounded-full flex items-center justify-center transition-transform active:scale-95',
-        colors[color]
-      )}>
-        <Icon className="h-6 w-6" />
-      </div>
-      <span className={clsx('text-xs font-medium', 'text-white/80')}>{label}</span>
-    </button>
-  );
-}
+// Command Center Components
+import CommandCenterHero from '../components/home/CommandCenterHero';
+import LeagueBanner from '../components/home/LeagueBanner';
+import MissionCard from '../components/home/MissionCard';
 
 // Portfolio Card (Job as asset)
 function JobAssetCard({ job, isDark }) {
@@ -139,86 +98,6 @@ function JobAssetCard({ job, isDark }) {
   );
 }
 
-// Quest Preview Item
-function QuestPreviewItem({ quest, isDark, onNavigate }) {
-  const progress = quest.target > 0 ? (quest.progress / quest.target) * 100 : 0;
-  const isClaimable = quest.status === 'claimable';
-  const isClaimed = quest.status === 'claimed';
-
-  return (
-    <button
-      onClick={onNavigate}
-      className={clsx(
-        'w-full flex items-center gap-3 p-3 rounded-xl border text-left transition-all active:scale-[0.98]',
-        isClaimed
-          ? (isDark ? 'bg-dark-800/30 border-white/5 opacity-60' : 'bg-slate-100/50 border-slate-200 opacity-60')
-          : isClaimable
-            ? 'bg-gold-900/20 border-gold-500/30'
-            : isDark
-              ? 'bg-dark-800/50 border-white/5'
-              : 'bg-white border-slate-200'
-      )}
-    >
-      {/* Icon */}
-      <div className={clsx(
-        'w-10 h-10 rounded-lg flex items-center justify-center flex-shrink-0',
-        isClaimed
-          ? 'bg-accent-500/20'
-          : isClaimable
-            ? 'bg-gold-500/20'
-            : 'bg-primary-500/20'
-      )}>
-        {isClaimed ? (
-          <CheckCircleIcon className="h-5 w-5 text-accent-400" />
-        ) : isClaimable ? (
-          <GiftIcon className="h-5 w-5 text-gold-400" />
-        ) : (
-          <TargetIcon className="h-5 w-5 text-primary-400" />
-        )}
-      </div>
-
-      {/* Content */}
-      <div className="flex-1 min-w-0">
-        <p className={clsx(
-          'font-medium truncate text-sm',
-          isClaimed
-            ? (isDark ? 'text-dark-500 line-through' : 'text-slate-400 line-through')
-            : (isDark ? 'text-white' : 'text-slate-900')
-        )}>
-          {quest.title}
-        </p>
-        {!isClaimed && quest.target > 1 && (
-          <div className="flex items-center gap-2 mt-1">
-            <div className={clsx('flex-1 h-1.5 rounded-full overflow-hidden', isDark ? 'bg-dark-700' : 'bg-slate-200')}>
-              <div
-                className={clsx('h-full rounded-full', isClaimable ? 'bg-gold-500' : 'bg-primary-500')}
-                style={{ width: `${Math.min(progress, 100)}%` }}
-              />
-            </div>
-            <span className={clsx('text-xs', isDark ? 'text-dark-400' : 'text-slate-500')}>
-              {quest.progress}/{quest.target}
-            </span>
-          </div>
-        )}
-        {isClaimable && (
-          <p className="text-xs text-gold-400 mt-0.5">Ready to claim!</p>
-        )}
-      </div>
-
-      {/* XP Reward */}
-      <div className={clsx(
-        'flex items-center gap-1 px-2 py-1 rounded-lg text-xs font-medium',
-        isClaimed
-          ? (isDark ? 'bg-dark-700 text-dark-500' : 'bg-slate-100 text-slate-400')
-          : 'bg-primary-500/20 text-primary-400'
-      )}>
-        <ZapIcon className="h-3 w-3" />
-        <span>+{quest.xp_reward}</span>
-      </div>
-    </button>
-  );
-}
-
 // Transaction/Activity Item
 function ActivityItem({ title, subtitle, amount, time, positive = true, isDark }) {
   return (
@@ -259,7 +138,6 @@ export default function Home() {
   const [quests, setQuests] = useState([]);
   const [thisMonthEarnings, setThisMonthEarnings] = useState(0);
   const [loading, setLoading] = useState(true);
-  const [balanceHidden, setBalanceHidden] = useState(false);
 
   // Gamification animation states
   const [xpGain, setXpGain] = useState({ amount: 0, trigger: 0 });
@@ -374,163 +252,72 @@ export default function Home() {
 
   return (
     <div className={clsx('min-h-screen pb-24', isDark ? 'bg-dark-950' : 'bg-transparent')}>
-      {/* Welcome Banner */}
+      {/* Compact Welcome Banner */}
       <div className="px-4 pt-4 pb-2">
         <div className="flex items-center justify-between">
-          <div>
-            <p className={clsx('text-sm font-medium', isDark ? 'text-primary-400' : 'text-primary-600')}>{getGreeting()}</p>
-            <p className={clsx('font-semibold text-lg', isDark ? 'text-white' : 'text-slate-900')}>{userName}</p>
-          </div>
-          <div className="flex items-center gap-1.5 px-3 py-1.5 rounded-full bg-primary-500/20 border border-primary-500/30">
-            <StarIcon className="h-4 w-4 text-primary-400" />
-            <span className="text-sm font-bold text-primary-400">Lv.{userLevel}</span>
-          </div>
-        </div>
-      </div>
-
-      {/* Balance Card - Crypto.com style */}
-      <div className="px-4 py-6">
-        <div className={clsx(
-          'relative overflow-hidden rounded-3xl p-6',
-          isDark
-            ? 'bg-gradient-to-br from-[#0a1628] via-[#0d1f3c] to-[#0f2847] border border-white/5'
-            : 'bg-gradient-to-br from-[#94BDCF] via-[#80CCE3] to-[#B0DEED] shadow-lg shadow-[#94BDCF]/30'
-        )}>
-          {/* Background decoration */}
-          <div className={clsx(
-            'absolute top-0 right-0 w-64 h-64 rounded-full blur-3xl -translate-y-1/2 translate-x-1/2',
-            isDark ? 'bg-primary-500/10' : 'bg-white/30'
-          )} />
-          <div className={clsx(
-            'absolute bottom-0 left-0 w-48 h-48 rounded-full blur-3xl translate-y-1/2 -translate-x-1/2',
-            isDark ? 'bg-cyan-500/10' : 'bg-[#80CCE3]/30'
-          )} />
-
-          <div className="relative">
-            {/* This Month Label */}
-            <div className="flex items-center justify-between mb-2">
-              <div className="flex items-center gap-2">
-                <span className="text-white/70 text-sm">This Month</span>
-                <button onClick={() => setBalanceHidden(!balanceHidden)} className="text-white/50">
-                  {balanceHidden ? <EyeOffIcon className="h-4 w-4" /> : <EyeIcon className="h-4 w-4" />}
-                </button>
-              </div>
-              {userStreak > 0 && (
-                <div className="flex items-center gap-1 px-2 py-1 rounded-full bg-amber-500/20">
-                  <FlameIcon className="h-3 w-3 text-amber-400" />
-                  <span className="text-xs font-medium text-amber-400">{userStreak} day streak</span>
-                </div>
-              )}
-            </div>
-
-            {/* Balance Amount */}
-            <div className="mb-6">
-              <p className="text-4xl font-bold text-white tracking-tight">
-                {balanceHidden ? '••••••' : `$${formatMoney(thisMonthEarnings)}`}
-              </p>
-              <p className="text-white/60 text-sm mt-1">
-                Total: ${formatMoney(totalEarnings)} • <span className="text-amber-400">${formatMoney(pendingPayment)} pending</span>
-              </p>
-            </div>
-
-            {/* XP Progress */}
-            <div className="mb-6">
-              <div className="flex items-center justify-between text-sm mb-2">
-                <span className="text-white/70">{levelTitles[userLevel]}</span>
-                <span className={isDark ? 'text-cyan-300' : 'text-white'}>{xpInLevel.toLocaleString()} / {xpNeeded.toLocaleString()} XP</span>
-              </div>
-              <div className="h-2 bg-white/20 rounded-full overflow-hidden">
-                <div
-                  className={clsx(
-                    'h-full rounded-full transition-all duration-500',
-                    isDark
-                      ? 'bg-gradient-to-r from-primary-400 to-cyan-400'
-                      : 'bg-gradient-to-r from-white to-[#DAEBF2]'
-                  )}
-                  style={{ width: `${progress}%` }}
-                />
-              </div>
-            </div>
-
-            {/* Quick Actions */}
-            <div className="flex justify-between">
-              <QuickActionCircle
-                icon={BriefcaseIcon}
-                label="Find Jobs"
-                onClick={() => navigate('/jobs')}
-                color="primary"
-                isDark={true}
-              />
-              <QuickActionCircle
-                icon={CalendarIcon}
-                label="Availability"
-                onClick={() => navigate('/calendar')}
-                color="blue"
-                isDark={true}
-              />
-              <QuickActionCircle
-                icon={GiftIcon}
-                label="Refer"
-                onClick={() => navigate('/referrals')}
-                color="green"
-                isDark={true}
-              />
-              <QuickActionCircle
-                icon={HistoryIcon}
-                label="History"
-                onClick={() => navigate('/wallet')}
-                color="cyan"
-                isDark={true}
-              />
-            </div>
-          </div>
-        </div>
-      </div>
-
-      {/* Streak Banner */}
-      {userStreak > 0 && (
-        <div className="px-4 mb-4">
+          <p className={clsx('text-sm font-medium', isDark ? 'text-primary-400' : 'text-primary-600')}>
+            {getGreeting()}
+          </p>
           <Link
             to="/achievements"
             className={clsx(
-              'flex items-center gap-3 p-3 rounded-2xl border transition-all active:scale-[0.98]',
+              'flex items-center gap-1.5 px-3 py-1.5 rounded-full transition-all active:scale-95',
               isDark
-                ? 'bg-gradient-to-r from-orange-900/30 to-amber-900/20 border-orange-500/20'
-                : 'bg-gradient-to-r from-orange-100 to-amber-50 border-orange-200'
+                ? 'bg-primary-500/20 border border-primary-500/30'
+                : 'bg-primary-50 border border-primary-200'
             )}
           >
-            <div className="w-10 h-10 rounded-full bg-orange-500/20 flex items-center justify-center">
-              <FlameIcon className="h-5 w-5 text-orange-400" />
-            </div>
-            <div className="flex-1">
-              <p className={clsx('font-semibold', isDark ? 'text-white' : 'text-slate-900')}>{userStreak} Day Streak!</p>
-              <p className="text-xs text-orange-500">Keep it going for bonus XP</p>
-            </div>
-            <ChevronRightIcon className={clsx('h-5 w-5', isDark ? 'text-dark-500' : 'text-slate-400')} />
+            <StarIcon className={clsx('h-4 w-4', isDark ? 'text-primary-400' : 'text-primary-500')} />
+            <span className={clsx('text-sm font-bold', isDark ? 'text-primary-400' : 'text-primary-600')}>
+              Lv.{userLevel}
+            </span>
           </Link>
         </div>
-      )}
+      </div>
 
-      {/* Daily Quests Section */}
+      {/* Command Center Hero Card */}
+      <CommandCenterHero
+        user={user}
+        userLevel={userLevel}
+        userXP={userXP}
+        userStreak={userStreak}
+        thisMonthEarnings={thisMonthEarnings}
+        totalEarnings={totalEarnings}
+        pendingPayment={pendingPayment}
+        xpInLevel={xpInLevel}
+        xpNeeded={xpNeeded}
+        progress={progress}
+      />
+
+      {/* League Banner (Streak + Stats) */}
+      <LeagueBanner
+        userStreak={userStreak}
+        totalEarnings={totalEarnings}
+        pendingPayment={pendingPayment}
+        showStatPods={false}
+      />
+
+      {/* Daily Missions Section */}
       {quests.length > 0 && (
         <div className="px-4 mb-6">
           <div className="flex items-center justify-between mb-3">
             <div className="flex items-center gap-2">
-              <SwordIcon className={clsx('h-5 w-5', isDark ? 'text-primary-400' : 'text-primary-500')} />
-              <h2 className={clsx('text-lg font-semibold', isDark ? 'text-white' : 'text-slate-900')}>Daily Quests</h2>
+              <RocketIcon className={clsx('h-5 w-5', isDark ? 'text-violet-400' : 'text-violet-500')} />
+              <h2 className={clsx('text-lg font-bold', isDark ? 'text-white' : 'text-slate-900')}>
+                Daily Missions
+              </h2>
             </div>
-            <Link to="/quests" className="flex items-center gap-1 text-sm text-primary-500">
+            <Link to="/quests" className="flex items-center gap-1 text-sm text-primary-500 font-medium">
               View all
               <ChevronRightIcon className="h-4 w-4" />
             </Link>
           </div>
 
-          <div className="space-y-2">
+          <div className="space-y-3">
             {quests.map(quest => (
-              <QuestPreviewItem
+              <MissionCard
                 key={quest.id}
                 quest={quest}
-                isDark={isDark}
                 onNavigate={() => navigate('/quests')}
               />
             ))}

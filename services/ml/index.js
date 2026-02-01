@@ -151,17 +151,16 @@ async function learn(question, answer, metadata = {}) {
   const normalizedQuestion = embeddings.generateNormalized(question);
   const questionTokens = embeddings.generateTokensForStorage(question);
 
-  // Check if similar question already exists
-  const existingEntries = db.prepare(`
+  // Check if question already exists (by raw question or normalized)
+  const existingEntry = db.prepare(`
     SELECT id, question, confidence, use_count
     FROM ml_knowledge_base
-    WHERE question_normalized = ?
-  `).all(normalizedQuestion);
+    WHERE question = ? OR question_normalized = ?
+  `).get(question, normalizedQuestion);
 
-  if (existingEntries.length > 0) {
+  if (existingEntry) {
     // Update existing entry
-    const existing = existingEntries[0];
-    const newConfidence = Math.min(1, (existing.confidence + confidence) / 2);
+    const newConfidence = Math.min(1, (existingEntry.confidence + confidence) / 2);
 
     db.prepare(`
       UPDATE ml_knowledge_base
@@ -171,19 +170,37 @@ async function learn(question, answer, metadata = {}) {
           category = COALESCE(?, category),
           updated_at = datetime('now')
       WHERE id = ?
-    `).run(answer, newConfidence, intent, category, existing.id);
+    `).run(answer, newConfidence, intent, category, existingEntry.id);
 
-    return existing.id;
+    return existingEntry.id;
   }
 
-  // Insert new entry
-  const result = db.prepare(`
-    INSERT INTO ml_knowledge_base
-    (question, question_normalized, question_tokens, answer, intent, category, confidence, source)
-    VALUES (?, ?, ?, ?, ?, ?, ?, ?)
-  `).run(question, normalizedQuestion, questionTokens, answer, intent, category, confidence, source);
+  // Insert new entry (with try-catch for race conditions)
+  try {
+    const result = db.prepare(`
+      INSERT INTO ml_knowledge_base
+      (question, question_normalized, question_tokens, answer, intent, category, confidence, source)
+      VALUES (?, ?, ?, ?, ?, ?, ?, ?)
+    `).run(question, normalizedQuestion, questionTokens, answer, intent, category, confidence, source);
 
-  return result.lastInsertRowid;
+    return result.lastInsertRowid;
+  } catch (e) {
+    // If insert fails due to unique constraint, try to update instead
+    if (e.code === 'SQLITE_CONSTRAINT_UNIQUE' || e.message.includes('UNIQUE constraint')) {
+      const existing = db.prepare('SELECT id FROM ml_knowledge_base WHERE question = ?').get(question);
+      if (existing) {
+        db.prepare(`
+          UPDATE ml_knowledge_base
+          SET answer = ?, confidence = ?, updated_at = datetime('now')
+          WHERE id = ?
+        `).run(answer, confidence, existing.id);
+        return existing.id;
+      }
+    }
+    // For other errors, just log and continue (don't break the response)
+    console.error('ML learn error (non-fatal):', e.message);
+    return null;
+  }
 }
 
 /**
