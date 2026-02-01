@@ -1,4 +1,5 @@
 import { clsx } from 'clsx';
+import logoImage from '../../assets/worklinkv2_vector_logo.png';
 
 export default function Logo({ size = 'md', showText = true, className }) {
   const sizes = {
@@ -13,7 +14,7 @@ export default function Logo({ size = 'md', showText = true, className }) {
   return (
     <div className={clsx('flex items-center gap-3', className)}>
       <img
-        src="/worklinkv2_vector_logo.png"
+        src={logoImage}
         alt="WorkLink"
         style={{ height: icon, width: 'auto' }}
         className="flex-shrink-0"
@@ -37,7 +38,7 @@ export default function Logo({ size = 'md', showText = true, className }) {
 export function LogoIcon({ size = 32, className }) {
   return (
     <img
-      src="/worklinkv2_vector_logo.png"
+      src={logoImage}
       alt="WorkLink"
       style={{ height: size, width: 'auto' }}
       className={clsx(className)}

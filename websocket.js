@@ -177,11 +177,13 @@ function handleCandidateConnection(ws, candidateId) {
   // Close existing connection for same candidate
   const existingWs = candidateClients.get(candidateId);
   if (existingWs && existingWs.readyState === WebSocket.OPEN) {
+    logger.ws(`Closing existing connection for ${candidateId}`);
     existingWs.close(4001, 'New connection established');
   }
 
   candidateClients.set(candidateId, ws);
-  logger.ws(`Candidate ${candidateId} connected (total: ${candidateClients.size})`);
+  logger.ws(`✅ Candidate ${candidateId} connected (total: ${candidateClients.size})`);
+  logger.ws(`   All candidates: ${Array.from(candidateClients.keys()).join(', ')}`);
 
   // Update online status
   updateCandidateStatus(candidateId, 'online');
@@ -728,12 +730,21 @@ function broadcastToAdmins(data) {
 
 function broadcastToCandidate(candidateId, data) {
   console.log(`📤 Broadcasting to candidate ${candidateId}:`, data.type);
+  console.log(`   📋 Data:`, JSON.stringify(data).substring(0, 200));
+  console.log(`   🗺️  All connected candidates:`, Array.from(candidateClients.keys()));
+
   const clientWs = candidateClients.get(candidateId);
   if (clientWs?.readyState === WebSocket.OPEN) {
-    console.log(`   ✅ Candidate ${candidateId} is connected, sending...`);
-    clientWs.send(JSON.stringify(data));
+    console.log(`   ✅ Candidate ${candidateId} is connected (readyState=${clientWs.readyState}), sending...`);
+    try {
+      clientWs.send(JSON.stringify(data));
+      console.log(`   ✅ Message sent successfully to ${candidateId}`);
+    } catch (err) {
+      console.error(`   ❌ Failed to send to ${candidateId}:`, err.message);
+    }
   } else {
-    console.log(`   ❌ Candidate ${candidateId} not connected. Connected candidates:`, Array.from(candidateClients.keys()));
+    console.log(`   ❌ Candidate ${candidateId} not connected or socket not open`);
+    console.log(`   🔍 clientWs exists:`, !!clientWs, ', readyState:', clientWs?.readyState);
   }
 }
 
