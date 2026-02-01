@@ -743,6 +743,11 @@ function createSchema() {
     db.exec(`ALTER TABLE telegram_groups ADD COLUMN created_at DATETIME DEFAULT CURRENT_TIMESTAMP`);
   } catch (e) {}
 
+  // Add keywords column to ml_knowledge_base if not exists
+  try {
+    db.exec(`ALTER TABLE ml_knowledge_base ADD COLUMN keywords TEXT`);
+  } catch (e) {}
+
   console.log('✅ Schema created successfully');
 }
 
