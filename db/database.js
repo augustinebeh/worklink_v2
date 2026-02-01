@@ -938,18 +938,22 @@ function seedEssentialData() {
   // AI/ML DEFAULT SETTINGS
   // =====================================================
 
-  // AI Chat Settings
+  // AI Chat Settings - Use INSERT OR REPLACE to ensure correct defaults on Railway
   const aiSettings = [
     ['ai_enabled', 'true', 'Master switch for AI auto-reply'],
-    ['default_mode', 'suggest', 'Default AI mode: off | auto | suggest'],
+    ['default_mode', 'auto', 'Default AI mode: off | auto | suggest'],
     ['response_delay_ms', '1500', 'Delay before AI responds (ms) for natural feel'],
     ['max_context_messages', '10', 'Number of previous messages to include in context'],
     ['include_candidate_profile', 'true', 'Include candidate info in AI context'],
     ['include_job_suggestions', 'true', 'Allow AI to suggest relevant jobs'],
   ];
   aiSettings.forEach(s => {
+    // First insert if not exists, then ensure ai_enabled and default_mode are correct
     db.prepare('INSERT OR IGNORE INTO ai_settings (key, value, description) VALUES (?, ?, ?)').run(...s);
   });
+  // Ensure AI is enabled with correct defaults (fixes Railway database)
+  db.prepare("UPDATE ai_settings SET value = 'true' WHERE key = 'ai_enabled'").run();
+  db.prepare("UPDATE ai_settings SET value = 'auto' WHERE key = 'default_mode'").run();
 
   // ML Settings
   const mlSettings = [

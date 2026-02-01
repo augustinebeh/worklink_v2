@@ -242,13 +242,17 @@ async function generateResponse(candidateId, message, options = {}) {
  * @param {string} channel - 'app' | 'telegram'
  */
 async function processIncomingMessage(candidateId, content, channel = 'app') {
+  const settings = getSettings();
   const mode = getConversationMode(candidateId);
 
+  console.log(`🤖 [AI] Processing message for ${candidateId}`);
+  console.log(`🤖 [AI] Settings: ai_enabled=${settings.ai_enabled}, default_mode=${settings.default_mode}`);
+  console.log(`🤖 [AI] Resolved mode for this conversation: ${mode}`);
+
   if (mode === 'off') {
+    console.log(`🤖 [AI] Mode is OFF, skipping AI response`);
     return null;
   }
-
-  const settings = getSettings();
 
   // Generate AI response
   const response = await generateResponse(candidateId, content, { mode });
