@@ -20,6 +20,7 @@ const prompts = require('./prompts');
  */
 function getSettings() {
   const rows = db.prepare('SELECT key, value FROM ai_settings').all();
+  console.log(`🤖 [AI] getSettings: Found ${rows.length} settings in database`);
   const settings = {};
   rows.forEach(row => {
     if (row.value === 'true') settings[row.key] = true;
@@ -27,6 +28,7 @@ function getSettings() {
     else if (!isNaN(parseFloat(row.value))) settings[row.key] = parseFloat(row.value);
     else settings[row.key] = row.value;
   });
+  console.log(`🤖 [AI] getSettings result:`, JSON.stringify(settings));
   return settings;
 }
 
@@ -37,7 +39,10 @@ function getSettings() {
 function getConversationMode(candidateId) {
   const settings = getSettings();
 
+  console.log(`🤖 [AI] getConversationMode: ai_enabled=${settings.ai_enabled} (type: ${typeof settings.ai_enabled})`);
+
   if (!settings.ai_enabled) {
+    console.log(`🤖 [AI] AI is disabled globally, returning 'off'`);
     return 'off';
   }
 
@@ -46,12 +51,17 @@ function getConversationMode(candidateId) {
     SELECT mode FROM conversation_ai_settings WHERE candidate_id = ?
   `).get(candidateId);
 
+  console.log(`🤖 [AI] Conversation override for ${candidateId}:`, conversationSettings || 'none');
+
   if (conversationSettings && conversationSettings.mode !== 'inherit') {
+    console.log(`🤖 [AI] Using conversation override: ${conversationSettings.mode}`);
     return conversationSettings.mode;
   }
 
   // Fall back to global default
-  return settings.default_mode || 'off';
+  const mode = settings.default_mode || 'off';
+  console.log(`🤖 [AI] Using global default: ${mode}`);
+  return mode;
 }
 
 /**
