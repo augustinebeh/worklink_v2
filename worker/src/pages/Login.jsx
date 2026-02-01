@@ -144,6 +144,39 @@ export default function Login() {
                 </>
               )}
             </button>
+
+            {/* Demo login divider */}
+            <div className="relative my-6">
+              <div className="absolute inset-0 flex items-center">
+                <div className="w-full border-t border-dark-700"></div>
+              </div>
+              <div className="relative flex justify-center text-xs">
+                <span className="bg-dark-950 px-3 text-dark-500">or try demo</span>
+              </div>
+            </div>
+
+            {/* Demo Sarah button */}
+            <button
+              type="button"
+              onClick={async () => {
+                setLoading(true);
+                setError('');
+                const result = await login('sarah.tan@email.com');
+                if (result.success) {
+                  navigate(from, { replace: true });
+                } else {
+                  setError(result.error || 'Demo login failed');
+                }
+                setLoading(false);
+              }}
+              disabled={loading}
+              className="w-full min-h-[52px] py-4 rounded-xl bg-dark-800 border border-dark-700 text-white font-medium flex items-center justify-center gap-3 hover:bg-dark-700 active:scale-[0.98] transition-all disabled:opacity-50"
+            >
+              <div className="w-8 h-8 rounded-full bg-gradient-to-br from-primary-400 to-accent-400 flex items-center justify-center text-sm font-bold">
+                S
+              </div>
+              <span>Login as Sarah (Demo)</span>
+            </button>
           </form>
         </div>
       </div>
