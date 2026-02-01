@@ -63,6 +63,8 @@ function runMigrations() {
   addColumn('messages', 'external_status', 'TEXT');
   addColumn('messages', 'ai_generated', 'INTEGER', '0');
   addColumn('messages', 'ai_source', 'TEXT');
+  addColumn('messages', 'admin_feedback', 'TEXT');
+  addColumn('messages', 'ai_log_id', 'INTEGER');
 
   // Create new tables if they don't exist
   const createTables = `

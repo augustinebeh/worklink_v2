@@ -148,32 +148,40 @@ function MessageBubble({ message, isOwn, onFeedback }) {
 
         {/* Feedback buttons for AI messages */}
         {isAIGenerated && isOwn && (
-          <div className="flex items-center gap-1 mt-2 pt-2 border-t border-white/10">
+          <div className="flex items-center gap-2 mt-2 pt-2 border-t border-white/10">
             {feedbackGiven ? (
               <span className={clsx(
-                'text-xs px-2 py-0.5 rounded-full',
+                'text-xs px-2 py-1 rounded-full',
                 feedbackGiven === 'positive' ? 'bg-emerald-500/30 text-emerald-200' : 'bg-red-500/30 text-red-200'
               )}>
                 {feedbackGiven === 'positive' ? '👍 Boosted' : '👎 Reduced'}
               </span>
             ) : (
               <>
-                <span className="text-xs text-white/50 mr-1">Rate:</span>
+                <span className="text-xs text-white/50">Rate:</span>
                 <button
-                  onClick={() => handleFeedback('positive')}
+                  type="button"
+                  onClick={(e) => {
+                    e.stopPropagation();
+                    handleFeedback('positive');
+                  }}
                   disabled={isSubmitting}
-                  className="p-1 rounded hover:bg-white/10 text-white/60 hover:text-emerald-300 transition-colors"
+                  className="p-1.5 rounded-lg hover:bg-white/20 text-white/70 hover:text-emerald-300 transition-colors cursor-pointer"
                   title="Good response - boost confidence"
                 >
-                  <ThumbsUp className="h-3.5 w-3.5" />
+                  <ThumbsUp className="h-4 w-4" />
                 </button>
                 <button
-                  onClick={() => handleFeedback('negative')}
+                  type="button"
+                  onClick={(e) => {
+                    e.stopPropagation();
+                    handleFeedback('negative');
+                  }}
                   disabled={isSubmitting}
-                  className="p-1 rounded hover:bg-white/10 text-white/60 hover:text-red-300 transition-colors"
+                  className="p-1.5 rounded-lg hover:bg-white/20 text-white/70 hover:text-red-300 transition-colors cursor-pointer"
                   title="Bad response - reduce confidence"
                 >
-                  <ThumbsDown className="h-3.5 w-3.5" />
+                  <ThumbsDown className="h-4 w-4" />
                 </button>
               </>
             )}

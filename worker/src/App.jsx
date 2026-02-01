@@ -24,6 +24,7 @@ const Leaderboard = lazy(() => import('./pages/Leaderboard'));
 const Training = lazy(() => import('./pages/Training'));
 const Notifications = lazy(() => import('./pages/Notifications'));
 const Referrals = lazy(() => import('./pages/Referrals'));
+const CompleteProfile = lazy(() => import('./pages/CompleteProfile'));
 
 // Loading spinner for lazy-loaded pages
 function PageLoader() {
