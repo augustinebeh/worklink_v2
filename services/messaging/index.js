@@ -211,11 +211,21 @@ async function handleIncomingMessage(channel, data) {
   });
 
   // Trigger AI processing for incoming messages (non-blocking)
+  console.log(`📨 [${channel}] Candidate ${candidateId} sent: "${content.substring(0, 50)}..."`);
   try {
     const aiChat = require('../ai-chat');
-    aiChat.processIncomingMessage(candidateId, content, channel).catch(err => {
-      console.error('AI processing error for incoming message:', err.message);
-    });
+    console.log(`🤖 [${channel}] Triggering AI processing...`);
+    aiChat.processIncomingMessage(candidateId, content, channel)
+      .then(result => {
+        if (result) {
+          console.log(`🤖 [${channel}] AI result: mode=${result.mode}, willSendIn=${result.willSendIn || 0}ms`);
+        } else {
+          console.log(`🤖 [${channel}] AI mode is off for ${candidateId}`);
+        }
+      })
+      .catch(err => {
+        console.error('AI processing error for incoming message:', err.message, err.stack);
+      });
   } catch (error) {
     console.error('Failed to load AI chat service:', error.message);
   }

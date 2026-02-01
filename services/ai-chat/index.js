@@ -299,6 +299,7 @@ async function processIncomingMessage(candidateId, content, channel = 'app') {
  * Send an AI-generated response to a candidate
  */
 async function sendAIResponse(candidateId, response, channel = 'app', originalQuestion = null) {
+  console.log(`📤 [AI] Sending response to ${candidateId} via ${channel}: "${response.content.substring(0, 50)}..."`);
   const messaging = require('../messaging');
 
   // Send via unified messaging service
@@ -308,6 +309,7 @@ async function sendAIResponse(candidateId, response, channel = 'app', originalQu
     aiGenerated: true,
     aiSource: response.source || 'llm', // 'kb', 'faq', 'llm', 'knowledge_base'
   });
+  console.log(`📤 [AI] Send result:`, result.success ? 'SUCCESS' : `FAILED: ${result.error}`);
 
   // Update the log to mark as sent
   if (response.logId) {
