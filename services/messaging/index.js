@@ -24,7 +24,7 @@ const Channels = {
  * @param {object} options - { channel, templateId }
  */
 async function sendToCandidate(candidateId, content, options = {}) {
-  const { channel = 'auto', templateId = null } = options;
+  const { channel = 'auto', templateId = null, aiGenerated = false, aiSource = null } = options;
 
   // Get candidate info
   const candidate = db.prepare(`
@@ -39,17 +39,40 @@ async function sendToCandidate(candidateId, content, options = {}) {
   let externalId = null;
   let deliveryMethod = [];
 
-  // 1. Always send via WebSocket (for PWA real-time)
+  // 1. Store message in database FIRST to get the ID
+  const messageId = Date.now();
+  db.prepare(`
+    INSERT INTO messages (id, candidate_id, sender, content, template_id, channel, read, ai_generated, ai_source, created_at)
+    VALUES (?, ?, 'admin', ?, ?, 'app', 0, ?, ?, datetime('now'))
+  `).run(messageId, candidateId, content, templateId, aiGenerated ? 1 : 0, aiSource);
+
+  // 2. Send to Telegram if linked (do this early to get external_id)
+  if (candidate.telegram_chat_id && telegram.isConfigured()) {
+    const telegramResult = await telegram.sendMessage(candidate.telegram_chat_id, content);
+    if (telegramResult.success) {
+      externalId = String(telegramResult.messageId);
+      deliveryMethod.push('telegram');
+      // Update message with external ID
+      db.prepare(`UPDATE messages SET external_id = ? WHERE id = ?`).run(externalId, messageId);
+    } else {
+      console.error('Telegram send failed:', telegramResult.error);
+    }
+  }
+
+  // 3. Get the full message from DB
+  const message = db.prepare('SELECT * FROM messages WHERE id = ?').get(messageId);
+
+  // 4. Send via WebSocket with FULL message (for PWA real-time)
   broadcastToCandidate(candidateId, {
     type: EventTypes.CHAT_MESSAGE,
-    message: { content, sender: 'admin', created_at: new Date().toISOString() },
+    message,
   });
   deliveryMethod.push('websocket');
 
-  // 2. Always create in-app notification
+  // 5. Create in-app notification
   createNotification(candidateId, 'chat', 'New message from WorkLink', content);
 
-  // 3. Send push notification if offline
+  // 6. Send push notification if offline
   const isOnline = isCandidateOnline(candidateId);
   if (!isOnline && candidate.push_token) {
     const pushSent = await sendPushNotification(candidate, 'New Message', content);
@@ -58,34 +81,7 @@ async function sendToCandidate(candidateId, content, options = {}) {
     }
   }
 
-  // 4. ALWAYS send to Telegram if linked (regardless of online status)
-  if (candidate.telegram_chat_id && telegram.isConfigured()) {
-    const telegramResult = await telegram.sendMessage(candidate.telegram_chat_id, content);
-    if (telegramResult.success) {
-      externalId = String(telegramResult.messageId);
-      deliveryMethod.push('telegram');
-    } else {
-      console.error('Telegram send failed:', telegramResult.error);
-    }
-  }
-
-  // Store message in database
-  const messageId = Date.now();
-  db.prepare(`
-    INSERT INTO messages (id, candidate_id, sender, content, template_id, channel, read, created_at)
-    VALUES (?, ?, 'admin', ?, ?, 'app', 0, datetime('now'))
-  `).run(messageId, candidateId, content, templateId);
-
-  // Store external ID if Telegram was sent
-  if (externalId) {
-    db.prepare(`
-      UPDATE messages SET external_id = ? WHERE id = ?
-    `).run(externalId, messageId);
-  }
-
-  const message = db.prepare('SELECT * FROM messages WHERE id = ?').get(messageId);
-
-  // Notify all admin clients
+  // 7. Notify all admin clients
   broadcastToAdmins({
     type: 'message_sent',
     message,
@@ -134,15 +130,24 @@ async function sendPushNotification(candidate, title, body) {
  */
 async function sendViaApp(candidateId, content) {
   try {
+    // Store message first
+    const messageId = Date.now();
+    db.prepare(`
+      INSERT INTO messages (id, candidate_id, sender, content, channel, read, created_at)
+      VALUES (?, ?, 'admin', ?, 'app', 0, datetime('now'))
+    `).run(messageId, candidateId, content);
+
+    const message = db.prepare('SELECT * FROM messages WHERE id = ?').get(messageId);
+
     broadcastToCandidate(candidateId, {
       type: EventTypes.CHAT_MESSAGE,
-      message: { content, sender: 'admin', created_at: new Date().toISOString() },
+      message,
     });
 
     // Create notification for offline candidates
     createNotification(candidateId, 'chat', 'New message from WorkLink', content);
 
-    return { success: true };
+    return { success: true, message };
   } catch (error) {
     return { success: false, error: error.message };
   }

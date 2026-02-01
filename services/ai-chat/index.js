@@ -187,7 +187,7 @@ async function generateResponse(candidateId, message, options = {}) {
     const intentResult = await detectIntent(message);
 
     // Generate response
-    const response = await askClaude(message, systemPrompt, { maxTokens: 300 });
+    const response = await askClaude(message, systemPrompt, { maxTokens: 150 });
 
     const responseTime = Date.now() - startTime;
 
@@ -258,7 +258,8 @@ async function processIncomingMessage(candidateId, content, channel = 'app') {
     const delay = settings.response_delay_ms || 1500;
 
     setTimeout(async () => {
-      await sendAIResponse(candidateId, response, channel);
+      // Pass original question for implicit feedback tracking
+      await sendAIResponse(candidateId, response, channel, content);
     }, delay);
 
     return {
@@ -297,13 +298,15 @@ async function processIncomingMessage(candidateId, content, channel = 'app') {
 /**
  * Send an AI-generated response to a candidate
  */
-async function sendAIResponse(candidateId, response, channel = 'app') {
+async function sendAIResponse(candidateId, response, channel = 'app', originalQuestion = null) {
   const messaging = require('../messaging');
 
   // Send via unified messaging service
+  // Include source (kb, faq, llm) for UI display
   const result = await messaging.sendToCandidate(candidateId, response.content, {
     channel: channel === 'telegram' ? 'telegram' : 'auto',
     aiGenerated: true,
+    aiSource: response.source || 'llm', // 'kb', 'faq', 'llm', 'knowledge_base'
   });
 
   // Update the log to mark as sent
@@ -311,6 +314,12 @@ async function sendAIResponse(candidateId, response, channel = 'app') {
     db.prepare(`
       UPDATE ai_response_logs SET status = 'sent' WHERE id = ?
     `).run(response.logId);
+
+    // Store pending feedback for implicit learning (Auto mode)
+    // This will track the next few messages to see if worker was satisfied
+    if (originalQuestion) {
+      ml.storePendingFeedback(candidateId, response.logId, originalQuestion);
+    }
   }
 
   // Broadcast to admins that AI sent a message

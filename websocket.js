@@ -319,6 +319,17 @@ async function sendMessageFromCandidate(candidateId, content, channel = 'app') {
     }
   }
 
+  // Process implicit feedback from previous AI responses (non-blocking)
+  // This learns from worker's reactions to AI auto-replies
+  try {
+    const ml = require('./services/ml');
+    ml.processImplicitFeedback(candidateId, content).catch(err => {
+      console.error('Implicit feedback processing error:', err.message);
+    });
+  } catch (error) {
+    // ML service not loaded, skip
+  }
+
   // Trigger AI processing (non-blocking)
   try {
     const aiChat = getAIChat();
@@ -644,18 +655,26 @@ async function handleAIModeUpdate(candidateId, mode, ws) {
 // ==================== BROADCAST FUNCTIONS ====================
 
 function broadcastToAdmins(data) {
+  console.log(`📤 Broadcasting to ${adminClients.size} admins:`, data.type);
   const message = JSON.stringify(data);
+  let sent = 0;
   adminClients.forEach((client) => {
     if (client.readyState === WebSocket.OPEN) {
       client.send(message);
+      sent++;
     }
   });
+  console.log(`   ✅ Sent to ${sent} admin clients`);
 }
 
 function broadcastToCandidate(candidateId, data) {
+  console.log(`📤 Broadcasting to candidate ${candidateId}:`, data.type);
   const clientWs = candidateClients.get(candidateId);
   if (clientWs?.readyState === WebSocket.OPEN) {
+    console.log(`   ✅ Candidate ${candidateId} is connected, sending...`);
     clientWs.send(JSON.stringify(data));
+  } else {
+    console.log(`   ❌ Candidate ${candidateId} not connected. Connected candidates:`, Array.from(candidateClients.keys()));
   }
 }
 

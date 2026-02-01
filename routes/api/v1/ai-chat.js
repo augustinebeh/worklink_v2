@@ -253,4 +253,87 @@ router.post('/detect-intent', async (req, res) => {
   }
 });
 
+// =====================================================
+// ADMIN FEEDBACK ON AI MESSAGES
+// =====================================================
+
+/**
+ * POST /api/v1/ai-chat/feedback/:messageId
+ * Submit feedback on an AI-generated message
+ * Used by admin to boost or reduce confidence after reviewing auto-replies
+ */
+router.post('/feedback/:messageId', async (req, res) => {
+  try {
+    const { feedback } = req.body; // 'positive' or 'negative'
+    const messageId = parseInt(req.params.messageId);
+
+    if (!feedback || !['positive', 'negative'].includes(feedback)) {
+      return res.status(400).json({
+        success: false,
+        error: 'feedback must be "positive" or "negative"',
+      });
+    }
+
+    const { db } = require('../../../db/database');
+    const ml = require('../../../services/ml');
+
+    // Get the message
+    const message = db.prepare('SELECT * FROM messages WHERE id = ?').get(messageId);
+
+    if (!message) {
+      return res.status(404).json({ success: false, error: 'Message not found' });
+    }
+
+    if (!message.ai_generated) {
+      return res.status(400).json({ success: false, error: 'Message is not AI-generated' });
+    }
+
+    // Update message with feedback
+    db.prepare(`
+      UPDATE messages SET admin_feedback = ? WHERE id = ?
+    `).run(feedback, messageId);
+
+    // Get the AI log if exists
+    const aiLog = message.ai_log_id
+      ? db.prepare('SELECT * FROM ai_response_logs WHERE id = ?').get(message.ai_log_id)
+      : null;
+
+    // Apply confidence change based on feedback
+    const confidenceChange = feedback === 'positive' ? 0.1 : -0.12;
+
+    if (aiLog && aiLog.kb_entry_id) {
+      // Update KB entry confidence
+      db.prepare(`
+        UPDATE ml_knowledge_base
+        SET confidence = MAX(0.1, MIN(1, confidence + ?)),
+            ${feedback === 'positive' ? 'success_count = success_count + 1' : 'reject_count = reject_count + 1'},
+            updated_at = datetime('now')
+        WHERE id = ?
+      `).run(confidenceChange, aiLog.kb_entry_id);
+    }
+
+    // If positive feedback on LLM response, learn it
+    if (feedback === 'positive' && aiLog && aiLog.source === 'llm') {
+      await ml.learn(aiLog.incoming_message, aiLog.ai_response, {
+        intent: aiLog.intent_detected,
+        source: 'admin_approved',
+        confidence: 0.75,
+      });
+    }
+
+    // Update metrics
+    ml.updateDailyMetrics(feedback === 'positive' ? 'admin_boost' : 'admin_reduce');
+
+    console.log(`[ML] Admin feedback: ${feedback} on message ${messageId}`);
+
+    res.json({
+      success: true,
+      message: feedback === 'positive' ? 'Confidence boosted' : 'Confidence reduced',
+    });
+  } catch (error) {
+    console.error('Feedback error:', error);
+    res.status(500).json({ success: false, error: error.message });
+  }
+});
+
 module.exports = router;

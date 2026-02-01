@@ -14,8 +14,16 @@ import EmojiPicker from 'emoji-picker-react';
 import { LogoIcon } from '../components/ui/Logo';
 import { DEFAULT_LOCALE, TIMEZONE, getSGDateString, MS_PER_DAY } from '../utils/constants';
 
+// Parse DB timestamp (stored as UTC without timezone indicator)
+function parseUTCTimestamp(timestamp) {
+  if (!timestamp) return new Date();
+  // If timestamp doesn't end with Z, append it to indicate UTC
+  const utcTimestamp = timestamp.endsWith('Z') ? timestamp : timestamp.replace(' ', 'T') + 'Z';
+  return new Date(utcTimestamp);
+}
+
 function MessageBubble({ message, isOwn }) {
-  const time = new Date(message.created_at).toLocaleTimeString(DEFAULT_LOCALE, {
+  const time = parseUTCTimestamp(message.created_at).toLocaleTimeString(DEFAULT_LOCALE, {
     hour: '2-digit',
     minute: '2-digit',
     hour12: true,
@@ -52,7 +60,7 @@ function MessageBubble({ message, isOwn }) {
 function DateDivider({ date }) {
   const todaySG = getSGDateString();
   const yesterdaySG = getSGDateString(new Date(Date.now() - MS_PER_DAY));
-  const msgDateSG = getSGDateString(date);
+  const msgDateSG = getSGDateString(parseUTCTimestamp(date));
 
   let label;
   if (msgDateSG === todaySG) {
@@ -60,7 +68,7 @@ function DateDivider({ date }) {
   } else if (msgDateSG === yesterdaySG) {
     label = 'Yesterday';
   } else {
-    label = new Date(date).toLocaleDateString(DEFAULT_LOCALE, { day: 'numeric', month: 'short', year: 'numeric', timeZone: TIMEZONE });
+    label = parseUTCTimestamp(date).toLocaleDateString(DEFAULT_LOCALE, { day: 'numeric', month: 'short', year: 'numeric', timeZone: TIMEZONE });
   }
 
   return (

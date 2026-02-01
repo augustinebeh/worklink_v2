@@ -1,4 +1,4 @@
-import { useState, useEffect, useRef } from 'react';
+import { useState, useEffect, useRef, useCallback } from 'react';
 import {
   Search,
   Send,
@@ -20,16 +20,64 @@ import {
   Power,
   Edit3,
   ThumbsUp,
+  ThumbsDown,
   Brain,
+  Volume2,
+  VolumeX,
 } from 'lucide-react';
 import EmojiPicker from 'emoji-picker-react';
 import Card from '../components/ui/Card';
 import Badge from '../components/ui/Badge';
 import { clsx } from 'clsx';
+import { useAdminWebSocket } from '../contexts/WebSocketContext';
+
+// Notification sound using Web Audio API
+let audioContext = null;
+function playNotificationSound() {
+  try {
+    if (!audioContext) {
+      audioContext = new (window.AudioContext || window.webkitAudioContext)();
+    }
+
+    // Resume context if suspended (browser autoplay policy)
+    if (audioContext.state === 'suspended') {
+      audioContext.resume();
+    }
+
+    const oscillator = audioContext.createOscillator();
+    const gainNode = audioContext.createGain();
+
+    oscillator.connect(gainNode);
+    gainNode.connect(audioContext.destination);
+
+    // Pleasant notification tone (two-tone chime)
+    oscillator.frequency.setValueAtTime(880, audioContext.currentTime); // A5
+    oscillator.frequency.setValueAtTime(1108.73, audioContext.currentTime + 0.1); // C#6
+
+    gainNode.gain.setValueAtTime(0.3, audioContext.currentTime);
+    gainNode.gain.exponentialRampToValueAtTime(0.01, audioContext.currentTime + 0.3);
+
+    oscillator.start(audioContext.currentTime);
+    oscillator.stop(audioContext.currentTime + 0.3);
+  } catch (e) {
+    console.log('Could not play notification sound:', e);
+  }
+}
+
+// Parse DB timestamp (stored as UTC without timezone indicator)
+function parseUTCTimestamp(timestamp) {
+  if (!timestamp) return new Date();
+  // If timestamp doesn't end with Z, append it to indicate UTC
+  const utcTimestamp = timestamp.endsWith('Z') ? timestamp : timestamp.replace(' ', 'T') + 'Z';
+  return new Date(utcTimestamp);
+}
 
 // Message bubble component
-function MessageBubble({ message, isOwn }) {
-  const time = new Date(message.created_at).toLocaleTimeString('en-SG', {
+function MessageBubble({ message, isOwn, onFeedback }) {
+  const [feedbackGiven, setFeedbackGiven] = useState(message.admin_feedback || null);
+  const [isSubmitting, setIsSubmitting] = useState(false);
+
+  const time = parseUTCTimestamp(message.created_at).toLocaleTimeString('en-SG', {
     hour: '2-digit',
     minute: '2-digit',
     hour12: true,
@@ -37,6 +85,44 @@ function MessageBubble({ message, isOwn }) {
   });
 
   const isAIGenerated = message.ai_generated === 1;
+  const aiSource = message.ai_source;
+
+  // Determine source label and color
+  const getSourceInfo = () => {
+    if (!aiSource) return { label: 'AI', color: 'text-white/70', bgColor: 'bg-white/20' };
+    switch (aiSource) {
+      case 'faq':
+      case 'knowledge_base':
+      case 'kb':
+        return { label: 'KB', color: 'text-emerald-200', bgColor: 'bg-emerald-500/30' };
+      case 'llm':
+        return { label: 'LLM', color: 'text-violet-200', bgColor: 'bg-violet-500/30' };
+      default:
+        return { label: 'AI', color: 'text-white/70', bgColor: 'bg-white/20' };
+    }
+  };
+
+  const handleFeedback = async (type) => {
+    if (isSubmitting || feedbackGiven) return;
+    setIsSubmitting(true);
+    try {
+      const res = await fetch(`/api/v1/ai-chat/feedback/${message.id}`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ feedback: type }),
+      });
+      if (res.ok) {
+        setFeedbackGiven(type);
+        if (onFeedback) onFeedback(message.id, type);
+      }
+    } catch (e) {
+      console.error('Failed to submit feedback:', e);
+    } finally {
+      setIsSubmitting(false);
+    }
+  };
+
+  const sourceInfo = getSourceInfo();
 
   return (
     <div className={clsx('flex', isOwn ? 'justify-end' : 'justify-start', 'mb-3')}>
@@ -47,12 +133,49 @@ function MessageBubble({ message, isOwn }) {
           : 'bg-slate-200 dark:bg-slate-700 text-slate-900 dark:text-white rounded-bl-sm'
       )}>
         {isAIGenerated && isOwn && (
-          <div className="flex items-center gap-1 mb-1 text-white/70">
-            <Bot className="h-3 w-3" />
-            <span className="text-xs">AI Generated</span>
+          <div className="flex items-center gap-1.5 mb-1">
+            <Bot className="h-3 w-3 text-white/70" />
+            <span className={clsx('text-xs px-1.5 py-0.5 rounded', sourceInfo.bgColor, sourceInfo.color)}>
+              {sourceInfo.label === 'KB' ? '📚 KB (Free)' : '🤖 LLM'}
+            </span>
           </div>
         )}
         <p className="whitespace-pre-wrap break-words text-sm">{message.content}</p>
+
+        {/* Feedback buttons for AI messages */}
+        {isAIGenerated && isOwn && (
+          <div className="flex items-center gap-1 mt-2 pt-2 border-t border-white/10">
+            {feedbackGiven ? (
+              <span className={clsx(
+                'text-xs px-2 py-0.5 rounded-full',
+                feedbackGiven === 'positive' ? 'bg-emerald-500/30 text-emerald-200' : 'bg-red-500/30 text-red-200'
+              )}>
+                {feedbackGiven === 'positive' ? '👍 Boosted' : '👎 Reduced'}
+              </span>
+            ) : (
+              <>
+                <span className="text-xs text-white/50 mr-1">Rate:</span>
+                <button
+                  onClick={() => handleFeedback('positive')}
+                  disabled={isSubmitting}
+                  className="p-1 rounded hover:bg-white/10 text-white/60 hover:text-emerald-300 transition-colors"
+                  title="Good response - boost confidence"
+                >
+                  <ThumbsUp className="h-3.5 w-3.5" />
+                </button>
+                <button
+                  onClick={() => handleFeedback('negative')}
+                  disabled={isSubmitting}
+                  className="p-1 rounded hover:bg-white/10 text-white/60 hover:text-red-300 transition-colors"
+                  title="Bad response - reduce confidence"
+                >
+                  <ThumbsDown className="h-3.5 w-3.5" />
+                </button>
+              </>
+            )}
+          </div>
+        )}
+
         <div className={clsx('flex items-center gap-1.5 mt-1', isOwn ? 'justify-end' : 'justify-start')}>
           <span className={clsx('text-xs', isOwn ? 'text-white/70' : 'text-slate-400')}>
             {time}
@@ -259,7 +382,7 @@ function ConversationItem({ conversation, active, onClick, collapsed }) {
           </span>
           <span className="text-xs text-slate-400">
             {conversation.last_message_at
-              ? new Date(conversation.last_message_at).toLocaleTimeString('en-SG', { hour: '2-digit', minute: '2-digit', timeZone: 'Asia/Singapore' })
+              ? parseUTCTimestamp(conversation.last_message_at).toLocaleTimeString('en-SG', { hour: '2-digit', minute: '2-digit', timeZone: 'Asia/Singapore' })
               : ''
             }
           </span>
@@ -295,6 +418,7 @@ function QuickReplyChip({ template, onClick }) {
 }
 
 export default function AdminChat() {
+  const { fetchUnreadTotal } = useAdminWebSocket();
   const [conversations, setConversations] = useState([]);
   const [candidates, setCandidates] = useState([]);
   const [templates, setTemplates] = useState([]);
@@ -307,20 +431,41 @@ export default function AdminChat() {
   const [loading, setLoading] = useState(true);
   const [isConnected, setIsConnected] = useState(false);
   const [sidebarCollapsed, setSidebarCollapsed] = useState(false);
+  const [soundEnabled, setSoundEnabled] = useState(() => {
+    // Load from localStorage, default to true
+    const saved = localStorage.getItem('chat_sound_enabled');
+    return saved !== null ? JSON.parse(saved) : true;
+  });
 
   // AI Chat state
   const [aiMode, setAiMode] = useState('off');
   const [aiSuggestion, setAiSuggestion] = useState(null);
   const [aiLoading, setAiLoading] = useState(false);
 
+  // Toggle sound and save preference
+  const toggleSound = useCallback(() => {
+    setSoundEnabled(prev => {
+      const newValue = !prev;
+      localStorage.setItem('chat_sound_enabled', JSON.stringify(newValue));
+      // Play a test sound when enabling
+      if (newValue) playNotificationSound();
+      return newValue;
+    });
+  }, []);
+
   const messagesEndRef = useRef(null);
   const wsRef = useRef(null);
   const inputRef = useRef(null);
   const selectedConversationRef = useRef(null);
+  const soundEnabledRef = useRef(soundEnabled);
 
   useEffect(() => {
     selectedConversationRef.current = selectedConversation;
   }, [selectedConversation]);
+
+  useEffect(() => {
+    soundEnabledRef.current = soundEnabled;
+  }, [soundEnabled]);
 
   useEffect(() => {
     fetchConversations();
@@ -342,8 +487,24 @@ export default function AdminChat() {
       fetchMessages(selectedConversation.candidate_id);
       fetchAIMode(selectedConversation.candidate_id);
       setAiSuggestion(null); // Clear suggestion when switching conversations
+
+      // Mark messages as read when opening conversation
+      if (wsRef.current?.readyState === WebSocket.OPEN && selectedConversation.unread_count > 0) {
+        wsRef.current.send(JSON.stringify({
+          type: 'read',
+          candidateId: selectedConversation.candidate_id
+        }));
+        // Update global unread total
+        fetchUnreadTotal();
+      }
+      // Also update local state to clear unread count
+      setConversations(prev => prev.map(c =>
+        c.candidate_id === selectedConversation.candidate_id
+          ? { ...c, unread_count: 0 }
+          : c
+      ));
     }
-  }, [selectedConversation]);
+  }, [selectedConversation, fetchUnreadTotal]);
 
   const connectWebSocket = () => {
     const protocol = window.location.protocol === 'https:' ? 'wss:' : 'ws:';
@@ -389,6 +550,10 @@ export default function AdminChat() {
 
       case 'new_message':
         console.log('New message received:', data);
+        // Play notification sound for incoming messages
+        if (soundEnabledRef.current) {
+          playNotificationSound();
+        }
         setMessages(prev => {
           const currentConv = selectedConversationRef.current;
           if (currentConv?.candidate_id === data.candidateId) {
@@ -805,6 +970,18 @@ export default function AdminChat() {
                       onChange={handleAIModeChange}
                       candidateId={selectedConversation.candidate_id}
                     />
+                    <button
+                      onClick={toggleSound}
+                      className={clsx(
+                        'p-2 rounded-lg transition-colors',
+                        soundEnabled
+                          ? 'text-primary-500 hover:bg-primary-50 dark:hover:bg-primary-900/20'
+                          : 'text-slate-400 hover:text-slate-600 hover:bg-slate-100 dark:hover:bg-slate-800'
+                      )}
+                      title={soundEnabled ? 'Sound on (click to mute)' : 'Sound off (click to unmute)'}
+                    >
+                      {soundEnabled ? <Volume2 className="h-5 w-5" /> : <VolumeX className="h-5 w-5" />}
+                    </button>
                     {selectedConversation.email && (
                       <a
                         href={`mailto:${selectedConversation.email}`}

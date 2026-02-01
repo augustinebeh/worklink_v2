@@ -165,9 +165,28 @@ export function WebSocketProvider({ children }) {
   }, [send]);
 
   // Mark messages as read
-  const markMessagesRead = useCallback((candidateId) => {
+  // Mark messages as read and update unread count
+  const markMessagesRead = useCallback((candidateId, unreadCount = 0) => {
+    // Decrement total unread by the conversation's unread count
+    if (unreadCount > 0) {
+      setUnreadTotal(prev => Math.max(0, prev - unreadCount));
+    }
     return send({ type: 'read', candidateId });
   }, [send]);
+
+  // Fetch total unread count from server
+  const fetchUnreadTotal = useCallback(async () => {
+    try {
+      const res = await fetch('/api/v1/chat/admin/conversations');
+      const data = await res.json();
+      if (data.success) {
+        const total = data.data.reduce((sum, conv) => sum + (conv.unread_count || 0), 0);
+        setUnreadTotal(total);
+      }
+    } catch (error) {
+      console.error('Failed to fetch unread total:', error);
+    }
+  }, []);
 
   // Get candidate status
   const getCandidateStatus = useCallback((candidateId) => {
@@ -195,6 +214,7 @@ export function WebSocketProvider({ children }) {
   useEffect(() => {
     if (isAuthenticated) {
       connect();
+      fetchUnreadTotal(); // Fetch initial unread count
     }
 
     return () => {
@@ -230,6 +250,7 @@ export function WebSocketProvider({ children }) {
     getCandidateStatus,
     subscribe,
     isCandidateOnline,
+    fetchUnreadTotal,
   };
 
   return (

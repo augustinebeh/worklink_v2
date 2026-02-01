@@ -1,59 +1,138 @@
 /**
- * Claude AI Integration Utility
+ * LLM Integration Utility (Groq - Llama 3.1)
  * WorkLink v2
+ *
+ * Using Groq for fast, free LLM responses
+ * Fallback to Google Gemini if Groq fails
  */
 
-const ANTHROPIC_API_URL = 'https://api.anthropic.com/v1/messages';
+const GROQ_API_URL = 'https://api.groq.com/openai/v1/chat/completions';
+const GEMINI_API_URL = 'https://generativelanguage.googleapis.com/v1beta/models';
 
 /**
- * Send a message to Claude and get a response
- * @param {string} prompt - The user prompt
- * @param {string} systemPrompt - System instructions for Claude
- * @param {object} options - Additional options (maxTokens, model)
- * @returns {Promise<string>} Claude's response text
+ * Send a message to Groq and get a response
+ * Falls back to Gemini if Groq fails
  */
 async function askClaude(prompt, systemPrompt = '', options = {}) {
-  const apiKey = process.env.ANTHROPIC_API_KEY;
+  // Try Groq first (faster and more free tokens)
+  const groqKey = process.env.GROQ_API_KEY;
+
+  if (groqKey) {
+    try {
+      const response = await askGroq(prompt, systemPrompt, options);
+      return response;
+    } catch (error) {
+      console.error('Groq failed, trying Gemini fallback:', error.message);
+    }
+  }
+
+  // Fallback to Gemini
+  return await askGemini(prompt, systemPrompt, options);
+}
+
+/**
+ * Groq API (Llama 3.1)
+ */
+async function askGroq(prompt, systemPrompt = '', options = {}) {
+  const apiKey = process.env.GROQ_API_KEY;
 
   if (!apiKey) {
-    throw new Error('ANTHROPIC_API_KEY not configured');
+    throw new Error('GROQ_API_KEY not configured');
   }
 
   const {
     maxTokens = 1024,
-    model = 'claude-3-5-sonnet-20241022',
+    model = 'llama-3.1-8b-instant', // Fast and capable
   } = options;
 
-  try {
-    const response = await fetch(ANTHROPIC_API_URL, {
-      method: 'POST',
-      headers: {
-        'Content-Type': 'application/json',
-        'x-api-key': apiKey,
-        'anthropic-version': '2023-06-01',
-      },
-      body: JSON.stringify({
-        model,
-        max_tokens: maxTokens,
-        system: systemPrompt,
-        messages: [
-          { role: 'user', content: prompt }
-        ],
-      }),
-    });
+  const messages = [];
 
-    if (!response.ok) {
-      const errorData = await response.json().catch(() => ({}));
-      throw new Error(errorData.error?.message || `API error: ${response.status}`);
-    }
-
-    const data = await response.json();
-    return data.content[0]?.text || '';
-  } catch (error) {
-    console.error('Claude API error:', error.message);
-    throw error;
+  if (systemPrompt) {
+    messages.push({ role: 'system', content: systemPrompt });
   }
+  messages.push({ role: 'user', content: prompt });
+
+  const response = await fetch(GROQ_API_URL, {
+    method: 'POST',
+    headers: {
+      'Content-Type': 'application/json',
+      'Authorization': `Bearer ${apiKey}`,
+    },
+    body: JSON.stringify({
+      model,
+      messages,
+      max_tokens: maxTokens,
+      temperature: 0.7,
+    }),
+  });
+
+  if (!response.ok) {
+    const errorData = await response.json().catch(() => ({}));
+    const errorMessage = errorData.error?.message || `Groq API error: ${response.status}`;
+    console.error('Groq API error:', errorMessage);
+    throw new Error(errorMessage);
+  }
+
+  const data = await response.json();
+  const text = data.choices?.[0]?.message?.content || '';
+
+  if (!text) {
+    throw new Error('Empty response from Groq');
+  }
+
+  return text;
 }
+
+/**
+ * Gemini API (fallback)
+ */
+async function askGemini(prompt, systemPrompt = '', options = {}) {
+  const apiKey = process.env.GOOGLE_API_KEY;
+
+  if (!apiKey) {
+    throw new Error('GOOGLE_API_KEY not configured');
+  }
+
+  const {
+    maxTokens = 1024,
+    model = 'gemma-3-1b-it',
+  } = options;
+
+  const url = `${GEMINI_API_URL}/${model}:generateContent?key=${apiKey}`;
+
+  let fullPrompt = prompt;
+  if (systemPrompt) {
+    fullPrompt = `${systemPrompt}\n\n---\n\nUser message:\n${prompt}`;
+  }
+
+  const response = await fetch(url, {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({
+      contents: [{ role: 'user', parts: [{ text: fullPrompt }] }],
+      generationConfig: { maxOutputTokens: maxTokens, temperature: 0.7 },
+      safetySettings: [
+        { category: 'HARM_CATEGORY_HARASSMENT', threshold: 'BLOCK_NONE' },
+        { category: 'HARM_CATEGORY_HATE_SPEECH', threshold: 'BLOCK_NONE' },
+        { category: 'HARM_CATEGORY_SEXUALLY_EXPLICIT', threshold: 'BLOCK_NONE' },
+        { category: 'HARM_CATEGORY_DANGEROUS_CONTENT', threshold: 'BLOCK_NONE' },
+      ],
+    }),
+  });
+
+  if (!response.ok) {
+    const errorData = await response.json().catch(() => ({}));
+    throw new Error(errorData.error?.message || `Gemini API error: ${response.status}`);
+  }
+
+  const data = await response.json();
+  return data.candidates?.[0]?.content?.parts?.[0]?.text || '';
+}
+
+/**
+ * Alias for askClaude
+ */
+const askLLM = askClaude;
 
 /**
  * Generate job posting content for multiple platforms
@@ -87,7 +166,6 @@ Return ONLY valid JSON in this exact format:
 
   const response = await askClaude(prompt, systemPrompt, { maxTokens: 1500 });
 
-  // Parse JSON from response
   const jsonMatch = response.match(/\{[\s\S]*\}/);
   if (jsonMatch) {
     return JSON.parse(jsonMatch[0]);
@@ -167,7 +245,6 @@ Return ONLY valid JSON.`;
 
   const response = await askClaude(prompt, systemPrompt, { maxTokens: 1000 });
 
-  // Parse JSON from response
   const jsonMatch = response.match(/\{[\s\S]*\}/);
   if (jsonMatch) {
     return JSON.parse(jsonMatch[0]);
@@ -181,7 +258,6 @@ Return ONLY valid JSON.`;
 async function matchCandidates(job, candidates) {
   const systemPrompt = `You are an AI talent matcher for WorkLink Singapore. Score candidates based on fit for the job. Be objective and explain your reasoning briefly.`;
 
-  // Limit to top 20 candidates to keep prompt size reasonable
   const candidateList = candidates.slice(0, 20).map(c => ({
     id: c.id,
     name: c.name,
@@ -216,7 +292,6 @@ Return ONLY valid JSON array.`;
 
   const response = await askClaude(prompt, systemPrompt, { maxTokens: 800 });
 
-  // Parse JSON from response
   const jsonMatch = response.match(/\[[\s\S]*\]/);
   if (jsonMatch) {
     return JSON.parse(jsonMatch[0]);
@@ -226,6 +301,9 @@ Return ONLY valid JSON array.`;
 
 module.exports = {
   askClaude,
+  askGroq,
+  askGemini,
+  askLLM,
   generateJobPostings,
   generateOutreachMessage,
   analyzeTender,

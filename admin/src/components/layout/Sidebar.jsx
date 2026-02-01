@@ -27,6 +27,7 @@ import {
 } from 'lucide-react';
 import { clsx } from 'clsx';
 import Logo, { LogoIcon } from '../ui/Logo';
+import { useAdminWebSocket } from '../../contexts/WebSocketContext';
 
 // Navigation organized by role/focus area
 const navigation = [
@@ -62,7 +63,7 @@ const navigation = [
       { name: 'Jobs', href: '/jobs', icon: BriefcaseIcon, description: 'Job postings' },
       { name: 'Sourcing AI', href: '/ai-sourcing', icon: SearchIcon, description: 'Posting & outreach' },
       { name: 'Telegram Groups', href: '/telegram-groups', icon: SendIcon, description: 'Group posting' },
-      { name: 'Chat', href: '/chat', icon: MessageCircleIcon, description: 'Message workers' },
+      { name: 'Chat', href: '/chat', icon: MessageCircleIcon, description: 'Message workers', showUnreadBadge: true },
     ],
   },
 
@@ -109,11 +110,11 @@ const navigation = [
   },
 ];
 
-function NavItem({ item, collapsed }) {
+function NavItem({ item, collapsed, unreadTotal = 0 }) {
   const location = useLocation();
   const [isOpen, setIsOpen] = useState(true);
   const hasChildren = item.children && item.children.length > 0;
-  
+
   const isChildActive = hasChildren && item.children.some(child => location.pathname === child.href);
   const isActive = location.pathname === item.href;
 
@@ -192,7 +193,12 @@ function NavItem({ item, collapsed }) {
                 <div className="flex-1 min-w-0">
                   <span className="block">{child.name}</span>
                 </div>
-                {child.highlight && (
+                {child.showUnreadBadge && unreadTotal > 0 && (
+                  <span className="px-2 py-0.5 text-2xs font-bold bg-red-500 text-white rounded-full min-w-[20px] text-center">
+                    {unreadTotal > 99 ? '99+' : unreadTotal}
+                  </span>
+                )}
+                {child.highlight && !child.showUnreadBadge && (
                   <span className="px-1.5 py-0.5 text-2xs font-medium bg-emerald-100 dark:bg-emerald-900/30 text-emerald-600 dark:text-emerald-400 rounded-full" aria-label="New feature">
                     NEW
                   </span>
@@ -237,6 +243,8 @@ function NavItem({ item, collapsed }) {
 }
 
 export default function Sidebar({ collapsed, onClose, isMobile }) {
+  const { unreadTotal } = useAdminWebSocket();
+
   return (
     <aside
       className={clsx(
@@ -263,7 +271,7 @@ export default function Sidebar({ collapsed, onClose, isMobile }) {
       {/* Navigation */}
       <nav className="flex-1 overflow-y-auto p-4 space-y-2" aria-label="Main navigation">
         {navigation.map((item) => (
-          <NavItem key={item.name} item={item} collapsed={collapsed} />
+          <NavItem key={item.name} item={item} collapsed={collapsed} unreadTotal={unreadTotal} />
         ))}
       </nav>
 

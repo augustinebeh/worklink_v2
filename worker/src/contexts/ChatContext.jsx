@@ -30,22 +30,59 @@ export function ChatProvider({ children }) {
 
       wsRef.current.onmessage = (event) => {
         const data = JSON.parse(event.data);
-        
-        if (data.type === 'message') {
-          setMessages(prev => [...prev, data.message]);
-          if (data.message.sender === 'admin') {
-            setUnreadCount(prev => prev + 1);
-            // Show notification if page is not visible
-            if (document.hidden && 'Notification' in window && Notification.permission === 'granted') {
-              new Notification('New Message from WorkLink', {
-                body: data.message.content,
-                icon: '/icon-192.png',
-              });
+        console.log('WebSocket message received:', data.type, data);
+
+        switch (data.type) {
+          case 'chat_message':
+            // Message from admin
+            setMessages(prev => {
+              // Avoid duplicates
+              if (prev.some(m => m.id === data.message?.id)) return prev;
+              return [...prev, data.message];
+            });
+            if (data.message?.sender === 'admin') {
+              setUnreadCount(prev => prev + 1);
+              // Show notification if page is not visible
+              if (document.hidden && 'Notification' in window && Notification.permission === 'granted') {
+                new Notification('New Message from WorkLink', {
+                  body: data.message.content,
+                  icon: '/icon-192.png',
+                });
+              }
             }
-          }
-        } else if (data.type === 'history') {
-          setMessages(data.messages || []);
-          setUnreadCount(data.unreadCount || 0);
+            break;
+
+          case 'message_sent':
+            // Confirmation of our sent message
+            setMessages(prev => {
+              if (prev.some(m => m.id === data.message?.id)) return prev;
+              return [...prev, data.message];
+            });
+            break;
+
+          case 'chat_history':
+            setMessages(data.messages || []);
+            setUnreadCount(data.unreadCount || 0);
+            break;
+
+          case 'connected':
+            console.log('WebSocket connected as candidate');
+            break;
+
+          case 'messages_read':
+            // Admin read our messages
+            break;
+
+          case 'typing':
+            // Admin is typing
+            break;
+
+          case 'notification':
+            // Handle notifications
+            break;
+
+          default:
+            console.log('Unknown WebSocket message type:', data.type);
         }
       };
 

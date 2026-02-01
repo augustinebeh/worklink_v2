@@ -573,8 +573,8 @@ function createSchema() {
       variable_tested TEXT, -- The specific variable being tested in this A/B test
       variable_value TEXT, -- The value of that variable for this variant
       source TEXT DEFAULT 'llm', -- llm | optimized | manual
-      created_at DATETIME DEFAULT CURRENT_TIMESTAMP,
-      FOREIGN KEY (job_id) REFERENCES jobs(id)
+      created_at DATETIME DEFAULT CURRENT_TIMESTAMP
+      -- Note: No FK to jobs since ad training data should persist after jobs deleted
     );
 
     -- Track ad performance for each variant
@@ -593,9 +593,8 @@ function createSchema() {
       response_rate REAL, -- responses / impressions
       is_winner INTEGER DEFAULT 0, -- Won the A/B test
       measured_at DATETIME,
-      created_at DATETIME DEFAULT CURRENT_TIMESTAMP,
-      FOREIGN KEY (variant_id) REFERENCES ad_variants(id),
-      FOREIGN KEY (group_id) REFERENCES telegram_groups(id)
+      created_at DATETIME DEFAULT CURRENT_TIMESTAMP
+      -- Note: No FKs since training data should persist even if variants/groups deleted
     );
 
     -- Learned variable preferences (updated after each A/B test)
@@ -989,7 +988,337 @@ function seedEssentialData() {
     db.prepare('INSERT OR IGNORE INTO ai_faq (category, question, answer, keywords, priority) VALUES (?, ?, ?, ?, ?)').run(...f);
   });
 
-  console.log('✅ Essential data seeded (including AI/ML settings)');
+  // Additional FAQ entries for comprehensive coverage
+  const additionalFaqs = [
+    ['pay', 'What payment methods do you accept?', "We pay directly to your Singapore bank account via PayNow or bank transfer. Make sure your bank details are updated in your Profile! We don't do cash payments. 🏦", '["paynow","bank","transfer","cash","payment method"]', 8],
+    ['pay', 'Why is my payment less than expected?', "Your payment might differ due to: break time deductions, actual hours worked vs scheduled, or CPF contributions if applicable. Check the payment breakdown in your Wallet for details! 📋", '["less","lower","deduction","wrong","incorrect","short"]', 9],
+    ['pay', 'Can I get paid early?', "Standard payment is every Friday, but we understand emergencies happen! Contact our support team if you need an advance - we'll try to help where possible. 💪", '["early","advance","urgent","emergency","faster","quick"]', 7],
+    ['schedule', 'What if I am late to a job?', "Please inform us immediately if you're running late! Contact your supervisor and our support team. Being late repeatedly may affect your rating and future job assignments. ⏰", '["late","delay","traffic","stuck","running late"]', 9],
+    ['schedule', 'Can I swap shifts with another worker?', "Shift swaps need to be approved by us first. Contact support with details of who you want to swap with. Both workers must agree and the swap must be confirmed at least 24 hours before. 🔄", '["swap","switch","exchange","trade","replace"]', 8],
+    ['schedule', 'How far in advance are jobs posted?', "Jobs are typically posted 1-2 weeks in advance, but some urgent jobs may be posted with shorter notice. Enable notifications to get alerts for new jobs that match your preferences! 📱", '["advance","ahead","notice","when posted","upcoming"]', 7],
+    ['jobs', 'What types of jobs are available?', "We have various roles: F&B service, event crew, warehouse packing, retail assistants, admin support, and more! Check the Jobs tab to see what's available in your area. 🎪", '["type","kind","role","position","what jobs"]', 9],
+    ['jobs', 'Do I need experience?', "Many of our jobs are entry-level and provide on-site training! Your profile shows your experience level, and we'll match you with suitable roles. Everyone starts somewhere! 🌟", '["experience","requirement","qualification","skill","new","beginner"]', 9],
+    ['jobs', 'What should I wear to work?', "Dress code depends on the job. Most events require all-black attire (black shirt, pants, shoes). Specific requirements are listed in the job details. When in doubt, smart casual is safe! 👔", '["wear","dress","attire","uniform","clothing","outfit"]', 8],
+    ['jobs', 'Where are the jobs located?', "Jobs are across Singapore! You can filter by location in the Jobs tab. We have opportunities in CBD, Orchard, Marina Bay, Sentosa, and neighborhood areas. Choose what's convenient for you! 🗺️", '["location","where","area","place","mrt","near"]', 8],
+    ['onboarding', 'How do I update my profile?', "Go to the Profile tab in your app. You can update your photo, contact info, bank details, skills, and certifications. A complete profile helps you get matched to better jobs! ✨", '["update","edit","change","profile","information","details"]', 9],
+    ['onboarding', 'What documents do I need?', "You'll need: NRIC (for Singaporeans/PRs) or valid work pass, and bank account details. Some roles may require additional certifications which will be specified. 📄", '["document","nric","passport","work pass","requirement"]', 9],
+    ['onboarding', 'How long until I can start working?', "Once your profile is complete and verified, you can start applying immediately! Verification usually takes 1-2 business days. While waiting, browse available jobs! ⚡", '["how long","when can","start","begin","wait","verification"]', 8],
+    ['general', 'How do I contact support?', "You can reach us through: in-app chat (fastest!), email at support@worklink.sg, or WhatsApp. We're here to help Mon-Fri 9am-6pm, and for urgent job issues on weekends too! 💬", '["contact","support","help","reach","phone","email","whatsapp"]', 10],
+    ['general', 'What happens if I get injured at work?', "Your safety is our priority! Report any injury immediately to your supervisor. We have insurance coverage for work-related injuries. Seek medical attention first, then contact us. 🏥", '["injury","hurt","accident","injured","medical","insurance"]', 10],
+    ['general', 'Can I bring a friend to work?', "You can refer friends through our referral program! However, they need to complete their own registration and get assigned. You can't bring unregistered people to work sites. 👥", '["friend","bring","together","work together","same job"]', 7],
+    ['general', 'How do I improve my rating?', "Great question! Your rating improves by: showing up on time, completing jobs well, being professional, getting good feedback from clients. Consistency is key! 🌟", '["rating","improve","increase","better","score"]', 8],
+    ['general', 'What is the streak bonus?', "Work consecutive days to build a streak! The longer your streak, the bigger your bonus multiplier. Missing a scheduled day resets your streak, so plan carefully! 🔥", '["streak","consecutive","bonus","multiplier","daily"]', 8],
+    ['transport', 'Is transport provided?', "Transport is usually not provided - you'll need to make your own way. Some remote locations may have arranged transport which will be mentioned in the job details. Check before applying! 🚌", '["transport","travel","get there","bus","mrt","provided"]', 8],
+    ['transport', 'Will transport be reimbursed?', "Transport claims depend on the job and client. If reimbursement is available, it will be stated in the job details. Keep your receipts just in case! 🧾", '["reimburse","claim","transport cost","fare","travel expense"]', 7],
+  ];
+  additionalFaqs.forEach(f => {
+    db.prepare('INSERT OR IGNORE INTO ai_faq (category, question, answer, keywords, priority) VALUES (?, ?, ?, ?, ?)').run(...f);
+  });
+
+  // ============================================
+  // CHAT ML - Knowledge Base (Learned Q&A pairs)
+  // ============================================
+  const knowledgeBaseEntries = [
+    // High confidence entries (frequently approved)
+    ['when payment', 'Payments are processed every Friday! You should see the money in your bank account by Monday. Check your Wallet in the app for payment history.', 'pay_inquiry', 0.92, 45, 42, 2, 1, 'approved'],
+    ['how much pay', 'Your pay = hours worked × hourly rate, plus any bonuses. The exact rate is shown in each job listing. Check your Wallet for detailed breakdowns!', 'pay_inquiry', 0.89, 38, 35, 3, 0, 'approved'],
+    ['got job or not', 'Yes! Open the Jobs tab to see available positions. New jobs are posted daily. Filter by date and location to find ones near you!', 'job_search', 0.95, 67, 65, 2, 0, 'approved'],
+    ['how to apply', 'Easy! Go to Jobs tab → Find a job you like → Tap "Apply" → Done! Make sure your availability is updated first.', 'job_application', 0.91, 52, 48, 3, 1, 'approved'],
+    ['cannot make it tomorrow', "No worries, please cancel in the app ASAP and let us know the reason. The earlier you inform us, the better. We can find a replacement!", 'schedule_question', 0.88, 29, 26, 2, 1, 'approved'],
+    ['what time start', 'Start times vary by job! Check the specific job details in your Deployments tab. Always arrive 15 minutes early to sign in.', 'schedule_question', 0.87, 34, 30, 3, 1, 'approved'],
+    ['where is the job', "The job location and address are in the job details! Tap on your deployment to see the full address and map. Some jobs have reporting points different from the venue.", 'job_search', 0.86, 28, 25, 2, 1, 'approved'],
+    ['thanks', "You're welcome! Let me know if you need anything else. Good luck with your upcoming jobs! 💪", 'goodbye', 0.98, 89, 88, 1, 0, 'approved'],
+    ['hi', 'Hello! How can I help you today? Feel free to ask about jobs, payments, schedules, or anything else!', 'general_greeting', 0.97, 156, 154, 2, 0, 'approved'],
+    ['good morning', 'Good morning! Ready to find some great jobs today? How can I assist you?', 'general_greeting', 0.96, 78, 76, 2, 0, 'approved'],
+
+    // Medium confidence entries (some edits needed)
+    ['pay when ah', 'Friday every week! Jobs done Mon-Sun get paid the following Friday. Check Wallet for status.', 'pay_inquiry', 0.78, 23, 18, 4, 1, 'approved'],
+    ['any lobang', 'Got plenty! Check the Jobs tab - we have F&B, events, retail, warehouse and more. Apply to ones that suit your schedule!', 'job_search', 0.75, 19, 14, 4, 1, 'approved'],
+    ['mc how', 'If you need MC, inform us ASAP through the app chat. Provide your MC when you can. We hope you feel better soon! 🤒', 'schedule_question', 0.72, 15, 11, 3, 1, 'approved'],
+    ['late already', 'Thanks for letting us know! Please also contact your on-site supervisor directly. How late will you be?', 'urgent', 0.85, 21, 18, 2, 1, 'approved'],
+    ['need help', "I'm here to help! What do you need assistance with - jobs, payments, schedule, or something else?", 'general_question', 0.90, 45, 42, 3, 0, 'approved'],
+    ['bank wrong', 'No problem! Go to Profile → Bank Details to update your account. Changes take effect from the next payment cycle.', 'general_question', 0.82, 17, 14, 2, 1, 'approved'],
+    ['how to refer friend', 'Share your referral code from your Profile page! When your friend signs up and completes their first job, you both earn a bonus!', 'general_question', 0.88, 31, 28, 2, 1, 'approved'],
+    ['xp for what', 'XP helps you level up! Higher levels = priority job access + bonus multipliers. Earn XP by completing jobs and maintaining streaks.', 'general_question', 0.84, 25, 21, 3, 1, 'approved'],
+    ['my rating low', "Your rating reflects punctuality and job performance. Keep showing up on time and doing great work - it'll improve! Need tips?", 'complaint', 0.76, 14, 10, 3, 1, 'approved'],
+    ['confirm job', 'Jobs are confirmed when you see "Confirmed" status in your Deployments. If still pending, the client is finalizing numbers. Check back soon!', 'job_application', 0.83, 27, 23, 3, 1, 'approved'],
+
+    // Lower confidence (newer entries, still learning)
+    ['parking got', 'Parking availability varies by venue. Check the job details or ask the support team about specific locations.', 'general_question', 0.65, 8, 5, 2, 1, 'approved'],
+    ['can claim taxi', 'Transport claims depend on the specific job. Check job details for reimbursement info. Keep receipts if claims are allowed!', 'pay_inquiry', 0.62, 7, 4, 2, 1, 'approved'],
+    ['dress code', 'Most events require all-black attire. Specific dress codes are in the job details. When unsure, smart casual is safe!', 'job_search', 0.71, 12, 9, 2, 1, 'approved'],
+    ['break time', 'Breaks depend on shift length. 4-6hr shifts usually have 30min break, 6hr+ may have 1 hour. Check job details!', 'schedule_question', 0.68, 10, 7, 2, 1, 'approved'],
+    ['overtime pay', 'Overtime is usually at 1.5x rate after 8 hours. The exact terms are in your job assignment. Check with your supervisor on-site!', 'pay_inquiry', 0.66, 9, 6, 2, 1, 'approved'],
+  ];
+
+  knowledgeBaseEntries.forEach(entry => {
+    db.prepare(`
+      INSERT OR IGNORE INTO ml_knowledge_base
+      (question, answer, intent, confidence, use_count, success_count, edit_count, reject_count, source)
+      VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)
+    `).run(...entry);
+  });
+
+  // ============================================
+  // CHAT ML - Training Data (For future SLM)
+  // ============================================
+  const trainingData = [
+    ['When will I receive my salary?', 'Payments are processed every Friday for the previous week. The money should be in your bank account by Monday!', 'pay_inquiry', 0.95, 1, null, 'production'],
+    ['Got any job tomorrow?', 'Check the Jobs tab for tomorrow! Filter by date to see available positions. Apply early as slots fill up fast!', 'job_search', 0.92, 1, null, 'production'],
+    ['How to cancel my shift?', "Go to your Deployments, find the job, and tap Cancel. Please do this at least 24 hours before. Let us know the reason!", 'schedule_question', 0.90, 1, null, 'production'],
+    ['What time should I arrive?', 'Please arrive 15 minutes before your shift starts for check-in. The exact start time is in your job details.', 'schedule_question', 0.93, 1, null, 'production'],
+    ['Is there parking at the venue?', 'Parking varies by location. Check job details or contact us for specific venues. Some places have limited parking!', 'general_question', 0.85, 1, null, 'production'],
+    ['Can I apply for multiple jobs same day?', "You can apply to multiple jobs, but make sure there's no time overlap! The system will warn you about conflicts.", 'job_application', 0.88, 1, null, 'production'],
+    ['My friend wants to join', 'Great! Share your referral code from Profile. They sign up, complete a job, you both get bonus! 🎉', 'general_question', 0.91, 1, null, 'production'],
+    ['What should I bring to work?', 'Bring your NRIC for verification, and wear the required attire. Some jobs need specific items - check the job details!', 'job_search', 0.87, 1, null, 'production'],
+    ['How to update bank account?', 'Go to Profile → Bank Details → Edit. Make sure NRIC name matches bank account name. Changes apply from next payment.', 'general_question', 0.94, 1, null, 'production'],
+    ['Pay not correct', "Sorry to hear that! Let me check. Can you tell me which job and date? I'll look into the payment details for you.", 'complaint', 0.89, 1, 'Let me help you check your payment. Which job date are you referring to? I can look up the breakdown for you.', 'production'],
+    ['Looking for weekend job', 'Weekend jobs are popular! Check Jobs tab and filter for Sat/Sun. Enable notifications to get alerts when new weekend jobs are posted.', 'job_search', 0.90, 1, null, 'production'],
+    ['Where to find my schedule', 'Your confirmed jobs are in the Deployments tab! You can also check Calendar view to see your upcoming schedule at a glance.', 'schedule_question', 0.92, 1, null, 'production'],
+    ['How does XP work', 'Complete jobs to earn XP! More XP = higher level = better perks like priority booking and bonus multipliers. Keep that streak going! 🔥', 'general_question', 0.88, 1, null, 'production'],
+    ['Need urgent job today', 'Urgent jobs are marked with 🔥! Check Jobs tab now - some same-day positions may be available. Apply quickly!', 'job_search', 0.86, 1, null, 'production'],
+    ['When confirm my application', 'Confirmations usually come 24-48 hours before the job. Keep notifications on! Status shows in your Deployments.', 'job_application', 0.87, 1, null, 'production'],
+    ['Sorry cannot work tmr', "Thanks for the early notice! Please cancel in the app and let me know the reason. Hope everything is okay!", 'schedule_question', 0.91, 1, null, 'production'],
+    ['What is my referral code', 'Your unique referral code is in Profile → Referrals. Share it with friends to earn bonuses when they complete jobs!', 'general_question', 0.93, 1, null, 'production'],
+    ['Rate for waiter job', 'Waiter jobs typically range $10-14/hr depending on venue and event type. Check specific job listings for exact rates!', 'pay_inquiry', 0.84, 1, null, 'production'],
+    ['Got training provided', 'Most jobs include on-site briefing! Some specialized roles have pre-training. Check job requirements for details.', 'job_search', 0.82, 1, null, 'production'],
+    ['How many hours minimum', 'Minimum hours vary by job - some are 4hrs, some full day. Filter by duration in Jobs tab to find what suits you!', 'job_search', 0.85, 1, null, 'production'],
+  ];
+
+  trainingData.forEach(entry => {
+    db.prepare(`
+      INSERT OR IGNORE INTO ml_training_data
+      (input_text, output_text, intent, quality_score, admin_approved, edited_output, source)
+      VALUES (?, ?, ?, ?, ?, ?, ?)
+    `).run(...entry);
+  });
+
+  // ============================================
+  // CHAT ML - Metrics (Historical performance)
+  // ============================================
+  const today = new Date();
+  for (let i = 30; i >= 0; i--) {
+    const date = new Date(today);
+    date.setDate(date.getDate() - i);
+    const dateStr = date.toISOString().split('T')[0];
+
+    // Simulate improving KB hit rate over time
+    const baseQueries = 20 + Math.floor(Math.random() * 30);
+    const kbHitRate = 0.3 + (30 - i) * 0.015 + Math.random() * 0.1; // Improves over time
+    const kbHits = Math.floor(baseQueries * Math.min(kbHitRate, 0.85));
+    const llmCalls = baseQueries - kbHits;
+    const costSaved = kbHits * 0.005; // $0.005 per LLM call saved
+
+    db.prepare(`
+      INSERT OR IGNORE INTO ml_metrics (date, total_queries, kb_hits, llm_calls, avg_confidence, estimated_cost_saved)
+      VALUES (?, ?, ?, ?, ?, ?)
+    `).run(dateStr, baseQueries, kbHits, llmCalls, 0.75 + Math.random() * 0.15, costSaved);
+  }
+
+  // ============================================
+  // AD ML - Variable Scores (Learned preferences)
+  // ============================================
+  const variableScores = [
+    // Tone preferences - "friendly" wins
+    ['tone', 'friendly', null, 28, 8, 156, 0.045, 0.78],
+    ['tone', 'casual', null, 18, 14, 89, 0.032, 0.56],
+    ['tone', 'urgent', null, 12, 18, 67, 0.028, 0.40],
+    ['tone', 'formal', null, 6, 24, 34, 0.018, 0.20],
+
+    // Emoji count - 3-4 is optimal
+    ['emoji_count', '3', null, 24, 6, 134, 0.048, 0.80],
+    ['emoji_count', '4', null, 20, 8, 112, 0.042, 0.71],
+    ['emoji_count', '2', null, 14, 12, 78, 0.031, 0.54],
+    ['emoji_count', '5', null, 10, 16, 56, 0.025, 0.38],
+    ['emoji_count', '0', null, 4, 22, 23, 0.012, 0.15],
+
+    // Length - medium performs best
+    ['length', 'medium', null, 26, 7, 145, 0.046, 0.79],
+    ['length', 'short', null, 16, 14, 82, 0.033, 0.53],
+    ['length', 'long', null, 8, 19, 45, 0.022, 0.30],
+
+    // CTA style - direct wins
+    ['cta_style', 'direct', null, 22, 9, 128, 0.044, 0.71],
+    ['cta_style', 'question', null, 15, 12, 76, 0.034, 0.56],
+    ['cta_style', 'soft', null, 9, 17, 48, 0.024, 0.35],
+
+    // Pay emphasis - prominent works
+    ['pay_emphasis', 'prominent', null, 20, 10, 118, 0.041, 0.67],
+    ['pay_emphasis', 'normal', null, 14, 13, 72, 0.032, 0.52],
+    ['pay_emphasis', 'subtle', null, 7, 18, 38, 0.019, 0.28],
+
+    // Format - bullets slightly better
+    ['format', 'bullets', null, 18, 11, 95, 0.038, 0.62],
+    ['format', 'hybrid', null, 15, 12, 81, 0.034, 0.56],
+    ['format', 'paragraph', null, 10, 16, 54, 0.026, 0.38],
+  ];
+
+  variableScores.forEach(v => {
+    db.prepare(`
+      INSERT OR IGNORE INTO ad_variable_scores
+      (variable_name, variable_value, job_category, win_count, lose_count, total_responses, avg_response_rate, confidence)
+      VALUES (?, ?, ?, ?, ?, ?, ?, ?)
+    `).run(...v);
+  });
+
+  // ============================================
+  // AD ML - Timing Scores (Best posting times)
+  // ============================================
+  // Singapore prime time is 6-9pm weekdays, 10am-2pm weekends
+  const timingScores = [
+    // Weekday evenings (best)
+    [18, 1, 45, 89, 0.051, 0.92], // Mon 6pm
+    [19, 1, 52, 98, 0.055, 0.95], // Mon 7pm
+    [20, 1, 38, 68, 0.046, 0.85], // Mon 8pm
+    [18, 2, 48, 92, 0.052, 0.93], // Tue 6pm
+    [19, 2, 55, 105, 0.058, 0.98], // Tue 7pm - BEST
+    [20, 2, 41, 74, 0.048, 0.87], // Tue 8pm
+    [18, 3, 44, 85, 0.049, 0.90], // Wed 6pm
+    [19, 3, 50, 95, 0.054, 0.94], // Wed 7pm
+    [20, 3, 36, 62, 0.044, 0.82], // Wed 8pm
+    [18, 4, 46, 88, 0.050, 0.91], // Thu 6pm
+    [19, 4, 53, 100, 0.056, 0.96], // Thu 7pm
+    [20, 4, 39, 70, 0.047, 0.86], // Thu 8pm
+    [18, 5, 42, 78, 0.047, 0.88], // Fri 6pm
+    [19, 5, 48, 89, 0.051, 0.92], // Fri 7pm
+    [20, 5, 35, 58, 0.042, 0.80], // Fri 8pm
+
+    // Weekend daytime
+    [11, 6, 38, 72, 0.048, 0.88], // Sat 11am
+    [12, 6, 42, 82, 0.051, 0.91], // Sat 12pm
+    [13, 6, 40, 76, 0.049, 0.89], // Sat 1pm
+    [11, 0, 35, 65, 0.046, 0.85], // Sun 11am
+    [12, 0, 38, 71, 0.048, 0.88], // Sun 12pm
+    [13, 0, 36, 67, 0.047, 0.86], // Sun 1pm
+
+    // Morning (moderate)
+    [9, 1, 22, 35, 0.028, 0.55], // Mon 9am
+    [10, 1, 25, 42, 0.032, 0.62], // Mon 10am
+    [9, 2, 24, 38, 0.030, 0.58], // Tue 9am
+    [10, 2, 27, 45, 0.034, 0.65], // Tue 10am
+
+    // Late night (poor)
+    [22, 1, 12, 15, 0.015, 0.28], // Mon 10pm
+    [23, 1, 8, 9, 0.010, 0.18], // Mon 11pm
+    [22, 2, 14, 18, 0.017, 0.32], // Tue 10pm
+
+    // Early morning (very poor)
+    [7, 1, 5, 4, 0.006, 0.12], // Mon 7am
+    [8, 1, 8, 8, 0.009, 0.18], // Mon 8am
+  ];
+
+  timingScores.forEach(t => {
+    db.prepare(`
+      INSERT OR IGNORE INTO ad_timing_scores
+      (hour, day_of_week, post_count, total_responses, avg_response_rate, score)
+      VALUES (?, ?, ?, ?, ?, ?)
+    `).run(...t);
+  });
+
+  // ============================================
+  // AD ML - Training Data (Winning ads)
+  // ============================================
+  const adTrainingData = [
+    [
+      '{"title":"F&B Service Crew","location":"Marina Bay Sands","pay_rate":14,"category":"fnb"}',
+      "🔥 *F&B SERVICE CREW NEEDED!*\n\n📍 Marina Bay Sands\n💰 *$14/hr* - Great rate!\n📅 This Saturday\n⏰ 6pm - 11pm\n\n✅ No experience needed\n✅ Meal provided\n✅ MRT accessible\n\n👥 5 slots left - Apply now in WorkLink! 🚀",
+      '{"tone":"friendly","emoji_count":"4","length":"medium","cta_style":"direct"}',
+      0.058, 1, 0.92
+    ],
+    [
+      '{"title":"Event Crew","location":"Sentosa","pay_rate":15,"category":"events"}',
+      "🎪 *EVENT CREW - SENTOSA*\n\nJoin our team for an exciting corporate event!\n\n💰 $15/hr\n📅 Next Friday\n⏰ 2pm - 10pm (8hrs)\n📍 Sentosa Gateway\n\n*What you'll do:*\n• Guest registration\n• Crowd management\n• Setup & teardown\n\nApply now! Limited slots! 🏃",
+      '{"tone":"friendly","emoji_count":"3","length":"medium","cta_style":"direct"}',
+      0.052, 1, 0.88
+    ],
+    [
+      '{"title":"Warehouse Packer","location":"Tuas","pay_rate":12,"category":"warehouse"}',
+      "📦 *WAREHOUSE PACKERS WANTED*\n\nSimple packing job at Tuas!\n\n💵 $12/hr\n📅 Mon-Fri available\n⏰ 9am - 6pm\n🚌 Transport from Jurong East MRT\n\nNo experience needed. Training provided!\n\n10 positions open - Apply in WorkLink app 👆",
+      '{"tone":"casual","emoji_count":"3","length":"medium","cta_style":"direct"}',
+      0.045, 1, 0.85
+    ],
+    [
+      '{"title":"Retail Assistant","location":"Orchard Road","pay_rate":13,"category":"retail"}',
+      "🛍️ *RETAIL ASSISTANT*\n\nPopular fashion brand at Orchard!\n\n💰 $13/hr + commission potential\n📅 Weekend shifts available\n📍 ION Orchard\n\n*Looking for:*\n• Friendly personality\n• Basic English\n• Neat appearance\n\nWant to earn while shopping? 😄\nApply now!",
+      '{"tone":"friendly","emoji_count":"3","length":"medium","cta_style":"question"}',
+      0.048, 1, 0.86
+    ],
+    [
+      '{"title":"Banquet Server","location":"Raffles Hotel","pay_rate":16,"category":"fnb"}',
+      "✨ *BANQUET SERVERS - RAFFLES HOTEL*\n\nPrestigious wedding dinner event!\n\n💰 *$16/hr* - Premium rate!\n📅 Saturday 7th Dec\n⏰ 5pm - 12am\n📍 Raffles Hotel Ballroom\n\n*Requirements:*\n• All-black attire\n• F&B experience preferred\n• Professional attitude\n\n🎯 Only 8 slots! Apply fast!",
+      '{"tone":"friendly","emoji_count":"4","length":"medium","cta_style":"direct","pay_emphasis":"prominent"}',
+      0.062, 1, 0.94
+    ],
+    [
+      '{"title":"Roadshow Promoter","location":"Tampines Mall","pay_rate":11,"category":"promo"}',
+      "📢 *ROADSHOW PROMOTER*\n\nTelco promotion at Tampines!\n\n$11/hr + attractive commissions! 💸\n\n📅 This weekend (Sat & Sun)\n⏰ 11am - 9pm\n📍 Tampines Mall Atrium\n\nOutgoing personality needed!\nTraining provided on Day 1.\n\nInterested? Apply now! 📱",
+      '{"tone":"casual","emoji_count":"3","length":"medium","cta_style":"question"}',
+      0.041, 1, 0.82
+    ],
+    [
+      '{"title":"Admin Assistant","location":"CBD","pay_rate":14,"category":"admin"}',
+      "💼 *ADMIN ASSISTANT*\n\nCBD office needs help!\n\n💰 $14/hr\n📅 Mon-Fri, 2 weeks\n⏰ 9am - 6pm\n📍 Raffles Place MRT\n\n*Tasks:*\n• Data entry\n• Filing & organizing\n• Basic admin duties\n\nAC office, friendly team! ❄️\n\nApply through WorkLink 👍",
+      '{"tone":"friendly","emoji_count":"3","length":"medium","cta_style":"direct"}',
+      0.044, 1, 0.84
+    ],
+    [
+      '{"title":"Kitchen Helper","location":"East Coast","pay_rate":12,"category":"fnb"}',
+      "🍳 *KITCHEN HELPER NEEDED*\n\nBusy restaurant at East Coast!\n\n💵 $12/hr\n📅 Daily shifts available\n⏰ Various timings\n📍 East Coast Road\n\n*Duties:*\n• Food prep\n• Dishwashing\n• Kitchen cleaning\n\nNo experience OK! Willing to learn? Apply! 💪",
+      '{"tone":"casual","emoji_count":"3","length":"medium","cta_style":"question"}',
+      0.039, 1, 0.80
+    ],
+  ];
+
+  adTrainingData.forEach(ad => {
+    db.prepare(`
+      INSERT OR IGNORE INTO ad_training_data
+      (job_details, ad_content, variables, response_rate, is_winner, quality_score)
+      VALUES (?, ?, ?, ?, ?, ?)
+    `).run(...ad);
+  });
+
+  // ============================================
+  // TELEGRAM GROUPS - Sample groups for posting
+  // ============================================
+  const sampleGroups = [
+    ['-1001234567890', 'SG Part-Time Jobs', 'job_posting', 1],
+    ['-1001234567891', 'F&B Workers SG', 'job_posting', 1],
+    ['-1001234567892', 'Warehouse Jobs Singapore', 'job_posting', 1],
+  ];
+
+  sampleGroups.forEach(g => {
+    db.prepare(`
+      INSERT OR IGNORE INTO telegram_groups (chat_id, name, type, active)
+      VALUES (?, ?, ?, ?)
+    `).run(...g);
+  });
+
+  // ============================================
+  // AD ML - Sample Ad Variants (For testing)
+  // ============================================
+  const sampleVariants = [
+    ['JOB_SAMPLE_1', 'A', "🔥 *WAITERS NEEDED!*\n\n📍 Clarke Quay\n💰 $13/hr\n📅 This Friday\n\nApply now! 🚀", '{"tone":"friendly","emoji_count":"4"}'],
+    ['JOB_SAMPLE_1', 'B', "*Waiter Position Available*\n\nLocation: Clarke Quay\nRate: $13 per hour\nDate: This Friday\n\nInterested candidates please apply.", '{"tone":"formal","emoji_count":"0"}'],
+    ['JOB_SAMPLE_2', 'A', "📦 Warehouse packers @ Tuas!\n\n$12/hr, transport provided 🚌\nNo exp needed!\n\nApply in app 👆", '{"tone":"casual","emoji_count":"3","length":"short"}'],
+    ['JOB_SAMPLE_2', 'B', "📦 *WAREHOUSE PACKING JOB*\n\nGreat opportunity at Tuas warehouse!\n\n💰 $12 per hour\n🚌 Free transport from Jurong East\n📅 Immediate start available\n\nNo experience required - full training provided. Join our friendly team today!\n\nApply through WorkLink app now! 🎯", '{"tone":"friendly","emoji_count":"4","length":"long"}'],
+  ];
+
+  sampleVariants.forEach(v => {
+    db.prepare(`
+      INSERT OR IGNORE INTO ad_variants (job_id, variant_key, content, variables)
+      VALUES (?, ?, ?, ?)
+    `).run(...v);
+  });
+
+  // Add some performance data for the variants
+  db.prepare(`
+    INSERT OR IGNORE INTO ad_performance (variant_id, job_id, group_id, posted_at, post_hour, post_day, responses)
+    SELECT id, job_id, 1, datetime('now', '-3 days'), 19, 2,
+      CASE variant_key WHEN 'A' THEN 12 ELSE 4 END
+    FROM ad_variants
+  `).run();
+
+  console.log('✅ Essential data seeded (including AI/ML training data)');
 }
 
 // Seed COMPREHENSIVE sample data - ONLY in development

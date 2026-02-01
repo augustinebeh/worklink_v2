@@ -537,6 +537,243 @@ function getResponseLogs(options = {}) {
   return db.prepare(query).all(...params);
 }
 
+/**
+ * Implicit Feedback System
+ *
+ * Analyzes worker's follow-up messages to determine if AI response was helpful.
+ * Positive signals: thanks, ok, got it, found it, done, understood, etc.
+ * Negative signals: repeated question, frustration, confusion, asking for human
+ */
+
+// Positive signal patterns (worker understood/satisfied)
+const POSITIVE_PATTERNS = [
+  /\b(thanks|thank you|thx|tq|ty)\b/i,
+  /\b(ok|okay|okie|k)\b/i,
+  /\b(got it|understood|i see|i understand)\b/i,
+  /\b(found it|found|done|sorted)\b/i,
+  /\b(perfect|great|awesome|nice|good)\b/i,
+  /\b(helpful|helped|works|working)\b/i,
+  /\b(👍|✅|🙏|😊|💯)\b/,
+  /^(ok|yes|yup|yep|sure|alright)$/i,
+];
+
+// Negative signal patterns (worker confused/frustrated)
+const NEGATIVE_PATTERNS = [
+  /\b(don'?t understand|confused|confusing)\b/i,
+  /\b(not helpful|doesn'?t help|didn'?t help)\b/i,
+  /\b(wrong|incorrect|that'?s not right)\b/i,
+  /\b(talk to|speak to|contact|call).*(human|person|someone|admin|staff|real)\b/i,
+  /\b(frustrated|annoying|useless)\b/i,
+  /\b(still (don'?t|cant|cannot))\b/i,
+  /\b(what do you mean|huh\??|wtf)\b/i,
+  /\?\s*\?+/, // Multiple question marks = frustration
+];
+
+/**
+ * Analyze a message for implicit feedback signals
+ * @param {string} message - The worker's follow-up message
+ * @returns {object} { signal: 'positive'|'negative'|'neutral', confidence: 0-1 }
+ */
+function analyzeImplicitFeedback(message) {
+  if (!message || message.length < 2) {
+    return { signal: 'neutral', confidence: 0 };
+  }
+
+  const lowerMessage = message.toLowerCase().trim();
+
+  // Check positive patterns
+  for (const pattern of POSITIVE_PATTERNS) {
+    if (pattern.test(message)) {
+      // Short positive messages have higher confidence
+      const lengthBonus = message.length < 20 ? 0.2 : 0;
+      return { signal: 'positive', confidence: 0.7 + lengthBonus };
+    }
+  }
+
+  // Check negative patterns
+  for (const pattern of NEGATIVE_PATTERNS) {
+    if (pattern.test(message)) {
+      return { signal: 'negative', confidence: 0.8 };
+    }
+  }
+
+  // Check if it's a repeated/similar question (negative signal)
+  // This will be checked separately with the original question
+
+  return { signal: 'neutral', confidence: 0 };
+}
+
+/**
+ * Check if a follow-up message is repeating the original question
+ * @param {string} originalQuestion - The original question AI answered
+ * @param {string} followUpMessage - The worker's follow-up message
+ * @returns {boolean}
+ */
+function isRepeatedQuestion(originalQuestion, followUpMessage) {
+  if (!originalQuestion || !followUpMessage) return false;
+
+  const normalize = (text) => text.toLowerCase()
+    .replace(/[^\w\s]/g, '')
+    .replace(/\s+/g, ' ')
+    .trim();
+
+  const original = normalize(originalQuestion);
+  const followUp = normalize(followUpMessage);
+
+  // Check if follow-up contains a question mark (asking again)
+  if (!followUpMessage.includes('?')) return false;
+
+  // Check word overlap
+  const originalWords = new Set(original.split(' ').filter(w => w.length > 2));
+  const followUpWords = new Set(followUp.split(' ').filter(w => w.length > 2));
+
+  if (originalWords.size === 0 || followUpWords.size === 0) return false;
+
+  let overlap = 0;
+  for (const word of followUpWords) {
+    if (originalWords.has(word)) overlap++;
+  }
+
+  const overlapRatio = overlap / Math.min(originalWords.size, followUpWords.size);
+  return overlapRatio > 0.5; // More than 50% word overlap = repeated question
+}
+
+/**
+ * Store a pending implicit feedback record
+ * Called when AI sends an auto-reply
+ */
+function storePendingFeedback(candidateId, logId, originalQuestion) {
+  try {
+    db.prepare(`
+      INSERT INTO pending_implicit_feedback
+      (candidate_id, log_id, original_question, messages_checked, created_at)
+      VALUES (?, ?, ?, 0, datetime('now'))
+    `).run(candidateId, logId, originalQuestion);
+  } catch (e) {
+    // Table might not exist yet, create it
+    db.exec(`
+      CREATE TABLE IF NOT EXISTS pending_implicit_feedback (
+        id INTEGER PRIMARY KEY AUTOINCREMENT,
+        candidate_id TEXT NOT NULL,
+        log_id INTEGER NOT NULL,
+        original_question TEXT,
+        messages_checked INTEGER DEFAULT 0,
+        resolved INTEGER DEFAULT 0,
+        created_at DATETIME DEFAULT CURRENT_TIMESTAMP
+      )
+    `);
+    db.prepare(`
+      INSERT INTO pending_implicit_feedback
+      (candidate_id, log_id, original_question, messages_checked, created_at)
+      VALUES (?, ?, ?, 0, datetime('now'))
+    `).run(candidateId, logId, originalQuestion);
+  }
+}
+
+/**
+ * Process a new message from a candidate for implicit feedback
+ * Called whenever a candidate sends a message
+ *
+ * @param {string} candidateId - The candidate ID
+ * @param {string} message - The new message content
+ */
+async function processImplicitFeedback(candidateId, message) {
+  // Get pending feedback records for this candidate (last 5 minutes, max 3 messages checked)
+  const pendingRecords = db.prepare(`
+    SELECT pif.*, arl.incoming_message as original_question, arl.kb_entry_id, arl.source
+    FROM pending_implicit_feedback pif
+    JOIN ai_response_logs arl ON pif.log_id = arl.id
+    WHERE pif.candidate_id = ?
+      AND pif.resolved = 0
+      AND pif.messages_checked < 3
+      AND pif.created_at > datetime('now', '-5 minutes')
+    ORDER BY pif.created_at DESC
+  `).all(candidateId);
+
+  for (const record of pendingRecords) {
+    // Increment messages checked
+    db.prepare(`
+      UPDATE pending_implicit_feedback
+      SET messages_checked = messages_checked + 1
+      WHERE id = ?
+    `).run(record.id);
+
+    // Analyze the message
+    const feedback = analyzeImplicitFeedback(message);
+    const isRepeat = isRepeatedQuestion(record.original_question, message);
+
+    let action = null;
+    let confidenceChange = 0;
+
+    if (feedback.signal === 'positive' && feedback.confidence >= 0.7) {
+      // Worker is satisfied - implicit approval
+      action = 'implicit_approved';
+      confidenceChange = 0.08; // Slightly less than explicit approval
+      console.log(`[ML] Implicit APPROVAL detected for log ${record.log_id}: "${message.substring(0, 50)}..."`);
+    } else if (feedback.signal === 'negative' || isRepeat) {
+      // Worker is confused/frustrated or repeating - implicit rejection
+      action = 'implicit_rejected';
+      confidenceChange = -0.1;
+      console.log(`[ML] Implicit REJECTION detected for log ${record.log_id}: "${message.substring(0, 50)}..."`);
+    }
+
+    if (action) {
+      // Mark as resolved
+      db.prepare(`
+        UPDATE pending_implicit_feedback
+        SET resolved = 1
+        WHERE id = ?
+      `).run(record.id);
+
+      // Update confidence if we have a KB entry
+      if (record.kb_entry_id) {
+        db.prepare(`
+          UPDATE ml_knowledge_base
+          SET confidence = MAX(0.1, MIN(1, confidence + ?)),
+              ${action === 'implicit_approved' ? 'success_count = success_count + 1' : 'reject_count = reject_count + 1'},
+              updated_at = datetime('now')
+          WHERE id = ?
+        `).run(confidenceChange, record.kb_entry_id);
+      }
+
+      // Also learn from the interaction if it was from LLM
+      if (record.source === 'llm' && action === 'implicit_approved') {
+        const log = db.prepare('SELECT * FROM ai_response_logs WHERE id = ?').get(record.log_id);
+        if (log) {
+          await learn(log.incoming_message, log.ai_response, {
+            intent: log.intent_detected,
+            source: 'implicit_approved',
+            confidence: 0.65, // Medium-high confidence for implicit approval
+          });
+        }
+      }
+
+      // Update metrics
+      updateDailyMetrics(action);
+    }
+
+    // If 3 messages checked without clear signal, mark as neutral and resolve
+    if (record.messages_checked >= 2 && !action) {
+      db.prepare(`
+        UPDATE pending_implicit_feedback
+        SET resolved = 1
+        WHERE id = ?
+      `).run(record.id);
+    }
+  }
+}
+
+/**
+ * Clean up old pending feedback records
+ */
+function cleanupPendingFeedback() {
+  db.prepare(`
+    DELETE FROM pending_implicit_feedback
+    WHERE created_at < datetime('now', '-1 hour')
+      OR resolved = 1
+  `).run();
+}
+
 module.exports = {
   // Settings
   getSettings,
@@ -546,6 +783,13 @@ module.exports = {
   findAnswer,
   learn,
   recordFeedback,
+
+  // Implicit feedback (Auto mode learning)
+  analyzeImplicitFeedback,
+  isRepeatedQuestion,
+  storePendingFeedback,
+  processImplicitFeedback,
+  cleanupPendingFeedback,
 
   // Metrics
   recordKBHit,
