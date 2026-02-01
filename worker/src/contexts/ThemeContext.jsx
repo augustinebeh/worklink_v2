@@ -4,9 +4,13 @@ const ThemeContext = createContext();
 
 export function ThemeProvider({ children }) {
   const [theme, setTheme] = useState(() => {
-    // Always default to dark - ignore any saved light theme preference
-    // Users can manually switch to light if they want
-    return 'dark';
+    // Load saved theme from localStorage, default to dark
+    try {
+      const saved = localStorage.getItem('theme');
+      return saved === 'light' || saved === 'dark' ? saved : 'dark';
+    } catch {
+      return 'dark';
+    }
   });
 
   useEffect(() => {

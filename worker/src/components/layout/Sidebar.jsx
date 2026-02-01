@@ -14,6 +14,7 @@ import {
   GraduationCapIcon,
   BellIcon,
   ZapIcon,
+  UserCogIcon,
 } from 'lucide-react';
 import { useAuth } from '../../contexts/AuthContext';
 import { useTheme } from '../../contexts/ThemeContext';
@@ -45,6 +46,7 @@ const menuSections = [
     title: 'More',
     items: [
       { path: '/training', icon: GraduationCapIcon, label: 'Training' },
+      { path: '/complete-profile', icon: UserCogIcon, label: 'Edit Profile' },
       { path: '/notifications', icon: BellIcon, label: 'Notifications' },
       { path: '/profile', icon: UserIcon, label: 'Profile' },
     ],

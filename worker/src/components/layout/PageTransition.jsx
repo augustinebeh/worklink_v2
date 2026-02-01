@@ -1,60 +1,38 @@
-import { useEffect, useState } from 'react';
+import { useEffect, useState, useRef } from 'react';
 import { useLocation } from 'react-router-dom';
 
 /**
  * PageTransition - Provides smooth page transition animations
- * Wraps route content with fade/slide animations
+ * Simplified to avoid stale children state issues that cause white screens
  */
 export function PageTransition({ children }) {
   const location = useLocation();
-  const [displayChildren, setDisplayChildren] = useState(children);
-  const [isAnimating, setIsAnimating] = useState(false);
+  const [isVisible, setIsVisible] = useState(true);
+  const prevPathRef = useRef(location.pathname);
 
   useEffect(() => {
-    // Start exit animation
-    setIsAnimating(true);
-
-    // After exit animation, swap content and start enter animation
-    const timer = setTimeout(() => {
-      setDisplayChildren(children);
-      setIsAnimating(false);
-    }, 150);
-
-    return () => clearTimeout(timer);
-  }, [location.pathname, children]);
+    // Only animate on actual path changes
+    if (prevPathRef.current !== location.pathname) {
+      prevPathRef.current = location.pathname;
+      setIsVisible(false);
+      // Quick fade-in after path change
+      const timer = requestAnimationFrame(() => {
+        setIsVisible(true);
+      });
+      return () => cancelAnimationFrame(timer);
+    }
+  }, [location.pathname]);
 
   return (
     <div
-      className={`page-transition ${isAnimating ? 'page-exit' : 'page-enter'}`}
+      className="page-transition"
       style={{
-        animation: isAnimating
-          ? 'page-fade-out 0.15s ease-out forwards'
-          : 'page-fade-in 0.2s ease-out forwards',
+        opacity: isVisible ? 1 : 0,
+        transform: isVisible ? 'translateY(0)' : 'translateY(4px)',
+        transition: 'opacity 0.15s ease-out, transform 0.15s ease-out',
       }}
     >
-      {displayChildren}
-      <style>{`
-        @keyframes page-fade-in {
-          from {
-            opacity: 0;
-            transform: translateY(8px);
-          }
-          to {
-            opacity: 1;
-            transform: translateY(0);
-          }
-        }
-        @keyframes page-fade-out {
-          from {
-            opacity: 1;
-            transform: translateY(0);
-          }
-          to {
-            opacity: 0;
-            transform: translateY(-8px);
-          }
-        }
-      `}</style>
+      {children}
     </div>
   );
 }

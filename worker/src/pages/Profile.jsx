@@ -780,6 +780,7 @@ export default function Profile() {
 
         {/* Menu items */}
         <div className="space-y-2">
+          <MenuLink icon={UserIcon} label="Edit Profile" sublabel="Update your information" onClick={() => navigate('/complete-profile')} />
           <MenuLink icon={ShareIcon} label="Refer & Earn" sublabel="Invite friends, get $30" onClick={() => navigate('/referrals')} />
           <MenuLink icon={AwardIcon} label="Achievements" onClick={() => navigate('/achievements')} />
           <MenuLink icon={TrophyIcon} label="Leaderboard" onClick={() => navigate('/leaderboard')} />

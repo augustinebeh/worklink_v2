@@ -8,6 +8,7 @@ import Header from './components/layout/Header';
 import BottomNav from './components/layout/BottomNav';
 import { PageTransition } from './components/layout/PageTransition';
 import InstallPrompt from './components/InstallPrompt';
+import ErrorBoundary from './components/ErrorBoundary';
 
 // Lazy load pages for code splitting
 const Home = lazy(() => import('./pages/Home'));
@@ -197,6 +198,16 @@ function AppRoutes() {
         }
       />
 
+      {/* Complete Profile */}
+      <Route
+        path="/complete-profile"
+        element={
+          <ProtectedRoute>
+            <AppLayout><CompleteProfile /></AppLayout>
+          </ProtectedRoute>
+        }
+      />
+
       {/* Catch all - redirect to home (which will redirect to login if not authenticated) */}
       <Route path="*" element={<Navigate to="/" replace />} />
     </Routes>
@@ -210,7 +221,9 @@ export default function App() {
         <AuthProvider>
           <WebSocketProvider>
             <ToastProvider>
-              <AppRoutes />
+              <ErrorBoundary>
+                <AppRoutes />
+              </ErrorBoundary>
               <InstallPrompt />
             </ToastProvider>
           </WebSocketProvider>

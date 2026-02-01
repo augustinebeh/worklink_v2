@@ -54,9 +54,11 @@ function QuestCard({ quest, onClaim, claiming, isDark }) {
     } else if (requirement.type === 'referral') {
       navigate('/referrals');
     } else if (requirement.type === 'streak') {
-      navigate('/');
+      // Daily check-in quest - already counted by opening the app
+      // Don't navigate away, just stay on quests page
+      return;
     } else if (requirement.type === 'profile_complete') {
-      navigate('/profile');
+      navigate('/complete-profile');
     }
   };
 
