@@ -748,6 +748,16 @@ function createSchema() {
     db.exec(`ALTER TABLE ml_knowledge_base ADD COLUMN keywords TEXT`);
   } catch (e) {}
 
+  // Add telegram_username column to candidates if not exists
+  try {
+    db.exec(`ALTER TABLE candidates ADD COLUMN telegram_username TEXT`);
+  } catch (e) {}
+
+  // Add google_id column to candidates if not exists
+  try {
+    db.exec(`ALTER TABLE candidates ADD COLUMN google_id TEXT`);
+  } catch (e) {}
+
   console.log('✅ Schema created successfully');
 }
 

@@ -1,8 +1,97 @@
 const express = require('express');
 const router = express.Router();
+const crypto = require('crypto');
 const { db } = require('../../../db/database');
 const { validate, schemas } = require('../../../middleware/validation');
 const logger = require('../../../utils/logger');
+
+// Telegram bot token from env
+const TELEGRAM_BOT_TOKEN = process.env.TELEGRAM_BOT_TOKEN;
+const GOOGLE_CLIENT_ID = process.env.GOOGLE_CLIENT_ID;
+
+// Verify Telegram Login data
+function verifyTelegramAuth(authData) {
+  if (!TELEGRAM_BOT_TOKEN) {
+    logger.error('TELEGRAM_BOT_TOKEN not configured');
+    return false;
+  }
+
+  const { hash, ...data } = authData;
+  
+  // Check auth_date is not too old (within 1 day)
+  const authDate = parseInt(data.auth_date);
+  const now = Math.floor(Date.now() / 1000);
+  if (now - authDate > 86400) {
+    logger.warn('Telegram auth data expired');
+    return false;
+  }
+
+  // Create data check string
+  const checkString = Object.keys(data)
+    .sort()
+    .map(key => `${key}=${data[key]}`)
+    .join('\n');
+
+  // Create secret key from bot token
+  const secretKey = crypto
+    .createHash('sha256')
+    .update(TELEGRAM_BOT_TOKEN)
+    .digest();
+
+  // Calculate hash
+  const calculatedHash = crypto
+    .createHmac('sha256', secretKey)
+    .update(checkString)
+    .digest('hex');
+
+  return calculatedHash === hash;
+}
+
+// Verify Google ID token
+async function verifyGoogleToken(idToken) {
+  if (!GOOGLE_CLIENT_ID) {
+    logger.error('GOOGLE_CLIENT_ID not configured');
+    return null;
+  }
+
+  try {
+    // Use Google's tokeninfo endpoint for verification
+    const response = await fetch(`https://oauth2.googleapis.com/tokeninfo?id_token=${idToken}`);
+    
+    if (!response.ok) {
+      logger.warn('Google token verification failed');
+      return null;
+    }
+
+    const payload = await response.json();
+
+    // Verify the token is for our app
+    if (payload.aud !== GOOGLE_CLIENT_ID) {
+      logger.warn('Google token audience mismatch');
+      return null;
+    }
+
+    // Check token is not expired
+    const now = Math.floor(Date.now() / 1000);
+    if (payload.exp && parseInt(payload.exp) < now) {
+      logger.warn('Google token expired');
+      return null;
+    }
+
+    return {
+      googleId: payload.sub,
+      email: payload.email,
+      emailVerified: payload.email_verified === 'true',
+      name: payload.name,
+      picture: payload.picture,
+      givenName: payload.given_name,
+      familyName: payload.family_name,
+    };
+  } catch (error) {
+    logger.error('Google token verification error:', error);
+    return null;
+  }
+}
 
 // Login (simplified - no password for demo)
 router.post('/login', (req, res) => {
@@ -149,6 +238,193 @@ router.post('/worker/login', (req, res) => {
   }
 });
 
+// Telegram Login - authenticate via Telegram widget
+router.post('/telegram/login', (req, res) => {
+  try {
+    const telegramData = req.body;
+    
+    logger.info('📱 Telegram login attempt:', { id: telegramData.id, username: telegramData.username });
+
+    // Verify the Telegram authentication data
+    if (!verifyTelegramAuth(telegramData)) {
+      logger.warn('❌ Telegram auth verification failed');
+      return res.status(401).json({ success: false, error: 'Invalid Telegram authentication' });
+    }
+
+    const telegramId = telegramData.id.toString();
+    const firstName = telegramData.first_name || '';
+    const lastName = telegramData.last_name || '';
+    const username = telegramData.username || '';
+    const photoUrl = telegramData.photo_url || '';
+    const fullName = `${firstName} ${lastName}`.trim() || username || `User ${telegramId}`;
+
+    // Check if user exists by telegram_chat_id
+    let candidate = db.prepare('SELECT * FROM candidates WHERE telegram_chat_id = ?').get(telegramId);
+
+    if (candidate) {
+      // Existing user - update last login info
+      db.prepare(`
+        UPDATE candidates SET 
+          telegram_username = ?,
+          profile_photo = COALESCE(NULLIF(?, ''), profile_photo),
+          online_status = 'online',
+          updated_at = datetime('now')
+        WHERE telegram_chat_id = ?
+      `).run(username, photoUrl, telegramId);
+
+      candidate = db.prepare('SELECT * FROM candidates WHERE telegram_chat_id = ?').get(telegramId);
+      candidate.certifications = JSON.parse(candidate.certifications || '[]');
+
+      logger.info(`✅ Telegram login success: ${candidate.name} (existing user)`);
+
+      return res.json({
+        success: true,
+        data: candidate,
+        token: `demo-token-${candidate.id}`,
+        isNewUser: false,
+      });
+    }
+
+    // New user - create account with pending status
+    const id = 'CND' + Date.now().toString(36).toUpperCase();
+    const referralCode = fullName.split(' ')[0].toUpperCase().slice(0, 4) + Date.now().toString(36).toUpperCase().slice(-4);
+
+    db.prepare(`
+      INSERT INTO candidates (
+        id, name, telegram_chat_id, telegram_username, status, source, 
+        referral_code, xp, level, profile_photo, online_status,
+        created_at, updated_at
+      )
+      VALUES (?, ?, ?, ?, 'pending', 'telegram', ?, 0, 1, ?, 'online', datetime('now'), datetime('now'))
+    `).run(id, fullName, telegramId, username, referralCode, photoUrl || `https://api.dicebear.com/7.x/avataaars/svg?seed=${encodeURIComponent(fullName)}`);
+
+    candidate = db.prepare('SELECT * FROM candidates WHERE id = ?').get(id);
+    candidate.certifications = JSON.parse(candidate.certifications || '[]');
+
+    logger.info(`📱 New Telegram registration: ${fullName} (@${username || 'no username'})`);
+
+    res.status(201).json({
+      success: true,
+      data: candidate,
+      token: `demo-token-${candidate.id}`,
+      isNewUser: true,
+      message: 'Account created! Your account is pending approval.',
+    });
+  } catch (error) {
+    logger.error('Telegram login error:', error);
+    res.status(500).json({ success: false, error: error.message });
+  }
+});
+
+// Get Telegram bot username for the widget
+router.get('/telegram/config', (req, res) => {
+  const botUsername = process.env.TELEGRAM_BOT_USERNAME;
+  
+  if (!botUsername) {
+    return res.status(500).json({ success: false, error: 'Telegram bot not configured' });
+  }
+
+  res.json({
+    success: true,
+    botUsername: botUsername,
+  });
+});
+
+// Google Login - authenticate via Google Sign-In
+router.post('/google/login', async (req, res) => {
+  try {
+    const { credential } = req.body;
+    
+    if (!credential) {
+      return res.status(400).json({ success: false, error: 'No credential provided' });
+    }
+
+    logger.info('🔵 Google login attempt');
+
+    // Verify the Google ID token
+    const googleUser = await verifyGoogleToken(credential);
+    
+    if (!googleUser) {
+      logger.warn('❌ Google auth verification failed');
+      return res.status(401).json({ success: false, error: 'Invalid Google authentication' });
+    }
+
+    const { googleId, email, name, picture, givenName, familyName } = googleUser;
+    const fullName = name || `${givenName || ''} ${familyName || ''}`.trim() || email.split('@')[0];
+
+    // Check if user exists by google_id or email
+    let candidate = db.prepare('SELECT * FROM candidates WHERE google_id = ? OR email = ?').get(googleId, email);
+
+    if (candidate) {
+      // Existing user - update with Google info if needed
+      db.prepare(`
+        UPDATE candidates SET 
+          google_id = COALESCE(google_id, ?),
+          email = COALESCE(email, ?),
+          profile_photo = COALESCE(NULLIF(?, ''), profile_photo),
+          online_status = 'online',
+          updated_at = datetime('now')
+        WHERE id = ?
+      `).run(googleId, email, picture, candidate.id);
+
+      candidate = db.prepare('SELECT * FROM candidates WHERE id = ?').get(candidate.id);
+      candidate.certifications = JSON.parse(candidate.certifications || '[]');
+
+      logger.info(`✅ Google login success: ${candidate.name} (existing user)`);
+
+      return res.json({
+        success: true,
+        data: candidate,
+        token: `demo-token-${candidate.id}`,
+        isNewUser: false,
+      });
+    }
+
+    // New user - create account with pending status
+    const id = 'CND' + Date.now().toString(36).toUpperCase();
+    const referralCode = (givenName || fullName.split(' ')[0]).toUpperCase().slice(0, 4) + Date.now().toString(36).toUpperCase().slice(-4);
+
+    db.prepare(`
+      INSERT INTO candidates (
+        id, name, email, google_id, status, source, 
+        referral_code, xp, level, profile_photo, online_status,
+        created_at, updated_at
+      )
+      VALUES (?, ?, ?, ?, 'pending', 'google', ?, 0, 1, ?, 'online', datetime('now'), datetime('now'))
+    `).run(id, fullName, email, googleId, referralCode, picture || `https://api.dicebear.com/7.x/avataaars/svg?seed=${encodeURIComponent(fullName)}`);
+
+    candidate = db.prepare('SELECT * FROM candidates WHERE id = ?').get(id);
+    candidate.certifications = JSON.parse(candidate.certifications || '[]');
+
+    logger.info(`🔵 New Google registration: ${fullName} (${email})`);
+
+    res.status(201).json({
+      success: true,
+      data: candidate,
+      token: `demo-token-${candidate.id}`,
+      isNewUser: true,
+      message: 'Account created! Your account is pending approval.',
+    });
+  } catch (error) {
+    logger.error('Google login error:', error);
+    res.status(500).json({ success: false, error: error.message });
+  }
+});
+
+// Get Google Client ID for the frontend
+router.get('/google/config', (req, res) => {
+  const clientId = process.env.GOOGLE_CLIENT_ID;
+  
+  if (!clientId || clientId === 'YOUR_GOOGLE_CLIENT_ID.apps.googleusercontent.com') {
+    return res.status(500).json({ success: false, error: 'Google OAuth not configured' });
+  }
+
+  res.json({
+    success: true,
+    clientId: clientId,
+  });
+});
+
 // Register new candidate (email-based)
 router.post('/register', validate(schemas.registration), (req, res) => {
   try {
@@ -172,111 +448,6 @@ router.post('/register', validate(schemas.registration), (req, res) => {
     candidate.certifications = JSON.parse(candidate.certifications || '[]');
 
     res.status(201).json({
-      success: true,
-      data: candidate,
-      token: `demo-token-${candidate.id}`,
-    });
-  } catch (error) {
-    res.status(500).json({ success: false, error: error.message });
-  }
-});
-
-// Register via Telegram (phone-based, no email required)
-router.post('/register/telegram', (req, res) => {
-  try {
-    const { name, phone, telegram_username } = req.body;
-
-    // Validate required fields
-    if (!name || !phone) {
-      return res.status(400).json({ success: false, error: 'Name and phone number are required' });
-    }
-
-    // Validate phone format (Singapore format: +65XXXXXXXX or 65XXXXXXXX or 8/9XXXXXXX)
-    const cleanPhone = phone.replace(/[\s\-()]/g, '');
-    let normalizedPhone = cleanPhone;
-    
-    if (cleanPhone.startsWith('+65')) {
-      normalizedPhone = cleanPhone;
-    } else if (cleanPhone.startsWith('65')) {
-      normalizedPhone = '+' + cleanPhone;
-    } else if (cleanPhone.match(/^[89]\d{7}$/)) {
-      normalizedPhone = '+65' + cleanPhone;
-    } else {
-      return res.status(400).json({ success: false, error: 'Please enter a valid Singapore phone number' });
-    }
-
-    // Check if phone exists
-    const existingPhone = db.prepare('SELECT id FROM candidates WHERE phone = ?').get(normalizedPhone);
-    if (existingPhone) {
-      return res.status(400).json({ success: false, error: 'Phone number already registered. Please login instead.' });
-    }
-
-    // Check if telegram username exists (if provided)
-    if (telegram_username) {
-      const existingTelegram = db.prepare('SELECT id FROM candidates WHERE telegram_username = ?').get(telegram_username);
-      if (existingTelegram) {
-        return res.status(400).json({ success: false, error: 'Telegram username already registered' });
-      }
-    }
-
-    const id = 'CND' + Date.now().toString(36).toUpperCase();
-    const referralCode = name.split(' ')[0].toUpperCase() + Date.now().toString(36).toUpperCase().slice(-4);
-
-    db.prepare(`
-      INSERT INTO candidates (
-        id, name, phone, telegram_username, status, source, referral_code, 
-        xp, level, created_at, updated_at
-      )
-      VALUES (?, ?, ?, ?, 'pending', 'telegram', ?, 0, 1, datetime('now'), datetime('now'))
-    `).run(id, name.trim(), normalizedPhone, telegram_username || null, referralCode);
-
-    const candidate = db.prepare('SELECT * FROM candidates WHERE id = ?').get(id);
-    candidate.certifications = JSON.parse(candidate.certifications || '[]');
-
-    logger.info(`📱 New Telegram registration: ${name} (${normalizedPhone})`);
-
-    res.status(201).json({
-      success: true,
-      data: candidate,
-      token: `demo-token-${candidate.id}`,
-      message: 'Registration successful! Your account is pending approval.',
-    });
-  } catch (error) {
-    logger.error('Telegram registration error:', error);
-    res.status(500).json({ success: false, error: error.message });
-  }
-});
-
-// Login via phone (for Telegram users)
-router.post('/worker/login/phone', (req, res) => {
-  try {
-    const { phone } = req.body;
-
-    if (!phone) {
-      return res.status(400).json({ success: false, error: 'Phone number is required' });
-    }
-
-    // Normalize phone number
-    const cleanPhone = phone.replace(/[\s\-()]/g, '');
-    let normalizedPhone = cleanPhone;
-    
-    if (cleanPhone.startsWith('+65')) {
-      normalizedPhone = cleanPhone;
-    } else if (cleanPhone.startsWith('65')) {
-      normalizedPhone = '+' + cleanPhone;
-    } else if (cleanPhone.match(/^[89]\d{7}$/)) {
-      normalizedPhone = '+65' + cleanPhone;
-    }
-
-    const candidate = db.prepare('SELECT * FROM candidates WHERE phone = ?').get(normalizedPhone);
-
-    if (!candidate) {
-      return res.status(401).json({ success: false, error: 'Phone number not found. Please sign up first.' });
-    }
-
-    candidate.certifications = JSON.parse(candidate.certifications || '[]');
-
-    res.json({
       success: true,
       data: candidate,
       token: `demo-token-${candidate.id}`,
