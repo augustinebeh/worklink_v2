@@ -106,9 +106,11 @@ export default function Chat() {
   const [showEmoji, setShowEmoji] = useState(false);
   const [isTyping, setIsTyping] = useState(false);
   const [keyboardVisible, setKeyboardVisible] = useState(false);
+  const [keyboardHeight, setKeyboardHeight] = useState(0);
   const messagesEndRef = useRef(null);
   const messagesContainerRef = useRef(null);
   const inputRef = useRef(null);
+  const inputAreaRef = useRef(null);
   const typingTimeoutRef = useRef(null);
   const isTypingSentRef = useRef(false);
   const containerRef = useRef(null);
@@ -119,17 +121,23 @@ export default function Chat() {
 
     const handleResize = () => {
       const viewport = window.visualViewport;
-      const isKeyboard = viewport.height < window.innerHeight * 0.75;
-      setKeyboardVisible(isKeyboard);
+      const fullHeight = window.innerHeight;
+      const viewportHeight = viewport.height;
+      const kbHeight = fullHeight - viewportHeight - viewport.offsetTop;
+      const isKeyboard = kbHeight > 100; // Keyboard is open if difference > 100px
 
-      // Adjust container height to match visual viewport
+      setKeyboardVisible(isKeyboard);
+      setKeyboardHeight(isKeyboard ? kbHeight : 0);
+
+      // Adjust container to visual viewport height
       if (containerRef.current) {
-        containerRef.current.style.height = `${viewport.height}px`;
+        containerRef.current.style.height = `${viewportHeight}px`;
+        containerRef.current.style.top = `${viewport.offsetTop}px`;
       }
 
       // Scroll to bottom when keyboard opens
       if (isKeyboard) {
-        setTimeout(() => scrollToBottom(), 100);
+        setTimeout(() => scrollToBottom(), 50);
       }
     };
 
@@ -300,8 +308,15 @@ export default function Chat() {
   const handleInputFocus = () => {
     // Close emoji picker when focusing input
     setShowEmoji(false);
-    // Scroll to bottom after a short delay for keyboard animation
+
+    // Scroll input into view and scroll messages to bottom
+    // Multiple timeouts to handle different keyboard animation speeds
+    setTimeout(() => {
+      inputRef.current?.scrollIntoView({ behavior: 'smooth', block: 'center' });
+      scrollToBottom();
+    }, 100);
     setTimeout(() => scrollToBottom(), 300);
+    setTimeout(() => scrollToBottom(), 500);
   };
 
   // Group messages by date (Singapore timezone)
@@ -323,8 +338,11 @@ export default function Chat() {
   return (
     <div
       ref={containerRef}
-      className="fixed inset-0 bg-white dark:bg-dark-950 flex flex-col"
-      style={{ height: '100dvh' }}
+      className="fixed left-0 right-0 bg-white dark:bg-dark-950 flex flex-col"
+      style={{
+        height: '100dvh',
+        top: 0,
+      }}
     >
       {/* Fixed Header */}
       <div className="flex-shrink-0 bg-slate-50 dark:bg-dark-900 px-4 pt-safe pb-3 border-b border-slate-200 dark:border-white/5 z-10">
@@ -408,7 +426,13 @@ export default function Chat() {
       )}
 
       {/* Fixed Input Area - Single line PWA-optimized */}
-      <div className="flex-shrink-0 bg-white dark:bg-dark-950 px-3 py-2 pb-safe border-t border-slate-200 dark:border-white/5">
+      <div
+        ref={inputAreaRef}
+        className="flex-shrink-0 bg-white dark:bg-dark-950 px-3 py-2 border-t border-slate-200 dark:border-white/5"
+        style={{
+          paddingBottom: keyboardVisible ? '8px' : 'env(safe-area-inset-bottom, 8px)',
+        }}
+      >
         <div className="flex items-center gap-2">
           <button
             onClick={() => setShowEmoji(!showEmoji)}
