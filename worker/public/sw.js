@@ -3,30 +3,30 @@
  * Provides offline support and caching
  */
 
-const CACHE_NAME = 'worklink-v18';
-const STATIC_CACHE = 'worklink-static-v18';
-const DYNAMIC_CACHE = 'worklink-dynamic-v18';
+const CACHE_NAME = 'worklink-v19';
+const STATIC_CACHE = 'worklink-static-v19';
+const DYNAMIC_CACHE = 'worklink-dynamic-v19';
 
-// Static assets to cache immediately
+// Static assets to cache immediately (versioned for cache-busting)
 const STATIC_ASSETS = [
   '/',
   '/index.html',
   '/manifest.json',
-  '/favicon.png',
-  '/favicon-16x16.png',
-  '/favicon-32x32.png',
-  '/favicon-48x48.png',
-  '/favicon-64x64.png',
-  '/apple-touch-icon.png',
-  '/icon-72x72.png',
-  '/icon-96x96.png',
-  '/icon-128x128.png',
-  '/icon-144x144.png',
-  '/icon-152x152.png',
-  '/icon-192x192.png',
-  '/icon-256x256.png',
-  '/icon-384x384.png',
-  '/icon-512x512.png',
+  '/favicon.png?v=2',
+  '/favicon-16x16.png?v=2',
+  '/favicon-32x32.png?v=2',
+  '/favicon-48x48.png?v=2',
+  '/favicon-64x64.png?v=2',
+  '/apple-touch-icon.png?v=2',
+  '/icon-72x72.png?v=2',
+  '/icon-96x96.png?v=2',
+  '/icon-128x128.png?v=2',
+  '/icon-144x144.png?v=2',
+  '/icon-152x152.png?v=2',
+  '/icon-192x192.png?v=2',
+  '/icon-256x256.png?v=2',
+  '/icon-384x384.png?v=2',
+  '/icon-512x512.png?v=2',
 ];
 
 // API routes to cache with network-first strategy
