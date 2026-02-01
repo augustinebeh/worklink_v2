@@ -98,9 +98,11 @@ export default function InstallPrompt() {
 
       <div className="flex items-start gap-4">
         {/* App Icon */}
-        <div className="w-14 h-14 rounded-2xl bg-gradient-to-br from-primary-500 to-violet-600 flex items-center justify-center flex-shrink-0">
-          <span className="text-2xl font-bold text-white">W</span>
-        </div>
+        <img
+          src="/apple-touch-icon.png"
+          alt="WorkLink"
+          className="w-14 h-14 rounded-2xl flex-shrink-0"
+        />
 
         <div className="flex-1 min-w-0">
           <h3 className={clsx('font-semibold', isDark ? 'text-white' : 'text-slate-900')}>
