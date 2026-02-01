@@ -7,7 +7,7 @@ const navItems = [
   { path: '/', icon: HomeIcon, label: 'Home' },
   { path: '/jobs', icon: SearchIcon, label: 'Jobs' },
   { path: '/wallet', icon: WalletIcon, label: 'Wallet' },
-  { path: '/profile', icon: UserIcon, label: 'Account' },
+  { path: '/profile', icon: UserIcon, label: 'Profile' },
 ];
 
 export default function BottomNav() {

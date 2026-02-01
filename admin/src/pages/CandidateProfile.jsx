@@ -533,13 +533,10 @@ export default function CandidateProfile() {
           />
           <Select
             label="Status"
-            value={editForm.status || 'active'}
+            value={editForm.status || 'pending'}
             onChange={(val) => setEditForm({...editForm, status: val})}
             options={[
-              { value: 'lead', label: 'Lead' },
-              { value: 'applied', label: 'Applied' },
-              { value: 'screening', label: 'Screening' },
-              { value: 'onboarding', label: 'Onboarding' },
+              { value: 'pending', label: 'Pending' },
               { value: 'active', label: 'Active' },
               { value: 'inactive', label: 'Inactive' },
             ]}

@@ -253,7 +253,7 @@ router.get('/admin/candidates', (req, res) => {
         id, name, email, phone, profile_photo, status, level, online_status, last_seen,
         telegram_chat_id, preferred_contact
       FROM candidates
-      WHERE status IN ('active', 'onboarding', 'pending', 'screening', 'lead')
+      WHERE status IN ('pending', 'active')
       ORDER BY name ASC
     `).all();
 

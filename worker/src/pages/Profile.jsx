@@ -1,5 +1,5 @@
 import { useState, useEffect } from 'react';
-import { useNavigate } from 'react-router-dom';
+import { useNavigate, Link } from 'react-router-dom';
 import {
   UserIcon,
   MailIcon,
@@ -25,6 +25,7 @@ import {
   SettingsIcon,
   FlameIcon,
   BellIcon,
+  CalendarIcon,
 } from 'lucide-react';
 import { useToast } from '../components/ui/Toast';
 import { useAuth } from '../contexts/AuthContext';
@@ -34,6 +35,91 @@ import { clsx } from 'clsx';
 import { XP_THRESHOLDS as xpThresholds, LEVEL_TITLES as levelTitles, calculateLevel, getLevelTier, LEVEL_TIERS } from '../utils/gamification';
 import { DEFAULTS } from '../utils/constants';
 import ProfileAvatar from '../components/ui/ProfileAvatar';
+
+// Availability Quick Selector
+function AvailabilitySelector({ user, onUpdate }) {
+  const [selected, setSelected] = useState(user?.availability_mode || 'weekdays');
+  const [saving, setSaving] = useState(false);
+  const toast = useToast();
+  const navigate = useNavigate();
+
+  const options = [
+    { id: 'weekdays', label: 'Weekdays', desc: 'Mon-Fri' },
+    { id: 'weekends', label: 'Weekends', desc: 'Sat-Sun' },
+    { id: 'all', label: 'All Week', desc: 'Every day' },
+    { id: 'custom', label: 'Custom', desc: 'Pick days' },
+  ];
+
+  const handleSelect = async (mode) => {
+    if (mode === 'custom') {
+      navigate('/calendar');
+      return;
+    }
+    
+    if (mode === selected) return;
+    
+    setSaving(true);
+    setSelected(mode);
+    
+    try {
+      const res = await fetch(`/api/v1/candidates/${user.id}/availability-mode`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ mode }),
+      });
+      const data = await res.json();
+      if (data.success) {
+        toast.success('Availability Updated', `Set to ${options.find(o => o.id === mode)?.label}`);
+        onUpdate?.();
+      }
+    } catch (error) {
+      toast.error('Failed', 'Could not update availability');
+      setSelected(user?.availability_mode || 'weekdays');
+    } finally {
+      setSaving(false);
+    }
+  };
+
+  return (
+    <div className="px-4 mt-6">
+      <div className="flex items-center justify-between mb-3">
+        <h2 className="text-white font-semibold flex items-center gap-2">
+          <CalendarIcon className="h-5 w-5 text-emerald-400" />
+          My Availability
+        </h2>
+        <Link to="/calendar" className="text-emerald-400 text-sm font-medium">
+          View Calendar →
+        </Link>
+      </div>
+      <div className="grid grid-cols-4 gap-2">
+        {options.map(opt => (
+          <button
+            key={opt.id}
+            onClick={() => handleSelect(opt.id)}
+            disabled={saving}
+            className={clsx(
+              'p-3 rounded-2xl border transition-all text-center',
+              selected === opt.id
+                ? 'bg-emerald-500/20 border-emerald-500/40 ring-2 ring-emerald-500/30'
+                : 'bg-[#0a1628]/80 border-white/[0.05] hover:border-white/10'
+            )}
+          >
+            <div className={clsx(
+              'text-sm font-semibold',
+              selected === opt.id ? 'text-emerald-400' : 'text-white'
+            )}>
+              {opt.label}
+            </div>
+            <div className="text-xs text-white/40 mt-0.5">{opt.desc}</div>
+            {selected === opt.id && (
+              <CheckIcon className="h-4 w-4 text-emerald-400 mx-auto mt-1" />
+            )}
+          </button>
+        ))}
+      </div>
+    </div>
+  );
+}
 
 // Stat Card Component
 function StatCard({ icon: Icon, label, value, color = 'emerald' }) {
@@ -219,7 +305,6 @@ export default function Profile() {
 
   const handleLogout = () => {
     logout();
-    // Defer navigation to let React process the state change
     setTimeout(() => navigate('/login'), 0);
   };
 
@@ -322,8 +407,11 @@ export default function Profile() {
         </div>
       </div>
 
+      {/* Availability Selector - NEW! */}
+      <AvailabilitySelector user={user} onUpdate={refreshUser} />
+
       {/* Stats Grid */}
-      <div className="px-4 mt-4">
+      <div className="px-4 mt-6">
         <div className="grid grid-cols-2 gap-3">
           <StatCard icon={BriefcaseIcon} label="Jobs Completed" value={jobsCompleted} color="emerald" />
           <StatCard icon={ZapIcon} label="Total XP" value={userXP.toLocaleString()} color="violet" />

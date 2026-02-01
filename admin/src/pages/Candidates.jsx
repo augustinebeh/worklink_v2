@@ -140,19 +140,17 @@ function CandidateCard({ candidate, onClick }) {
 function PipelineCard({ status, count, color, onClick, active }) {
   const colors = {
     emerald: 'from-emerald-500 to-emerald-600',
-    blue: 'from-blue-500 to-blue-600',
     amber: 'from-amber-500 to-amber-600',
-    purple: 'from-purple-500 to-purple-600',
     slate: 'from-slate-400 to-slate-500',
   };
-  
+
   return (
-    <button 
+    <button
       onClick={onClick}
       className={clsx(
         'p-4 rounded-xl border-2 transition-all text-left w-full',
-        active 
-          ? 'border-primary-500 bg-primary-50 dark:bg-primary-900/20' 
+        active
+          ? 'border-primary-500 bg-primary-50 dark:bg-primary-900/20'
           : 'border-transparent bg-white dark:bg-slate-900 hover:border-slate-200 dark:hover:border-slate-700'
       )}
     >
@@ -161,10 +159,9 @@ function PipelineCard({ status, count, color, onClick, active }) {
       </div>
       <p className="font-medium text-slate-900 dark:text-white capitalize">{status}</p>
       <p className="text-xs text-slate-500 mt-0.5">
-        {status === 'active' ? 'Ready to deploy' : 
-         status === 'onboarding' ? 'In progress' :
-         status === 'screening' ? 'Under review' :
-         status === 'lead' ? 'New interest' : 'Click to filter'}
+        {status === 'active' ? 'Ready to deploy' :
+         status === 'pending' ? 'Awaiting verification' :
+         status === 'inactive' ? 'Not available' : 'Click to filter'}
       </p>
     </button>
   );
@@ -180,9 +177,7 @@ export default function Candidates() {
   const [showTips, setShowTips] = useState(true);
   const [currentTip, setCurrentTip] = useState(0);
   const [pipelineStats, setPipelineStats] = useState({
-    lead: 0,
-    screening: 0,
-    onboarding: 0,
+    pending: 0,
     active: 0,
     inactive: 0,
   });
@@ -196,7 +191,7 @@ export default function Candidates() {
     phone: '',
     date_of_birth: '',
     source: 'direct',
-    status: 'lead',
+    status: 'pending',
   });
 
   const handleAddCandidate = async () => {
@@ -398,39 +393,25 @@ export default function Candidates() {
       )}
 
       {/* Pipeline Stats */}
-      <div className="grid grid-cols-2 sm:grid-cols-5 gap-3">
-        <PipelineCard 
-          status="active" 
-          count={pipelineStats.active || 0} 
-          color="emerald" 
+      <div className="grid grid-cols-3 gap-3">
+        <PipelineCard
+          status="pending"
+          count={pipelineStats.pending || 0}
+          color="amber"
+          active={statusFilter === 'pending'}
+          onClick={() => setStatusFilter(statusFilter === 'pending' ? 'all' : 'pending')}
+        />
+        <PipelineCard
+          status="active"
+          count={pipelineStats.active || 0}
+          color="emerald"
           active={statusFilter === 'active'}
           onClick={() => setStatusFilter(statusFilter === 'active' ? 'all' : 'active')}
         />
-        <PipelineCard 
-          status="onboarding" 
-          count={pipelineStats.onboarding || 0} 
-          color="blue" 
-          active={statusFilter === 'onboarding'}
-          onClick={() => setStatusFilter(statusFilter === 'onboarding' ? 'all' : 'onboarding')}
-        />
-        <PipelineCard 
-          status="screening" 
-          count={pipelineStats.screening || 0} 
-          color="amber" 
-          active={statusFilter === 'screening'}
-          onClick={() => setStatusFilter(statusFilter === 'screening' ? 'all' : 'screening')}
-        />
-        <PipelineCard 
-          status="lead" 
-          count={pipelineStats.lead || 0} 
-          color="purple" 
-          active={statusFilter === 'lead'}
-          onClick={() => setStatusFilter(statusFilter === 'lead' ? 'all' : 'lead')}
-        />
-        <PipelineCard 
-          status="inactive" 
-          count={pipelineStats.inactive || 0} 
-          color="slate" 
+        <PipelineCard
+          status="inactive"
+          count={pipelineStats.inactive || 0}
+          color="slate"
           active={statusFilter === 'inactive'}
           onClick={() => setStatusFilter(statusFilter === 'inactive' ? 'all' : 'inactive')}
         />
@@ -446,15 +427,13 @@ export default function Candidates() {
             onChange={(e) => setSearchQuery(e.target.value)}
             className="w-64"
           />
-          <Select 
+          <Select
             value={statusFilter}
             onChange={setStatusFilter}
             options={[
               { value: 'all', label: 'All Status' },
+              { value: 'pending', label: 'Pending' },
               { value: 'active', label: 'Active' },
-              { value: 'onboarding', label: 'Onboarding' },
-              { value: 'screening', label: 'Screening' },
-              { value: 'lead', label: 'Lead' },
               { value: 'inactive', label: 'Inactive' },
             ]}
             className="w-36"
@@ -596,10 +575,9 @@ export default function Candidates() {
                 value={newCandidate.status}
                 onChange={(value) => setNewCandidate({ ...newCandidate, status: value })}
                 options={[
-                  { value: 'lead', label: 'Lead' },
-                  { value: 'screening', label: 'Screening' },
-                  { value: 'onboarding', label: 'Onboarding' },
+                  { value: 'pending', label: 'Pending' },
                   { value: 'active', label: 'Active' },
+                  { value: 'inactive', label: 'Inactive' },
                 ]}
               />
             </div>

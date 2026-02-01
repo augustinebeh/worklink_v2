@@ -1,4 +1,4 @@
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useRef } from 'react';
 import { Link, useNavigate } from 'react-router-dom';
 import {
   ChevronRightIcon,
@@ -6,11 +6,12 @@ import {
   ZapIcon,
   SparklesIcon,
   ChevronLeftIcon,
-  WalletIcon,
-  CalendarIcon,
   TrophyIcon,
-  UsersIcon,
   CheckIcon,
+  ClockIcon,
+  StarIcon,
+  RefreshCwIcon,
+  FlameIcon,
 } from 'lucide-react';
 import { useAuth } from '../contexts/AuthContext';
 import { useWebSocket } from '../contexts/WebSocketContext';
@@ -31,92 +32,115 @@ import {
   getSGDateString,
 } from '../utils/constants';
 
-// Availability Quick Selector
-function AvailabilitySelector({ user, onUpdate }) {
-  const [selected, setSelected] = useState(user?.availability_mode || 'weekdays');
-  const [saving, setSaving] = useState(false);
-  const toast = useToast();
+// Quest type config
+const questTypeConfig = {
+  daily: { color: 'text-cyan-400', bg: 'bg-cyan-500/20', border: 'border-cyan-500/30', icon: ClockIcon },
+  weekly: { color: 'text-violet-400', bg: 'bg-violet-500/20', border: 'border-violet-500/30', icon: StarIcon },
+  special: { color: 'text-amber-400', bg: 'bg-amber-500/20', border: 'border-amber-500/30', icon: SparklesIcon },
+  repeatable: { color: 'text-emerald-400', bg: 'bg-emerald-500/20', border: 'border-emerald-500/30', icon: RefreshCwIcon },
+  challenge: { color: 'text-red-400', bg: 'bg-red-500/20', border: 'border-red-500/30', icon: FlameIcon },
+};
 
-  const options = [
-    { id: 'weekdays', label: 'Weekdays', desc: 'Mon-Fri' },
-    { id: 'weekends', label: 'Weekends', desc: 'Sat-Sun' },
-    { id: 'all', label: 'All Week', desc: 'Every day' },
-    { id: 'custom', label: 'Custom', desc: 'Pick days' },
-  ];
+// Animated Quest Card for Homepage
+function HomeQuestCard({ quest, onComplete, isCompleting, onAnimationComplete }) {
+  const [isExiting, setIsExiting] = useState(false);
+  const config = questTypeConfig[quest.type] || questTypeConfig.daily;
+  const Icon = config.icon;
+  
+  const isClaimable = quest.status === 'claimable';
+  const isCheckinQuest = quest.requirement?.type === 'checkin' || 
+                         quest.title?.toLowerCase().includes('check') ||
+                         quest.title?.toLowerCase().includes('login') ||
+                         quest.title?.toLowerCase().includes('daily');
+  const canCheckin = isCheckinQuest && quest.status !== 'claimed' && !isClaimable && quest.progress < quest.target;
 
-  const handleSelect = async (mode) => {
-    if (mode === 'custom') {
-      // Navigate to calendar for custom selection
-      window.location.href = '/calendar';
-      return;
-    }
+  const handleClick = async () => {
+    if (isCompleting) return;
     
-    if (mode === selected) return;
+    // Start exit animation
+    setIsExiting(true);
     
-    setSaving(true);
-    setSelected(mode);
+    // Trigger the action
+    await onComplete(quest, isClaimable ? 'claim' : 'checkin');
     
-    try {
-      const res = await fetch(`/api/v1/candidates/${user.id}/availability-mode`, {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ mode }),
-      });
-      const data = await res.json();
-      if (data.success) {
-        toast.success('Availability Updated', `Set to ${options.find(o => o.id === mode)?.label}`);
-        onUpdate?.();
-      }
-    } catch (error) {
-      toast.error('Failed', 'Could not update availability');
-      setSelected(user?.availability_mode || 'weekdays');
-    } finally {
-      setSaving(false);
-    }
+    // Wait for animation then notify parent
+    setTimeout(() => {
+      onAnimationComplete(quest.id);
+    }, 400);
   };
 
+  const canInteract = isClaimable || canCheckin;
+  if (!canInteract && quest.status === 'claimed') return null;
+
   return (
-    <div className="px-4 mt-6">
-      <div className="flex items-center justify-between mb-3">
-        <h2 className="text-white font-semibold flex items-center gap-2">
-          My Availability <span className="text-lg">📅</span>
-        </h2>
-        <Link to="/calendar" className="text-emerald-400 text-sm font-medium">
-          View Calendar →
-        </Link>
-      </div>
-      <div className="grid grid-cols-4 gap-2">
-        {options.map(opt => (
-          <button
-            key={opt.id}
-            onClick={() => handleSelect(opt.id)}
-            disabled={saving}
-            className={clsx(
-              'p-3 rounded-2xl border transition-all text-center',
-              selected === opt.id
-                ? 'bg-emerald-500/20 border-emerald-500/40 ring-2 ring-emerald-500/30'
-                : 'bg-[#0a1628]/80 border-white/[0.05] hover:border-white/10'
+    <div
+      onClick={canInteract ? handleClick : undefined}
+      className={clsx(
+        'relative p-4 rounded-2xl transition-all duration-400 ease-out',
+        isExiting && 'opacity-0 scale-95 -translate-y-2',
+        canInteract ? 'cursor-pointer active:scale-[0.98]' : '',
+        isClaimable
+          ? 'bg-gradient-to-r from-emerald-500/20 to-cyan-500/20 border border-emerald-500/40'
+          : canCheckin
+            ? 'bg-gradient-to-r from-cyan-500/10 to-violet-500/10 border border-cyan-500/30'
+            : 'bg-[#0a1628]/80 border border-white/[0.05]'
+      )}
+    >
+      <div className="flex items-center gap-4">
+        {/* Icon */}
+        <div className={clsx(
+          'w-12 h-12 rounded-2xl flex items-center justify-center flex-shrink-0',
+          isClaimable ? 'bg-emerald-500/30' : canCheckin ? 'bg-cyan-500/30' : config.bg
+        )}>
+          {isCompleting ? (
+            <div className="animate-spin h-5 w-5 border-2 border-white border-t-transparent rounded-full" />
+          ) : (
+            <Icon className={clsx('h-6 w-6', isClaimable ? 'text-emerald-400' : canCheckin ? 'text-cyan-400' : config.color)} />
+          )}
+        </div>
+
+        {/* Content */}
+        <div className="flex-1 min-w-0">
+          <div className="flex items-center gap-2 mb-0.5">
+            {isClaimable && (
+              <span className="px-2 py-0.5 rounded-md bg-emerald-500/30 text-emerald-400 text-xs font-bold animate-pulse">
+                READY!
+              </span>
             )}
-          >
-            <div className={clsx(
-              'text-sm font-semibold',
-              selected === opt.id ? 'text-emerald-400' : 'text-white'
-            )}>
-              {opt.label}
+            {canCheckin && (
+              <span className="px-2 py-0.5 rounded-md bg-cyan-500/30 text-cyan-400 text-xs font-bold">
+                TAP
+              </span>
+            )}
+          </div>
+          <h3 className="font-semibold text-white text-sm">{quest.title}</h3>
+          
+          {/* Mini progress */}
+          {!isClaimable && (
+            <div className="flex items-center gap-2 mt-1">
+              <div className="flex-1 h-1.5 rounded-full bg-white/10 overflow-hidden">
+                <div
+                  className="h-full rounded-full bg-gradient-to-r from-cyan-500 to-violet-500 transition-all duration-500"
+                  style={{ width: `${Math.min((quest.progress / quest.target) * 100, 100)}%` }}
+                />
+              </div>
+              <span className="text-xs text-white/40">{quest.progress}/{quest.target}</span>
             </div>
-            <div className="text-xs text-white/40 mt-0.5">{opt.desc}</div>
-            {selected === opt.id && (
-              <CheckIcon className="h-4 w-4 text-emerald-400 mx-auto mt-1" />
-            )}
-          </button>
-        ))}
+          )}
+        </div>
+
+        {/* XP Reward */}
+        <div className="flex items-center gap-1 px-3 py-1.5 rounded-xl bg-violet-500/20">
+          <ZapIcon className="h-4 w-4 text-violet-400" />
+          <span className="text-sm font-bold text-violet-400">+{quest.xp_reward}</span>
+        </div>
       </div>
     </div>
   );
 }
 
 // League Header Card - Main pool-style banner
-function LeagueCard({ user, userLevel, userXP, thisMonthEarnings, totalJobs, poolEndsIn }) {
+function LeagueCard({ user, userLevel, userXP, thisMonthEarnings, totalJobs, poolEndsIn, xpAnimating }) {
   const levelTitle = levelTitles[userLevel] || 'Newcomer';
   
   // XP progress calculations
@@ -166,18 +190,23 @@ function LeagueCard({ user, userLevel, userXP, thisMonthEarnings, totalJobs, poo
           </div>
         </div>
 
-        {/* XP Progress Bar */}
+        {/* XP Progress Bar - with animation support */}
         <div className="mb-6">
           <div className="flex items-center justify-between text-sm mb-2">
             <span className="text-white/50">Level Progress</span>
             <span className="text-white">
-              <span className="text-emerald-400 font-bold">{xpInLevel.toLocaleString()}</span>
+              <span className={clsx('font-bold transition-all duration-500', xpAnimating ? 'text-emerald-300 scale-110' : 'text-emerald-400')}>
+                {xpInLevel.toLocaleString()}
+              </span>
               <span className="text-white/30"> / {xpNeeded.toLocaleString()} XP</span>
             </span>
           </div>
           <div className="h-3 rounded-full bg-white/5 overflow-hidden">
             <div
-              className="h-full rounded-full bg-gradient-to-r from-emerald-500 via-cyan-500 to-violet-500 transition-all duration-500"
+              className={clsx(
+                'h-full rounded-full bg-gradient-to-r from-emerald-500 via-cyan-500 to-violet-500 transition-all',
+                xpAnimating ? 'duration-1000' : 'duration-500'
+              )}
               style={{ width: `${Math.max(progress, 2)}%` }}
             />
           </div>
@@ -269,33 +298,6 @@ function ActivityItem({ job }) {
   );
 }
 
-// Quick Action Button
-function QuickAction({ icon: Icon, label, to, badge, color = 'slate' }) {
-  const colorClasses = {
-    slate: 'bg-slate-800/50 hover:bg-slate-700/50 border-white/5',
-    emerald: 'bg-emerald-500/10 hover:bg-emerald-500/20 border-emerald-500/20',
-    violet: 'bg-violet-500/10 hover:bg-violet-500/20 border-violet-500/20',
-    amber: 'bg-amber-500/10 hover:bg-amber-500/20 border-amber-500/20',
-  };
-
-  return (
-    <Link
-      to={to}
-      className={clsx('flex flex-col items-center gap-2 p-4 rounded-2xl border transition-all active:scale-95', colorClasses[color])}
-    >
-      <div className="relative">
-        <Icon className="h-6 w-6 text-white" />
-        {badge && (
-          <span className="absolute -top-1 -right-1 w-4 h-4 rounded-full bg-red-500 text-[10px] font-bold text-white flex items-center justify-center">
-            {badge}
-          </span>
-        )}
-      </div>
-      <span className="text-white/70 text-xs font-medium">{label}</span>
-    </Link>
-  );
-}
-
 // Pagination Component
 function Pagination({ currentPage, totalPages, onPageChange }) {
   return (
@@ -343,6 +345,8 @@ export default function Home() {
   const [thisMonthEarnings, setThisMonthEarnings] = useState(0);
   const [loading, setLoading] = useState(true);
   const [currentPage, setCurrentPage] = useState(1);
+  const [completingQuest, setCompletingQuest] = useState(null);
+  const [xpAnimating, setXpAnimating] = useState(false);
   const jobsPerPage = 5;
 
   // Gamification animation states
@@ -401,19 +405,79 @@ export default function Home() {
       }
 
       if (questsData.success) {
-        const sorted = (questsData.data || [])
-          .filter(q => q.status !== 'claimed')
-          .sort((a, b) => {
-            const order = { claimable: 0, in_progress: 1, available: 2 };
-            return (order[a.status] ?? 3) - (order[b.status] ?? 3);
-          });
-        setQuests(sorted.slice(0, 3));
+        // Filter to show only actionable quests (claimable or can check-in)
+        const actionable = (questsData.data || []).filter(q => {
+          if (q.status === 'claimed') return false;
+          if (q.status === 'claimable') return true;
+          // Check if it's a checkin quest that can be completed
+          const isCheckin = q.requirement?.type === 'checkin' || 
+                           q.title?.toLowerCase().includes('check') ||
+                           q.title?.toLowerCase().includes('login') ||
+                           q.title?.toLowerCase().includes('daily');
+          return isCheckin && q.progress < q.target;
+        });
+        
+        const sorted = actionable.sort((a, b) => {
+          const order = { claimable: 0, in_progress: 1, available: 2 };
+          return (order[a.status] ?? 3) - (order[b.status] ?? 3);
+        });
+        setQuests(sorted.slice(0, 3)); // Show max 3 quests
       }
     } catch (error) {
       toast.error('Failed to load', 'Pull down to refresh');
     } finally {
       setLoading(false);
     }
+  };
+
+  const handleQuestComplete = async (quest, action) => {
+    setCompletingQuest(quest.id);
+    
+    try {
+      let res;
+      if (action === 'claim') {
+        res = await fetch(`/api/v1/gamification/quests/${quest.id}/claim`, {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ candidateId: user.id }),
+        });
+      } else {
+        // Check-in action
+        res = await fetch(`/api/v1/gamification/quests/${quest.id}/progress`, {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ candidateId: user.id, increment: 1 }),
+        });
+      }
+      
+      const data = await res.json();
+      if (data.success) {
+        // Trigger XP bar animation
+        setXpAnimating(true);
+        setTimeout(() => setXpAnimating(false), 1500);
+        
+        // Show floating XP
+        setXpGain({ amount: quest.xp_reward, trigger: Date.now() });
+        
+        toast.success(
+          action === 'claim' ? 'Quest Complete!' : 'Checked In!', 
+          `+${quest.xp_reward} XP earned`
+        );
+        
+        // Refresh user data for updated XP
+        refreshUser();
+      } else {
+        toast.error('Failed', data.error || 'Please try again');
+      }
+    } catch (error) {
+      toast.error('Error', 'Please try again');
+    } finally {
+      setCompletingQuest(null);
+    }
+  };
+
+  const handleQuestAnimationComplete = (questId) => {
+    setQuests(prev => prev.filter(q => q.id !== questId));
   };
 
   const userXP = user?.xp || DEFAULTS.xp;
@@ -441,20 +505,33 @@ export default function Home() {
           thisMonthEarnings={thisMonthEarnings}
           totalJobs={totalJobs}
           poolEndsIn={getNextPayout()}
+          xpAnimating={xpAnimating}
         />
 
-        {/* Availability Selector */}
-        <AvailabilitySelector user={user} onUpdate={refreshUser} />
-
-        {/* Quick Actions */}
-        <div className="px-4 mt-6">
-          <div className="grid grid-cols-4 gap-3">
-            <QuickAction icon={WalletIcon} label="Wallet" to="/wallet" color="emerald" />
-            <QuickAction icon={CalendarIcon} label="Calendar" to="/calendar" color="violet" />
-            <QuickAction icon={TrophyIcon} label="Quests" to="/quests" badge={quests.length || null} color="amber" />
-            <QuickAction icon={UsersIcon} label="Referrals" to="/referrals" color="slate" />
+        {/* Daily Quests Section */}
+        {quests.length > 0 && (
+          <div className="px-4 mt-6">
+            <div className="flex items-center justify-between mb-3">
+              <h2 className="text-white font-semibold flex items-center gap-2">
+                Daily Quests <span className="text-lg">🎯</span>
+              </h2>
+              <Link to="/quests" className="text-emerald-400 text-sm font-medium">
+                View All →
+              </Link>
+            </div>
+            <div className="space-y-3 transition-all duration-300">
+              {quests.map(quest => (
+                <HomeQuestCard
+                  key={quest.id}
+                  quest={quest}
+                  onComplete={handleQuestComplete}
+                  isCompleting={completingQuest === quest.id}
+                  onAnimationComplete={handleQuestAnimationComplete}
+                />
+              ))}
+            </div>
           </div>
-        </div>
+        )}
 
         {/* Job Activity Feed */}
         <div className="px-4 mt-8">
@@ -489,22 +566,6 @@ export default function Home() {
               </div>
             )}
           </div>
-        </div>
-
-        {/* Floating Quest CTA */}
-        <div className="fixed bottom-24 left-4">
-          <Link
-            to="/quests"
-            className="flex items-center gap-3 px-4 py-3 rounded-2xl bg-gradient-to-r from-violet-600 to-indigo-600 border border-violet-500/30 shadow-lg shadow-violet-500/20 hover:shadow-violet-500/30 transition-all active:scale-95"
-          >
-            <div className="w-10 h-10 rounded-xl bg-white/10 flex items-center justify-center">
-              <TrophyIcon className="h-5 w-5 text-white" />
-            </div>
-            <div>
-              <p className="text-white font-semibold text-sm">Daily Quests</p>
-              <p className="text-violet-200 text-xs">Earn bonus XP</p>
-            </div>
-          </Link>
         </div>
       </div>
 

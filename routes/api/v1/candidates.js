@@ -155,25 +155,31 @@ router.put('/:id', (req, res) => {
 });
 
 // Get candidate stats (for pipeline)
+// Simplified to: pending, active, inactive
 router.get('/stats/pipeline', (req, res) => {
   try {
     const stats = db.prepare(`
-      SELECT status, COUNT(*) as count 
-      FROM candidates 
+      SELECT status, COUNT(*) as count
+      FROM candidates
       GROUP BY status
     `).all();
 
     const pipeline = {
-      lead: 0,
-      applied: 0,
-      screening: 0,
-      onboarding: 0,
+      pending: 0,
       active: 0,
       inactive: 0,
     };
 
+    // Map old statuses to new simplified ones
     stats.forEach(s => {
-      pipeline[s.status] = s.count;
+      if (s.status === 'active') {
+        pipeline.active = s.count;
+      } else if (s.status === 'inactive') {
+        pipeline.inactive = s.count;
+      } else {
+        // pending, lead, screening, onboarding, applied -> all count as pending
+        pipeline.pending += s.count;
+      }
     });
 
     res.json({ success: true, data: pipeline });

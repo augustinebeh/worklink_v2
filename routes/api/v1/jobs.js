@@ -201,6 +201,19 @@ router.post('/:id/accept', (req, res) => {
     const { candidate_id } = req.body;
     const job_id = req.params.id;
 
+    // Check candidate status - only active users can accept jobs
+    const candidate = db.prepare('SELECT status FROM candidates WHERE id = ?').get(candidate_id);
+    if (!candidate) {
+      return res.status(404).json({ success: false, error: 'Candidate not found' });
+    }
+    if (candidate.status !== 'active') {
+      return res.status(403).json({
+        success: false,
+        error: 'Your account is pending verification. Please wait for admin approval before accepting jobs.',
+        code: 'ACCOUNT_PENDING'
+      });
+    }
+
     // Check if job exists and has slots
     const job = db.prepare('SELECT * FROM jobs WHERE id = ?').get(job_id);
     if (!job) {

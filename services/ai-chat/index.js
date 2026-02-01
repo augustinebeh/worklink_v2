@@ -132,6 +132,65 @@ async function detectIntent(message) {
 }
 
 /**
+ * Get response for pending (unverified) users
+ * These users cannot accept jobs yet, so AI should only provide limited responses
+ */
+function getPendingUserResponse(message, candidateName) {
+  const lowerMessage = message.toLowerCase();
+  const firstName = candidateName ? candidateName.split(' ')[0] : '';
+
+  // Check if asking about jobs
+  if (lowerMessage.includes('job') || lowerMessage.includes('work') || lowerMessage.includes('shift') ||
+      lowerMessage.includes('apply') || lowerMessage.includes('available') || lowerMessage.includes('gig')) {
+    return {
+      content: `Hi${firstName ? ' ' + firstName : ''}! Your account is currently being reviewed by our team. Once verified, you'll be able to browse and accept jobs. In the meantime, you can complete your profile to speed up the verification process! 📝`,
+      isPendingResponse: true,
+    };
+  }
+
+  // Check if asking about account/verification status
+  if (lowerMessage.includes('account') || lowerMessage.includes('verify') || lowerMessage.includes('status') ||
+      lowerMessage.includes('approved') || lowerMessage.includes('review') || lowerMessage.includes('pending')) {
+    return {
+      content: `Your account is pending verification. Our admin team will review your profile and reach out soon. To help speed things up, make sure your profile is complete with accurate information! 🙏`,
+      isPendingResponse: true,
+    };
+  }
+
+  // Check if asking about payment
+  if (lowerMessage.includes('pay') || lowerMessage.includes('salary') || lowerMessage.includes('money') ||
+      lowerMessage.includes('earning') || lowerMessage.includes('rate')) {
+    return {
+      content: `Great question! Once your account is verified, you'll be able to see job details including pay rates. For now, please complete your profile and our team will verify your account soon! 💰`,
+      isPendingResponse: true,
+    };
+  }
+
+  // Check for greetings
+  if (lowerMessage.match(/^(hi|hello|hey|good morning|good afternoon|good evening)/)) {
+    return {
+      content: `Hi${firstName ? ' ' + firstName : ''}! Welcome to WorkLink! 👋 Your account is being reviewed by our team. Feel free to explore the app and complete your profile while you wait for verification!`,
+      isPendingResponse: true,
+    };
+  }
+
+  // Check if asking how to use app / FAQ
+  if (lowerMessage.includes('how do i') || lowerMessage.includes('how to') || lowerMessage.includes('help') ||
+      lowerMessage.includes('what is') || lowerMessage.includes('explain')) {
+    return {
+      content: `I'd love to help! Your account is pending verification, so some features aren't available yet. You can explore the app, complete your profile, and check out the training section. Our team will verify your account soon! 📱`,
+      isPendingResponse: true,
+    };
+  }
+
+  // Default response for pending users
+  return {
+    content: `Thanks for reaching out${firstName ? ', ' + firstName : ''}! Your account is currently pending verification. Please be patient while our admin team reviews your profile. In the meantime, you can browse the app and complete your profile to expedite the verification process! 🙏`,
+    isPendingResponse: true,
+  };
+}
+
+/**
  * Generate AI response for a candidate message
  *
  * @param {string} candidateId - Candidate ID
@@ -143,6 +202,24 @@ async function generateResponse(candidateId, message, options = {}) {
   console.log(`🤖 [AI] generateResponse called for ${candidateId}: "${message.substring(0, 50)}..."`);
   const startTime = Date.now();
   const settings = getSettings();
+
+  // Check candidate status - pending users get limited responses
+  const candidate = getCandidate(candidateId);
+  if (candidate && candidate.status === 'pending') {
+    console.log(`🤖 [AI] Candidate ${candidateId} is PENDING - returning limited response`);
+    const pendingResponse = getPendingUserResponse(message, candidate.name);
+    const responseTime = Date.now() - startTime;
+
+    return {
+      content: pendingResponse.content,
+      source: 'pending_status',
+      confidence: 1.0,
+      intent: 'pending_user',
+      responseTimeMs: responseTime,
+      fromKB: false,
+      isPendingUser: true,
+    };
+  }
 
   // Check if this query needs real-time data (payment amounts, job status, etc.)
   const lowerMessage = message.toLowerCase();
