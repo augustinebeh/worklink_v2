@@ -25,6 +25,45 @@ function getAIChat() {
   return aiChatService;
 }
 
+// Lazy-loaded conversation manager
+let conversationManager = null;
+function getConversationManager() {
+  if (!conversationManager) {
+    try {
+      conversationManager = require('./services/conversation-manager');
+    } catch (e) {
+      console.log('Conversation manager not loaded:', e.message);
+    }
+  }
+  return conversationManager;
+}
+
+// Lazy-loaded smart notifications
+let smartNotifications = null;
+function getSmartNotifications() {
+  if (!smartNotifications) {
+    try {
+      smartNotifications = require('./services/smart-notifications');
+    } catch (e) {
+      console.log('Smart notifications not loaded:', e.message);
+    }
+  }
+  return smartNotifications;
+}
+
+// Lazy-loaded quick replies
+let quickReplies = null;
+function getQuickReplies() {
+  if (!quickReplies) {
+    try {
+      quickReplies = require('./services/quick-replies');
+    } catch (e) {
+      console.log('Quick replies not loaded:', e.message);
+    }
+  }
+  return quickReplies;
+}
+
 // Store connected clients
 const candidateClients = new Map(); // candidateId -> WebSocket
 const adminClients = new Set(); // Set of admin WebSocket connections
@@ -299,6 +338,32 @@ function handleMessage(ws, message, candidateId, isAdmin) {
       }
       break;
 
+    // Conversation management (admin only)
+    case 'update_conversation_status':
+      if (isAdmin && message.candidateId && message.status) {
+        handleConversationStatusUpdate(message.candidateId, message.status, ws);
+      }
+      break;
+
+    case 'update_conversation_priority':
+      if (isAdmin && message.candidateId && message.priority) {
+        handleConversationPriorityUpdate(message.candidateId, message.priority, ws);
+      }
+      break;
+
+    case 'resolve_conversation':
+      if (isAdmin && message.candidateId) {
+        handleResolveConversation(message.candidateId, ws);
+      }
+      break;
+
+    // Quick replies (candidate)
+    case 'get_quick_replies':
+      if (candidateId) {
+        handleGetQuickReplies(candidateId, ws);
+      }
+      break;
+
     default:
       console.log('Unknown message type:', message.type);
   }
@@ -360,8 +425,66 @@ async function sendMessageFromCandidate(candidateId, content, channel = 'app') {
 
   const message = db.prepare('SELECT * FROM messages WHERE id = ?').get(id);
 
-  // Notify all admins
-  broadcastToAdmins({ type: 'new_message', message, candidateId, channel });
+  // Update conversation metadata
+  const convManager = getConversationManager();
+  if (convManager) {
+    try {
+      convManager.recordCandidateMessage(candidateId);
+      // Ensure conversation is open when candidate sends message
+      const meta = convManager.getConversationMetadata(candidateId);
+      if (meta.status === 'resolved') {
+        convManager.updateStatus(candidateId, 'open');
+      }
+    } catch (e) {
+      console.log('Conv manager error:', e.message);
+    }
+  }
+
+  // Smart notifications - check if urgent
+  const smartNotif = getSmartNotifications();
+  let isUrgent = false;
+  if (smartNotif) {
+    try {
+      const shouldNotifyNow = smartNotif.shouldNotifyImmediately(candidateId, content);
+      isUrgent = shouldNotifyNow;
+
+      if (shouldNotifyNow) {
+        // Immediate notification to admins
+        broadcastToAdmins({
+          type: 'urgent_message',
+          message,
+          candidateId,
+          channel,
+          urgency: smartNotif.analyzeMessageUrgency(content),
+        });
+      } else {
+        // Queue for batched notification
+        smartNotif.queueNotification(candidateId, content);
+      }
+    } catch (e) {
+      console.log('Smart notif error:', e.message);
+    }
+  }
+
+  // Check for auto-escalation
+  if (convManager) {
+    try {
+      const escalationCheck = convManager.checkForEscalation(candidateId, content, 1.0);
+      if (escalationCheck.shouldEscalate) {
+        convManager.escalate(candidateId, escalationCheck.reason);
+        broadcastToAdmins({
+          type: 'conversation_escalated',
+          candidateId,
+          reason: escalationCheck.reason,
+        });
+      }
+    } catch (e) {
+      console.log('Escalation check error:', e.message);
+    }
+  }
+
+  // Notify all admins (regular notification)
+  broadcastToAdmins({ type: 'new_message', message, candidateId, channel, isUrgent });
 
   // Confirm to candidate (only for app channel)
   if (channel === 'app') {
@@ -372,7 +495,6 @@ async function sendMessageFromCandidate(candidateId, content, channel = 'app') {
   }
 
   // Process implicit feedback from previous AI responses (non-blocking)
-  // This learns from worker's reactions to AI auto-replies
   try {
     const ml = require('./services/ml');
     ml.processImplicitFeedback(candidateId, content).catch(err => {
@@ -427,20 +549,33 @@ function handleTypingIndicator(message, candidateId, isAdmin) {
 }
 
 function handleReadReceipt(message, candidateId, isAdmin) {
+  const readAt = new Date().toISOString();
+
   if (isAdmin && message.candidateId) {
+    // Admin reading candidate messages - update with timestamp
     db.prepare(`
-      UPDATE messages SET read = 1 WHERE candidate_id = ? AND sender = 'candidate' AND read = 0
-    `).run(message.candidateId);
-    
+      UPDATE messages SET read = 1, read_at = ? WHERE candidate_id = ? AND sender = 'candidate' AND read = 0
+    `).run(readAt, message.candidateId);
+
     const clientWs = candidateClients.get(message.candidateId);
     if (clientWs?.readyState === WebSocket.OPEN) {
-      clientWs.send(JSON.stringify({ type: EventTypes.CHAT_READ, by: 'admin' }));
+      clientWs.send(JSON.stringify({ type: EventTypes.CHAT_READ, by: 'admin', readAt }));
+    }
+
+    // Update conversation metadata - record admin activity
+    const convManager = getConversationManager();
+    if (convManager) {
+      try {
+        convManager.recordAdminReply(message.candidateId);
+      } catch (e) { /* ignore */ }
     }
   } else if (candidateId) {
+    // Candidate reading admin messages - update with timestamp
     db.prepare(`
-      UPDATE messages SET read = 1 WHERE candidate_id = ? AND sender = 'admin' AND read = 0
-    `).run(candidateId);
-    broadcastToAdmins({ type: EventTypes.CHAT_READ, candidateId, by: 'candidate' });
+      UPDATE messages SET read = 1, read_at = ? WHERE candidate_id = ? AND sender = 'admin' AND read = 0
+    `).run(readAt, candidateId);
+
+    broadcastToAdmins({ type: EventTypes.CHAT_READ, candidateId, by: 'candidate', readAt });
   }
 }
 
@@ -708,6 +843,123 @@ async function handleAIModeUpdate(candidateId, mode, ws) {
   } catch (error) {
     ws.send(JSON.stringify({
       type: 'ai_error',
+      error: error.message,
+    }));
+  }
+}
+
+// ==================== CONVERSATION MANAGEMENT FUNCTIONS ====================
+
+function handleConversationStatusUpdate(candidateId, status, ws) {
+  try {
+    const convManager = getConversationManager();
+    if (!convManager) {
+      throw new Error('Conversation manager not available');
+    }
+
+    convManager.updateStatus(candidateId, status);
+    const metadata = convManager.getConversationMetadata(candidateId);
+
+    ws.send(JSON.stringify({
+      type: 'conversation_updated',
+      candidateId,
+      metadata,
+    }));
+
+    broadcastToAdmins({
+      type: 'conversation_updated',
+      candidateId,
+      metadata,
+    });
+  } catch (error) {
+    ws.send(JSON.stringify({
+      type: 'conversation_error',
+      error: error.message,
+    }));
+  }
+}
+
+function handleConversationPriorityUpdate(candidateId, priority, ws) {
+  try {
+    const convManager = getConversationManager();
+    if (!convManager) {
+      throw new Error('Conversation manager not available');
+    }
+
+    convManager.updatePriority(candidateId, priority);
+    const metadata = convManager.getConversationMetadata(candidateId);
+
+    ws.send(JSON.stringify({
+      type: 'conversation_updated',
+      candidateId,
+      metadata,
+    }));
+
+    broadcastToAdmins({
+      type: 'conversation_updated',
+      candidateId,
+      metadata,
+    });
+  } catch (error) {
+    ws.send(JSON.stringify({
+      type: 'conversation_error',
+      error: error.message,
+    }));
+  }
+}
+
+function handleResolveConversation(candidateId, ws) {
+  try {
+    const convManager = getConversationManager();
+    if (!convManager) {
+      throw new Error('Conversation manager not available');
+    }
+
+    convManager.resolve(candidateId);
+    const metadata = convManager.getConversationMetadata(candidateId);
+
+    ws.send(JSON.stringify({
+      type: 'conversation_resolved',
+      candidateId,
+      metadata,
+    }));
+
+    broadcastToAdmins({
+      type: 'conversation_resolved',
+      candidateId,
+      metadata,
+    });
+  } catch (error) {
+    ws.send(JSON.stringify({
+      type: 'conversation_error',
+      error: error.message,
+    }));
+  }
+}
+
+async function handleGetQuickReplies(candidateId, ws) {
+  try {
+    const qr = getQuickReplies();
+    if (!qr) {
+      ws.send(JSON.stringify({
+        type: 'quick_replies',
+        suggestions: ['Thanks!', 'Okay, noted', 'I have a question'],
+      }));
+      return;
+    }
+
+    const result = await qr.getSuggestedReplies(candidateId, 4);
+
+    ws.send(JSON.stringify({
+      type: 'quick_replies',
+      context: result.context,
+      suggestions: result.suggestions,
+      personalized: result.personalized,
+    }));
+  } catch (error) {
+    ws.send(JSON.stringify({
+      type: 'quick_replies',
+      suggestions: ['Thanks!', 'Okay, noted', 'I have a question'],
       error: error.message,
     }));
   }

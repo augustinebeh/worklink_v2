@@ -6,6 +6,12 @@ import {
   CheckIcon,
   CheckCheckIcon,
   ChevronLeftIcon,
+  PaperclipIcon,
+  ImageIcon,
+  FileTextIcon,
+  XIcon,
+  DownloadIcon,
+  EyeIcon,
 } from 'lucide-react';
 import { useAuth } from '../contexts/AuthContext';
 import { useWebSocket } from '../contexts/WebSocketContext';
@@ -22,6 +28,44 @@ function parseUTCTimestamp(timestamp) {
   return new Date(utcTimestamp);
 }
 
+// Attachment display component
+function MessageAttachment({ attachment, isOwn }) {
+  const isImage = attachment.type === 'image' || attachment.mime_type?.startsWith('image/');
+
+  if (isImage) {
+    return (
+      <a
+        href={attachment.url || attachment.file_url}
+        target="_blank"
+        rel="noopener noreferrer"
+        className="block mb-2"
+      >
+        <img
+          src={attachment.thumbnail_url || attachment.url || attachment.file_url}
+          alt={attachment.name || attachment.original_name || 'Image'}
+          className="max-w-full rounded-lg max-h-48 object-cover"
+        />
+      </a>
+    );
+  }
+
+  return (
+    <a
+      href={attachment.url || attachment.file_url}
+      target="_blank"
+      rel="noopener noreferrer"
+      className={clsx(
+        'flex items-center gap-2 p-2 rounded-lg mb-2',
+        isOwn ? 'bg-white/10' : 'bg-slate-300 dark:bg-dark-700'
+      )}
+    >
+      <FileTextIcon className="h-5 w-5 flex-shrink-0" />
+      <span className="flex-1 truncate text-sm">{attachment.name || attachment.original_name || 'Document'}</span>
+      <DownloadIcon className="h-4 w-4 flex-shrink-0" />
+    </a>
+  );
+}
+
 function MessageBubble({ message, isOwn }) {
   const time = parseUTCTimestamp(message.created_at).toLocaleTimeString(DEFAULT_LOCALE, {
     hour: '2-digit',
@@ -29,6 +73,24 @@ function MessageBubble({ message, isOwn }) {
     hour12: true,
     timeZone: TIMEZONE
   });
+
+  // Parse attachments if stored as JSON string
+  const attachments = message.attachments
+    ? (typeof message.attachments === 'string' ? JSON.parse(message.attachments) : message.attachments)
+    : [];
+
+  // Single attachment from message fields
+  const hasInlineAttachment = message.attachment_url && message.attachment_type;
+
+  // Read receipt with timestamp
+  const readAt = message.read_at
+    ? parseUTCTimestamp(message.read_at).toLocaleTimeString(DEFAULT_LOCALE, {
+        hour: '2-digit',
+        minute: '2-digit',
+        hour12: true,
+        timeZone: TIMEZONE
+      })
+    : null;
 
   return (
     <div className={clsx('flex', isOwn ? 'justify-end' : 'justify-start')}>
@@ -38,7 +100,29 @@ function MessageBubble({ message, isOwn }) {
           ? 'bg-primary-500 text-white rounded-br-md'
           : 'bg-slate-200 dark:bg-dark-800 text-slate-900 dark:text-white rounded-bl-md'
       )}>
-        <p className="whitespace-pre-wrap break-words">{message.content}</p>
+        {/* Inline attachment */}
+        {hasInlineAttachment && (
+          <MessageAttachment
+            attachment={{
+              url: message.attachment_url,
+              type: message.attachment_type,
+              name: message.attachment_name,
+            }}
+            isOwn={isOwn}
+          />
+        )}
+
+        {/* Multiple attachments */}
+        {attachments.map((att, idx) => (
+          <MessageAttachment key={idx} attachment={att} isOwn={isOwn} />
+        ))}
+
+        {/* Message content */}
+        {message.content && (
+          <p className="whitespace-pre-wrap break-words">{message.content}</p>
+        )}
+
+        {/* Time and read status */}
         <div className={clsx(
           'flex items-center gap-1 mt-1',
           isOwn ? 'justify-end' : 'justify-start'
@@ -47,9 +131,16 @@ function MessageBubble({ message, isOwn }) {
             {time}
           </span>
           {isOwn && (
-            message.read
-              ? <CheckCheckIcon className="h-3 w-3 text-white/60" />
-              : <CheckIcon className="h-3 w-3 text-white/60" />
+            message.read ? (
+              <div className="flex items-center gap-0.5">
+                <CheckCheckIcon className="h-3 w-3 text-cyan-300" />
+                {readAt && (
+                  <span className="text-[10px] text-white/50">Seen {readAt}</span>
+                )}
+              </div>
+            ) : (
+              <CheckIcon className="h-3 w-3 text-white/60" />
+            )
           )}
         </div>
       </div>
@@ -95,6 +186,18 @@ function TypingIndicator() {
   );
 }
 
+// Quick Reply Chip
+function QuickReplyChip({ text, onClick }) {
+  return (
+    <button
+      onClick={() => onClick(text)}
+      className="px-3 py-1.5 rounded-full bg-white dark:bg-dark-800 border border-slate-200 dark:border-white/10 text-sm text-slate-700 dark:text-slate-300 hover:bg-slate-50 dark:hover:bg-dark-700 transition-colors whitespace-nowrap"
+    >
+      {text}
+    </button>
+  );
+}
+
 export default function Chat() {
   const { user } = useAuth();
   const ws = useWebSocket();
@@ -105,17 +208,30 @@ export default function Chat() {
   const [sending, setSending] = useState(false);
   const [showEmoji, setShowEmoji] = useState(false);
   const [isTyping, setIsTyping] = useState(false);
+  const [quickReplies, setQuickReplies] = useState([]);
+  const [uploadingFile, setUploadingFile] = useState(false);
+  const [selectedFile, setSelectedFile] = useState(null);
+  const [filePreview, setFilePreview] = useState(null);
   const messagesEndRef = useRef(null);
   const messagesContainerRef = useRef(null);
   const inputRef = useRef(null);
+  const fileInputRef = useRef(null);
   const typingTimeoutRef = useRef(null);
   const isTypingSentRef = useRef(false);
 
   useEffect(() => {
     if (user) {
       fetchMessages();
+      fetchQuickReplies();
     }
   }, [user]);
+
+  // Fetch quick replies when messages change (context-aware)
+  useEffect(() => {
+    if (user && messages.length > 0) {
+      fetchQuickReplies();
+    }
+  }, [messages.length]);
 
   // Listen to WebSocket messages
   useEffect(() => {
@@ -182,6 +298,90 @@ export default function Chat() {
     }
   };
 
+  const fetchQuickReplies = async () => {
+    if (!user?.id) return;
+
+    try {
+      const res = await fetch(`/api/v1/quick-replies/${user.id}`);
+      const data = await res.json();
+      if (data.success && data.data?.suggestions) {
+        setQuickReplies(data.data.suggestions.slice(0, 4));
+      }
+    } catch (error) {
+      // Use default suggestions
+      setQuickReplies(['Thanks!', 'Okay, noted', 'I have a question']);
+    }
+  };
+
+  const handleFileSelect = (e) => {
+    const file = e.target.files?.[0];
+    if (!file) return;
+
+    // Validate file size (10MB max)
+    if (file.size > 10 * 1024 * 1024) {
+      alert('File too large. Maximum size is 10MB.');
+      return;
+    }
+
+    setSelectedFile(file);
+
+    // Create preview for images
+    if (file.type.startsWith('image/')) {
+      const reader = new FileReader();
+      reader.onload = (e) => setFilePreview(e.target.result);
+      reader.readAsDataURL(file);
+    } else {
+      setFilePreview(null);
+    }
+  };
+
+  const clearFileSelection = () => {
+    setSelectedFile(null);
+    setFilePreview(null);
+    if (fileInputRef.current) {
+      fileInputRef.current.value = '';
+    }
+  };
+
+  const uploadFile = async () => {
+    if (!selectedFile || !user?.id) return null;
+
+    setUploadingFile(true);
+    try {
+      const formData = new FormData();
+      formData.append('file', selectedFile);
+      formData.append('candidateId', user.id);
+
+      const res = await fetch('/api/v1/chat/attachments', {
+        method: 'POST',
+        body: formData,
+      });
+
+      const data = await res.json();
+      if (data.success) {
+        return data.data;
+      }
+      return null;
+    } catch (error) {
+      console.error('Failed to upload file:', error);
+      return null;
+    } finally {
+      setUploadingFile(false);
+    }
+  };
+
+  const handleQuickReply = (text) => {
+    setNewMessage(text);
+    inputRef.current?.focus();
+
+    // Track usage for learning
+    fetch(`/api/v1/quick-replies/${user.id}/track`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ suggestion: text }),
+    }).catch(() => {});
+  };
+
   const scrollToBottom = useCallback(() => {
     messagesEndRef.current?.scrollIntoView({ behavior: 'smooth' });
   }, []);
@@ -208,7 +408,7 @@ export default function Chat() {
   };
 
   const handleSend = async () => {
-    if (!newMessage.trim() || sending) return;
+    if ((!newMessage.trim() && !selectedFile) || sending) return;
 
     const content = newMessage.trim();
     setNewMessage('');
@@ -221,6 +421,13 @@ export default function Chat() {
       isTypingSentRef.current = false;
     }
 
+    // Upload file first if selected
+    let attachment = null;
+    if (selectedFile) {
+      attachment = await uploadFile();
+      clearFileSelection();
+    }
+
     // Optimistically add message
     const tempMessage = {
       id: Date.now(),
@@ -228,6 +435,9 @@ export default function Chat() {
       sender: 'candidate',
       created_at: new Date().toISOString(),
       read: 0,
+      attachment_url: attachment?.file_url,
+      attachment_type: attachment?.is_image ? 'image' : 'file',
+      attachment_name: attachment?.original_name,
     };
     setMessages(prev => [...prev, tempMessage]);
 
@@ -240,7 +450,10 @@ export default function Chat() {
         await fetch(`/api/v1/chat/${user.id}/messages`, {
           method: 'POST',
           headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify({ content }),
+          body: JSON.stringify({
+            content,
+            attachmentId: attachment?.id,
+          }),
         });
       }
     } catch (error) {
@@ -353,6 +566,44 @@ export default function Chat() {
         )}
       </div>
 
+      {/* Quick Replies - show when no message being typed */}
+      {quickReplies.length > 0 && !newMessage && !selectedFile && !showEmoji && (
+        <div className="flex-shrink-0 px-3 py-2 border-t border-slate-200 dark:border-white/5 bg-slate-50 dark:bg-dark-900">
+          <div className="flex gap-2 overflow-x-auto scrollbar-hide">
+            {quickReplies.map((reply, idx) => (
+              <QuickReplyChip key={idx} text={reply} onClick={handleQuickReply} />
+            ))}
+          </div>
+        </div>
+      )}
+
+      {/* File Preview */}
+      {selectedFile && (
+        <div className="flex-shrink-0 px-3 py-2 border-t border-slate-200 dark:border-white/5 bg-slate-50 dark:bg-dark-900">
+          <div className="flex items-center gap-3 p-2 rounded-lg bg-white dark:bg-dark-800 border border-slate-200 dark:border-white/10">
+            {filePreview ? (
+              <img src={filePreview} alt="Preview" className="w-12 h-12 rounded object-cover" />
+            ) : (
+              <div className="w-12 h-12 rounded bg-slate-100 dark:bg-dark-700 flex items-center justify-center">
+                <FileTextIcon className="h-6 w-6 text-slate-500 dark:text-dark-400" />
+              </div>
+            )}
+            <div className="flex-1 min-w-0">
+              <p className="text-sm font-medium text-slate-900 dark:text-white truncate">{selectedFile.name}</p>
+              <p className="text-xs text-slate-500 dark:text-dark-400">
+                {(selectedFile.size / 1024).toFixed(1)} KB
+              </p>
+            </div>
+            <button
+              onClick={clearFileSelection}
+              className="p-1.5 rounded-full hover:bg-slate-100 dark:hover:bg-dark-700 text-slate-500 dark:text-dark-400"
+            >
+              <XIcon className="h-5 w-5" />
+            </button>
+          </div>
+        </div>
+      )}
+
       {/* Emoji picker - positioned above input */}
       {showEmoji && (
         <div className="flex-shrink-0 border-t border-slate-200 dark:border-white/5">
@@ -367,9 +618,31 @@ export default function Chat() {
         </div>
       )}
 
+      {/* Hidden file input */}
+      <input
+        ref={fileInputRef}
+        type="file"
+        accept="image/*,.pdf,.doc,.docx,.txt"
+        onChange={handleFileSelect}
+        className="hidden"
+      />
+
       {/* Input Area */}
       <div className="flex-shrink-0 bg-white dark:bg-dark-950 px-3 py-2 pb-safe border-t border-slate-200 dark:border-white/5">
         <div className="flex items-center gap-2">
+          {/* File attachment button */}
+          <button
+            onClick={() => fileInputRef.current?.click()}
+            disabled={uploadingFile}
+            className={clsx(
+              'p-2.5 rounded-full transition-colors flex-shrink-0',
+              'text-slate-500 dark:text-dark-400 hover:text-slate-700 dark:hover:text-white',
+              uploadingFile && 'opacity-50'
+            )}
+          >
+            <PaperclipIcon className="h-5 w-5" />
+          </button>
+
           <button
             onClick={() => setShowEmoji(!showEmoji)}
             className={clsx(
@@ -396,15 +669,19 @@ export default function Chat() {
 
           <button
             onClick={handleSend}
-            disabled={!newMessage.trim() || sending}
+            disabled={(!newMessage.trim() && !selectedFile) || sending || uploadingFile}
             className={clsx(
               'p-2.5 rounded-full transition-colors flex-shrink-0',
-              newMessage.trim()
+              (newMessage.trim() || selectedFile)
                 ? 'bg-primary-500 text-white'
                 : 'text-slate-400 dark:text-dark-500'
             )}
           >
-            <SendIcon className="h-5 w-5" />
+            {uploadingFile ? (
+              <div className="h-5 w-5 border-2 border-white border-t-transparent rounded-full animate-spin" />
+            ) : (
+              <SendIcon className="h-5 w-5" />
+            )}
           </button>
         </div>
       </div>

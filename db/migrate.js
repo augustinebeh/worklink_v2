@@ -66,6 +66,13 @@ function runMigrations() {
   addColumn('messages', 'admin_feedback', 'TEXT');
   addColumn('messages', 'ai_log_id', 'INTEGER');
 
+  // Messages table migrations (for chat feature enhancements)
+  addColumn('messages', 'read_at', 'DATETIME');
+  addColumn('messages', 'attachment_url', 'TEXT');
+  addColumn('messages', 'attachment_type', 'TEXT');
+  addColumn('messages', 'attachment_name', 'TEXT');
+  addColumn('messages', 'reply_to_id', 'INTEGER');
+
   // Create new tables if they don't exist
   const createTables = `
     CREATE TABLE IF NOT EXISTS candidate_availability (
@@ -179,6 +186,43 @@ function runMigrations() {
       auto_post_jobs INTEGER DEFAULT 0,
       created_at DATETIME DEFAULT CURRENT_TIMESTAMP
     );
+
+    CREATE TABLE IF NOT EXISTS conversation_metadata (
+      id INTEGER PRIMARY KEY AUTOINCREMENT,
+      candidate_id TEXT UNIQUE NOT NULL,
+      status TEXT DEFAULT 'open',
+      priority TEXT DEFAULT 'normal',
+      tags TEXT DEFAULT '[]',
+      assigned_to TEXT,
+      last_admin_reply_at DATETIME,
+      resolved_at DATETIME,
+      escalated INTEGER DEFAULT 0,
+      escalation_reason TEXT,
+      created_at DATETIME DEFAULT CURRENT_TIMESTAMP,
+      updated_at DATETIME DEFAULT CURRENT_TIMESTAMP,
+      FOREIGN KEY (candidate_id) REFERENCES candidates(id)
+    );
+
+    CREATE TABLE IF NOT EXISTS chat_attachments (
+      id INTEGER PRIMARY KEY AUTOINCREMENT,
+      message_id INTEGER,
+      url TEXT NOT NULL,
+      type TEXT,
+      name TEXT,
+      size INTEGER,
+      mime_type TEXT,
+      created_at DATETIME DEFAULT CURRENT_TIMESTAMP,
+      FOREIGN KEY (message_id) REFERENCES messages(id)
+    );
+
+    CREATE TABLE IF NOT EXISTS typing_indicators (
+      id INTEGER PRIMARY KEY AUTOINCREMENT,
+      candidate_id TEXT NOT NULL,
+      sender TEXT NOT NULL,
+      started_at DATETIME DEFAULT CURRENT_TIMESTAMP,
+      expires_at DATETIME,
+      FOREIGN KEY (candidate_id) REFERENCES candidates(id)
+    );
   `;
 
   try {
@@ -201,6 +245,9 @@ function runMigrations() {
     'CREATE INDEX IF NOT EXISTS idx_referrals_referrer ON referrals(referrer_id)',
     'CREATE INDEX IF NOT EXISTS idx_tender_alerts_active ON tender_alerts(active)',
     'CREATE INDEX IF NOT EXISTS idx_job_match_scores ON job_match_scores(candidate_id, score)',
+    'CREATE INDEX IF NOT EXISTS idx_messages_read_at ON messages(candidate_id, read_at)',
+    'CREATE INDEX IF NOT EXISTS idx_conversation_metadata_status ON conversation_metadata(status)',
+    'CREATE INDEX IF NOT EXISTS idx_conversation_metadata_priority ON conversation_metadata(priority)',
   ];
 
   for (const idx of indices) {

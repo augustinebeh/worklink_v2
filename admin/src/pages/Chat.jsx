@@ -28,6 +28,14 @@ import {
   TimerOff,
   AlignLeft,
   AlignJustify,
+  Paperclip,
+  Image,
+  FileText,
+  Filter,
+  AlertTriangle,
+  CheckCircle2,
+  Flag,
+  Download,
 } from 'lucide-react';
 import EmojiPicker from 'emoji-picker-react';
 import Card from '../components/ui/Card';
@@ -76,8 +84,144 @@ function parseUTCTimestamp(timestamp) {
   return new Date(utcTimestamp);
 }
 
+// Format date for message grouping
+function formatDateDivider(date) {
+  const today = new Date();
+  const yesterday = new Date(today);
+  yesterday.setDate(yesterday.getDate() - 1);
+
+  const messageDate = new Date(date);
+
+  if (messageDate.toDateString() === today.toDateString()) {
+    return 'Today';
+  } else if (messageDate.toDateString() === yesterday.toDateString()) {
+    return 'Yesterday';
+  } else {
+    return messageDate.toLocaleDateString('en-SG', {
+      month: 'short',
+      day: 'numeric',
+      timeZone: 'Asia/Singapore'
+    });
+  }
+}
+
+// Group messages by date
+function groupMessagesByDate(messages) {
+  const groups = [];
+  let currentDate = null;
+
+  messages.forEach(msg => {
+    const msgDate = parseUTCTimestamp(msg.created_at).toDateString();
+    if (msgDate !== currentDate) {
+      currentDate = msgDate;
+      groups.push({ type: 'divider', date: msg.created_at });
+    }
+    groups.push({ type: 'message', message: msg });
+  });
+
+  return groups;
+}
+
+// Date divider component
+function DateDivider({ date }) {
+  return (
+    <div className="flex items-center justify-center my-4">
+      <div className="px-3 py-1 rounded-full bg-slate-200 dark:bg-slate-700 text-xs text-slate-600 dark:text-slate-300 font-medium">
+        {formatDateDivider(date)}
+      </div>
+    </div>
+  );
+}
+
+// Priority indicator component
+function PriorityIndicator({ priority }) {
+  const colors = {
+    urgent: 'bg-red-500',
+    high: 'bg-orange-500',
+    normal: 'bg-slate-300 dark:bg-slate-600',
+  };
+
+  return (
+    <span
+      className={clsx('w-2.5 h-2.5 rounded-full', colors[priority] || colors.normal)}
+      title={`Priority: ${priority || 'normal'}`}
+    />
+  );
+}
+
+// Status badge component
+function StatusBadge({ status }) {
+  const variants = {
+    open: { variant: 'primary', icon: MessageSquare },
+    pending: { variant: 'warning', icon: Clock },
+    resolved: { variant: 'success', icon: CheckCircle2 },
+  };
+
+  const config = variants[status] || variants.open;
+  const Icon = config.icon;
+
+  return (
+    <Badge variant={config.variant} size="xs" className="flex items-center gap-1">
+      <Icon className="h-3 w-3" />
+      {status ? status.charAt(0).toUpperCase() + status.slice(1) : 'Open'}
+    </Badge>
+  );
+}
+
+// Escalation badge component
+function EscalationBadge({ escalated, reason }) {
+  if (!escalated) return null;
+
+  return (
+    <div className="relative group">
+      <Badge variant="danger" size="xs" className="flex items-center gap-1">
+        <AlertTriangle className="h-3 w-3" />
+        Escalated
+      </Badge>
+      {reason && (
+        <div className="absolute z-50 bottom-full left-1/2 -translate-x-1/2 mb-2 px-3 py-2 bg-slate-900 text-white text-xs rounded-lg opacity-0 group-hover:opacity-100 transition-opacity whitespace-nowrap pointer-events-none">
+          {reason}
+          <div className="absolute top-full left-1/2 -translate-x-1/2 border-4 border-transparent border-t-slate-900" />
+        </div>
+      )}
+    </div>
+  );
+}
+
+// File attachment in message
+function MessageAttachment({ attachment }) {
+  const isImage = attachment.type?.startsWith('image/') || /\.(jpg|jpeg|png|gif|webp)$/i.test(attachment.url || attachment.filename);
+
+  if (isImage) {
+    return (
+      <div className="mt-2">
+        <img
+          src={attachment.url}
+          alt={attachment.filename || 'Attachment'}
+          className="max-w-full max-h-64 rounded-lg object-contain cursor-pointer hover:opacity-90 transition-opacity"
+          onClick={() => window.open(attachment.url, '_blank')}
+        />
+      </div>
+    );
+  }
+
+  return (
+    <a
+      href={attachment.url}
+      download={attachment.filename}
+      target="_blank"
+      rel="noopener noreferrer"
+      className="mt-2 flex items-center gap-2 px-3 py-2 rounded-lg bg-white/10 hover:bg-white/20 transition-colors"
+    >
+      <FileText className="h-4 w-4" />
+      <span className="text-sm truncate flex-1">{attachment.filename || 'Download file'}</span>
+      <Download className="h-4 w-4" />
+    </a>
+  );
+}
+
 // Message bubble component
-function MessageBubble({ message, isOwn, onFeedback }) {
+function MessageBubble({ message, isOwn, onFeedback, searchHighlight }) {
   const [feedbackGiven, setFeedbackGiven] = useState(message.admin_feedback || null);
   const [isSubmitting, setIsSubmitting] = useState(false);
 
@@ -128,6 +272,30 @@ function MessageBubble({ message, isOwn, onFeedback }) {
 
   const sourceInfo = getSourceInfo();
 
+  // Highlight search matches in content
+  const renderContent = () => {
+    if (!searchHighlight || !message.content) {
+      return <p className="whitespace-pre-wrap break-words text-sm">{message.content}</p>;
+    }
+
+    const regex = new RegExp(`(${searchHighlight.replace(/[.*+?^${}()|[\]\\]/g, '\\$&')})`, 'gi');
+    const parts = message.content.split(regex);
+
+    return (
+      <p className="whitespace-pre-wrap break-words text-sm">
+        {parts.map((part, i) =>
+          regex.test(part) ? (
+            <mark key={i} className="bg-yellow-300 dark:bg-yellow-600 text-inherit rounded px-0.5">
+              {part}
+            </mark>
+          ) : (
+            part
+          )
+        )}
+      </p>
+    );
+  };
+
   return (
     <div className={clsx('flex', isOwn ? 'justify-end' : 'justify-start', 'mb-3')}>
       <div className={clsx(
@@ -144,7 +312,16 @@ function MessageBubble({ message, isOwn, onFeedback }) {
             </span>
           </div>
         )}
-        <p className="whitespace-pre-wrap break-words text-sm">{message.content}</p>
+        {renderContent()}
+
+        {/* Attachments */}
+        {message.attachments && message.attachments.length > 0 && (
+          <div className="space-y-2">
+            {message.attachments.map((att, idx) => (
+              <MessageAttachment key={idx} attachment={att} />
+            ))}
+          </div>
+        )}
 
         {/* Feedback buttons for AI messages */}
         {isAIGenerated && isOwn && (
@@ -198,9 +375,25 @@ function MessageBubble({ message, isOwn, onFeedback }) {
             </span>
           )}
           {isOwn && (
-            message.read
-              ? <CheckCheck className="h-3.5 w-3.5 text-white/70" />
-              : <Check className="h-3.5 w-3.5 text-white/50" />
+            <>
+              {message.read ? (
+                <span className="flex items-center gap-1">
+                  <CheckCheck className="h-3.5 w-3.5 text-white/70" />
+                  {message.read_at && (
+                    <span className="text-xs text-white/50">
+                      Seen {parseUTCTimestamp(message.read_at).toLocaleTimeString('en-SG', {
+                        hour: '2-digit',
+                        minute: '2-digit',
+                        hour12: true,
+                        timeZone: 'Asia/Singapore'
+                      })}
+                    </span>
+                  )}
+                </span>
+              ) : (
+                <Check className="h-3.5 w-3.5 text-white/50" />
+              )}
+            </>
           )}
         </div>
       </div>
@@ -317,6 +510,113 @@ function AIModeSelector({ mode, onChange, candidateId }) {
   );
 }
 
+// Status/Priority dropdown component
+function StatusPriorityDropdown({ type, value, onChange }) {
+  const [isOpen, setIsOpen] = useState(false);
+
+  const options = type === 'status'
+    ? [
+        { value: 'open', label: 'Open', icon: MessageSquare, color: 'text-blue-500' },
+        { value: 'pending', label: 'Pending', icon: Clock, color: 'text-amber-500' },
+        { value: 'resolved', label: 'Resolved', icon: CheckCircle2, color: 'text-emerald-500' },
+      ]
+    : [
+        { value: 'urgent', label: 'Urgent', color: 'text-red-500', dot: 'bg-red-500' },
+        { value: 'high', label: 'High', color: 'text-orange-500', dot: 'bg-orange-500' },
+        { value: 'normal', label: 'Normal', color: 'text-slate-500', dot: 'bg-slate-400' },
+      ];
+
+  const currentOption = options.find(o => o.value === value) || options[options.length - 1];
+
+  return (
+    <div className="relative">
+      <button
+        onClick={() => setIsOpen(!isOpen)}
+        className="flex items-center gap-2 px-3 py-1.5 rounded-lg bg-slate-100 dark:bg-slate-800 hover:bg-slate-200 dark:hover:bg-slate-700 transition-colors text-sm"
+      >
+        {type === 'status' && currentOption.icon && (
+          <currentOption.icon className={clsx('h-4 w-4', currentOption.color)} />
+        )}
+        {type === 'priority' && (
+          <span className={clsx('w-2.5 h-2.5 rounded-full', currentOption.dot)} />
+        )}
+        <span className={currentOption.color}>{currentOption.label}</span>
+      </button>
+
+      {isOpen && (
+        <>
+          <div className="fixed inset-0 z-40" onClick={() => setIsOpen(false)} />
+          <div className="absolute top-full mt-1 right-0 z-50 bg-white dark:bg-slate-800 rounded-lg shadow-lg border border-slate-200 dark:border-slate-700 py-1 min-w-[140px]">
+            {options.map(option => (
+              <button
+                key={option.value}
+                onClick={() => {
+                  onChange(option.value);
+                  setIsOpen(false);
+                }}
+                className={clsx(
+                  'w-full flex items-center gap-2 px-3 py-2 text-sm hover:bg-slate-100 dark:hover:bg-slate-700 transition-colors',
+                  value === option.value && 'bg-slate-50 dark:bg-slate-700/50'
+                )}
+              >
+                {type === 'status' && option.icon && (
+                  <option.icon className={clsx('h-4 w-4', option.color)} />
+                )}
+                {type === 'priority' && (
+                  <span className={clsx('w-2.5 h-2.5 rounded-full', option.dot)} />
+                )}
+                <span className={option.color}>{option.label}</span>
+              </button>
+            ))}
+          </div>
+        </>
+      )}
+    </div>
+  );
+}
+
+// Sidebar filter dropdown
+function SidebarFilterDropdown({ label, value, options, onChange }) {
+  const [isOpen, setIsOpen] = useState(false);
+
+  const currentOption = options.find(o => o.value === value) || options[0];
+
+  return (
+    <div className="relative">
+      <button
+        onClick={() => setIsOpen(!isOpen)}
+        className="flex items-center gap-1.5 px-2 py-1 rounded text-xs bg-slate-100 dark:bg-slate-700 hover:bg-slate-200 dark:hover:bg-slate-600 transition-colors"
+      >
+        <span className="text-slate-500 dark:text-slate-400">{label}:</span>
+        <span className="text-slate-700 dark:text-slate-300">{currentOption.label}</span>
+      </button>
+
+      {isOpen && (
+        <>
+          <div className="fixed inset-0 z-40" onClick={() => setIsOpen(false)} />
+          <div className="absolute top-full mt-1 left-0 z-50 bg-white dark:bg-slate-800 rounded-lg shadow-lg border border-slate-200 dark:border-slate-700 py-1 min-w-[100px]">
+            {options.map(option => (
+              <button
+                key={option.value}
+                onClick={() => {
+                  onChange(option.value);
+                  setIsOpen(false);
+                }}
+                className={clsx(
+                  'w-full text-left px-3 py-1.5 text-xs hover:bg-slate-100 dark:hover:bg-slate-700 transition-colors',
+                  value === option.value && 'bg-slate-50 dark:bg-slate-700/50 font-medium'
+                )}
+              >
+                {option.label}
+              </button>
+            ))}
+          </div>
+        </>
+      )}
+    </div>
+  );
+}
+
 // Conversation item in sidebar
 function ConversationItem({ conversation, active, onClick, collapsed }) {
   const isOnline = conversation.online_status === 'online';
@@ -355,6 +655,11 @@ function ConversationItem({ conversation, active, onClick, collapsed }) {
             {conversation.unread_count}
           </span>
         )}
+        {conversation.escalated && (
+          <span className="absolute top-2 left-2 w-4 h-4 rounded-full bg-amber-500 flex items-center justify-center">
+            <AlertTriangle className="h-2.5 w-2.5 text-white" />
+          </span>
+        )}
       </button>
     );
   }
@@ -388,16 +693,25 @@ function ConversationItem({ conversation, active, onClick, collapsed }) {
       </div>
 
       <div className="flex-1 min-w-0 text-left">
-        <div className="flex items-center justify-between">
-          <span className="font-medium text-slate-900 dark:text-white truncate">
-            {conversation.name}
-          </span>
-          <span className="text-xs text-slate-400">
+        <div className="flex items-center justify-between gap-2">
+          <div className="flex items-center gap-2 min-w-0">
+            <PriorityIndicator priority={conversation.priority} />
+            <span className="font-medium text-slate-900 dark:text-white truncate">
+              {conversation.name}
+            </span>
+          </div>
+          <span className="text-xs text-slate-400 flex-shrink-0">
             {conversation.last_message_at
               ? parseUTCTimestamp(conversation.last_message_at).toLocaleTimeString('en-SG', { hour: '2-digit', minute: '2-digit', timeZone: 'Asia/Singapore' })
               : ''
             }
           </span>
+        </div>
+        <div className="flex items-center gap-2 mt-1">
+          <StatusBadge status={conversation.status} />
+          {conversation.escalated && (
+            <EscalationBadge escalated={true} reason={conversation.escalation_reason} />
+          )}
         </div>
         <div className="flex items-center justify-between mt-0.5">
           <p className="text-sm text-slate-500 dark:text-slate-400 truncate">
@@ -454,6 +768,14 @@ export default function AdminChat() {
   const [aiLoading, setAiLoading] = useState(false);
   const [typingDelayEnabled, setTypingDelayEnabled] = useState(true);
   const [responseStyle, setResponseStyle] = useState('concise'); // 'concise' or 'normal'
+
+  // New feature states
+  const [messageSearchQuery, setMessageSearchQuery] = useState('');
+  const [showMessageSearch, setShowMessageSearch] = useState(false);
+  const [statusFilter, setStatusFilter] = useState('all');
+  const [priorityFilter, setPriorityFilter] = useState('all');
+  const [uploadingFile, setUploadingFile] = useState(false);
+  const fileInputRef = useRef(null);
 
   // Toggle sound and save preference
   const toggleSound = useCallback(() => {
@@ -629,6 +951,8 @@ export default function AdminChat() {
       fetchMessages(selectedConversation.candidate_id);
       fetchAIMode(selectedConversation.candidate_id);
       setAiSuggestion(null); // Clear suggestion when switching conversations
+      setMessageSearchQuery(''); // Clear message search
+      setShowMessageSearch(false);
 
       // Mark messages as read when opening conversation
       if (isConnected && selectedConversation.unread_count > 0) {
@@ -781,6 +1105,105 @@ export default function AdminChat() {
     }
   };
 
+  // Update conversation status
+  const handleStatusChange = async (newStatus) => {
+    if (!selectedConversation) return;
+
+    try {
+      const res = await fetch(`/api/v1/conversations/${selectedConversation.candidate_id}/status`, {
+        method: 'PUT',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ status: newStatus }),
+      });
+      const data = await res.json();
+      if (data.success) {
+        setSelectedConversation(prev => ({ ...prev, status: newStatus }));
+        setConversations(prev => prev.map(c =>
+          c.candidate_id === selectedConversation.candidate_id
+            ? { ...c, status: newStatus }
+            : c
+        ));
+      }
+    } catch (error) {
+      console.error('Failed to update status:', error);
+    }
+  };
+
+  // Update conversation priority
+  const handlePriorityChange = async (newPriority) => {
+    if (!selectedConversation) return;
+
+    try {
+      const res = await fetch(`/api/v1/conversations/${selectedConversation.candidate_id}/priority`, {
+        method: 'PUT',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ priority: newPriority }),
+      });
+      const data = await res.json();
+      if (data.success) {
+        setSelectedConversation(prev => ({ ...prev, priority: newPriority }));
+        setConversations(prev => prev.map(c =>
+          c.candidate_id === selectedConversation.candidate_id
+            ? { ...c, priority: newPriority }
+            : c
+        ));
+      }
+    } catch (error) {
+      console.error('Failed to update priority:', error);
+    }
+  };
+
+  // Resolve conversation
+  const handleResolve = async () => {
+    if (!selectedConversation) return;
+
+    try {
+      const res = await fetch(`/api/v1/conversations/${selectedConversation.candidate_id}/resolve`, {
+        method: 'POST',
+      });
+      const data = await res.json();
+      if (data.success) {
+        setSelectedConversation(prev => ({ ...prev, status: 'resolved' }));
+        setConversations(prev => prev.map(c =>
+          c.candidate_id === selectedConversation.candidate_id
+            ? { ...c, status: 'resolved' }
+            : c
+        ));
+      }
+    } catch (error) {
+      console.error('Failed to resolve conversation:', error);
+    }
+  };
+
+  // Handle file upload
+  const handleFileUpload = async (e) => {
+    const file = e.target.files?.[0];
+    if (!file || !selectedConversation) return;
+
+    setUploadingFile(true);
+    try {
+      const formData = new FormData();
+      formData.append('file', file);
+      formData.append('candidateId', selectedConversation.candidate_id);
+
+      const res = await fetch('/api/v1/chat/attachments', {
+        method: 'POST',
+        body: formData,
+      });
+      const data = await res.json();
+      if (data.success) {
+        fetchMessages(selectedConversation.candidate_id);
+      }
+    } catch (error) {
+      console.error('Failed to upload file:', error);
+    } finally {
+      setUploadingFile(false);
+      if (fileInputRef.current) {
+        fileInputRef.current.value = '';
+      }
+    }
+  };
+
   const sendMessage = async () => {
     if (!newMessage.trim() || !selectedConversation) return;
 
@@ -859,10 +1282,34 @@ export default function AdminChat() {
     }
   };
 
-  const filteredConversations = conversations.filter(c =>
-    c.name?.toLowerCase().includes(searchTerm.toLowerCase()) ||
-    c.email?.toLowerCase().includes(searchTerm.toLowerCase())
-  );
+  // Filter conversations based on search, status, and priority
+  const filteredConversations = conversations
+    .filter(c =>
+      c.name?.toLowerCase().includes(searchTerm.toLowerCase()) ||
+      c.email?.toLowerCase().includes(searchTerm.toLowerCase())
+    )
+    .filter(c => statusFilter === 'all' || c.status === statusFilter)
+    .filter(c => priorityFilter === 'all' || c.priority === priorityFilter)
+    .sort((a, b) => {
+      // Escalated first
+      if (a.escalated && !b.escalated) return -1;
+      if (!a.escalated && b.escalated) return 1;
+      // Then by priority
+      const priorityOrder = { urgent: 0, high: 1, normal: 2 };
+      const aPriority = priorityOrder[a.priority] ?? 2;
+      const bPriority = priorityOrder[b.priority] ?? 2;
+      if (aPriority !== bPriority) return aPriority - bPriority;
+      // Then by last message time
+      return new Date(b.last_message_at || 0) - new Date(a.last_message_at || 0);
+    });
+
+  // Filter messages based on message search query
+  const filteredMessages = messageSearchQuery
+    ? messages.filter(m => m.content?.toLowerCase().includes(messageSearchQuery.toLowerCase()))
+    : messages;
+
+  // Group messages by date
+  const groupedMessages = groupMessagesByDate(filteredMessages);
 
   const filteredCandidates = candidates.filter(c =>
     c.name?.toLowerCase().includes(searchTerm.toLowerCase()) ||
@@ -900,7 +1347,7 @@ export default function AdminChat() {
                   </div>
                 </div>
 
-                <div className="relative">
+                <div className="relative mb-3">
                   <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-slate-400" />
                   <input
                     type="text"
@@ -908,6 +1355,33 @@ export default function AdminChat() {
                     value={searchTerm}
                     onChange={(e) => setSearchTerm(e.target.value)}
                     className="w-full pl-10 pr-4 py-2 rounded-lg bg-slate-50 dark:bg-slate-800 border border-slate-200 dark:border-slate-700 text-slate-900 dark:text-white text-sm placeholder-slate-400 focus:outline-none focus:ring-2 focus:ring-primary-500 focus:border-transparent"
+                  />
+                </div>
+
+                {/* Filters */}
+                <div className="flex items-center gap-2">
+                  <Filter className="h-3.5 w-3.5 text-slate-400" />
+                  <SidebarFilterDropdown
+                    label="Status"
+                    value={statusFilter}
+                    onChange={setStatusFilter}
+                    options={[
+                      { value: 'all', label: 'All' },
+                      { value: 'open', label: 'Open' },
+                      { value: 'pending', label: 'Pending' },
+                      { value: 'resolved', label: 'Resolved' },
+                    ]}
+                  />
+                  <SidebarFilterDropdown
+                    label="Priority"
+                    value={priorityFilter}
+                    onChange={setPriorityFilter}
+                    options={[
+                      { value: 'all', label: 'All' },
+                      { value: 'urgent', label: 'Urgent' },
+                      { value: 'high', label: 'High' },
+                      { value: 'normal', label: 'Normal' },
+                    ]}
                   />
                 </div>
               </>
@@ -990,9 +1464,14 @@ export default function AdminChat() {
                       )} />
                     </div>
                     <div>
-                      <h3 className="font-semibold text-slate-900 dark:text-white">
-                        {selectedConversation.name}
-                      </h3>
+                      <div className="flex items-center gap-2">
+                        <h3 className="font-semibold text-slate-900 dark:text-white">
+                          {selectedConversation.name}
+                        </h3>
+                        {selectedConversation.escalated && (
+                          <EscalationBadge escalated={true} reason={selectedConversation.escalation_reason} />
+                        )}
+                      </div>
                       <p className="text-sm text-slate-500 dark:text-slate-400 flex items-center gap-1">
                         {selectedConversation.online_status === 'online' ? (
                           <Badge variant="success" size="xs">Online</Badge>
@@ -1008,7 +1487,48 @@ export default function AdminChat() {
                       </p>
                     </div>
                   </div>
-                  <div className="flex items-center gap-3">
+                  <div className="flex items-center gap-2">
+                    {/* Message search toggle */}
+                    <button
+                      onClick={() => setShowMessageSearch(!showMessageSearch)}
+                      className={clsx(
+                        'p-2 rounded-lg transition-colors',
+                        showMessageSearch
+                          ? 'bg-primary-500 text-white'
+                          : 'text-slate-400 hover:text-slate-600 hover:bg-slate-100 dark:hover:bg-slate-800'
+                      )}
+                      title="Search messages"
+                    >
+                      <Search className="h-5 w-5" />
+                    </button>
+
+                    {/* Status dropdown */}
+                    <StatusPriorityDropdown
+                      type="status"
+                      value={selectedConversation.status || 'open'}
+                      onChange={handleStatusChange}
+                    />
+
+                    {/* Priority dropdown */}
+                    <StatusPriorityDropdown
+                      type="priority"
+                      value={selectedConversation.priority || 'normal'}
+                      onChange={handlePriorityChange}
+                    />
+
+                    {/* Resolve button */}
+                    {selectedConversation.status !== 'resolved' && (
+                      <button
+                        onClick={handleResolve}
+                        className="flex items-center gap-1.5 px-3 py-1.5 rounded-lg bg-emerald-500 text-white text-sm font-medium hover:bg-emerald-600 transition-colors"
+                      >
+                        <CheckCircle2 className="h-4 w-4" />
+                        Resolve
+                      </button>
+                    )}
+
+                    <div className="w-px h-6 bg-slate-200 dark:bg-slate-700" />
+
                     <AIModeSelector
                       mode={aiMode}
                       onChange={handleAIModeChange}
@@ -1064,6 +1584,36 @@ export default function AdminChat() {
                     </button>
                   </div>
                 </div>
+
+                {/* Message search bar */}
+                {showMessageSearch && (
+                  <div className="mt-3 flex items-center gap-2">
+                    <div className="flex-1 relative">
+                      <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-slate-400" />
+                      <input
+                        type="text"
+                        placeholder="Search in this conversation..."
+                        value={messageSearchQuery}
+                        onChange={(e) => setMessageSearchQuery(e.target.value)}
+                        className="w-full pl-10 pr-10 py-2 rounded-lg bg-slate-50 dark:bg-slate-800 border border-slate-200 dark:border-slate-700 text-slate-900 dark:text-white text-sm placeholder-slate-400 focus:outline-none focus:ring-2 focus:ring-primary-500 focus:border-transparent"
+                        autoFocus
+                      />
+                      {messageSearchQuery && (
+                        <button
+                          onClick={() => setMessageSearchQuery('')}
+                          className="absolute right-3 top-1/2 -translate-y-1/2 text-slate-400 hover:text-slate-600"
+                        >
+                          <X className="h-4 w-4" />
+                        </button>
+                      )}
+                    </div>
+                    {messageSearchQuery && (
+                      <span className="text-sm text-slate-500">
+                        {filteredMessages.length} result{filteredMessages.length !== 1 ? 's' : ''}
+                      </span>
+                    )}
+                  </div>
+                )}
               </div>
 
               {/* Quick replies bar */}
@@ -1085,19 +1635,28 @@ export default function AdminChat() {
 
               {/* Messages */}
               <div className="flex-1 overflow-y-auto p-6">
-                {messages.length === 0 ? (
+                {filteredMessages.length === 0 ? (
                   <div className="h-full flex flex-col items-center justify-center text-slate-400">
                     <MessageSquare className="h-12 w-12 mb-3 opacity-30" />
-                    <p className="text-sm">No messages yet</p>
-                    <p className="text-xs mt-1">Send a message to start the conversation</p>
+                    <p className="text-sm">
+                      {messageSearchQuery ? 'No messages match your search' : 'No messages yet'}
+                    </p>
+                    {!messageSearchQuery && (
+                      <p className="text-xs mt-1">Send a message to start the conversation</p>
+                    )}
                   </div>
                 ) : (
-                  messages.map(msg => (
-                    <MessageBubble
-                      key={msg.id}
-                      message={msg}
-                      isOwn={msg.sender === 'admin'}
-                    />
+                  groupedMessages.map((item, idx) => (
+                    item.type === 'divider' ? (
+                      <DateDivider key={`divider-${idx}`} date={item.date} />
+                    ) : (
+                      <MessageBubble
+                        key={item.message.id}
+                        message={item.message}
+                        isOwn={item.message.sender === 'admin'}
+                        searchHighlight={messageSearchQuery}
+                      />
+                    )
                   ))
                 )}
                 <div ref={messagesEndRef} />
@@ -1141,6 +1700,33 @@ export default function AdminChat() {
                   >
                     <Smile className="h-5 w-5" />
                   </button>
+
+                  {/* File upload button */}
+                  <input
+                    type="file"
+                    ref={fileInputRef}
+                    onChange={handleFileUpload}
+                    className="hidden"
+                    accept="image/*,.pdf,.doc,.docx,.txt,.xlsx,.xls"
+                  />
+                  <button
+                    onClick={() => fileInputRef.current?.click()}
+                    disabled={uploadingFile}
+                    className={clsx(
+                      'p-2.5 rounded-lg transition-colors',
+                      uploadingFile
+                        ? 'bg-slate-200 dark:bg-slate-700 text-slate-400'
+                        : 'bg-slate-100 dark:bg-slate-800 text-slate-500 hover:text-slate-700 dark:hover:text-slate-300'
+                    )}
+                    title="Attach file"
+                  >
+                    {uploadingFile ? (
+                      <div className="h-5 w-5 border-2 border-slate-400 border-t-transparent rounded-full animate-spin" />
+                    ) : (
+                      <Paperclip className="h-5 w-5" />
+                    )}
+                  </button>
+
                   <div className="flex-1 relative">
                     <textarea
                       ref={inputRef}

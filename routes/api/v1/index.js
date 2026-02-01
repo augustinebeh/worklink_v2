@@ -37,6 +37,11 @@ const mlRoutes = require('./ml');
 const adMlRoutes = require('./ad-ml');
 const telegramGroupsRoutes = require('./telegram-groups');
 
+// Enhanced Chat Features
+const conversationsRoutes = require('./conversations');
+const chatAttachmentsRoutes = require('./chat-attachments');
+const quickRepliesRoutes = require('./quick-replies');
+
 // Mount routes
 router.use('/auth', authRoutes);
 router.use('/candidates', candidateRoutes);
@@ -67,6 +72,11 @@ router.use('/ai-chat', aiChatRoutes);
 router.use('/ml', mlRoutes);
 router.use('/ad-ml', adMlRoutes);
 router.use('/telegram-groups', telegramGroupsRoutes);
+
+// Enhanced Chat Features
+router.use('/conversations', conversationsRoutes);
+router.use('/chat/attachments', chatAttachmentsRoutes);
+router.use('/quick-replies', quickRepliesRoutes);
 
 // API info endpoint
 router.get('/', (req, res) => {
