@@ -110,12 +110,17 @@ function setupWebSocket(server) {
     const isAdmin = url.searchParams.get('admin') === 'true';
     const token = url.searchParams.get('token');
 
+    logger.info(`🔌 [WS] Connection attempt: isAdmin=${isAdmin}, candidateId=${candidateId}, hasToken=${!!token}`);
+
     // Validate authentication
     const authResult = validateConnection(token, candidateId, isAdmin);
     if (!authResult.valid) {
+      logger.error(`🔌 [WS] Auth failed: ${authResult.error}`);
       ws.close(4001, authResult.error || 'Authentication failed');
       return;
     }
+
+    logger.info(`🔌 [WS] Auth success: role=${authResult.role}`);
 
     if (isAdmin) {
       handleAdminConnection(ws);
