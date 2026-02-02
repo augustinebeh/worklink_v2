@@ -1,16 +1,111 @@
 import { useState, useEffect } from 'react';
-import { TrophyIcon, CrownIcon, FlameIcon, ZapIcon } from 'lucide-react';
+import {
+  TrophyIcon,
+  CrownIcon,
+  FlameIcon,
+  ZapIcon,
+  ClockIcon,
+  SparklesIcon,
+  StarIcon,
+  UsersIcon,
+  RocketIcon,
+} from 'lucide-react';
 import { useAuth } from '../contexts/AuthContext';
 import { clsx } from 'clsx';
 import { calculateLevel } from '../utils/gamification';
 import ProfileAvatar from '../components/ui/ProfileAvatar';
-import { FilterTabs, EmptyState, LoadingSkeleton } from '../components/common';
+
+// Coming Soon Overlay
+function ComingSoonOverlay() {
+  return (
+    <div className="fixed inset-0 z-50 flex items-center justify-center p-6 bg-[#020817]/95 backdrop-blur-sm">
+      <div className="w-full max-w-md text-center">
+        {/* Animated icon */}
+        <div className="relative mb-8">
+          <div className="w-32 h-32 mx-auto rounded-full bg-gradient-to-br from-violet-500/20 to-cyan-500/20 flex items-center justify-center">
+            <div className="absolute inset-0 rounded-full bg-violet-500/10 animate-ping" style={{ animationDuration: '2s' }} />
+            <TrophyIcon className="h-16 w-16 text-violet-400" />
+          </div>
+          {/* Floating badges */}
+          <div className="absolute top-0 left-1/4 -translate-x-1/2 animate-bounce" style={{ animationDelay: '0.2s' }}>
+            <div className="w-10 h-10 rounded-full bg-amber-500/20 border border-amber-500/30 flex items-center justify-center">
+              <CrownIcon className="h-5 w-5 text-amber-400" />
+            </div>
+          </div>
+          <div className="absolute top-1/4 right-0 animate-bounce" style={{ animationDelay: '0.5s' }}>
+            <div className="w-8 h-8 rounded-full bg-emerald-500/20 border border-emerald-500/30 flex items-center justify-center">
+              <StarIcon className="h-4 w-4 text-emerald-400" />
+            </div>
+          </div>
+          <div className="absolute bottom-0 left-0 animate-bounce" style={{ animationDelay: '0.8s' }}>
+            <div className="w-8 h-8 rounded-full bg-cyan-500/20 border border-cyan-500/30 flex items-center justify-center">
+              <ZapIcon className="h-4 w-4 text-cyan-400" />
+            </div>
+          </div>
+        </div>
+
+        {/* Title */}
+        <h1 className="text-3xl font-bold text-white mb-3">
+          Leaderboard Coming Soon
+        </h1>
+
+        <p className="text-white/60 text-lg mb-8">
+          We're building something exciting! Compete with other workers and climb to the top.
+        </p>
+
+        {/* Feature preview */}
+        <div className="space-y-3 mb-8">
+          <div className="flex items-center gap-4 p-4 rounded-2xl bg-white/[0.02] border border-white/[0.05]">
+            <div className="w-12 h-12 rounded-xl bg-violet-500/20 flex items-center justify-center">
+              <TrophyIcon className="h-6 w-6 text-violet-400" />
+            </div>
+            <div className="flex-1 text-left">
+              <h3 className="text-white font-semibold">Weekly Rankings</h3>
+              <p className="text-white/40 text-sm">Compete for the top spot every week</p>
+            </div>
+          </div>
+
+          <div className="flex items-center gap-4 p-4 rounded-2xl bg-white/[0.02] border border-white/[0.05]">
+            <div className="w-12 h-12 rounded-xl bg-emerald-500/20 flex items-center justify-center">
+              <SparklesIcon className="h-6 w-6 text-emerald-400" />
+            </div>
+            <div className="flex-1 text-left">
+              <h3 className="text-white font-semibold">Exclusive Rewards</h3>
+              <p className="text-white/40 text-sm">Top performers earn special bonuses</p>
+            </div>
+          </div>
+
+          <div className="flex items-center gap-4 p-4 rounded-2xl bg-white/[0.02] border border-white/[0.05]">
+            <div className="w-12 h-12 rounded-xl bg-amber-500/20 flex items-center justify-center">
+              <UsersIcon className="h-6 w-6 text-amber-400" />
+            </div>
+            <div className="flex-1 text-left">
+              <h3 className="text-white font-semibold">Community Stats</h3>
+              <p className="text-white/40 text-sm">See how you stack up against others</p>
+            </div>
+          </div>
+        </div>
+
+        {/* CTA */}
+        <div className="p-4 rounded-2xl bg-gradient-to-br from-violet-500/10 to-cyan-500/10 border border-violet-500/20">
+          <div className="flex items-center justify-center gap-2 mb-2">
+            <RocketIcon className="h-5 w-5 text-violet-400" />
+            <span className="text-white font-semibold">Get Ready!</span>
+          </div>
+          <p className="text-white/50 text-sm">
+            Complete quests and earn XP now to get a head start when the leaderboard launches!
+          </p>
+        </div>
+      </div>
+    </div>
+  );
+}
 
 function RankBadge({ rank }) {
-  if (rank === 1) return <div className="w-8 h-8 rounded-full bg-gradient-to-br from-amber-400 to-yellow-600 flex items-center justify-center"><CrownIcon className="h-4 w-4 text-white" /></div>;
-  if (rank === 2) return <div className="w-8 h-8 rounded-full bg-gradient-to-br from-slate-300 to-slate-500 flex items-center justify-center"><span className="text-white font-bold text-sm">2</span></div>;
-  if (rank === 3) return <div className="w-8 h-8 rounded-full bg-gradient-to-br from-amber-600 to-amber-800 flex items-center justify-center"><span className="text-white font-bold text-sm">3</span></div>;
-  return <div className="w-8 h-8 rounded-full bg-white/5 flex items-center justify-center"><span className="text-white/50 font-medium text-sm">{rank}</span></div>;
+  if (rank === 1) return <div className="w-10 h-10 rounded-full bg-gradient-to-br from-amber-400 to-yellow-600 flex items-center justify-center shadow-lg shadow-amber-500/30"><CrownIcon className="h-5 w-5 text-white" /></div>;
+  if (rank === 2) return <div className="w-10 h-10 rounded-full bg-gradient-to-br from-slate-300 to-slate-500 flex items-center justify-center"><span className="text-white font-bold">2</span></div>;
+  if (rank === 3) return <div className="w-10 h-10 rounded-full bg-gradient-to-br from-amber-600 to-amber-800 flex items-center justify-center"><span className="text-white font-bold">3</span></div>;
+  return <div className="w-10 h-10 rounded-full bg-white/5 flex items-center justify-center"><span className="text-white/50 font-medium">{rank}</span></div>;
 }
 
 function LeaderboardItem({ player, rank, isCurrentUser }) {
@@ -20,9 +115,9 @@ function LeaderboardItem({ player, rank, isCurrentUser }) {
     <div className={clsx(
       'flex items-center gap-4 p-4 rounded-2xl transition-all',
       isCurrentUser
-        ? 'bg-emerald-500/10 border-2 border-emerald-500/30'
+        ? 'bg-gradient-to-r from-emerald-500/10 to-cyan-500/10 border-2 border-emerald-500/30'
         : rank <= 3
-          ? 'bg-[#0a1628]/80 border border-amber-500/20'
+          ? 'bg-gradient-to-r from-amber-500/5 to-orange-500/5 border border-amber-500/20'
           : 'bg-[#0a1628]/50 border border-white/[0.05]'
     )}>
       <RankBadge rank={rank} />
@@ -38,7 +133,7 @@ function LeaderboardItem({ player, rank, isCurrentUser }) {
       <div className="flex-1 min-w-0">
         <h3 className={clsx('font-semibold truncate', isCurrentUser ? 'text-emerald-400' : 'text-white')}>
           {player.name}
-          {isCurrentUser && <span className="text-xs ml-1">(You)</span>}
+          {isCurrentUser && <span className="text-xs ml-1 text-emerald-400/70">(You)</span>}
         </h3>
         <div className="flex items-center gap-2 mt-0.5">
           <span className="px-2 py-0.5 rounded-md bg-violet-500/20 text-violet-400 text-xs font-medium">
@@ -49,13 +144,18 @@ function LeaderboardItem({ player, rank, isCurrentUser }) {
               <FlameIcon className="h-3 w-3" /> {player.streak_days}
             </span>
           )}
+          {rank <= 3 && (
+            <span className="flex items-center gap-1 text-xs text-amber-400">
+              <StarIcon className="h-3 w-3" /> Top {rank}
+            </span>
+          )}
         </div>
       </div>
 
       <div className="text-right">
         <div className="flex items-center gap-1 justify-end">
           <ZapIcon className="h-4 w-4 text-violet-400" />
-          <span className="text-lg font-bold text-white">{(player.xp || 0).toLocaleString()}</span>
+          <span className="text-xl font-bold text-white">{(player.xp || 0).toLocaleString()}</span>
         </div>
         <span className="text-xs text-white/40">XP</span>
       </div>
@@ -67,17 +167,19 @@ export default function Leaderboard() {
   const { user } = useAuth();
   const [players, setPlayers] = useState([]);
   const [loading, setLoading] = useState(true);
-  const [period, setPeriod] = useState('all');
   const [userRank, setUserRank] = useState(null);
+
+  // Coming soon flag - set to true to show the overlay
+  const isComingSoon = true;
 
   useEffect(() => {
     fetchLeaderboard();
-  }, [period]);
+  }, []);
 
   const fetchLeaderboard = async () => {
     setLoading(true);
     try {
-      const res = await fetch(`/api/v1/gamification/leaderboard?period=${period}&limit=50`);
+      const res = await fetch(`/api/v1/gamification/leaderboard?limit=50`);
       const data = await res.json();
       if (data.success) {
         setPlayers(data.data || []);
@@ -95,14 +197,11 @@ export default function Leaderboard() {
 
   const currentUserData = user ? players.find(p => p.id === user.id) : null;
 
-  const tabs = [
-    { id: 'all', label: 'All Time' },
-    { id: 'monthly', label: 'This Month' },
-    { id: 'weekly', label: 'This Week' },
-  ];
-
   return (
     <div className="min-h-screen bg-[#020817] pb-24">
+      {/* Coming Soon Overlay */}
+      {isComingSoon && <ComingSoonOverlay />}
+
       {/* Header Card */}
       <div className="px-4 pt-4">
         <div className="relative rounded-3xl overflow-hidden">
@@ -122,18 +221,38 @@ export default function Leaderboard() {
               </div>
             </div>
 
-            {userRank && (
-              <div className="flex items-center justify-between p-4 rounded-2xl bg-emerald-500/10 border border-emerald-500/30">
+            {/* Stats row */}
+            <div className="grid grid-cols-3 gap-3">
+              <div className="p-3 rounded-2xl bg-amber-500/10 border border-amber-500/20 text-center">
+                <CrownIcon className="h-5 w-5 text-amber-400 mx-auto mb-1" />
+                <p className="text-xs text-white/40">Top Prize</p>
+                <p className="text-lg font-bold text-amber-400">$50</p>
+              </div>
+              <div className="p-3 rounded-2xl bg-violet-500/10 border border-violet-500/20 text-center">
+                <UsersIcon className="h-5 w-5 text-violet-400 mx-auto mb-1" />
+                <p className="text-xs text-white/40">Players</p>
+                <p className="text-lg font-bold text-white">{players.length}</p>
+              </div>
+              <div className="p-3 rounded-2xl bg-emerald-500/10 border border-emerald-500/20 text-center">
+                <ZapIcon className="h-5 w-5 text-emerald-400 mx-auto mb-1" />
+                <p className="text-xs text-white/40">Your Rank</p>
+                <p className="text-lg font-bold text-emerald-400">{userRank ? `#${userRank}` : '-'}</p>
+              </div>
+            </div>
+
+            {/* Your position card */}
+            {userRank && currentUserData && (
+              <div className="mt-4 flex items-center justify-between p-4 rounded-2xl bg-gradient-to-r from-emerald-500/10 to-cyan-500/10 border border-emerald-500/30">
                 <div className="flex items-center gap-3">
                   <RankBadge rank={userRank} />
                   <div>
-                    <p className="text-white/50 text-sm">Your Rank</p>
-                    <p className="text-emerald-400 font-bold text-lg">#{userRank}</p>
+                    <p className="text-white/50 text-sm">Your Position</p>
+                    <p className="text-emerald-400 font-bold text-xl">#{userRank}</p>
                   </div>
                 </div>
                 <div className="text-right">
                   <p className="text-white/50 text-sm">Your XP</p>
-                  <p className="text-white font-bold text-lg">{(currentUserData?.xp || user?.xp || 0).toLocaleString()}</p>
+                  <p className="text-white font-bold text-xl">{(currentUserData?.xp || user?.xp || 0).toLocaleString()}</p>
                 </div>
               </div>
             )}
@@ -141,19 +260,87 @@ export default function Leaderboard() {
         </div>
       </div>
 
-      <div className="px-4 mt-4">
-        <FilterTabs tabs={tabs} activeFilter={period} onFilterChange={setPeriod} variant="violet" />
-      </div>
+      {/* Top 3 podium */}
+      {!loading && players.length >= 3 && (
+        <div className="px-4 mt-6">
+          <h2 className="text-lg font-bold text-white mb-4 flex items-center gap-2">
+            <CrownIcon className="h-5 w-5 text-amber-400" />
+            Top Players
+          </h2>
+          <div className="flex items-end justify-center gap-3">
+            {/* 2nd place */}
+            <div className="flex-1 text-center">
+              <ProfileAvatar
+                name={players[1]?.name}
+                photoUrl={players[1]?.profile_photo}
+                level={calculateLevel(players[1]?.xp || 0)}
+                size="lg"
+                className="mx-auto mb-2"
+              />
+              <div className="p-3 rounded-2xl bg-gradient-to-b from-slate-400/20 to-slate-600/10 border border-slate-400/30">
+                <p className="text-white font-semibold text-sm truncate">{players[1]?.name}</p>
+                <p className="text-slate-400 text-xs">{(players[1]?.xp || 0).toLocaleString()} XP</p>
+                <div className="mt-2 text-2xl font-bold text-slate-300">2nd</div>
+              </div>
+            </div>
 
-      <div className="px-4 py-4">
+            {/* 1st place */}
+            <div className="flex-1 text-center">
+              <div className="relative">
+                <CrownIcon className="h-8 w-8 text-amber-400 mx-auto mb-1 animate-bounce" style={{ animationDuration: '2s' }} />
+                <ProfileAvatar
+                  name={players[0]?.name}
+                  photoUrl={players[0]?.profile_photo}
+                  level={calculateLevel(players[0]?.xp || 0)}
+                  size="xl"
+                  className="mx-auto mb-2"
+                />
+              </div>
+              <div className="p-4 rounded-2xl bg-gradient-to-b from-amber-400/20 to-yellow-600/10 border border-amber-400/30">
+                <p className="text-white font-bold truncate">{players[0]?.name}</p>
+                <p className="text-amber-400 text-sm">{(players[0]?.xp || 0).toLocaleString()} XP</p>
+                <div className="mt-2 text-3xl font-bold text-amber-400">1st</div>
+              </div>
+            </div>
+
+            {/* 3rd place */}
+            <div className="flex-1 text-center">
+              <ProfileAvatar
+                name={players[2]?.name}
+                photoUrl={players[2]?.profile_photo}
+                level={calculateLevel(players[2]?.xp || 0)}
+                size="lg"
+                className="mx-auto mb-2"
+              />
+              <div className="p-3 rounded-2xl bg-gradient-to-b from-amber-600/20 to-amber-800/10 border border-amber-600/30">
+                <p className="text-white font-semibold text-sm truncate">{players[2]?.name}</p>
+                <p className="text-amber-600 text-xs">{(players[2]?.xp || 0).toLocaleString()} XP</p>
+                <div className="mt-2 text-2xl font-bold text-amber-600">3rd</div>
+              </div>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* Full rankings */}
+      <div className="px-4 mt-6">
+        <h2 className="text-lg font-bold text-white mb-3 flex items-center gap-2">
+          <TrophyIcon className="h-5 w-5 text-violet-400" />
+          Full Rankings
+        </h2>
+
         {loading ? (
-          <LoadingSkeleton count={5} height="h-20" />
+          <div className="space-y-3">
+            {[1, 2, 3, 4, 5].map(i => (
+              <div key={i} className="h-20 rounded-2xl bg-white/[0.02] animate-pulse" />
+            ))}
+          </div>
         ) : players.length === 0 ? (
-          <EmptyState
-            icon={TrophyIcon}
-            title="No players yet"
-            description="Be the first to earn XP!"
-          />
+          <div className="text-center py-12">
+            <TrophyIcon className="h-16 w-16 text-white/10 mx-auto mb-4" />
+            <h3 className="text-white font-semibold mb-2">No players yet</h3>
+            <p className="text-white/40 text-sm">Be the first to earn XP!</p>
+          </div>
         ) : (
           <div className="space-y-3">
             {players.map((player, index) => (

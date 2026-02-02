@@ -120,7 +120,26 @@ router.get('/achievements', (req, res) => {
   }
 });
 
-// Unlock achievement
+// Get user's achievements with claimed status
+router.get('/achievements/user/:candidateId', (req, res) => {
+  try {
+    const candidateId = req.params.candidateId;
+
+    // Get user's unlocked achievements with claimed status
+    const userAchievements = db.prepare(`
+      SELECT ca.*, a.name, a.description, a.icon, a.category, a.xp_reward, a.rarity
+      FROM candidate_achievements ca
+      JOIN achievements a ON ca.achievement_id = a.id
+      WHERE ca.candidate_id = ?
+    `).all(candidateId);
+
+    res.json({ success: true, data: userAchievements });
+  } catch (error) {
+    res.status(500).json({ success: false, error: error.message });
+  }
+});
+
+// Unlock achievement (does NOT auto-award XP - must be claimed separately)
 router.post('/achievements/unlock', (req, res) => {
   try {
     const { candidate_id, achievement_id } = req.body;
@@ -131,25 +150,84 @@ router.post('/achievements/unlock', (req, res) => {
     ).get(candidate_id, achievement_id);
 
     if (existing) {
-      return res.json({ success: true, already_unlocked: true });
+      return res.json({ success: true, already_unlocked: true, claimed: existing.claimed === 1 });
+    }
+
+    // Get achievement info
+    const achievement = db.prepare('SELECT * FROM achievements WHERE id = ?').get(achievement_id);
+    if (!achievement) {
+      return res.status(404).json({ success: false, error: 'Achievement not found' });
+    }
+
+    // Unlock achievement (but don't award XP yet - user must claim)
+    db.prepare(`
+      INSERT INTO candidate_achievements (candidate_id, achievement_id, claimed)
+      VALUES (?, ?, 0)
+    `).run(candidate_id, achievement_id);
+
+    res.json({
+      success: true,
+      data: {
+        achievement,
+        unlocked: true,
+        claimed: false,
+      },
+    });
+  } catch (error) {
+    res.status(500).json({ success: false, error: error.message });
+  }
+});
+
+// Claim achievement XP reward
+router.post('/achievements/:achievementId/claim', (req, res) => {
+  try {
+    const { candidateId, candidate_id } = req.body;
+    const finalCandidateId = candidateId || candidate_id;
+    const achievementId = req.params.achievementId;
+
+    // Check if achievement is unlocked
+    const userAchievement = db.prepare(`
+      SELECT * FROM candidate_achievements
+      WHERE candidate_id = ? AND achievement_id = ?
+    `).get(finalCandidateId, achievementId);
+
+    if (!userAchievement) {
+      return res.status(400).json({ success: false, error: 'Achievement not unlocked' });
+    }
+
+    if (userAchievement.claimed === 1) {
+      return res.status(400).json({ success: false, error: 'Achievement already claimed' });
     }
 
     // Get achievement XP reward
-    const achievement = db.prepare('SELECT * FROM achievements WHERE id = ?').get(achievement_id);
+    const achievement = db.prepare('SELECT * FROM achievements WHERE id = ?').get(achievementId);
+    if (!achievement) {
+      return res.status(404).json({ success: false, error: 'Achievement not found' });
+    }
 
-    // Unlock achievement
+    // Mark as claimed
     db.prepare(`
-      INSERT INTO candidate_achievements (candidate_id, achievement_id)
-      VALUES (?, ?)
-    `).run(candidate_id, achievement_id);
+      UPDATE candidate_achievements
+      SET claimed = 1, claimed_at = CURRENT_TIMESTAMP
+      WHERE candidate_id = ? AND achievement_id = ?
+    `).run(finalCandidateId, achievementId);
 
     // Award XP
     if (achievement.xp_reward > 0) {
-      db.prepare('UPDATE candidates SET xp = xp + ? WHERE id = ?').run(achievement.xp_reward, candidate_id);
+      db.prepare('UPDATE candidates SET xp = xp + ? WHERE id = ?').run(achievement.xp_reward, finalCandidateId);
       db.prepare(`
         INSERT INTO xp_transactions (candidate_id, amount, reason, reference_id)
-        VALUES (?, ?, 'achievement', ?)
-      `).run(candidate_id, achievement.xp_reward, achievement_id);
+        VALUES (?, ?, 'achievement_claim', ?)
+      `).run(finalCandidateId, achievement.xp_reward, achievementId);
+    }
+
+    // Check for level up
+    const candidate = db.prepare('SELECT xp, level FROM candidates WHERE id = ?').get(finalCandidateId);
+    const newLevel = calculateLevel(candidate.xp);
+    const leveledUp = newLevel > candidate.level;
+
+    if (leveledUp) {
+      db.prepare('UPDATE candidates SET level = ? WHERE id = ?').run(newLevel, finalCandidateId);
     }
 
     res.json({
@@ -157,9 +235,74 @@ router.post('/achievements/unlock', (req, res) => {
       data: {
         achievement,
         xp_awarded: achievement.xp_reward,
+        new_xp: candidate.xp,
+        new_level: leveledUp ? newLevel : candidate.level,
+        leveled_up: leveledUp,
       },
     });
   } catch (error) {
+    console.error('Achievement claim error:', error);
+    res.status(500).json({ success: false, error: error.message });
+  }
+});
+
+// Check and unlock automatic achievements (first login, profile complete, verified)
+router.post('/achievements/check/:candidateId', (req, res) => {
+  try {
+    const candidateId = req.params.candidateId;
+    const unlockedAchievements = [];
+
+    // Get candidate info
+    const candidate = db.prepare(`
+      SELECT id, name, phone, profile_photo, address, status, created_at
+      FROM candidates WHERE id = ?
+    `).get(candidateId);
+
+    if (!candidate) {
+      return res.status(404).json({ success: false, error: 'Candidate not found' });
+    }
+
+    // Helper to unlock achievement if not already unlocked
+    const tryUnlock = (achievementId) => {
+      const existing = db.prepare(
+        'SELECT * FROM candidate_achievements WHERE candidate_id = ? AND achievement_id = ?'
+      ).get(candidateId, achievementId);
+
+      if (!existing) {
+        const achievement = db.prepare('SELECT * FROM achievements WHERE id = ?').get(achievementId);
+        if (achievement) {
+          db.prepare(`
+            INSERT INTO candidate_achievements (candidate_id, achievement_id, claimed)
+            VALUES (?, ?, 0)
+          `).run(candidateId, achievementId);
+          unlockedAchievements.push(achievement);
+        }
+      }
+    };
+
+    // ACH012: First login (always unlocked when this check runs)
+    tryUnlock('ACH012');
+
+    // ACH013: Profile complete (100%)
+    const isProfileComplete = !!(candidate.name && candidate.phone && candidate.profile_photo && candidate.address);
+    if (isProfileComplete) {
+      tryUnlock('ACH013');
+    }
+
+    // ACH014: Account verified (status is active)
+    if (candidate.status === 'active') {
+      tryUnlock('ACH014');
+    }
+
+    res.json({
+      success: true,
+      data: {
+        unlocked: unlockedAchievements,
+        count: unlockedAchievements.length,
+      },
+    });
+  } catch (error) {
+    console.error('Achievement check error:', error);
     res.status(500).json({ success: false, error: error.message });
   }
 });

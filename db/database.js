@@ -265,6 +265,8 @@ function createSchema() {
       candidate_id TEXT,
       achievement_id TEXT,
       unlocked_at DATETIME DEFAULT CURRENT_TIMESTAMP,
+      claimed INTEGER DEFAULT 0,
+      claimed_at DATETIME,
       PRIMARY KEY (candidate_id, achievement_id)
     );
 
@@ -767,6 +769,14 @@ function createSchema() {
     db.exec(`ALTER TABLE candidates ADD COLUMN google_id TEXT`);
   } catch (e) {}
 
+  // Add claimed columns to candidate_achievements if not exists
+  try {
+    db.exec(`ALTER TABLE candidate_achievements ADD COLUMN claimed INTEGER DEFAULT 0`);
+  } catch (e) {}
+  try {
+    db.exec(`ALTER TABLE candidate_achievements ADD COLUMN claimed_at DATETIME`);
+  } catch (e) {}
+
   console.log('✅ Schema created successfully');
 }
 
@@ -866,22 +876,41 @@ function seedEssentialData() {
   // Achievements
   if (achievementCount === 0) {
     const achievements = [
-      ['ACH001', 'First Steps', 'Complete your first job', '🎯', 'jobs', 'jobs_completed', 1, 100, 'common'],
-      ['ACH002', 'Getting Started', 'Complete 5 jobs', '⭐', 'jobs', 'jobs_completed', 5, 250, 'common'],
-      ['ACH003', 'Dedicated Worker', 'Complete 25 jobs', '💪', 'jobs', 'jobs_completed', 25, 500, 'rare'],
-      ['ACH004', 'Job Master', 'Complete 100 jobs', '🏆', 'milestone', 'jobs_completed', 100, 1500, 'epic'],
-      ['ACH005', 'Week Warrior', '7-day streak', '🔥', 'streak', 'streak', 7, 200, 'rare'],
-      ['ACH011', 'Fort Knight!', '14-day streak', '⚔️', 'streak', 'streak', 14, 500, 'epic'],
-      ['ACH006', 'MONTH-STER!', '30-day streak', '👑', 'streak', 'streak', 30, 1000, 'legendary'],
-      ['ACH007', 'First Cert', 'Complete first training', '📚', 'training', 'training', 1, 150, 'common'],
-      ['ACH008', 'Recruiter', 'Refer your first friend', '🤝', 'referral', 'referrals', 1, 200, 'common'],
-      ['ACH009', 'Super Recruiter', 'Refer 5 friends', '🌟', 'referral', 'referrals', 5, 500, 'rare'],
-      ['ACH010', 'Perfect Score', 'Get 5-star rating 10 times', '⭐', 'rating', 'five_star', 10, 300, 'rare'],
+      // Welcome & Onboarding achievements (special category)
+      ['ACH012', 'Welcome!', 'Log in for the first time', 'wave', 'special', 'first_login', 1, 50, 'common'],
+      ['ACH013', 'Profile Pro', 'Complete your profile 100%', 'user-check', 'special', 'profile_complete', 1, 100, 'common'],
+      ['ACH014', 'Verified!', 'Get your account approved', 'badge-check', 'special', 'account_verified', 1, 75, 'common'],
+      // Jobs achievements
+      ['ACH001', 'First Steps', 'Complete your first job', 'target', 'milestones', 'jobs_completed', 1, 100, 'common'],
+      ['ACH002', 'Getting Started', 'Complete 5 jobs', 'star', 'milestones', 'jobs_completed', 5, 250, 'common'],
+      ['ACH003', 'Dedicated Worker', 'Complete 25 jobs', 'trophy', 'milestones', 'jobs_completed', 25, 500, 'rare'],
+      ['ACH004', 'Job Master', 'Complete 100 jobs', 'crown', 'milestones', 'jobs_completed', 100, 1500, 'epic'],
+      // Streak achievements
+      ['ACH005', 'Week Warrior', '7-day streak', 'flame', 'streaks', 'streak', 7, 200, 'rare'],
+      ['ACH011', 'Fort Knight!', '14-day streak', 'sword', 'streaks', 'streak', 14, 500, 'epic'],
+      ['ACH006', 'MONTH-STER!', '30-day streak', 'crown', 'streaks', 'streak', 30, 1000, 'legendary'],
+      // Training achievements
+      ['ACH007', 'First Cert', 'Complete first training', 'book-open', 'performance', 'training', 1, 150, 'common'],
+      // Referral achievements (social category)
+      ['ACH008', 'Recruiter', 'Refer your first friend', 'users', 'social', 'referrals', 1, 200, 'common'],
+      ['ACH009', 'Super Recruiter', 'Refer 5 friends', 'users-plus', 'social', 'referrals', 5, 500, 'rare'],
+      // Performance achievements
+      ['ACH010', 'Perfect Score', 'Get 5-star rating 10 times', 'star', 'performance', 'five_star', 10, 300, 'rare'],
     ];
     achievements.forEach(a => {
       db.prepare('INSERT OR IGNORE INTO achievements VALUES (?,?,?,?,?,?,?,?,?)').run(...a);
     });
   }
+
+  // Insert new achievements if they don't exist (for existing databases)
+  const newAchievements = [
+    ['ACH012', 'Welcome!', 'Log in for the first time', 'wave', 'special', 'first_login', 1, 50, 'common'],
+    ['ACH013', 'Profile Pro', 'Complete your profile 100%', 'user-check', 'special', 'profile_complete', 1, 100, 'common'],
+    ['ACH014', 'Verified!', 'Get your account approved', 'badge-check', 'special', 'account_verified', 1, 75, 'common'],
+  ];
+  newAchievements.forEach(a => {
+    db.prepare('INSERT OR IGNORE INTO achievements VALUES (?,?,?,?,?,?,?,?,?)').run(...a);
+  });
 
   // Quests - seed independently
   const questCount = db.prepare('SELECT COUNT(*) as c FROM quests').get().c;
