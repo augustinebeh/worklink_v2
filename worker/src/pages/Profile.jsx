@@ -119,19 +119,6 @@ function ProfileActionModal({ isOpen, onClose, onSelectPhoto, onSelectBorder }) 
     </>
   );
 }
-          </button>
-        </div>
-
-        <button
-          onClick={onClose}
-          className="w-full mt-4 py-3 rounded-xl bg-white/5 text-white/60 font-medium"
-        >
-          Cancel
-        </button>
-      </div>
-    </div>
-  );
-}
 
 // Border Selection Modal
 function BorderSelectionModal({ isOpen, onClose, borders, selectedBorderId, onSelect, userLevel }) {
