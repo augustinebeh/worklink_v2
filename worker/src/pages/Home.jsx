@@ -11,6 +11,8 @@ import {
   StarIcon,
   RefreshCwIcon,
   FlameIcon,
+  WalletIcon,
+  GiftIcon,
 } from 'lucide-react';
 import { useAuth } from '../contexts/AuthContext';
 import { useWebSocket } from '../contexts/WebSocketContext';
@@ -194,7 +196,7 @@ function HomeQuestCard({ quest, onClaim, isClaiming }) {
 }
 
 // League Header Card
-function LeagueCard({ user, userLevel, userXP, thisMonthEarnings, totalJobs, poolEndsIn, xpAnimating, xpBarRef }) {
+function LeagueCard({ user, userLevel, userXP, thisMonthEarnings, totalJobs, xpAnimating, xpBarRef }) {
   const levelTitle = levelTitles[userLevel] || 'Newcomer';
 
   return (
@@ -231,7 +233,7 @@ function LeagueCard({ user, userLevel, userXP, thisMonthEarnings, totalJobs, poo
           <div>
             <h1 className="text-2xl font-bold text-white flex items-center gap-2">
               {levelTitle} League
-              <span className="text-2xl">🏆</span>
+              <TrophyIcon className="h-6 w-6 text-amber-400" />
             </h1>
             <p className="text-white/50 text-sm">Level {userLevel} • {userXP.toLocaleString()} XP</p>
           </div>
@@ -248,10 +250,9 @@ function LeagueCard({ user, userLevel, userXP, thisMonthEarnings, totalJobs, poo
         </div>
 
         {/* Stats */}
-        <div className="grid grid-cols-3 gap-3">
-          <StatPod label="This Month" value={`$${formatMoney(thisMonthEarnings)}`} emoji="💰" color="emerald" whiteValue size="md" />
-          <StatPod label="Jobs Done" value={totalJobs.toString()} emoji="📋" color="violet" whiteValue size="md" />
-          <StatPod label="Next Payout" value={poolEndsIn} emoji="⏰" color="cyan" whiteValue size="md" />
+        <div className="grid grid-cols-2 gap-3">
+          <StatPod label="This Month" value={`$${formatMoney(thisMonthEarnings)}`} icon={WalletIcon} color="emerald" whiteValue size="md" />
+          <StatPod label="Jobs Done" value={totalJobs.toString()} icon={BriefcaseIcon} color="violet" whiteValue size="md" />
         </div>
       </div>
     </div>
@@ -482,13 +483,6 @@ export default function Home() {
   const userLevel = calculateLevel(userXP);
   const totalJobs = user?.total_jobs_completed || 0;
 
-  const getNextPayout = () => {
-    const now = new Date();
-    const daysUntilSunday = 7 - now.getDay();
-    const hours = 23 - now.getHours();
-    return `${daysUntilSunday}d : ${hours}h`;
-  };
-
   const totalPages = Math.ceil(jobs.length / jobsPerPage);
   const paginatedJobs = jobs.slice((currentPage - 1) * jobsPerPage, currentPage * jobsPerPage);
 
@@ -501,7 +495,6 @@ export default function Home() {
           userXP={userXP}
           thisMonthEarnings={thisMonthEarnings}
           totalJobs={totalJobs}
-          poolEndsIn={getNextPayout()}
           xpAnimating={xpAnimating}
           xpBarRef={xpBarRef}
         />
@@ -510,7 +503,7 @@ export default function Home() {
           <div className="px-4 mt-6">
             <div className="flex items-center justify-between mb-3">
               <h2 className="text-white font-semibold flex items-center gap-2">
-                Rewards Ready! <span className="text-lg">🎁</span>
+                Rewards Ready! <GiftIcon className="h-5 w-5 text-amber-400" />
               </h2>
               <Link to="/quests" className="text-emerald-400 text-sm font-medium">
                 All Quests →
@@ -533,7 +526,7 @@ export default function Home() {
           <div className="flex items-center justify-between mb-4">
             <div className="flex items-center gap-2">
               <h2 className="text-white font-semibold text-lg">Job Activity</h2>
-              <span className="text-2xl">📋</span>
+              <BriefcaseIcon className="h-6 w-6 text-emerald-400" />
             </div>
             {totalPages > 1 && (
               <Pagination currentPage={currentPage} totalPages={totalPages} onPageChange={setCurrentPage} />

@@ -10,7 +10,6 @@ import {
   CheckCircleIcon,
   BriefcaseIcon,
   ChevronLeftIcon,
-  AlertCircleIcon,
   ClockIcon as PendingIcon,
 } from 'lucide-react';
 import { useAuth } from '../contexts/AuthContext';
@@ -27,39 +26,41 @@ import {
   isTomorrow as checkIsTomorrow,
 } from '../utils/constants';
 
-// Pending Account Banner
-function PendingAccountBanner() {
+// Pending Account Overlay
+function PendingAccountOverlay() {
   return (
-    <div className="mx-4 mt-4 p-6 rounded-3xl bg-gradient-to-br from-amber-500/20 to-orange-500/10 border border-amber-500/30">
-      <div className="flex items-start gap-4">
-        <div className="w-14 h-14 rounded-2xl bg-amber-500/20 flex items-center justify-center flex-shrink-0">
-          <PendingIcon className="h-7 w-7 text-amber-400" />
-        </div>
-        <div className="flex-1">
-          <h2 className="text-xl font-bold text-white mb-1">Account Pending Approval</h2>
-          <p className="text-white/60 text-sm mb-4">
-            Your account is being reviewed. Once approved, you'll be able to browse and apply for jobs.
-          </p>
-          <div className="space-y-2">
-            <div className="flex items-center gap-2 text-sm">
-              <CheckCircleIcon className="h-4 w-4 text-emerald-400" />
-              <span className="text-white/70">Account created successfully</span>
-            </div>
-            <div className="flex items-center gap-2 text-sm">
-              <div className="w-4 h-4 rounded-full border-2 border-amber-400 border-t-transparent animate-spin" />
-              <span className="text-amber-400">Awaiting admin approval</span>
-            </div>
-            <div className="flex items-center gap-2 text-sm">
-              <div className="w-4 h-4 rounded-full border border-white/20" />
-              <span className="text-white/40">Browse & apply for jobs</span>
+    <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-[#020817]/90 backdrop-blur-sm">
+      <div className="w-full max-w-md p-6 rounded-3xl bg-gradient-to-br from-amber-500/20 to-orange-500/10 border border-amber-500/30 shadow-2xl shadow-black/50">
+        <div className="flex items-start gap-4">
+          <div className="w-14 h-14 rounded-2xl bg-amber-500/20 flex items-center justify-center flex-shrink-0">
+            <PendingIcon className="h-7 w-7 text-amber-400" />
+          </div>
+          <div className="flex-1">
+            <h2 className="text-xl font-bold text-white mb-1">Account Pending Approval</h2>
+            <p className="text-white/60 text-sm mb-4">
+              Your account is being reviewed. Once approved, you'll be able to browse and apply for jobs.
+            </p>
+            <div className="space-y-2">
+              <div className="flex items-center gap-2 text-sm">
+                <CheckCircleIcon className="h-4 w-4 text-emerald-400" />
+                <span className="text-white/70">Account created successfully</span>
+              </div>
+              <div className="flex items-center gap-2 text-sm">
+                <div className="w-4 h-4 rounded-full border-2 border-amber-400 border-t-transparent animate-spin" />
+                <span className="text-amber-400">Awaiting admin approval</span>
+              </div>
+              <div className="flex items-center gap-2 text-sm">
+                <div className="w-4 h-4 rounded-full border border-white/20" />
+                <span className="text-white/40">Browse & apply for jobs</span>
+              </div>
             </div>
           </div>
         </div>
-      </div>
-      <div className="mt-4 pt-4 border-t border-white/10">
-        <p className="text-xs text-white/40">
-          This usually takes 1-2 business days. You'll receive a notification when your account is approved.
-        </p>
+        <div className="mt-4 pt-4 border-t border-white/10">
+          <p className="text-xs text-white/40">
+            This usually takes 1-2 business days. You'll receive a notification when your account is approved.
+          </p>
+        </div>
       </div>
     </div>
   );
@@ -236,12 +237,8 @@ export default function Jobs() {
   const isPending = user?.status === 'pending' || user?.status === 'lead';
 
   useEffect(() => {
-    if (!isPending) {
-      fetchJobs();
-    } else {
-      setLoading(false);
-    }
-  }, [user, isPending]);
+    fetchJobs();
+  }, [user]);
 
   const fetchJobs = async () => {
     try {
@@ -262,53 +259,6 @@ export default function Jobs() {
     }
   };
 
-  // Show pending banner if user is pending
-  if (isPending) {
-    return (
-      <div className="min-h-screen bg-[#020817] pb-24">
-        <PendingAccountBanner />
-        
-        {/* Sample jobs preview (blurred) */}
-        <div className="px-4 mt-6">
-          <h3 className="text-lg font-semibold text-white mb-3 flex items-center gap-2">
-            Available Jobs Preview
-            <span className="px-2 py-0.5 rounded-full bg-amber-500/20 text-amber-400 text-xs">Locked</span>
-          </h3>
-          <div className="space-y-3 relative">
-            {/* Blur overlay */}
-            <div className="absolute inset-0 bg-[#020817]/60 backdrop-blur-md z-10 rounded-2xl flex items-center justify-center">
-              <div className="text-center">
-                <AlertCircleIcon className="h-12 w-12 mx-auto mb-3 text-amber-400" />
-                <p className="text-white font-medium">Account pending approval</p>
-                <p className="text-white/50 text-sm mt-1">Jobs will be visible once approved</p>
-              </div>
-            </div>
-            
-            {/* Placeholder cards */}
-            {[1, 2, 3].map(i => (
-              <div key={i} className="p-4 rounded-2xl bg-[#0a1628]/80 border border-white/[0.05]">
-                <div className="flex gap-4">
-                  <div className="w-14 h-14 rounded-2xl bg-white/5" />
-                  <div className="flex-1">
-                    <div className="h-4 bg-white/10 rounded w-3/4 mb-2" />
-                    <div className="h-3 bg-white/5 rounded w-1/2 mb-3" />
-                    <div className="flex gap-3">
-                      <div className="h-3 bg-white/5 rounded w-20" />
-                      <div className="h-3 bg-white/5 rounded w-16" />
-                    </div>
-                  </div>
-                  <div className="text-right">
-                    <div className="h-6 bg-emerald-500/20 rounded w-16 mb-1" />
-                    <div className="h-3 bg-white/5 rounded w-10" />
-                  </div>
-                </div>
-              </div>
-            ))}
-          </div>
-        </div>
-      </div>
-    );
-  }
 
   const filteredJobs = jobs.filter(job => {
     if (search) {
@@ -340,6 +290,9 @@ export default function Jobs() {
 
   return (
     <div className="min-h-screen bg-[#020817] pb-24">
+      {/* Pending Account Overlay */}
+      {isPending && <PendingAccountOverlay />}
+
       {/* Header */}
       <div className="px-4 pt-4 pb-2">
         <div className="flex items-center justify-between mb-4">

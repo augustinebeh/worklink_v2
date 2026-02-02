@@ -110,7 +110,8 @@ export default function Notifications() {
       <div className="px-4 pt-4 pb-4">
         <PageHeader
           title="Notifications"
-          emoji="🔔"
+          icon={BellIcon}
+          iconColor="text-amber-400"
           subtitle={`${unreadCount} unread`}
           rightAction={
             unreadCount > 0 && (

@@ -5,12 +5,12 @@ import {
   CheckCircleIcon,
   ClockIcon,
   StarIcon,
-  RefreshCwIcon,
   SparklesIcon,
   ChevronRightIcon,
   FlameIcon,
   TargetIcon,
   CheckIcon,
+  TrophyIcon,
 } from 'lucide-react';
 import { useAuth } from '../contexts/AuthContext';
 import { useToast } from '../components/ui/Toast';
@@ -25,7 +25,7 @@ const QUEST_ICONS = {
   daily: ClockIcon,
   weekly: StarIcon,
   special: SparklesIcon,
-  repeatable: RefreshCwIcon,
+  repeatable: TrophyIcon,
   challenge: FlameIcon,
 };
 
@@ -196,7 +196,6 @@ export default function Quests() {
   const [loading, setLoading] = useState(true);
   const [claiming, setClaiming] = useState(null);
   const [filter, setFilter] = useState('all');
-  const [refreshing, setRefreshing] = useState(false);
 
   useEffect(() => {
     if (user) fetchQuests();
@@ -217,13 +216,7 @@ export default function Quests() {
       console.error('Failed to fetch quests:', error);
     } finally {
       setLoading(false);
-      setRefreshing(false);
     }
-  };
-
-  const handleRefresh = () => {
-    setRefreshing(true);
-    fetchQuests();
   };
 
   const handleCheckin = async (quest) => {
@@ -283,38 +276,69 @@ export default function Quests() {
 
   const claimableCount = quests.filter(q => q.status === 'claimable').length;
   const completedCount = quests.filter(q => q.status === 'claimed').length;
+  const activeCount = quests.filter(q => q.status !== 'claimed').length;
+  const totalXPAvailable = quests.filter(q => q.status !== 'claimed').reduce((sum, q) => sum + (q.xp_reward || 0), 0);
 
   return (
     <div className="min-h-screen bg-[#020817] pb-24">
-      {/* Header */}
-      <div className="px-4 pt-4 pb-2">
-        <div className="flex items-center justify-between mb-4">
-          <div>
-            <h1 className="text-2xl font-bold text-white flex items-center gap-2">
-              Quests <span className="text-2xl">🎯</span>
-            </h1>
-            <p className="text-white/40 text-sm">Complete quests to earn XP</p>
+      {/* Hero Header Card */}
+      <div className="px-4 pt-4">
+        <div className="relative rounded-3xl overflow-hidden">
+          <div className="absolute inset-0 bg-gradient-to-br from-[#0a1628] via-[#0d1f3c] to-[#0f2847]" />
+          <div className="absolute top-0 right-0 w-64 h-64 bg-violet-500/20 rounded-full blur-[80px] -translate-y-1/2 translate-x-1/4" />
+          <div className="absolute bottom-0 left-0 w-48 h-48 bg-emerald-500/15 rounded-full blur-[60px] translate-y-1/3 -translate-x-1/4" />
+          <div className="absolute inset-0 rounded-3xl border border-white/[0.08]" />
+
+          <div className="relative p-6">
+            {/* Title Row */}
+            <div className="flex items-center gap-4 mb-4">
+              <div className="w-14 h-14 rounded-2xl bg-violet-500/20 border border-violet-500/30 flex items-center justify-center">
+                <TargetIcon className="h-7 w-7 text-violet-400" />
+              </div>
+              <div>
+                <h1 className="text-2xl font-bold text-white">Quests</h1>
+                <p className="text-white/50">Complete quests to earn XP</p>
+              </div>
+            </div>
+
+            {/* XP Progress Bar */}
+            <div className="mb-4">
+              <XPBar currentXP={user?.xp || 0} level={calculateLevel(user?.xp || 0)} />
+            </div>
+
+            {/* Stats Row */}
+            <div className="grid grid-cols-3 gap-3">
+              {claimableCount > 0 ? (
+                <div className="p-3 rounded-2xl bg-emerald-500/10 border border-emerald-500/20 text-center">
+                  <p className="text-2xl font-bold text-emerald-400">{claimableCount}</p>
+                  <p className="text-xs text-white/40">Ready to Claim</p>
+                </div>
+              ) : (
+                <div className="p-3 rounded-2xl bg-white/5 text-center">
+                  <p className="text-2xl font-bold text-white">{activeCount}</p>
+                  <p className="text-xs text-white/40">Active</p>
+                </div>
+              )}
+              <div className="p-3 rounded-2xl bg-violet-500/10 border border-violet-500/20 text-center">
+                <p className="text-2xl font-bold text-violet-400">{totalXPAvailable}</p>
+                <p className="text-xs text-white/40">XP Available</p>
+              </div>
+              <div className="p-3 rounded-2xl bg-white/5 text-center">
+                <p className="text-2xl font-bold text-white">{completedCount}</p>
+                <p className="text-xs text-white/40">Completed</p>
+              </div>
+            </div>
           </div>
-          <button
-            onClick={handleRefresh}
-            disabled={refreshing}
-            className="p-3 rounded-xl bg-white/5 border border-white/10 hover:bg-white/10 transition-colors disabled:opacity-50"
-          >
-            <RefreshCwIcon className={clsx('h-5 w-5 text-white/50', refreshing && 'animate-spin')} />
-          </button>
         </div>
+      </div>
 
-        {/* XP Progress Bar */}
-        <div className="mb-4 p-4 rounded-2xl bg-[#0a1628]/80 border border-white/[0.05]">
-          <XPBar currentXP={user?.xp || 0} level={calculateLevel(user?.xp || 0)} />
-        </div>
-
-        {/* Filter Tabs */}
+      {/* Filter Tabs */}
+      <div className="px-4 mt-4">
         <FilterTabs
           tabs={[
-            { id: 'all', label: 'All' },
-            { id: 'active', label: 'Active' },
-            { id: 'completed', label: 'Completed' },
+            { id: 'all', label: 'All', count: quests.length },
+            { id: 'active', label: 'Active', count: activeCount },
+            { id: 'completed', label: 'Completed', count: completedCount },
           ]}
           activeFilter={filter}
           onFilterChange={setFilter}

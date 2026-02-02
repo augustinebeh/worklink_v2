@@ -10,6 +10,8 @@ import {
   XIcon,
   BriefcaseIcon,
   DollarSignIcon,
+  ClockIcon as PendingIcon,
+  CheckCircleIcon,
 } from 'lucide-react';
 import { useAuth } from '../contexts/AuthContext';
 import { useToast } from '../components/ui/Toast';
@@ -40,6 +42,46 @@ function isWeekend(year, month, day) {
   return d === 0 || d === 6;
 }
 
+// Pending Account Overlay
+function PendingAccountOverlay() {
+  return (
+    <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-[#020817]/90 backdrop-blur-sm">
+      <div className="w-full max-w-md p-6 rounded-3xl bg-gradient-to-br from-amber-500/20 to-orange-500/10 border border-amber-500/30 shadow-2xl shadow-black/50">
+        <div className="flex items-start gap-4">
+          <div className="w-14 h-14 rounded-2xl bg-amber-500/20 flex items-center justify-center flex-shrink-0">
+            <PendingIcon className="h-7 w-7 text-amber-400" />
+          </div>
+          <div className="flex-1">
+            <h2 className="text-xl font-bold text-white mb-1">Account Pending Approval</h2>
+            <p className="text-white/60 text-sm mb-4">
+              Your account is being reviewed. Once approved, you'll be able to view your calendar and schedule.
+            </p>
+            <div className="space-y-2">
+              <div className="flex items-center gap-2 text-sm">
+                <CheckCircleIcon className="h-4 w-4 text-emerald-400" />
+                <span className="text-white/70">Account created successfully</span>
+              </div>
+              <div className="flex items-center gap-2 text-sm">
+                <div className="w-4 h-4 rounded-full border-2 border-amber-400 border-t-transparent animate-spin" />
+                <span className="text-amber-400">Awaiting admin approval</span>
+              </div>
+              <div className="flex items-center gap-2 text-sm">
+                <div className="w-4 h-4 rounded-full border border-white/20" />
+                <span className="text-white/40">View calendar & availability</span>
+              </div>
+            </div>
+          </div>
+        </div>
+        <div className="mt-4 pt-4 border-t border-white/10">
+          <p className="text-xs text-white/40">
+            This usually takes 1-2 business days. You'll receive a notification when your account is approved.
+          </p>
+        </div>
+      </div>
+    </div>
+  );
+}
+
 export default function Calendar() {
   const { user } = useAuth();
   const toast = useToast();
@@ -53,6 +95,9 @@ export default function Calendar() {
   const [mode, setMode] = useState('view');
   const [pendingChanges, setPendingChanges] = useState({});
   const [saving, setSaving] = useState(false);
+
+  // Check if user is pending
+  const isPending = user?.status === 'pending' || user?.status === 'lead';
 
   const year = currentDate.getFullYear();
   const month = currentDate.getMonth();
@@ -215,11 +260,14 @@ export default function Calendar() {
 
   return (
     <div className="min-h-screen bg-[#020817] pb-24">
+      {/* Pending Account Overlay */}
+      {isPending && <PendingAccountOverlay />}
+
       {/* Header */}
       <div className="sticky top-0 z-10 bg-[#020817]/95 backdrop-blur-xl px-4 pt-4 pb-4 border-b border-white/[0.05]">
         <div className="flex items-center justify-between mb-4">
           <h1 className="text-2xl font-bold text-white flex items-center gap-2">
-            Calendar <span className="text-2xl">📅</span>
+            Calendar <CalendarIcon className="h-6 w-6 text-emerald-400" />
           </h1>
           <div className="flex items-center gap-2">
             {mode === 'edit' ? (

@@ -158,7 +158,7 @@ export default function Wallet() {
       <div className="px-4 mt-6">
         <div className="flex items-center justify-between mb-4">
           <h2 className="text-lg font-bold text-white flex items-center gap-2">
-            Transactions <span className="text-lg">💳</span>
+            Transactions <WalletIcon className="h-5 w-5 text-emerald-400" />
           </h2>
           <span className="text-white/40 text-sm">{filteredPayments.length} total</span>
         </div>

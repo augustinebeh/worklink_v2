@@ -6,7 +6,8 @@ import { clsx } from 'clsx';
  */
 export default function PageHeader({
   title,
-  emoji,
+  icon: Icon,
+  iconColor = 'text-emerald-400',
   subtitle,
   rightAction,
   compact = false
@@ -22,7 +23,7 @@ export default function PageHeader({
           compact ? 'text-xl' : 'text-2xl'
         )}>
           {title}
-          {emoji && <span className={compact ? 'text-xl' : 'text-2xl'}>{emoji}</span>}
+          {Icon && <Icon className={clsx(compact ? 'h-5 w-5' : 'h-6 w-6', iconColor)} />}
         </h1>
         {subtitle && (
           <p className="text-white/40 text-sm">{subtitle}</p>

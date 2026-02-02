@@ -648,7 +648,7 @@ export default function Profile() {
 
       {/* Contact Info */}
       <div className="px-4 mt-6">
-        <h2 className="text-white font-semibold mb-3 flex items-center gap-2">Contact Info <span className="text-lg">📧</span></h2>
+        <h2 className="text-white font-semibold mb-3 flex items-center gap-2">Contact Info <MailIcon className="h-5 w-5 text-emerald-400" /></h2>
         <div className="space-y-3">
           <div className="flex items-center gap-4 p-4 rounded-2xl bg-[#0a1628]/80 border border-white/[0.05]">
             <div className="w-10 h-10 rounded-xl bg-white/5 flex items-center justify-center">

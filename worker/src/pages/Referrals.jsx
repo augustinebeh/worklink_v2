@@ -6,6 +6,7 @@ import {
   UsersIcon,
   ShareIcon,
   UserPlusIcon,
+  LightbulbIcon,
 } from 'lucide-react';
 import { useAuth } from '../contexts/AuthContext';
 import { useToast } from '../components/ui/Toast';
@@ -155,7 +156,7 @@ export default function Referrals() {
       {/* How It Works */}
       <div className="px-4 mt-6">
         <h2 className="text-white font-semibold mb-3 flex items-center gap-2">
-          How It Works <span className="text-lg">💡</span>
+          How It Works <LightbulbIcon className="h-5 w-5 text-amber-400" />
         </h2>
         <div className="space-y-3">
           {[
@@ -179,7 +180,7 @@ export default function Referrals() {
       {/* Referral History */}
       <div className="px-4 mt-6">
         <h2 className="text-white font-semibold mb-3 flex items-center gap-2">
-          Your Referrals <span className="text-lg">👥</span>
+          Your Referrals <UsersIcon className="h-5 w-5 text-violet-400" />
         </h2>
 
         {loading ? (
