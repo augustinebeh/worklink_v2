@@ -38,7 +38,7 @@ import { calculateLevel, getLevelTier, LEVEL_TITLES as levelTitles } from '../ut
 import { DEFAULTS } from '../utils/constants';
 import ProfileAvatar from '../components/ui/ProfileAvatar';
 import XPBar from '../components/gamification/XPBar';
-import { StatCard } from '../components/common';
+import { StatCard, SectionHeader } from '../components/common';
 
 // Rarity colors
 const RARITY_COLORS = {
@@ -97,6 +97,16 @@ function ProfileActionDropdown({ isOpen, onClose, onSelectPhoto, onSelectBorder,
 function BorderSelectionModal({ isOpen, onClose, borders, selectedBorderId, onSelect, userLevel }) {
   const [selecting, setSelecting] = useState(null);
 
+  // Lock body scroll when modal is open - must be before any early returns to follow Rules of Hooks
+  useEffect(() => {
+    if (isOpen) {
+      document.body.style.overflow = 'hidden';
+      return () => {
+        document.body.style.overflow = '';
+      };
+    }
+  }, [isOpen]);
+
   if (!isOpen) return null;
 
   const handleSelect = async (border) => {
@@ -114,14 +124,6 @@ function BorderSelectionModal({ isOpen, onClose, borders, selectedBorderId, onSe
   }, {});
 
   const tierOrder = ['bronze', 'silver', 'gold', 'platinum', 'diamond', 'mythic', 'special'];
-
-  // Lock body scroll when modal is open
-  useEffect(() => {
-    document.body.style.overflow = 'hidden';
-    return () => {
-      document.body.style.overflow = '';
-    };
-  }, []);
 
   return (
     <div
@@ -317,15 +319,13 @@ function AvailabilitySelector({ user, onUpdate }) {
 
   return (
     <div className="px-4 mt-6">
-      <div className="flex items-center justify-between mb-3">
-        <h2 className="text-white font-semibold flex items-center gap-2">
-          <CalendarIcon className="h-5 w-5 text-emerald-400" />
-          My Availability
-        </h2>
-        <Link to="/calendar" className="text-emerald-400 text-sm font-medium">
-          View Calendar →
-        </Link>
-      </div>
+      <SectionHeader
+        title="My Availability"
+        icon={CalendarIcon}
+        actionLabel="View Calendar →"
+        onAction={() => navigate('/calendar')}
+        actionVariant="link"
+      />
       <div className="grid grid-cols-4 gap-2">
         {options.map(opt => (
           <button
@@ -716,15 +716,13 @@ export default function Profile() {
 
       {/* Contact Info */}
       <div className="px-4 mt-6">
-        <div className="flex items-center justify-between mb-3">
-          <h2 className="text-white font-semibold flex items-center gap-2">Contact Info <MailIcon className="h-5 w-5 text-emerald-400" /></h2>
-          <button
-            onClick={() => navigate('/complete-profile')}
-            className="px-3 py-1.5 rounded-lg bg-white/5 border border-white/10 text-white/70 text-sm font-medium hover:bg-white/10 hover:text-white transition-colors"
-          >
-            Edit
-          </button>
-        </div>
+        <SectionHeader
+          title="Contact Info"
+          icon={MailIcon}
+          actionLabel="Edit"
+          onAction={() => navigate('/complete-profile')}
+          actionVariant="button"
+        />
         <div className="space-y-3">
           <div className="flex items-center gap-4 p-4 rounded-2xl bg-[#0a1628]/80 border border-white/[0.05]">
             <div className="w-10 h-10 rounded-xl bg-white/5 flex items-center justify-center">

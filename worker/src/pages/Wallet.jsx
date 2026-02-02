@@ -10,7 +10,7 @@ import {
 import { useAuth } from '../contexts/AuthContext';
 import { clsx } from 'clsx';
 import { formatMoney, DEFAULT_LOCALE, TIMEZONE, PAYMENT_STATUS_LABELS, getSGDateString } from '../utils/constants';
-import { FilterTabs, EmptyState, LoadingSkeleton, StatusBadge, StatPod } from '../components/common';
+import { FilterTabs, EmptyState, LoadingSkeleton, StatusBadge, StatPod, SectionHeader } from '../components/common';
 
 function TransactionItem({ payment }) {
   const isPaid = payment.status === 'paid';
@@ -156,9 +156,10 @@ export default function Wallet() {
 
       {/* Transactions Section */}
       <div className="px-4 mt-6">
-        <div className="flex items-center justify-between mb-4">
-          <h2 className="text-lg font-bold text-white flex items-center gap-2">
-            Transactions <WalletIcon className="h-5 w-5 text-emerald-400" />
+        <div className="flex items-center justify-between mb-3">
+          <h2 className="text-white font-semibold flex items-center gap-2">
+            <WalletIcon className="h-5 w-5 text-emerald-400" />
+            Transactions
           </h2>
           <span className="text-white/40 text-sm">{filteredPayments.length} total</span>
         </div>

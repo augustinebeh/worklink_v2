@@ -12,7 +12,7 @@ import { useAuth } from '../contexts/AuthContext';
 import { useToast } from '../components/ui/Toast';
 import { useAppSettings } from '../contexts/AppSettingsContext';
 import { clsx } from 'clsx';
-import { EmptyState, LoadingSkeleton, StatusBadge } from '../components/common';
+import { EmptyState, LoadingSkeleton, StatusBadge, SectionHeader } from '../components/common';
 
 function ReferralItem({ referral }) {
   return (
@@ -183,9 +183,7 @@ Sign up now: https://worklinkv2-production.up.railway.app/login?ref=${code}`;
 
       {/* How It Works */}
       <div className="px-4 mt-6">
-        <h2 className="text-white font-semibold mb-3 flex items-center gap-2">
-          How It Works <LightbulbIcon className="h-5 w-5 text-amber-400" />
-        </h2>
+        <SectionHeader title="How It Works" icon={LightbulbIcon} iconColor="text-amber-400" />
         <div className="space-y-3">
           {[
             { step: '1', title: 'Share your code', desc: 'Send your unique code to friends' },
@@ -207,9 +205,7 @@ Sign up now: https://worklinkv2-production.up.railway.app/login?ref=${code}`;
 
       {/* Referral History */}
       <div className="px-4 mt-6">
-        <h2 className="text-white font-semibold mb-3 flex items-center gap-2">
-          Your Referrals <UsersIcon className="h-5 w-5 text-violet-400" />
-        </h2>
+        <SectionHeader title="Your Referrals" icon={UsersIcon} iconColor="text-violet-400" />
 
         {loading ? (
           <LoadingSkeleton count={3} height="h-16" />

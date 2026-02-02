@@ -267,7 +267,8 @@ export default function Calendar() {
       <div className="sticky top-0 z-10 bg-[#020817]/95 backdrop-blur-xl px-4 pt-4 pb-4 border-b border-white/[0.05]">
         <div className="flex items-center justify-between mb-4">
           <h1 className="text-2xl font-bold text-white flex items-center gap-2">
-            Calendar <CalendarIcon className="h-6 w-6 text-emerald-400" />
+            <CalendarIcon className="h-6 w-6 text-emerald-400" />
+            Calendar
           </h1>
           <div className="flex items-center gap-2">
             {mode === 'edit' ? (

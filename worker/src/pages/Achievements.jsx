@@ -21,7 +21,7 @@ import {
 import { useAuth } from '../contexts/AuthContext';
 import { useToast } from '../components/ui/Toast';
 import { clsx } from 'clsx';
-import { FilterTabs, EmptyState, LoadingSkeleton } from '../components/common';
+import { FilterTabs, EmptyState, LoadingSkeleton, SectionHeader } from '../components/common';
 
 // Map icon strings to components
 const ICON_MAP = {
@@ -412,10 +412,7 @@ export default function Achievements() {
       {/* Getting Started Section - Featured for newcomers */}
       {featuredAchievements.length > 0 && (
         <div className="px-4 mt-6">
-          <h2 className="text-lg font-bold text-white mb-3 flex items-center gap-2">
-            <SparklesIcon className="h-5 w-5 text-cyan-400" />
-            Getting Started
-          </h2>
+          <SectionHeader title="Getting Started" icon={SparklesIcon} iconColor="text-cyan-400" />
           <div className="space-y-3">
             {featuredAchievements.map(achievement => (
               <FeaturedAchievementCard
@@ -433,10 +430,7 @@ export default function Achievements() {
 
       {/* All Achievements */}
       <div className="px-4 mt-6">
-        <h2 className="text-lg font-bold text-white mb-3 flex items-center gap-2">
-          <TrophyIcon className="h-5 w-5 text-amber-400" />
-          All Achievements
-        </h2>
+        <SectionHeader title="All Achievements" icon={TrophyIcon} iconColor="text-amber-400" />
 
         <FilterTabs tabs={tabs} activeFilter={filter} onFilterChange={setFilter} />
       </div>

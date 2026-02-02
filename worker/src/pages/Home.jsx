@@ -19,7 +19,7 @@ import { useWebSocket } from '../contexts/WebSocketContext';
 import { useToast } from '../components/ui/Toast';
 import { clsx } from 'clsx';
 import { LEVEL_TITLES as levelTitles, calculateLevel } from '../utils/gamification';
-import { LoadingSkeleton, EmptyState, StatPod } from '../components/common';
+import { LoadingSkeleton, EmptyState, StatPod, SectionHeader } from '../components/common';
 import { FloatingXP, LevelUpCelebration, AchievementUnlock } from '../components/gamification/Confetti';
 import XPBar from '../components/gamification/XPBar';
 import {
@@ -501,14 +501,13 @@ export default function Home() {
 
         {quests.length > 0 && (
           <div className="px-4 mt-6">
-            <div className="flex items-center justify-between mb-3">
-              <h2 className="text-white font-semibold flex items-center gap-2">
-                Rewards Ready! <GiftIcon className="h-5 w-5 text-amber-400" />
-              </h2>
-              <Link to="/quests" className="text-emerald-400 text-sm font-medium">
-                All Quests →
-              </Link>
-            </div>
+            <SectionHeader
+              title="Rewards Ready!"
+              icon={GiftIcon}
+              iconColor="text-amber-400"
+              actionLabel="All Quests →"
+              onAction={() => navigate('/quests')}
+            />
             <div className="space-y-3">
               {quests.map(quest => (
                 <HomeQuestCard
@@ -523,11 +522,11 @@ export default function Home() {
         )}
 
         <div className="px-4 mt-8">
-          <div className="flex items-center justify-between mb-4">
-            <div className="flex items-center gap-2">
-              <h2 className="text-white font-semibold text-lg">Job Activity</h2>
-              <BriefcaseIcon className="h-6 w-6 text-emerald-400" />
-            </div>
+          <div className="flex items-center justify-between mb-3">
+            <h2 className="text-white font-semibold flex items-center gap-2">
+              <BriefcaseIcon className="h-5 w-5 text-emerald-400" />
+              Job Activity
+            </h2>
             {totalPages > 1 && (
               <Pagination currentPage={currentPage} totalPages={totalPages} onPageChange={setCurrentPage} />
             )}

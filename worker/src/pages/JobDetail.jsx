@@ -85,6 +85,32 @@ export default function JobDetail() {
     }
   };
 
+  const handleShare = async () => {
+    if (!job) return;
+
+    const jobUrl = `${window.location.origin}/jobs/${id}`;
+    const shareText = `Check out this job: ${job.title} - $${formatMoney(job.pay_rate)}/hr at ${job.location}`;
+
+    try {
+      if (navigator.share) {
+        await navigator.share({
+          title: job.title,
+          text: shareText,
+          url: jobUrl,
+        });
+        toast.success('Shared!', 'Job link shared successfully');
+      } else {
+        await navigator.clipboard.writeText(jobUrl);
+        toast.success('Copied!', 'Job link copied to clipboard');
+      }
+    } catch (error) {
+      if (error.name !== 'AbortError') {
+        await navigator.clipboard.writeText(jobUrl);
+        toast.success('Copied!', 'Job link copied to clipboard');
+      }
+    }
+  };
+
   if (loading) {
     return (
       <div className="min-h-screen bg-[#020817] flex items-center justify-center">
@@ -122,7 +148,7 @@ export default function JobDetail() {
             <ArrowLeftIcon className="h-5 w-5" />
             <span>Back</span>
           </button>
-          <button className="p-2 rounded-xl bg-white/5 hover:bg-white/10 transition-colors">
+          <button onClick={handleShare} className="p-2 rounded-xl bg-white/5 hover:bg-white/10 transition-colors">
             <ShareIcon className="h-5 w-5 text-white/50" />
           </button>
         </div>

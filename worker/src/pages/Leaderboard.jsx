@@ -14,6 +14,7 @@ import { useAuth } from '../contexts/AuthContext';
 import { clsx } from 'clsx';
 import { calculateLevel } from '../utils/gamification';
 import ProfileAvatar from '../components/ui/ProfileAvatar';
+import { SectionHeader } from '../components/common';
 
 // Coming Soon Overlay
 function ComingSoonOverlay() {
@@ -263,11 +264,8 @@ export default function Leaderboard() {
       {/* Top 3 podium */}
       {!loading && players.length >= 3 && (
         <div className="px-4 mt-6">
-          <h2 className="text-lg font-bold text-white mb-4 flex items-center gap-2">
-            <CrownIcon className="h-5 w-5 text-amber-400" />
-            Top Players
-          </h2>
-          <div className="flex items-end justify-center gap-3">
+          <SectionHeader title="Top Players" icon={CrownIcon} iconColor="text-amber-400" />
+          <div className="flex items-end justify-center gap-3 mt-1">
             {/* 2nd place */}
             <div className="flex-1 text-center">
               <ProfileAvatar
@@ -324,10 +322,7 @@ export default function Leaderboard() {
 
       {/* Full rankings */}
       <div className="px-4 mt-6">
-        <h2 className="text-lg font-bold text-white mb-3 flex items-center gap-2">
-          <TrophyIcon className="h-5 w-5 text-violet-400" />
-          Full Rankings
-        </h2>
+        <SectionHeader title="Full Rankings" icon={TrophyIcon} iconColor="text-violet-400" />
 
         {loading ? (
           <div className="space-y-3">
