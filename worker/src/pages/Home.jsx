@@ -7,7 +7,6 @@ import {
   SparklesIcon,
   ChevronLeftIcon,
   TrophyIcon,
-  CheckIcon,
   ClockIcon,
   StarIcon,
   RefreshCwIcon,
@@ -45,18 +44,27 @@ const QUEST_ICONS = {
 };
 
 // Flying XP Animation Component
-function FlyingXP({ amount, startPos, targetPos, onComplete }) {
+function FlyingXP({ amount, startPos, targetRef, onComplete }) {
   const [position, setPosition] = useState(startPos);
+  const [targetPos, setTargetPos] = useState(null);
   const [opacity, setOpacity] = useState(1);
   const [scale, setScale] = useState(1);
 
   useEffect(() => {
-    if (!startPos || !targetPos) return;
+    if (!startPos || !targetRef?.current) return;
+
+    // Get the exact position of the XP bar dynamically
+    const rect = targetRef.current.getBoundingClientRect();
+    const target = {
+      x: rect.left + rect.width / 2,
+      y: rect.top + rect.height / 2,
+    };
+    setTargetPos(target);
 
     // Start animation after a tiny delay
     const timeout = setTimeout(() => {
-      setPosition(targetPos);
-      setScale(0.5);
+      setPosition(target);
+      setScale(0.3);
     }, 50);
 
     // Fade out near the end
@@ -74,19 +82,19 @@ function FlyingXP({ amount, startPos, targetPos, onComplete }) {
       clearTimeout(fadeTimeout);
       clearTimeout(completeTimeout);
     };
-  }, [startPos, targetPos, onComplete]);
+  }, [startPos, targetRef, onComplete]);
 
-  if (!startPos || !targetPos) return null;
+  if (!startPos) return null;
 
   return (
     <div
-      className="fixed z-[100] pointer-events-none flex items-center gap-1 px-3 py-1.5 rounded-full bg-violet-500 text-white font-bold shadow-lg shadow-violet-500/50"
+      className="fixed z-[100] pointer-events-none flex items-center gap-1 px-3 py-1.5 rounded-full bg-gradient-to-r from-violet-500 to-emerald-500 text-white font-bold shadow-lg shadow-violet-500/50"
       style={{
         left: position.x,
         top: position.y,
         transform: `translate(-50%, -50%) scale(${scale})`,
         opacity,
-        transition: 'all 0.7s cubic-bezier(0.34, 1.56, 0.64, 1)',
+        transition: 'all 0.7s cubic-bezier(0.22, 1, 0.36, 1)',
       }}
     >
       <ZapIcon className="h-4 w-4" />
@@ -96,21 +104,20 @@ function FlyingXP({ amount, startPos, targetPos, onComplete }) {
 }
 
 // Animated Quest Card for Homepage
-function HomeQuestCard({ quest, onClaim, isClaiming, xpBadgeRef }) {
+function HomeQuestCard({ quest, onClaim, isClaiming }) {
   const [isExiting, setIsExiting] = useState(false);
-  const claimButtonRef = useRef(null);
-  const config = QUEST_TYPE_STYLES[quest.type] || QUEST_TYPE_STYLES.daily;
+  const xpBadgeRef = useRef(null);
+  const config = QUEST_TYPE_STYLES?.[quest.type] || {};
   const Icon = QUEST_ICONS[quest.type] || QUEST_ICONS.daily;
   
   const isClaimable = quest.status === 'claimable';
-  const progress = quest.target > 0 ? (quest.progress / quest.target) * 100 : 0;
 
   const handleClaim = (e) => {
     e.stopPropagation();
     if (isClaiming || !isClaimable) return;
 
     // Get position of the XP badge on this card for flying animation
-    const rect = claimButtonRef.current?.getBoundingClientRect();
+    const rect = xpBadgeRef.current?.getBoundingClientRect();
     const startPos = rect ? { x: rect.left + rect.width / 2, y: rect.top + rect.height / 2 } : null;
 
     // Start exit animation
@@ -159,7 +166,7 @@ function HomeQuestCard({ quest, onClaim, isClaiming, xpBadgeRef }) {
         {/* Claim Button with XP */}
         <div className="flex flex-col items-end gap-2">
           <div 
-            ref={claimButtonRef}
+            ref={xpBadgeRef}
             className="flex items-center gap-1 px-3 py-1.5 rounded-xl bg-violet-500/30 border border-violet-500/40"
           >
             <ZapIcon className="h-4 w-4 text-violet-400" />
@@ -186,21 +193,19 @@ function HomeQuestCard({ quest, onClaim, isClaiming, xpBadgeRef }) {
   );
 }
 
-// League Header Card - Main pool-style banner
+// League Header Card
 function LeagueCard({ user, userLevel, userXP, thisMonthEarnings, totalJobs, poolEndsIn, xpAnimating, xpBarRef }) {
   const levelTitle = levelTitles[userLevel] || 'Newcomer';
 
   return (
     <div className="relative mx-4 mt-4 rounded-3xl overflow-hidden">
-      {/* Background with gradient and glow effects */}
+      {/* Background */}
       <div className="absolute inset-0 bg-gradient-to-br from-[#0a1628] via-[#0d1f3c] to-[#0f2847]" />
-
-      {/* Animated gradient orbs */}
       <div className="absolute top-0 right-0 w-64 h-64 bg-emerald-500/20 rounded-full blur-[80px] -translate-y-1/2 translate-x-1/4" />
       <div className="absolute bottom-0 left-0 w-48 h-48 bg-violet-500/20 rounded-full blur-[60px] translate-y-1/3 -translate-x-1/4" />
       <div className="absolute top-1/2 left-1/2 w-32 h-32 bg-cyan-500/10 rounded-full blur-[40px] -translate-x-1/2 -translate-y-1/2" />
-
-      {/* Border glow effect */}
+      
+      {/* Border glow */}
       <div className={clsx(
         'absolute inset-0 rounded-3xl border transition-all duration-500',
         xpAnimating ? 'border-emerald-500/50 shadow-[0_0_30px_rgba(16,185,129,0.3)]' : 'border-white/[0.08]'
@@ -208,7 +213,7 @@ function LeagueCard({ user, userLevel, userXP, thisMonthEarnings, totalJobs, poo
 
       {/* Content */}
       <div className="relative p-5">
-        {/* Top row - User info */}
+        {/* User info */}
         <div className="flex items-center gap-3 mb-4">
           <div className="flex-1">
             <p className="text-white/60 text-sm">Welcome back</p>
@@ -220,7 +225,7 @@ function LeagueCard({ user, userLevel, userXP, thisMonthEarnings, totalJobs, poo
           </div>
         </div>
 
-        {/* League Title Banner */}
+        {/* League Title */}
         <div className="flex items-center gap-3 mb-4">
           <div className="w-1 h-10 rounded-full bg-gradient-to-b from-emerald-400 to-cyan-400" />
           <div>
@@ -232,17 +237,17 @@ function LeagueCard({ user, userLevel, userXP, thisMonthEarnings, totalJobs, poo
           </div>
         </div>
 
-        {/* XP Progress Bar - Shared Component */}
+        {/* XP Bar - ref attached to the bar track for flying XP target */}
         <div className="mb-6">
           <XPBar
+            ref={xpBarRef}
             currentXP={userXP}
             level={userLevel}
             animating={xpAnimating}
-            barRef={xpBarRef}
           />
         </div>
 
-        {/* Stats Cards Row */}
+        {/* Stats */}
         <div className="grid grid-cols-3 gap-3">
           <StatPod label="This Month" value={`$${formatMoney(thisMonthEarnings)}`} emoji="💰" color="emerald" whiteValue size="md" />
           <StatPod label="Jobs Done" value={totalJobs.toString()} emoji="📋" color="violet" whiteValue size="md" />
@@ -253,8 +258,7 @@ function LeagueCard({ user, userLevel, userXP, thisMonthEarnings, totalJobs, poo
   );
 }
 
-
-// Activity Item for the feed
+// Activity Item
 function ActivityItem({ job }) {
   const slotsLeft = job.total_slots - job.filled_slots;
   const startTime = job.start_time || DEFAULT_START_TIME;
@@ -310,7 +314,7 @@ function ActivityItem({ job }) {
   );
 }
 
-// Pagination Component
+// Pagination
 function Pagination({ currentPage, totalPages, onPageChange }) {
   return (
     <div className="flex items-center gap-2 justify-center">
@@ -321,8 +325,7 @@ function Pagination({ currentPage, totalPages, onPageChange }) {
       >
         <ChevronLeftIcon className="h-4 w-4 text-white/60" />
       </button>
-      <span className="text-white/40 text-sm">Prev</span>
-      {[...Array(totalPages)].map((_, i) => (
+      {[...Array(Math.min(totalPages, 5))].map((_, i) => (
         <button
           key={i}
           onClick={() => onPageChange(i + 1)}
@@ -334,7 +337,6 @@ function Pagination({ currentPage, totalPages, onPageChange }) {
           {i + 1}
         </button>
       ))}
-      <span className="text-white/40 text-sm">Next</span>
       <button
         onClick={() => onPageChange(currentPage + 1)}
         disabled={currentPage === totalPages}
@@ -419,9 +421,8 @@ export default function Home() {
       }
 
       if (questsData.success) {
-        // Filter to show only claimable quests
         const claimable = (questsData.data || []).filter(q => q.status === 'claimable');
-        setQuests(claimable.slice(0, 3)); // Show max 3 quests
+        setQuests(claimable.slice(0, 3));
       }
     } catch (error) {
       toast.error('Failed to load', 'Pull down to refresh');
@@ -442,31 +443,20 @@ export default function Home() {
       
       const data = await res.json();
       if (data.success) {
-        // Get XP bar position for flying animation target
-        const xpBarRect = xpBarRef.current?.getBoundingClientRect();
-        const targetPos = xpBarRect ? { 
-          x: xpBarRect.left + xpBarRect.width / 2, 
-          y: xpBarRect.top + 20 
-        } : null;
-
-        // Start flying XP animation
-        if (startPos && targetPos) {
+        // Start flying XP animation - it will find the XP bar dynamically
+        if (startPos) {
           setFlyingXP({
             amount: quest.xp_reward,
             startPos,
-            targetPos,
           });
         }
 
-        // Remove quest from list after short delay
+        // Remove quest after delay
         setTimeout(() => {
           setQuests(prev => prev.filter(q => q.id !== quest.id));
         }, 300);
 
-        // Toast notification
         toast.success('Quest Complete!', `+${quest.xp_reward} XP earned`);
-        
-        // Refresh user data
         refreshUser();
       } else {
         toast.error('Failed', data.error || 'Please try again');
@@ -479,7 +469,6 @@ export default function Home() {
   };
 
   const handleFlyingXPComplete = () => {
-    // Trigger XP bar glow animation when flying XP reaches it
     setXpAnimating(true);
     setXpGain({ amount: flyingXP?.amount || 0, trigger: Date.now() });
     
@@ -506,7 +495,6 @@ export default function Home() {
   return (
     <div className="min-h-screen bg-[#020817] pb-24">
       <div>
-        {/* League Hero Card */}
         <LeagueCard
           user={user}
           userLevel={userLevel}
@@ -518,7 +506,6 @@ export default function Home() {
           xpBarRef={xpBarRef}
         />
 
-        {/* Claimable Quests Section */}
         {quests.length > 0 && (
           <div className="px-4 mt-6">
             <div className="flex items-center justify-between mb-3">
@@ -536,14 +523,12 @@ export default function Home() {
                   quest={quest}
                   onClaim={handleQuestClaim}
                   isClaiming={claimingQuest === quest.id}
-                  xpBarRef={xpBarRef}
                 />
               ))}
             </div>
           </div>
         )}
 
-        {/* Job Activity Feed */}
         <div className="px-4 mt-8">
           <div className="flex items-center justify-between mb-4">
             <div className="flex items-center gap-2">
@@ -578,17 +563,16 @@ export default function Home() {
         </div>
       </div>
 
-      {/* Flying XP Animation */}
+      {/* Flying XP - dynamically targets the XP bar */}
       {flyingXP && (
         <FlyingXP
           amount={flyingXP.amount}
           startPos={flyingXP.startPos}
-          targetPos={flyingXP.targetPos}
+          targetRef={xpBarRef}
           onComplete={handleFlyingXPComplete}
         />
       )}
 
-      {/* Gamification Animations */}
       <FloatingXP amount={xpGain.amount} trigger={xpGain.trigger} />
       <LevelUpCelebration show={levelUp.show} level={levelUp.level} onClose={() => setLevelUp({ show: false, level: 1 })} />
       <AchievementUnlock show={achievementUnlock.show} achievement={achievementUnlock.achievement} onClose={() => setAchievementUnlock({ show: false, achievement: null })} />

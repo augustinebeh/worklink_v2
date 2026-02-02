@@ -1,3 +1,4 @@
+import { forwardRef } from 'react';
 import { clsx } from 'clsx';
 import { ZapIcon } from 'lucide-react';
 import { XP_THRESHOLDS as xpThresholds, LEVEL_TITLES as levelTitles } from '../../utils/gamification';
@@ -12,19 +13,17 @@ import { XP_THRESHOLDS as xpThresholds, LEVEL_TITLES as levelTitles } from '../.
  * @param {boolean} showFooter - Show "X XP to next level" text (default: true)
  * @param {string} size - Bar height: 'sm' | 'md' | 'lg' (default: 'md')
  * @param {boolean} animating - Whether the bar is currently animating (glow effect)
- * @param {React.Ref} barRef - Ref to attach to the bar container (for flying XP animation)
  * @param {boolean} compact - Compact mode (just the bar, no text)
  */
-export default function XPBar({
+const XPBar = forwardRef(function XPBar({
   currentXP = 0,
   level = 1,
   showDetails = true,
   showFooter = true,
   size = 'md',
   animating = false,
-  barRef = null,
   compact = false,
-}) {
+}, ref) {
   const maxLevel = xpThresholds.length;
   const currentThreshold = xpThresholds[level - 1] || 0;
   const nextThreshold = xpThresholds[level] || xpThresholds[maxLevel - 1];
@@ -36,8 +35,8 @@ export default function XPBar({
 
   if (compact) {
     return (
-      <div className="xp-bar-shared xp-bar-compact" ref={barRef}>
-        <div className={clsx('xp-bar-track', size, animating && 'animating')}>
+      <div className="xp-bar-shared xp-bar-compact">
+        <div ref={ref} className={clsx('xp-bar-track', size, animating && 'animating')}>
           <div
             className={clsx('xp-bar-fill-shared', animating && 'animating')}
             style={{ width: `${Math.max(progress, 2)}%` }}
@@ -48,7 +47,7 @@ export default function XPBar({
   }
 
   return (
-    <div className="xp-bar-shared" ref={barRef}>
+    <div className="xp-bar-shared">
       {showDetails && (
         <div className="xp-bar-header">
           <span className="xp-bar-title">Level Progress</span>
@@ -67,7 +66,8 @@ export default function XPBar({
         </div>
       )}
 
-      <div className={clsx('xp-bar-track', size, animating && 'animating')}>
+      {/* The ref is on the track bar itself for precise flying XP targeting */}
+      <div ref={ref} className={clsx('xp-bar-track', size, animating && 'animating')}>
         <div
           className={clsx('xp-bar-fill-shared', animating && 'animating')}
           style={{ width: `${Math.max(progress, 2)}%` }}
@@ -81,7 +81,9 @@ export default function XPBar({
       )}
     </div>
   );
-}
+});
+
+export default XPBar;
 
 // Alternative: XP Bar with level badge (for Profile page style)
 export function XPBarWithBadge({
