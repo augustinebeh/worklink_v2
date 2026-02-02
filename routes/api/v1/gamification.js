@@ -590,4 +590,155 @@ router.get('/leaderboard', (req, res) => {
   }
 });
 
+// Get all profile borders with unlock status for a candidate
+router.get('/borders/:candidateId', (req, res) => {
+  try {
+    const candidateId = req.params.candidateId;
+    
+    // Get candidate info for level check
+    const candidate = db.prepare(`
+      SELECT level, selected_border_id FROM candidates WHERE id = ?
+    `).get(candidateId);
+    
+    if (!candidate) {
+      return res.status(404).json({ success: false, error: 'Candidate not found' });
+    }
+
+    // Get candidate's achievements
+    const achievements = db.prepare(`
+      SELECT achievement_id FROM candidate_achievements WHERE candidate_id = ?
+    `).all(candidateId);
+    const achievementIds = new Set(achievements.map(a => a.achievement_id));
+
+    // Get all borders
+    const borders = db.prepare(`
+      SELECT pb.*, 
+        CASE WHEN cb.candidate_id IS NOT NULL THEN 1 ELSE 0 END as manually_unlocked,
+        cb.is_selected
+      FROM profile_borders pb
+      LEFT JOIN candidate_borders cb ON pb.id = cb.border_id AND cb.candidate_id = ?
+      WHERE pb.active = 1
+      ORDER BY 
+        CASE pb.tier 
+          WHEN 'bronze' THEN 1 
+          WHEN 'silver' THEN 2 
+          WHEN 'gold' THEN 3 
+          WHEN 'platinum' THEN 4 
+          WHEN 'diamond' THEN 5 
+          WHEN 'mythic' THEN 6 
+          WHEN 'special' THEN 7 
+        END,
+        pb.rarity
+    `).all(candidateId);
+
+    const parsed = borders.map(border => {
+      const requirement = JSON.parse(border.unlock_requirement || '{}');
+      let unlocked = border.manually_unlocked === 1;
+      let unlockReason = null;
+
+      // Check unlock conditions
+      if (!unlocked) {
+        if (border.unlock_type === 'level' && requirement.level) {
+          unlocked = candidate.level >= requirement.level;
+          if (!unlocked) unlockReason = `Reach Level ${requirement.level}`;
+        } else if (border.unlock_type === 'achievement' && requirement.achievement_id) {
+          unlocked = achievementIds.has(requirement.achievement_id);
+          if (!unlocked) unlockReason = 'Unlock achievement';
+        } else if (border.unlock_type === 'special') {
+          unlockReason = 'Special event border';
+        }
+      }
+
+      return {
+        id: border.id,
+        name: border.name,
+        description: border.description,
+        tier: border.tier,
+        rarity: border.rarity,
+        gradient: border.gradient,
+        glow: border.glow,
+        animation: border.animation,
+        unlocked,
+        unlockReason,
+        isSelected: border.id === candidate.selected_border_id,
+      };
+    });
+
+    res.json({ 
+      success: true, 
+      data: {
+        borders: parsed,
+        selectedBorderId: candidate.selected_border_id,
+      }
+    });
+  } catch (error) {
+    console.error('Get borders error:', error);
+    res.status(500).json({ success: false, error: error.message });
+  }
+});
+
+// Select a border for the candidate
+router.post('/borders/:candidateId/select', (req, res) => {
+  try {
+    const candidateId = req.params.candidateId;
+    const { borderId } = req.body;
+
+    // If borderId is null, remove custom border (use default level-based)
+    if (!borderId) {
+      db.prepare('UPDATE candidates SET selected_border_id = NULL WHERE id = ?').run(candidateId);
+      return res.json({ success: true, data: { selectedBorderId: null } });
+    }
+
+    // Check if border exists
+    const border = db.prepare('SELECT * FROM profile_borders WHERE id = ?').get(borderId);
+    if (!border) {
+      return res.status(404).json({ success: false, error: 'Border not found' });
+    }
+
+    // Check if candidate has unlocked this border
+    const candidate = db.prepare('SELECT level FROM candidates WHERE id = ?').get(candidateId);
+    const requirement = JSON.parse(border.unlock_requirement || '{}');
+    
+    let unlocked = false;
+    
+    // Check manually unlocked
+    const manualUnlock = db.prepare(`
+      SELECT * FROM candidate_borders WHERE candidate_id = ? AND border_id = ?
+    `).get(candidateId, borderId);
+    
+    if (manualUnlock) {
+      unlocked = true;
+    } else if (border.unlock_type === 'level' && requirement.level) {
+      unlocked = candidate.level >= requirement.level;
+    } else if (border.unlock_type === 'achievement' && requirement.achievement_id) {
+      const hasAchievement = db.prepare(`
+        SELECT * FROM candidate_achievements WHERE candidate_id = ? AND achievement_id = ?
+      `).get(candidateId, requirement.achievement_id);
+      unlocked = !!hasAchievement;
+    }
+
+    if (!unlocked) {
+      return res.status(403).json({ success: false, error: 'Border not unlocked' });
+    }
+
+    // Update selected border
+    db.prepare('UPDATE candidates SET selected_border_id = ? WHERE id = ?').run(borderId, candidateId);
+
+    // Also add to candidate_borders if not there
+    db.prepare(`
+      INSERT OR IGNORE INTO candidate_borders (candidate_id, border_id, is_selected)
+      VALUES (?, ?, 1)
+    `).run(candidateId, borderId);
+
+    // Update is_selected flags
+    db.prepare('UPDATE candidate_borders SET is_selected = 0 WHERE candidate_id = ?').run(candidateId);
+    db.prepare('UPDATE candidate_borders SET is_selected = 1 WHERE candidate_id = ? AND border_id = ?').run(candidateId, borderId);
+
+    res.json({ success: true, data: { selectedBorderId: borderId } });
+  } catch (error) {
+    console.error('Select border error:', error);
+    res.status(500).json({ success: false, error: error.message });
+  }
+});
+
 module.exports = router;

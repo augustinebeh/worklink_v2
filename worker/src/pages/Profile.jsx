@@ -14,7 +14,6 @@ import {
   CopyIcon,
   CheckIcon,
   BriefcaseIcon,
-  ClockIcon,
   SunIcon,
   MoonIcon,
   CameraIcon,
@@ -22,10 +21,12 @@ import {
   MessageCircleIcon,
   ExternalLinkIcon,
   XIcon,
-  SettingsIcon,
   FlameIcon,
   BellIcon,
   CalendarIcon,
+  ImageIcon,
+  CircleIcon,
+  LockIcon,
 } from 'lucide-react';
 import { useToast } from '../components/ui/Toast';
 import { useAuth } from '../contexts/AuthContext';
@@ -37,6 +38,217 @@ import { DEFAULTS } from '../utils/constants';
 import ProfileAvatar from '../components/ui/ProfileAvatar';
 import XPBar from '../components/gamification/XPBar';
 import { StatCard } from '../components/common';
+
+// Rarity colors
+const RARITY_COLORS = {
+  common: 'text-slate-400 bg-slate-500/20 border-slate-500/30',
+  rare: 'text-blue-400 bg-blue-500/20 border-blue-500/30',
+  epic: 'text-violet-400 bg-violet-500/20 border-violet-500/30',
+  legendary: 'text-amber-400 bg-amber-500/20 border-amber-500/30',
+};
+
+// Tier colors
+const TIER_COLORS = {
+  bronze: 'from-amber-600 to-amber-700',
+  silver: 'from-slate-300 to-slate-400',
+  gold: 'from-yellow-400 to-amber-500',
+  platinum: 'from-cyan-400 to-teal-500',
+  diamond: 'from-violet-400 to-fuchsia-500',
+  mythic: 'from-rose-400 to-pink-500',
+  special: 'from-emerald-400 to-cyan-500',
+};
+
+// Profile Picture/Border Action Modal
+function ProfileActionModal({ isOpen, onClose, onSelectPhoto, onSelectBorder }) {
+  if (!isOpen) return null;
+
+  return (
+    <div className="fixed inset-0 z-50 flex items-end justify-center p-4 bg-black/70 backdrop-blur-sm" onClick={onClose}>
+      <div 
+        className="w-full max-w-sm rounded-t-3xl bg-[#0a1628] border border-white/10 p-6 animate-slide-up"
+        onClick={e => e.stopPropagation()}
+      >
+        <div className="w-12 h-1 bg-white/20 rounded-full mx-auto mb-6" />
+        <h3 className="text-lg font-bold text-white text-center mb-6">Customize Profile</h3>
+        
+        <div className="space-y-3">
+          <button
+            onClick={onSelectPhoto}
+            className="w-full flex items-center gap-4 p-4 rounded-2xl bg-white/5 border border-white/10 hover:bg-white/10 transition-all"
+          >
+            <div className="w-12 h-12 rounded-xl bg-emerald-500/20 flex items-center justify-center">
+              <CameraIcon className="h-6 w-6 text-emerald-400" />
+            </div>
+            <div className="flex-1 text-left">
+              <p className="text-white font-semibold">Change Profile Picture</p>
+              <p className="text-white/50 text-sm">Upload a new photo</p>
+            </div>
+            <ChevronRightIcon className="h-5 w-5 text-white/30" />
+          </button>
+
+          <button
+            onClick={onSelectBorder}
+            className="w-full flex items-center gap-4 p-4 rounded-2xl bg-white/5 border border-white/10 hover:bg-white/10 transition-all"
+          >
+            <div className="w-12 h-12 rounded-xl bg-violet-500/20 flex items-center justify-center">
+              <CircleIcon className="h-6 w-6 text-violet-400" />
+            </div>
+            <div className="flex-1 text-left">
+              <p className="text-white font-semibold">Change Profile Border</p>
+              <p className="text-white/50 text-sm">Customize your avatar frame</p>
+            </div>
+            <ChevronRightIcon className="h-5 w-5 text-white/30" />
+          </button>
+        </div>
+
+        <button
+          onClick={onClose}
+          className="w-full mt-4 py-3 rounded-xl bg-white/5 text-white/60 font-medium"
+        >
+          Cancel
+        </button>
+      </div>
+    </div>
+  );
+}
+
+// Border Selection Modal
+function BorderSelectionModal({ isOpen, onClose, borders, selectedBorderId, onSelect, userLevel }) {
+  const [selecting, setSelecting] = useState(null);
+
+  if (!isOpen) return null;
+
+  const handleSelect = async (border) => {
+    if (!border.unlocked || selecting) return;
+    setSelecting(border.id);
+    await onSelect(border.id);
+    setSelecting(null);
+  };
+
+  // Group borders by tier
+  const groupedBorders = borders.reduce((acc, border) => {
+    if (!acc[border.tier]) acc[border.tier] = [];
+    acc[border.tier].push(border);
+    return acc;
+  }, {});
+
+  const tierOrder = ['bronze', 'silver', 'gold', 'platinum', 'diamond', 'mythic', 'special'];
+
+  return (
+    <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/70 backdrop-blur-sm">
+      <div className="w-full max-w-lg max-h-[80vh] rounded-2xl bg-[#0a1628] border border-white/10 overflow-hidden flex flex-col">
+        {/* Header */}
+        <div className="p-4 border-b border-white/10 flex items-center justify-between">
+          <h3 className="text-lg font-bold text-white">Select Profile Border</h3>
+          <button onClick={onClose} className="p-2 rounded-lg hover:bg-white/5">
+            <XIcon className="h-5 w-5 text-white/50" />
+          </button>
+        </div>
+
+        {/* Borders List */}
+        <div className="flex-1 overflow-y-auto p-4 space-y-6">
+          {/* Default option */}
+          <div>
+            <h4 className="text-sm font-semibold text-white/50 mb-3 uppercase tracking-wider">Default</h4>
+            <button
+              onClick={() => onSelect(null)}
+              className={clsx(
+                'w-full flex items-center gap-4 p-3 rounded-xl border transition-all',
+                !selectedBorderId
+                  ? 'bg-emerald-500/20 border-emerald-500/50'
+                  : 'bg-white/5 border-white/10 hover:border-white/20'
+              )}
+            >
+              <div className="w-12 h-12 rounded-full bg-gradient-to-br from-slate-600 to-slate-700 flex items-center justify-center">
+                <UserIcon className="h-6 w-6 text-white/50" />
+              </div>
+              <div className="flex-1 text-left">
+                <p className="text-white font-medium">Level-Based Border</p>
+                <p className="text-white/40 text-sm">Changes automatically with your level</p>
+              </div>
+              {!selectedBorderId && <CheckIcon className="h-5 w-5 text-emerald-400" />}
+            </button>
+          </div>
+
+          {/* Grouped borders */}
+          {tierOrder.map(tier => {
+            const tierBorders = groupedBorders[tier];
+            if (!tierBorders?.length) return null;
+
+            return (
+              <div key={tier}>
+                <h4 className="text-sm font-semibold text-white/50 mb-3 uppercase tracking-wider flex items-center gap-2">
+                  <span className={clsx('w-3 h-3 rounded-full bg-gradient-to-r', TIER_COLORS[tier])} />
+                  {tier.charAt(0).toUpperCase() + tier.slice(1)}
+                </h4>
+                <div className="grid grid-cols-1 gap-2">
+                  {tierBorders.map(border => (
+                    <button
+                      key={border.id}
+                      onClick={() => handleSelect(border)}
+                      disabled={!border.unlocked || selecting === border.id}
+                      className={clsx(
+                        'w-full flex items-center gap-4 p-3 rounded-xl border transition-all',
+                        border.isSelected
+                          ? 'bg-emerald-500/20 border-emerald-500/50'
+                          : border.unlocked
+                            ? 'bg-white/5 border-white/10 hover:border-white/20'
+                            : 'bg-white/[0.02] border-white/5 opacity-60'
+                      )}
+                    >
+                      {/* Border Preview */}
+                      <div className={clsx(
+                        'w-12 h-12 rounded-full p-[3px] bg-gradient-to-br',
+                        border.gradient ? `from-${border.gradient.split(' ')[0]} to-${border.gradient.split(' ').pop()}` : TIER_COLORS[border.tier],
+                        border.glow,
+                        border.animation
+                      )}>
+                        <div className="w-full h-full rounded-full bg-[#0a1628] flex items-center justify-center">
+                          {border.unlocked ? (
+                            <span className="text-white/50 text-lg font-bold">A</span>
+                          ) : (
+                            <LockIcon className="h-4 w-4 text-white/30" />
+                          )}
+                        </div>
+                      </div>
+
+                      {/* Border Info */}
+                      <div className="flex-1 text-left">
+                        <div className="flex items-center gap-2">
+                          <p className={clsx('font-medium', border.unlocked ? 'text-white' : 'text-white/50')}>
+                            {border.name}
+                          </p>
+                          <span className={clsx(
+                            'px-1.5 py-0.5 rounded text-[10px] font-bold uppercase border',
+                            RARITY_COLORS[border.rarity]
+                          )}>
+                            {border.rarity}
+                          </span>
+                        </div>
+                        <p className="text-white/40 text-sm">
+                          {border.unlocked ? border.description : border.unlockReason}
+                        </p>
+                      </div>
+
+                      {/* Status */}
+                      {selecting === border.id ? (
+                        <div className="animate-spin h-5 w-5 border-2 border-emerald-500 border-t-transparent rounded-full" />
+                      ) : border.isSelected ? (
+                        <CheckIcon className="h-5 w-5 text-emerald-400" />
+                      ) : !border.unlocked ? (
+                        <LockIcon className="h-5 w-5 text-white/20" />
+                      ) : null}
+                    </button>
+                  ))}
+                </div>
+              </div>
+            );
+          })}
+        </div>
+      </div>
+    </div>
+  );
+}
 
 // Availability Quick Selector
 function AvailabilitySelector({ user, onUpdate }) {
@@ -57,12 +269,9 @@ function AvailabilitySelector({ user, onUpdate }) {
       navigate('/calendar');
       return;
     }
-    
     if (mode === selected) return;
-    
     setSaving(true);
     setSelected(mode);
-    
     try {
       const res = await fetch(`/api/v1/candidates/${user.id}/availability-mode`, {
         method: 'POST',
@@ -106,16 +315,11 @@ function AvailabilitySelector({ user, onUpdate }) {
                 : 'bg-[#0a1628]/80 border-white/[0.05] hover:border-white/10'
             )}
           >
-            <div className={clsx(
-              'text-sm font-semibold',
-              selected === opt.id ? 'text-emerald-400' : 'text-white'
-            )}>
+            <div className={clsx('text-sm font-semibold', selected === opt.id ? 'text-emerald-400' : 'text-white')}>
               {opt.label}
             </div>
             <div className="text-xs text-white/40 mt-0.5">{opt.desc}</div>
-            {selected === opt.id && (
-              <CheckIcon className="h-4 w-4 text-emerald-400 mx-auto mt-1" />
-            )}
+            {selected === opt.id && <CheckIcon className="h-4 w-4 text-emerald-400 mx-auto mt-1" />}
           </button>
         ))}
       </div>
@@ -135,10 +339,7 @@ function MenuLink({ icon: Icon, label, sublabel, onClick, danger, badge }) {
           : 'bg-[#0a1628]/80 border border-white/[0.05] hover:border-white/10'
       )}
     >
-      <div className={clsx(
-        'w-10 h-10 rounded-xl flex items-center justify-center',
-        danger ? 'bg-red-500/20' : 'bg-white/5'
-      )}>
+      <div className={clsx('w-10 h-10 rounded-xl flex items-center justify-center', danger ? 'bg-red-500/20' : 'bg-white/5')}>
         <Icon className={clsx('h-5 w-5', danger ? 'text-red-400' : 'text-white/70')} />
       </div>
       <div className="flex-1 text-left">
@@ -154,7 +355,6 @@ function MenuLink({ icon: Icon, label, sublabel, onClick, danger, badge }) {
   );
 }
 
-
 export default function Profile() {
   const navigate = useNavigate();
   const { user, logout, refreshUser } = useAuth();
@@ -167,9 +367,18 @@ export default function Profile() {
   const [showTelegramModal, setShowTelegramModal] = useState(false);
   const [telegramCode, setTelegramCode] = useState(null);
   const [telegramLoading, setTelegramLoading] = useState(false);
+  
+  // Profile customization states
+  const [showProfileActionModal, setShowProfileActionModal] = useState(false);
+  const [showBorderModal, setShowBorderModal] = useState(false);
+  const [borders, setBorders] = useState([]);
+  const [selectedBorderId, setSelectedBorderId] = useState(null);
 
   useEffect(() => {
-    if (user?.id) fetchUserData();
+    if (user?.id) {
+      fetchUserData();
+      fetchBorders();
+    }
   }, [user?.id]);
 
   const fetchUserData = async () => {
@@ -179,10 +388,47 @@ export default function Profile() {
       const data = await res.json();
       if (data.success) {
         setAchievements(data.data.achievements || []);
+        setSelectedBorderId(data.data.selected_border_id);
         refreshUser();
       }
     } catch (error) {
       console.error('Failed to fetch user data:', error);
+    }
+  };
+
+  const fetchBorders = async () => {
+    if (!user?.id) return;
+    try {
+      const res = await fetch(`/api/v1/gamification/borders/${user.id}`);
+      const data = await res.json();
+      if (data.success) {
+        setBorders(data.data.borders || []);
+        setSelectedBorderId(data.data.selectedBorderId);
+      }
+    } catch (error) {
+      console.error('Failed to fetch borders:', error);
+    }
+  };
+
+  const handleSelectBorder = async (borderId) => {
+    try {
+      const res = await fetch(`/api/v1/gamification/borders/${user.id}/select`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ borderId }),
+      });
+      const data = await res.json();
+      if (data.success) {
+        setSelectedBorderId(borderId);
+        toast.success('Border Updated!', borderId ? 'Your new border is now active' : 'Using level-based border');
+        fetchBorders();
+        refreshUser();
+        setShowBorderModal(false);
+      } else {
+        toast.error('Failed', data.error || 'Could not update border');
+      }
+    } catch (error) {
+      toast.error('Error', 'Please try again');
     }
   };
 
@@ -196,7 +442,7 @@ export default function Profile() {
   };
 
   const handlePhotoUpload = async (e) => {
-    const file = e.target.files?.[0];
+    const file = e.target?.files?.[0];
     if (!file) return;
     if (!file.type.startsWith('image/')) {
       toast.error('Invalid file', 'Please select an image');
@@ -206,8 +452,8 @@ export default function Profile() {
       toast.error('File too large', 'Max 5MB');
       return;
     }
-
     setUploadingPhoto(true);
+    setShowProfileActionModal(false);
     const reader = new FileReader();
     reader.onload = async (event) => {
       try {
@@ -280,43 +526,58 @@ export default function Profile() {
   const streakDays = user.streak_days || 0;
   const tier = getLevelTier(userLevel);
 
+  // Hidden file input for photo upload
+  const fileInputRef = useState(null);
+
   return (
     <div className="min-h-screen bg-[#020817] pb-24">
+      {/* Hidden file input */}
+      <input
+        type="file"
+        accept="image/*"
+        onChange={handlePhotoUpload}
+        className="hidden"
+        id="photo-upload-input"
+      />
+
       {/* Profile Header Card */}
       <div className="px-4 pt-4">
         <div className="relative rounded-3xl overflow-hidden">
-          {/* Background */}
           <div className="absolute inset-0 bg-gradient-to-br from-[#0a1628] via-[#0d1f3c] to-[#0f2847]" />
           <div className="absolute top-0 right-0 w-64 h-64 bg-violet-500/20 rounded-full blur-[80px] -translate-y-1/2 translate-x-1/4" />
           <div className="absolute bottom-0 left-0 w-48 h-48 bg-emerald-500/15 rounded-full blur-[60px] translate-y-1/3 -translate-x-1/4" />
           <div className="absolute inset-0 rounded-3xl border border-white/[0.08]" />
 
-          {/* Content */}
           <div className="relative p-6">
-            {/* Top Row */}
             <div className="flex items-center justify-between mb-6">
               <div className="flex items-center gap-4">
-                {/* Avatar with upload */}
-                <label className="cursor-pointer relative">
-                  <input type="file" accept="image/*" onChange={handlePhotoUpload} className="hidden" disabled={uploadingPhoto} />
-                  <div className="relative">
-                    <ProfileAvatar
-                      name={userName}
-                      photoUrl={user.profile_photo}
-                      level={userLevel}
-                      size="xl"
-                      showLevel={false}
-                    />
-                    {uploadingPhoto && (
-                      <div className="absolute inset-0 bg-black/50 rounded-full flex items-center justify-center">
-                        <div className="animate-spin h-6 w-6 border-2 border-white border-t-transparent rounded-full" />
-                      </div>
-                    )}
-                    <div className="absolute bottom-0 right-0 w-8 h-8 rounded-full bg-emerald-500 border-2 border-[#0a1628] flex items-center justify-center">
-                      <CameraIcon className="h-4 w-4 text-white" />
+                {/* Clickable Avatar */}
+                <button 
+                  onClick={() => setShowProfileActionModal(true)}
+                  className="relative group"
+                  disabled={uploadingPhoto}
+                >
+                  <ProfileAvatar
+                    name={userName}
+                    photoUrl={user.profile_photo}
+                    level={userLevel}
+                    size="xl"
+                    showLevel={false}
+                    selectedBorderId={selectedBorderId}
+                  />
+                  {uploadingPhoto ? (
+                    <div className="absolute inset-0 bg-black/50 rounded-full flex items-center justify-center">
+                      <div className="animate-spin h-6 w-6 border-2 border-white border-t-transparent rounded-full" />
                     </div>
+                  ) : (
+                    <div className="absolute inset-0 bg-black/0 group-hover:bg-black/30 rounded-full flex items-center justify-center transition-all">
+                      <CameraIcon className="h-6 w-6 text-white opacity-0 group-hover:opacity-100 transition-opacity" />
+                    </div>
+                  )}
+                  <div className="absolute bottom-0 right-0 w-8 h-8 rounded-full bg-emerald-500 border-2 border-[#0a1628] flex items-center justify-center">
+                    <CameraIcon className="h-4 w-4 text-white" />
                   </div>
-                </label>
+                </button>
 
                 <div>
                   <h1 className="text-xl font-bold text-white">{userName}</h1>
@@ -329,7 +590,6 @@ export default function Profile() {
                 </div>
               </div>
 
-              {/* Theme Toggle */}
               <button
                 onClick={toggleTheme}
                 className="p-3 rounded-xl bg-white/5 border border-white/10 hover:bg-white/10 transition-colors"
@@ -338,7 +598,6 @@ export default function Profile() {
               </button>
             </div>
 
-            {/* Level Badge */}
             <div className="flex items-center gap-3 mb-4">
               <div className="flex items-center gap-2 px-4 py-2 rounded-xl bg-violet-500/20 border border-violet-500/30">
                 <ZapIcon className="h-4 w-4 text-violet-400" />
@@ -350,16 +609,13 @@ export default function Profile() {
               </div>
             </div>
 
-            {/* XP Progress - Shared Component */}
             <XPBar currentXP={userXP} level={userLevel} />
           </div>
         </div>
       </div>
 
-      {/* Availability Selector - NEW! */}
       <AvailabilitySelector user={user} onUpdate={refreshUser} />
 
-      {/* Stats Grid */}
       <div className="px-4 mt-6">
         <div className="grid grid-cols-2 gap-3">
           <StatCard icon={BriefcaseIcon} label="Jobs Completed" value={jobsCompleted} color="emerald" />
@@ -386,10 +642,7 @@ export default function Profile() {
               <div className="flex-1 px-4 py-3 rounded-xl bg-[#0a1628] border border-white/[0.05]">
                 <p className="font-mono text-xl text-white tracking-widest text-center">{referralCode}</p>
               </div>
-              <button
-                onClick={handleCopyReferral}
-                className="p-3 rounded-xl bg-emerald-500 text-white shadow-lg shadow-emerald-500/25"
-              >
+              <button onClick={handleCopyReferral} className="p-3 rounded-xl bg-emerald-500 text-white shadow-lg shadow-emerald-500/25">
                 {copied ? <CheckIcon className="h-5 w-5" /> : <CopyIcon className="h-5 w-5" />}
               </button>
             </div>
@@ -399,9 +652,7 @@ export default function Profile() {
 
       {/* Contact Info */}
       <div className="px-4 mt-6">
-        <h2 className="text-white font-semibold mb-3 flex items-center gap-2">
-          Contact Info <span className="text-lg">📧</span>
-        </h2>
+        <h2 className="text-white font-semibold mb-3 flex items-center gap-2">Contact Info <span className="text-lg">📧</span></h2>
         <div className="space-y-3">
           <div className="flex items-center gap-4 p-4 rounded-2xl bg-[#0a1628]/80 border border-white/[0.05]">
             <div className="w-10 h-10 rounded-xl bg-white/5 flex items-center justify-center">
@@ -438,9 +689,7 @@ export default function Profile() {
             sublabel={
               pushNotifications.permission === 'denied'
                 ? 'Blocked in browser settings'
-                : pushNotifications.isSubscribed
-                  ? 'Receive instant alerts'
-                  : 'Enable job alerts'
+                : pushNotifications.isSubscribed ? 'Receive instant alerts' : 'Enable job alerts'
             }
             onClick={async () => {
               if (pushNotifications.isSubscribed) {
@@ -448,21 +697,39 @@ export default function Profile() {
                 if (success) toast.info('Disabled', 'Push notifications turned off');
               } else {
                 const success = await pushNotifications.subscribe();
-                if (success) {
-                  toast.success('Enabled!', 'You will receive push notifications');
-                } else if (pushNotifications.permission === 'denied') {
-                  toast.error('Blocked', 'Please enable notifications in browser settings');
-                }
+                if (success) toast.success('Enabled!', 'You will receive push notifications');
+                else if (pushNotifications.permission === 'denied') toast.error('Blocked', 'Please enable in browser settings');
               }
             }}
-            badge={
-              pushNotifications.isLoading ? '...' :
-              pushNotifications.isSubscribed ? '✓ Enabled' : null
-            }
+            badge={pushNotifications.isLoading ? '...' : pushNotifications.isSubscribed ? '✓ Enabled' : null}
           />
         )}
         <MenuLink icon={LogOutIcon} label="Log Out" onClick={handleLogout} danger />
       </div>
+
+      {/* Profile Action Modal */}
+      <ProfileActionModal
+        isOpen={showProfileActionModal}
+        onClose={() => setShowProfileActionModal(false)}
+        onSelectPhoto={() => {
+          setShowProfileActionModal(false);
+          document.getElementById('photo-upload-input')?.click();
+        }}
+        onSelectBorder={() => {
+          setShowProfileActionModal(false);
+          setShowBorderModal(true);
+        }}
+      />
+
+      {/* Border Selection Modal */}
+      <BorderSelectionModal
+        isOpen={showBorderModal}
+        onClose={() => setShowBorderModal(false)}
+        borders={borders}
+        selectedBorderId={selectedBorderId}
+        onSelect={handleSelectBorder}
+        userLevel={userLevel}
+      />
 
       {/* Telegram Modal */}
       {showTelegramModal && (
@@ -505,6 +772,16 @@ export default function Profile() {
           </div>
         </div>
       )}
+
+      <style>{`
+        @keyframes slide-up {
+          from { transform: translateY(100%); opacity: 0; }
+          to { transform: translateY(0); opacity: 1; }
+        }
+        .animate-slide-up {
+          animation: slide-up 0.3s ease-out;
+        }
+      `}</style>
     </div>
   );
 }
