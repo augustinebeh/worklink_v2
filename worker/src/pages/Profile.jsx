@@ -63,41 +63,62 @@ function ProfileActionModal({ isOpen, onClose, onSelectPhoto, onSelectBorder }) 
   if (!isOpen) return null;
 
   return (
-    <div className="fixed inset-0 z-50 flex items-end justify-center p-4 bg-black/70 backdrop-blur-sm" onClick={onClose}>
+    <>
+      {/* Backdrop */}
       <div 
-        className="w-full max-w-sm rounded-t-3xl bg-[#0a1628] border border-white/10 p-6 animate-slide-up"
-        onClick={e => e.stopPropagation()}
-      >
-        <div className="w-12 h-1 bg-white/20 rounded-full mx-auto mb-6" />
-        <h3 className="text-lg font-bold text-white text-center mb-6">Customize Profile</h3>
-        
-        <div className="space-y-3">
-          <button
-            onClick={onSelectPhoto}
-            className="w-full flex items-center gap-4 p-4 rounded-2xl bg-white/5 border border-white/10 hover:bg-white/10 transition-all"
-          >
-            <div className="w-12 h-12 rounded-xl bg-emerald-500/20 flex items-center justify-center">
-              <CameraIcon className="h-6 w-6 text-emerald-400" />
-            </div>
-            <div className="flex-1 text-left">
-              <p className="text-white font-semibold">Change Profile Picture</p>
-              <p className="text-white/50 text-sm">Upload a new photo</p>
-            </div>
-            <ChevronRightIcon className="h-5 w-5 text-white/30" />
-          </button>
+        className="fixed inset-0 z-[60] bg-black/70 backdrop-blur-sm"
+        onClick={onClose}
+      />
+      {/* Modal */}
+      <div className="fixed inset-x-0 bottom-0 z-[70] flex justify-center p-4">
+        <div 
+          className="w-full max-w-sm rounded-3xl bg-[#0a1628] border border-white/10 p-6 animate-slide-up"
+          onClick={e => e.stopPropagation()}
+        >
+          <div className="w-12 h-1 bg-white/20 rounded-full mx-auto mb-6" />
+          <h3 className="text-lg font-bold text-white text-center mb-6">Customize Profile</h3>
+          
+          <div className="space-y-3">
+            <button
+              onClick={onSelectPhoto}
+              className="w-full flex items-center gap-4 p-4 rounded-2xl bg-white/5 border border-white/10 hover:bg-white/10 active:scale-[0.98] transition-all"
+            >
+              <div className="w-12 h-12 rounded-xl bg-emerald-500/20 flex items-center justify-center">
+                <CameraIcon className="h-6 w-6 text-emerald-400" />
+              </div>
+              <div className="flex-1 text-left">
+                <p className="text-white font-semibold">Change Profile Picture</p>
+                <p className="text-white/50 text-sm">Upload a new photo</p>
+              </div>
+              <ChevronRightIcon className="h-5 w-5 text-white/30" />
+            </button>
+
+            <button
+              onClick={onSelectBorder}
+              className="w-full flex items-center gap-4 p-4 rounded-2xl bg-white/5 border border-white/10 hover:bg-white/10 active:scale-[0.98] transition-all"
+            >
+              <div className="w-12 h-12 rounded-xl bg-violet-500/20 flex items-center justify-center">
+                <CircleIcon className="h-6 w-6 text-violet-400" />
+              </div>
+              <div className="flex-1 text-left">
+                <p className="text-white font-semibold">Change Profile Border</p>
+                <p className="text-white/50 text-sm">Customize your avatar frame</p>
+              </div>
+              <ChevronRightIcon className="h-5 w-5 text-white/30" />
+            </button>
+          </div>
 
           <button
-            onClick={onSelectBorder}
-            className="w-full flex items-center gap-4 p-4 rounded-2xl bg-white/5 border border-white/10 hover:bg-white/10 transition-all"
+            onClick={onClose}
+            className="w-full mt-4 py-3 rounded-xl bg-white/5 text-white/60 font-medium hover:bg-white/10 transition-all"
           >
-            <div className="w-12 h-12 rounded-xl bg-violet-500/20 flex items-center justify-center">
-              <CircleIcon className="h-6 w-6 text-violet-400" />
-            </div>
-            <div className="flex-1 text-left">
-              <p className="text-white font-semibold">Change Profile Border</p>
-              <p className="text-white/50 text-sm">Customize your avatar frame</p>
-            </div>
-            <ChevronRightIcon className="h-5 w-5 text-white/30" />
+            Cancel
+          </button>
+        </div>
+      </div>
+    </>
+  );
+}
           </button>
         </div>
 

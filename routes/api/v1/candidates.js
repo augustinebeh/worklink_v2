@@ -2,6 +2,18 @@ const express = require('express');
 const router = express.Router();
 const { db } = require('../../../db/database');
 
+// Random default avatar generator
+function generateRandomAvatar(name) {
+  const styles = [
+    'avataaars', 'avataaars-neutral', 'bottts', 'fun-emoji', 'lorelei',
+    'lorelei-neutral', 'micah', 'miniavs', 'notionists', 'notionists-neutral',
+    'open-peeps', 'personas', 'pixel-art', 'pixel-art-neutral', 'thumbs',
+  ];
+  const style = styles[Math.floor(Math.random() * styles.length)];
+  const seed = `${name}-${Date.now()}-${Math.random().toString(36).slice(2)}`;
+  return `https://api.dicebear.com/7.x/${style}/svg?seed=${encodeURIComponent(seed)}`;
+}
+
 // Get all candidates
 router.get('/', (req, res) => {
   try {
@@ -103,10 +115,10 @@ router.post('/', (req, res) => {
     const id = 'CND' + Date.now().toString(36).toUpperCase();
 
     const stmt = db.prepare(`
-      INSERT INTO candidates (id, name, email, phone, date_of_birth, source, status)
-      VALUES (?, ?, ?, ?, ?, ?, ?)
+      INSERT INTO candidates (id, name, email, phone, date_of_birth, source, status, profile_photo)
+      VALUES (?, ?, ?, ?, ?, ?, ?, ?)
     `);
-    stmt.run(id, name, email, phone, date_of_birth, source, status);
+    stmt.run(id, name, email, phone, date_of_birth, source, status, generateRandomAvatar(name));
 
     const candidate = db.prepare('SELECT * FROM candidates WHERE id = ?').get(id);
     

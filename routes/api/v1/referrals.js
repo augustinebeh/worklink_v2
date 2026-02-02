@@ -7,6 +7,18 @@ const router = express.Router();
 const { db } = require('../../../db/database');
 const { validate, schemas } = require('../../../middleware/validation');
 
+// Random default avatar generator
+function generateRandomAvatar(name) {
+  const styles = [
+    'avataaars', 'avataaars-neutral', 'bottts', 'fun-emoji', 'lorelei',
+    'lorelei-neutral', 'micah', 'miniavs', 'notionists', 'notionists-neutral',
+    'open-peeps', 'personas', 'pixel-art', 'pixel-art-neutral', 'thumbs',
+  ];
+  const style = styles[Math.floor(Math.random() * styles.length)];
+  const seed = `${name}-${Date.now()}-${Math.random().toString(36).slice(2)}`;
+  return `https://api.dicebear.com/7.x/${style}/svg?seed=${encodeURIComponent(seed)}`;
+}
+
 // Get referral dashboard for a candidate
 router.get('/dashboard/:candidateId', (req, res) => {
   try {
@@ -111,11 +123,11 @@ router.post('/register', validate(schemas.referralRegistration), (req, res) => {
     const newReferralCode = name.split(' ')[0].toUpperCase().slice(0, 4) + 
       Math.random().toString(36).substring(2, 6).toUpperCase();
 
-    // Create candidate
+    // Create candidate with random avatar
     db.prepare(`
-      INSERT INTO candidates (id, name, email, phone, status, source, referral_code, referred_by)
-      VALUES (?, ?, ?, ?, 'onboarding', 'referral', ?, ?)
-    `).run(id, name, email, phone, newReferralCode, referrer.id);
+      INSERT INTO candidates (id, name, email, phone, status, source, referral_code, referred_by, profile_photo)
+      VALUES (?, ?, ?, ?, 'onboarding', 'referral', ?, ?, ?)
+    `).run(id, name, email, phone, newReferralCode, referrer.id, generateRandomAvatar(name));
 
     // Create referral record
     const refId = 'REF' + Date.now().toString(36).toUpperCase();

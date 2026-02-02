@@ -9,6 +9,36 @@ const logger = require('../../../utils/logger');
 const TELEGRAM_BOT_TOKEN = process.env.TELEGRAM_BOT_TOKEN;
 const GOOGLE_CLIENT_ID = process.env.GOOGLE_CLIENT_ID;
 
+// Random default avatar generator
+function generateRandomAvatar(name) {
+  // DiceBear avatar styles - variety of fun, professional avatars
+  const styles = [
+    'avataaars',
+    'avataaars-neutral', 
+    'bottts',
+    'fun-emoji',
+    'lorelei',
+    'lorelei-neutral',
+    'micah',
+    'miniavs',
+    'notionists',
+    'notionists-neutral',
+    'open-peeps',
+    'personas',
+    'pixel-art',
+    'pixel-art-neutral',
+    'thumbs',
+  ];
+  
+  // Pick a random style
+  const style = styles[Math.floor(Math.random() * styles.length)];
+  
+  // Add random seed variation for more uniqueness
+  const seed = `${name}-${Date.now()}-${Math.random().toString(36).slice(2)}`;
+  
+  return `https://api.dicebear.com/7.x/${style}/svg?seed=${encodeURIComponent(seed)}`;
+}
+
 // Verify Telegram Login data
 function verifyTelegramAuth(authData) {
   if (!TELEGRAM_BOT_TOKEN) {
@@ -296,7 +326,7 @@ router.post('/telegram/login', (req, res) => {
         created_at, updated_at
       )
       VALUES (?, ?, ?, ?, 'pending', 'telegram', ?, 0, 1, ?, 'online', datetime('now'), datetime('now'))
-    `).run(id, fullName, telegramId, username, referralCode, photoUrl || `https://api.dicebear.com/7.x/avataaars/svg?seed=${encodeURIComponent(fullName)}`);
+    `).run(id, fullName, telegramId, username, referralCode, photoUrl || generateRandomAvatar(fullName));
 
     candidate = db.prepare('SELECT * FROM candidates WHERE id = ?').get(id);
     candidate.certifications = JSON.parse(candidate.certifications || '[]');
@@ -391,7 +421,7 @@ router.post('/google/login', async (req, res) => {
         created_at, updated_at
       )
       VALUES (?, ?, ?, ?, 'pending', 'google', ?, 0, 1, ?, 'online', datetime('now'), datetime('now'))
-    `).run(id, fullName, email, googleId, referralCode, picture || `https://api.dicebear.com/7.x/avataaars/svg?seed=${encodeURIComponent(fullName)}`);
+    `).run(id, fullName, email, googleId, referralCode, picture || generateRandomAvatar(fullName));
 
     candidate = db.prepare('SELECT * FROM candidates WHERE id = ?').get(id);
     candidate.certifications = JSON.parse(candidate.certifications || '[]');
