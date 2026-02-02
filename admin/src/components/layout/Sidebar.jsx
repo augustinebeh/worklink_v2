@@ -25,6 +25,7 @@ import {
   SearchIcon,
   BrainIcon,
   ZapIcon,
+  TrendingUpIcon,
 } from 'lucide-react';
 import { clsx } from 'clsx';
 import Logo, { LogoIcon } from '../ui/Logo';
@@ -98,6 +99,7 @@ const navigation = [
     description: 'Track success',
     children: [
       { name: 'Financials', href: '/financials', icon: DollarSignIcon, description: 'Revenue & profit' },
+      { name: 'Retention Analytics', href: '/retention-analytics', icon: TrendingUpIcon, highlight: true, description: 'User engagement & churn' },
       { name: 'Gamification', href: '/gamification', icon: TrophyIcon, description: 'Worker engagement' },
       { name: 'Training', href: '/training', icon: GraduationCapIcon, description: 'Certifications' },
     ],

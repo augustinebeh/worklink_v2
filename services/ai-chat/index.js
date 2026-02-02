@@ -10,7 +10,7 @@
  * - auto: AI automatically responds (with delay for natural feel)
  */
 
-const { db } = require('../../db/database');
+const { db } = require('../../db');
 const { askClaude } = require('../../utils/claude');
 const ml = require('../ml');
 const prompts = require('./prompts');

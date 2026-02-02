@@ -12,7 +12,7 @@ import {
 } from 'lucide-react';
 import { useAuth } from '../contexts/AuthContext';
 import { clsx } from 'clsx';
-import { calculateLevel } from '../utils/gamification';
+import { calculateLevel } from '../../../shared/utils/gamification-esm';
 import ProfileAvatar from '../components/ui/ProfileAvatar';
 import { SectionHeader } from '../components/common';
 
@@ -143,6 +143,7 @@ function LeaderboardItem({ player, rank, isCurrentUser }) {
         level={level}
         size="md"
         showLevel={false}
+        selectedBorderId={player.selected_border_id}
       />
 
       <div className="flex-1 min-w-0">
@@ -289,6 +290,7 @@ export default function Leaderboard() {
                 level={calculateLevel(players[1]?.xp || 0)}
                 size="lg"
                 className="mx-auto mb-2"
+                selectedBorderId={players[1]?.selected_border_id}
               />
               <div className="p-3 rounded-2xl bg-gradient-to-b from-slate-400/20 to-slate-600/10 border border-slate-400/30">
                 <p className="text-white font-semibold text-sm truncate">
@@ -310,6 +312,7 @@ export default function Leaderboard() {
                   level={calculateLevel(players[0]?.xp || 0)}
                   size="xl"
                   className="mx-auto mb-2"
+                  selectedBorderId={players[0]?.selected_border_id}
                 />
               </div>
               <div className="p-4 rounded-2xl bg-gradient-to-b from-amber-400/20 to-yellow-600/10 border border-amber-400/30">
@@ -330,6 +333,7 @@ export default function Leaderboard() {
                 level={calculateLevel(players[2]?.xp || 0)}
                 size="lg"
                 className="mx-auto mb-2"
+                selectedBorderId={players[2]?.selected_border_id}
               />
               <div className="p-3 rounded-2xl bg-gradient-to-b from-amber-600/20 to-amber-800/10 border border-amber-600/30">
                 <p className="text-white font-semibold text-sm truncate">

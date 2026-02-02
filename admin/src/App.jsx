@@ -29,6 +29,7 @@ import AISourcing from './pages/AISourcing';
 import MLDashboard from './pages/MLDashboard';
 import TelegramGroups from './pages/TelegramGroups';
 import AdOptimization from './pages/AdOptimization';
+import RetentionAnalytics from './pages/RetentionAnalytics';
 
 // Protected Route wrapper
 function ProtectedRoute({ children }) {
@@ -83,6 +84,7 @@ function AppRoutes() {
         
         {/* Performance */}
         <Route path="financials" element={<FinancialDashboard />} />
+        <Route path="retention-analytics" element={<RetentionAnalytics />} />
         <Route path="gamification" element={<Gamification />} />
         <Route path="training" element={<Training />} />
         

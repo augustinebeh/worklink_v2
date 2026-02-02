@@ -22,7 +22,7 @@ import Select from '../components/ui/Select';
 import Table from '../components/ui/Table';
 import Modal from '../components/ui/Modal';
 import { clsx } from 'clsx';
-import { XP_THRESHOLDS as xpThresholds, LEVEL_TITLES as levelTitles } from '../utils/gamification';
+import { XP_THRESHOLDS as xpThresholds, LEVEL_TITLES as levelTitles } from '../../../shared/utils/gamification-esm';
 
 // Generate avatar URL if not provided
 const getAvatarUrl = (candidate) => {

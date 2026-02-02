@@ -1,6 +1,6 @@
 const express = require('express');
 const router = express.Router();
-const { db } = require('../../../db/database');
+const { db } = require('../../../db');
 const { getSGDateString } = require('../../../shared/constants');
 
 // Comprehensive financial dashboard
@@ -534,6 +534,193 @@ router.get('/leaderboard', (req, res) => {
   } catch (error) {
     res.status(500).json({ success: false, error: error.message });
   }
+});
+
+// =====================================================
+// RETENTION ANALYTICS ENDPOINTS
+// =====================================================
+
+// Get retention overview metrics
+router.get('/retention/overview', (req, res) => {
+  try {
+    const { days = 30 } = req.query;
+
+    // Active users metrics
+    const activeUsersQuery = `
+      SELECT
+        COUNT(DISTINCT CASE WHEN datetime(last_seen) > datetime('now', '-1 day') THEN id END) as dau,
+        COUNT(DISTINCT CASE WHEN datetime(last_seen) > datetime('now', '-7 days') THEN id END) as wau,
+        COUNT(DISTINCT CASE WHEN datetime(last_seen) > datetime('now', '-30 days') THEN id END) as mau,
+        COUNT(DISTINCT CASE WHEN status = 'active' THEN id END) as total_active
+      FROM candidates
+    `;
+
+    const activeUsers = db.prepare(activeUsersQuery).get();
+
+    // Streak metrics
+    const streakQuery = `
+      SELECT
+        COUNT(CASE WHEN streak_days > 0 THEN 1 END) as active_streaks,
+        COUNT(CASE WHEN streak_days > 0 AND
+          (julianday('now') - julianday(streak_last_date)) * 24 > 18 THEN 1 END) as at_risk_streaks,
+        AVG(CASE WHEN streak_days > 0 THEN streak_days END) as avg_streak_length,
+        MAX(streak_days) as max_streak
+      FROM candidates
+      WHERE status = 'active'
+    `;
+
+    const streakMetrics = db.prepare(streakQuery).get();
+
+    // Notification metrics
+    const notificationQuery = `
+      SELECT
+        SUM(sent_count) as total_sent,
+        SUM(opened_count) as total_opened,
+        SUM(clicked_count) as total_clicked,
+        SUM(responded_count) as total_responded,
+        CASE WHEN SUM(sent_count) > 0 THEN
+          ROUND((SUM(opened_count) * 100.0 / SUM(sent_count)), 2)
+        ELSE 0 END as open_rate,
+        CASE WHEN SUM(sent_count) > 0 THEN
+          ROUND((SUM(responded_count) * 100.0 / SUM(sent_count)), 2)
+        ELSE 0 END as response_rate
+      FROM notification_effectiveness
+      WHERE date_tracked >= date('now', '-30 days')
+    `;
+
+    const notificationMetrics = db.prepare(notificationQuery).get();
+
+    // Retention rate calculation
+    const retentionQuery = `
+      SELECT
+        COUNT(CASE WHEN datetime(created_at) <= datetime('now', '-7 days')
+          AND datetime(last_seen) > datetime('now', '-7 days') THEN 1 END) as retained_week1,
+        COUNT(CASE WHEN datetime(created_at) <= datetime('now', '-7 days') THEN 1 END) as eligible_week1,
+        COUNT(CASE WHEN datetime(created_at) <= datetime('now', '-30 days')
+          AND datetime(last_seen) > datetime('now', '-7 days') THEN 1 END) as retained_month1,
+        COUNT(CASE WHEN datetime(created_at) <= datetime('now', '-30 days') THEN 1 END) as eligible_month1
+      FROM candidates
+      WHERE status = 'active'
+    `;
+
+    const retention = db.prepare(retentionQuery).get();
+
+    const retentionRate7d = retention.eligible_week1 > 0 ?
+      (retention.retained_week1 / retention.eligible_week1 * 100).toFixed(1) : 0;
+    const retentionRate30d = retention.eligible_month1 > 0 ?
+      (retention.retained_month1 / retention.eligible_month1 * 100).toFixed(1) : 0;
+
+    res.json({
+      success: true,
+      data: {
+        summary: {
+          dau: activeUsers.dau || 0,
+          wau: activeUsers.wau || 0,
+          mau: activeUsers.mau || 0,
+          retentionRate7d: parseFloat(retentionRate7d),
+          retentionRate30d: parseFloat(retentionRate30d),
+          activeStreaks: streakMetrics.active_streaks || 0,
+          avgStreakLength: parseFloat((streakMetrics.avg_streak_length || 0).toFixed(1)),
+          notificationOpenRate: notificationMetrics.open_rate || 0,
+          notificationResponseRate: notificationMetrics.response_rate || 0
+        },
+        metrics: {
+          streaks: {
+            active: streakMetrics.active_streaks || 0,
+            atRisk: streakMetrics.at_risk_streaks || 0,
+            avgLength: parseFloat((streakMetrics.avg_streak_length || 0).toFixed(1)),
+            maxLength: streakMetrics.max_streak || 0
+          },
+          notifications: {
+            totalSent: notificationMetrics.total_sent || 0,
+            totalOpened: notificationMetrics.total_opened || 0,
+            totalClicked: notificationMetrics.total_clicked || 0,
+            totalResponded: notificationMetrics.total_responded || 0,
+            openRate: notificationMetrics.open_rate || 0,
+            responseRate: notificationMetrics.response_rate || 0
+          }
+        }
+      }
+    });
+  } catch (error) {
+    console.error('Error fetching retention overview:', error);
+    res.status(500).json({ success: false, error: error.message });
+  }
+});
+
+// Get churn risk analysis
+router.get('/retention/churn-risk', (req, res) => {
+  try {
+    const churnRiskQuery = `
+      SELECT
+        c.id,
+        c.name,
+        c.email,
+        c.last_seen,
+        c.streak_days,
+        c.total_jobs_completed,
+        c.rating,
+        c.xp,
+        (julianday('now') - julianday(c.last_seen)) as days_since_seen,
+        (julianday('now') - julianday(c.streak_last_date)) * 24 as hours_since_checkin,
+        CASE
+          WHEN (julianday('now') - julianday(c.last_seen)) > 7 THEN 'high'
+          WHEN (julianday('now') - julianday(c.last_seen)) > 3 THEN 'medium'
+          WHEN (julianday('now') - julianday(c.streak_last_date)) * 24 > 48 THEN 'medium'
+          WHEN (julianday('now') - julianday(c.streak_last_date)) * 24 > 18 THEN 'low'
+          ELSE 'none'
+        END as risk_level
+      FROM candidates c
+      WHERE c.status = 'active'
+        AND (
+          (julianday('now') - julianday(c.last_seen)) > 1
+          OR (julianday('now') - julianday(c.streak_last_date)) * 24 > 18
+        )
+      ORDER BY
+        CASE risk_level
+          WHEN 'high' THEN 1
+          WHEN 'medium' THEN 2
+          WHEN 'low' THEN 3
+          ELSE 4
+        END,
+        c.last_seen ASC
+      LIMIT 50
+    `;
+
+    const atRiskUsers = db.prepare(churnRiskQuery).all().map(user => ({
+      ...user,
+      days_since_seen: Math.round(user.days_since_seen * 10) / 10,
+      hours_since_checkin: Math.round(user.hours_since_checkin * 10) / 10
+    }));
+
+    // Risk level summary
+    const riskSummary = {
+      high: atRiskUsers.filter(u => u.risk_level === 'high').length,
+      medium: atRiskUsers.filter(u => u.risk_level === 'medium').length,
+      low: atRiskUsers.filter(u => u.risk_level === 'low').length,
+      total: atRiskUsers.length
+    };
+
+    res.json({
+      success: true,
+      data: {
+        atRiskUsers,
+        summary: riskSummary
+      }
+    });
+  } catch (error) {
+    console.error('Error fetching churn risk analysis:', error);
+    res.status(500).json({ success: false, error: error.message });
+  }
+});
+
+// Simple retention test endpoint
+router.get('/retention-test', (req, res) => {
+  res.json({
+    success: true,
+    message: 'Retention endpoint is working',
+    timestamp: new Date().toISOString()
+  });
 });
 
 module.exports = router;

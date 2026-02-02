@@ -1,6 +1,8 @@
 const express = require('express');
 const router = express.Router();
-const { db } = require('../../../db/database');
+const { db } = require('../../../db');
+const { authenticateAdmin, authenticateCandidateOwnership, authenticateAdminOrOwner } = require('../../../middleware/auth');
+const { createValidationMiddleware } = require('../../../middleware/database-validation');
 
 // Random default avatar generator
 function generateRandomAvatar(name) {
@@ -14,8 +16,8 @@ function generateRandomAvatar(name) {
   return `https://api.dicebear.com/7.x/${style}/svg?seed=${encodeURIComponent(seed)}`;
 }
 
-// Get all candidates
-router.get('/', (req, res) => {
+// Get all candidates - Admin only
+router.get('/', authenticateAdmin, (req, res) => {
   try {
     const { status, search, page = 1, limit = 20 } = req.query;
     const offset = (page - 1) * limit;
@@ -62,8 +64,8 @@ router.get('/', (req, res) => {
   }
 });
 
-// Get single candidate
-router.get('/:id', (req, res) => {
+// Get single candidate - Admin or own data
+router.get('/:id', authenticateAdminOrOwner, (req, res) => {
   try {
     const candidate = db.prepare('SELECT * FROM candidates WHERE id = ?').get(req.params.id);
     
@@ -160,8 +162,8 @@ function checkProfileCompletion(candidateId) {
 }
 
 // Update candidate (supports both PUT and PATCH)
-router.put('/:id', updateCandidate);
-router.patch('/:id', updateCandidate);
+router.put('/:id', authenticateAdminOrOwner, createValidationMiddleware('candidate'), updateCandidate);
+router.patch('/:id', authenticateAdminOrOwner, createValidationMiddleware('candidate'), updateCandidate);
 
 function updateCandidate(req, res) {
   try {

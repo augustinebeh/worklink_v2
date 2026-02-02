@@ -4,6 +4,7 @@ import { AuthProvider, useAuth } from './contexts/AuthContext';
 import { WebSocketProvider } from './contexts/WebSocketContext';
 import { ThemeProvider } from './contexts/ThemeContext';
 import { AppSettingsProvider } from './contexts/AppSettingsContext';
+import { StreakProtectionProvider } from './contexts/StreakProtectionContext';
 import { ToastProvider } from './components/ui/Toast';
 import Header from './components/layout/Header';
 import BottomNav from './components/layout/BottomNav';
@@ -231,12 +232,14 @@ export default function App() {
         <AuthProvider>
           <AppSettingsProvider>
             <WebSocketProvider>
-              <ToastProvider>
-                <ErrorBoundary>
-                  <AppRoutes />
-                </ErrorBoundary>
-                <InstallPrompt />
-              </ToastProvider>
+              <StreakProtectionProvider>
+                <ToastProvider>
+                  <ErrorBoundary>
+                    <AppRoutes />
+                  </ErrorBoundary>
+                  <InstallPrompt />
+                </ToastProvider>
+              </StreakProtectionProvider>
             </WebSocketProvider>
           </AppSettingsProvider>
         </AuthProvider>

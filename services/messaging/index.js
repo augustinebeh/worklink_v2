@@ -8,7 +8,7 @@
  * - Admin can override and send to specific channel or 'all'
  */
 
-const { db } = require('../../db/database');
+const { db } = require('../../db');
 const { broadcastToCandidate, broadcastToAdmins, createNotification, EventTypes, isCandidateOnline } = require('../../websocket');
 const telegram = require('./telegram');
 const webpush = require('web-push');

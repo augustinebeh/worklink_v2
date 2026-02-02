@@ -4,8 +4,9 @@
 
 const express = require('express');
 const router = express.Router();
-const { db } = require('../../../db/database');
+const { db } = require('../../../db');
 const { getSGDateString } = require('../../../shared/constants');
+const retentionService = require('../../../services/retention-notifications');
 
 // Initialize web-push if keys are available
 let webpush = null;
@@ -389,6 +390,344 @@ function calculateMatchScore(candidate, job) {
 function formatDate(dateStr) {
   const d = new Date(dateStr);
   return d.toLocaleDateString('en-SG', { weekday: 'short', day: 'numeric', month: 'short', timeZone: 'Asia/Singapore' });
+}
+
+// =====================================================
+// RETENTION NOTIFICATION SYSTEM
+// =====================================================
+
+// Enhanced push subscription with retention tracking
+router.post('/subscribe-enhanced', async (req, res) => {
+  try {
+    const { candidateId, subscription } = req.body;
+
+    if (!candidateId || !subscription) {
+      return res.status(400).json({
+        success: false,
+        error: 'Missing candidateId or subscription'
+      });
+    }
+
+    const { endpoint, keys } = subscription;
+
+    if (!endpoint || !keys?.p256dh || !keys?.auth) {
+      return res.status(400).json({
+        success: false,
+        error: 'Invalid subscription format'
+      });
+    }
+
+    // Store enhanced subscription for retention tracking
+    const query = `
+      INSERT OR REPLACE INTO push_subscriptions
+      (candidate_id, subscription_endpoint, subscription_p256dh, subscription_auth, user_agent, updated_at)
+      VALUES (?, ?, ?, ?, ?, datetime('now'))
+    `;
+
+    db.prepare(query).run(
+      candidateId,
+      endpoint,
+      keys.p256dh,
+      keys.auth,
+      req.get('User-Agent') || 'Unknown'
+    );
+
+    // Initialize streak protection for new users
+    const protectionQuery = `
+      INSERT OR IGNORE INTO streak_protection (candidate_id, freeze_tokens, recovery_tokens)
+      VALUES (?, 2, 1)
+    `;
+    db.prepare(protectionQuery).run(candidateId);
+
+    console.log(`✅ Enhanced push subscription registered for candidate ${candidateId}`);
+
+    res.json({
+      success: true,
+      message: 'Enhanced push subscription registered successfully'
+    });
+
+  } catch (error) {
+    console.error('Error registering enhanced push subscription:', error);
+    res.status(500).json({
+      success: false,
+      error: 'Failed to register enhanced push subscription'
+    });
+  }
+});
+
+// Handle notification action responses (for retention tracking)
+router.post('/action', async (req, res) => {
+  try {
+    const { candidateId, notificationType, action } = req.body;
+
+    if (!candidateId || !notificationType || !action) {
+      return res.status(400).json({
+        success: false,
+        error: 'Missing required fields'
+      });
+    }
+
+    // Log the action for retention analytics
+    const logQuery = `
+      INSERT INTO notification_log (candidate_id, notification_type, status, response_action)
+      VALUES (?, ?, 'responded', ?)
+    `;
+    db.prepare(logQuery).run(candidateId, notificationType, action);
+
+    // Handle specific actions
+    let result = {};
+
+    if (notificationType === 'streak_risk' && action === 'checkin') {
+      // Quick check-in to maintain streak
+      const updateQuery = `
+        UPDATE candidates
+        SET streak_last_date = date('now'),
+            updated_at = datetime('now')
+        WHERE id = ?
+      `;
+      db.prepare(updateQuery).run(candidateId);
+      result.checkedIn = true;
+
+    } else if (notificationType === 'streak_risk' && action === 'protect') {
+      // Use freeze token to protect streak
+      const protectResult = await protectStreak(candidateId);
+      result = protectResult;
+    }
+
+    console.log(`✅ Notification action: ${candidateId} responded to ${notificationType} with ${action}`);
+
+    res.json({ success: true, ...result });
+
+  } catch (error) {
+    console.error('Error handling notification action:', error);
+    res.status(500).json({
+      success: false,
+      error: 'Failed to handle notification action'
+    });
+  }
+});
+
+// Get notification status and streak protection info
+router.get('/status/:candidateId', async (req, res) => {
+  try {
+    const { candidateId } = req.params;
+
+    const query = `
+      SELECT
+        c.streak_days,
+        c.streak_last_date,
+        c.streak_protected_until,
+        sp.freeze_tokens,
+        sp.recovery_tokens,
+        ps.subscription_endpoint IS NOT NULL as has_enhanced_subscription,
+        (julianday('now') - julianday(c.streak_last_date)) * 24 as hours_since_checkin
+      FROM candidates c
+      LEFT JOIN streak_protection sp ON c.id = sp.candidate_id
+      LEFT JOIN push_subscriptions ps ON c.id = ps.candidate_id
+      WHERE c.id = ?
+    `;
+
+    const status = db.prepare(query).get(candidateId);
+
+    if (!status) {
+      return res.status(404).json({
+        success: false,
+        error: 'Candidate not found'
+      });
+    }
+
+    // Calculate streak risk
+    const streakAtRisk = status.hours_since_checkin > 18 && status.hours_since_checkin < 24;
+    const streakBroken = status.hours_since_checkin >= 24 && !status.streak_protected_until;
+
+    res.json({
+      success: true,
+      data: {
+        ...status,
+        streakAtRisk,
+        streakBroken,
+        canProtectStreak: status.freeze_tokens > 0,
+        canRecoverStreak: status.recovery_tokens > 0
+      }
+    });
+
+  } catch (error) {
+    console.error('Error getting notification status:', error);
+    res.status(500).json({
+      success: false,
+      error: 'Failed to get notification status'
+    });
+  }
+});
+
+// Use freeze token to protect streak
+router.post('/protect-streak', async (req, res) => {
+  try {
+    const { candidateId } = req.body;
+
+    if (!candidateId) {
+      return res.status(400).json({
+        success: false,
+        error: 'Missing candidateId'
+      });
+    }
+
+    const result = await protectStreak(candidateId);
+    res.json(result);
+
+  } catch (error) {
+    console.error('Error protecting streak:', error);
+    res.status(500).json({
+      success: false,
+      error: error.message || 'Failed to protect streak'
+    });
+  }
+});
+
+// Use recovery token to restore broken streak
+router.post('/recover-streak', async (req, res) => {
+  try {
+    const { candidateId } = req.body;
+
+    if (!candidateId) {
+      return res.status(400).json({
+        success: false,
+        error: 'Missing candidateId'
+      });
+    }
+
+    const result = await recoverStreak(candidateId);
+    res.json(result);
+
+  } catch (error) {
+    console.error('Error recovering streak:', error);
+    res.status(500).json({
+      success: false,
+      error: error.message || 'Failed to recover streak'
+    });
+  }
+});
+
+// Test retention notification endpoint (development only)
+router.post('/test-retention/:candidateId/:type', async (req, res) => {
+  try {
+    if (process.env.NODE_ENV === 'production') {
+      return res.status(403).json({
+        success: false,
+        error: 'Test endpoint not available in production'
+      });
+    }
+
+    const { candidateId, type } = req.params;
+
+    await retentionService.triggerNotification(candidateId, type);
+
+    res.json({
+      success: true,
+      message: `Test retention notification sent to ${candidateId}`
+    });
+
+  } catch (error) {
+    console.error('Error sending test retention notification:', error);
+    res.status(500).json({
+      success: false,
+      error: error.message
+    });
+  }
+});
+
+// Helper functions for streak protection
+async function protectStreak(candidateId) {
+  const transaction = db.transaction(() => {
+    // Check if user has freeze tokens
+    const protection = db.prepare(`
+      SELECT freeze_tokens FROM streak_protection WHERE candidate_id = ?
+    `).get(candidateId);
+
+    if (!protection || protection.freeze_tokens <= 0) {
+      throw new Error('No freeze tokens available');
+    }
+
+    // Use freeze token
+    db.prepare(`
+      UPDATE streak_protection
+      SET freeze_tokens = freeze_tokens - 1,
+          last_protection_used = datetime('now'),
+          updated_at = datetime('now')
+      WHERE candidate_id = ?
+    `).run(candidateId);
+
+    // Protect streak for 24 hours
+    db.prepare(`
+      UPDATE candidates
+      SET streak_protected_until = datetime('now', '+24 hours'),
+          updated_at = datetime('now')
+      WHERE id = ?
+    `).run(candidateId);
+
+    return {
+      success: true,
+      message: 'Streak protected for 24 hours',
+      tokensLeft: protection.freeze_tokens - 1
+    };
+  });
+
+  return transaction();
+}
+
+async function recoverStreak(candidateId) {
+  const transaction = db.transaction(() => {
+    // Check if user has recovery tokens and streak is broken
+    const query = `
+      SELECT
+        c.streak_days,
+        c.streak_last_date,
+        sp.recovery_tokens,
+        (julianday('now') - julianday(c.streak_last_date)) * 24 as hours_since_checkin
+      FROM candidates c
+      LEFT JOIN streak_protection sp ON c.id = sp.candidate_id
+      WHERE c.id = ?
+    `;
+
+    const data = db.prepare(query).get(candidateId);
+
+    if (!data || data.recovery_tokens <= 0) {
+      throw new Error('No recovery tokens available');
+    }
+
+    if (data.hours_since_checkin < 24) {
+      throw new Error('Streak is not broken yet');
+    }
+
+    if (data.hours_since_checkin > 48) {
+      throw new Error('Recovery window expired (max 48 hours)');
+    }
+
+    // Use recovery token
+    db.prepare(`
+      UPDATE streak_protection
+      SET recovery_tokens = recovery_tokens - 1,
+          updated_at = datetime('now')
+      WHERE candidate_id = ?
+    `).run(candidateId);
+
+    // Restore streak
+    db.prepare(`
+      UPDATE candidates
+      SET streak_last_date = date('now'),
+          updated_at = datetime('now')
+      WHERE id = ?
+    `).run(candidateId);
+
+    return {
+      success: true,
+      message: 'Streak recovered successfully',
+      tokensLeft: data.recovery_tokens - 1,
+      streakDays: data.streak_days
+    };
+  });
+
+  return transaction();
 }
 
 module.exports = router;

@@ -1,6 +1,9 @@
 const express = require('express');
 const router = express.Router();
-const { db } = require('../../../db/database');
+const { db } = require('../../../db');
+const { createLogger } = require('../../../utils/structured-logger');
+
+const logger = createLogger('gamification');
 const {
   XP_THRESHOLDS,
   XP_VALUES,
@@ -87,35 +90,68 @@ router.post('/xp/award', (req, res) => {
   try {
     const { candidate_id, amount, reason, reference_id, action_type } = req.body;
 
-    // Add XP transaction with action_type
-    db.prepare(`
-      INSERT INTO xp_transactions (candidate_id, action_type, amount, reason, reference_id)
-      VALUES (?, ?, ?, ?, ?)
-    `).run(candidate_id, action_type || 'manual', amount, reason, reference_id);
+    // Use transaction to ensure atomicity and prevent race conditions
+    const transaction = db.transaction(() => {
+      // Add XP transaction with action_type
+      db.prepare(`
+        INSERT INTO xp_transactions (candidate_id, action_type, amount, reason, reference_id)
+        VALUES (?, ?, ?, ?, ?)
+      `).run(candidate_id, action_type || 'manual', amount, reason, reference_id);
 
-    // Update candidate XP and lifetime_xp
-    if (amount > 0) {
-      db.prepare('UPDATE candidates SET xp = xp + ?, lifetime_xp = lifetime_xp + ? WHERE id = ?').run(amount, amount, candidate_id);
-    } else {
-      db.prepare('UPDATE candidates SET xp = MAX(0, xp + ?) WHERE id = ?').run(amount, candidate_id);
-    }
+      // Update candidate XP and lifetime_xp
+      // Also award points 1:1 with XP (only for positive amounts)
+      if (amount > 0) {
+        db.prepare('UPDATE candidates SET xp = xp + ?, lifetime_xp = lifetime_xp + ?, current_points = current_points + ? WHERE id = ?')
+          .run(amount, amount, amount, candidate_id);
+      } else {
+        db.prepare('UPDATE candidates SET xp = MAX(0, xp + ?) WHERE id = ?')
+          .run(amount, candidate_id);
+      }
 
-    // Check for level up
-    const candidate = db.prepare('SELECT xp, level FROM candidates WHERE id = ?').get(candidate_id);
-    const newLevel = calculateLevel(candidate.xp);
-    const newTier = getLevelTier(newLevel);
+      // Check for level up - all within the same transaction
+      const candidate = db.prepare('SELECT xp, level FROM candidates WHERE id = ?').get(candidate_id);
+      const newLevel = calculateLevel(candidate.xp);
+      const newTier = getLevelTier(newLevel);
 
-    if (newLevel !== candidate.level) {
-      db.prepare('UPDATE candidates SET level = ?, current_tier = ? WHERE id = ?').run(newLevel, newTier, candidate_id);
-    }
+      if (newLevel !== candidate.level) {
+        db.prepare('UPDATE candidates SET level = ?, current_tier = ? WHERE id = ?')
+          .run(newLevel, newTier, candidate_id);
+
+        // Return level up info for response
+        return { leveledUp: true, oldLevel: candidate.level, newLevel, newTier };
+      }
+
+      return { leveledUp: false, level: candidate.level };
+    });
+
+    // Execute the transaction atomically
+    const result = transaction();
+
+    // Get updated candidate data after transaction
+    const updatedCandidate = db.prepare('SELECT xp, level, current_tier FROM candidates WHERE id = ?').get(candidate_id);
+
+    // Log XP award
+    logger.business('xp_awarded', {
+      candidate_id,
+      amount,
+      reason,
+      reference_id,
+      action_type: action_type || 'manual',
+      leveled_up: result.leveledUp,
+      old_level: result.oldLevel,
+      new_level: result.newLevel || updatedCandidate.level,
+      total_xp: updatedCandidate.xp
+    });
 
     res.json({
       success: true,
       data: {
-        xp: candidate.xp,
-        level: newLevel,
-        tier: newTier,
-        leveledUp: newLevel > candidate.level,
+        xp: updatedCandidate.xp,
+        level: updatedCandidate.level,
+        tier: updatedCandidate.current_tier,
+        leveledUp: result.leveledUp,
+        oldLevel: result.oldLevel || updatedCandidate.level,
+        newLevel: result.newLevel || updatedCandidate.level,
       },
     });
   } catch (error) {
@@ -131,44 +167,60 @@ router.post('/xp/job-complete', (req, res) => {
     // Calculate XP using the strategy formula
     const xpAmount = calculateJobXP(hours_worked, is_urgent, was_on_time, rating);
 
-    // Add XP transaction
-    db.prepare(`
-      INSERT INTO xp_transactions (candidate_id, action_type, amount, reason, reference_id)
-      VALUES (?, 'shift', ?, ?, ?)
-    `).run(candidate_id, xpAmount, `Shift completion: ${hours_worked}hrs`, job_id);
+    // Use transaction to ensure atomicity and prevent race conditions
+    const transaction = db.transaction(() => {
+      // Add XP transaction
+      db.prepare(`
+        INSERT INTO xp_transactions (candidate_id, action_type, amount, reason, reference_id)
+        VALUES (?, 'shift', ?, ?, ?)
+      `).run(candidate_id, xpAmount, `Shift completion: ${hours_worked}hrs`, job_id);
 
-    // Update candidate XP, lifetime_xp, and total_jobs_completed
-    db.prepare(`
-      UPDATE candidates
-      SET xp = xp + ?,
-          lifetime_xp = lifetime_xp + ?,
-          total_jobs_completed = total_jobs_completed + 1
-      WHERE id = ?
-    `).run(xpAmount, xpAmount, candidate_id);
+      // Update candidate XP, lifetime_xp, current_points (1:1), and total_jobs_completed
+      db.prepare(`
+        UPDATE candidates
+        SET xp = xp + ?,
+            lifetime_xp = lifetime_xp + ?,
+            current_points = current_points + ?,
+            total_jobs_completed = total_jobs_completed + 1
+        WHERE id = ?
+      `).run(xpAmount, xpAmount, xpAmount, candidate_id);
 
-    // Check for level up
-    const candidate = db.prepare('SELECT xp, level FROM candidates WHERE id = ?').get(candidate_id);
-    const newLevel = calculateLevel(candidate.xp);
-    const newTier = getLevelTier(newLevel);
+      // Check for level up - all within the same transaction
+      const candidate = db.prepare('SELECT xp, level FROM candidates WHERE id = ?').get(candidate_id);
+      const newLevel = calculateLevel(candidate.xp);
+      const newTier = getLevelTier(newLevel);
 
-    if (newLevel !== candidate.level) {
-      db.prepare('UPDATE candidates SET level = ?, current_tier = ? WHERE id = ?').run(newLevel, newTier, candidate_id);
-    }
+      if (newLevel !== candidate.level) {
+        db.prepare('UPDATE candidates SET level = ?, current_tier = ? WHERE id = ?')
+          .run(newLevel, newTier, candidate_id);
+
+        return { leveledUp: true, oldLevel: candidate.level, newLevel, newTier, xpAmount };
+      }
+
+      return { leveledUp: false, level: candidate.level, xpAmount };
+    });
+
+    // Execute the transaction atomically
+    const result = transaction();
+
+    // Get updated candidate data after transaction
+    const updatedCandidate = db.prepare('SELECT xp, level, current_tier FROM candidates WHERE id = ?').get(candidate_id);
 
     res.json({
       success: true,
       data: {
-        xp_awarded: xpAmount,
+        xp_awarded: result.xpAmount,
         breakdown: {
           base: hours_worked * XP_VALUES.PER_HOUR_WORKED,
           urgent_bonus: is_urgent ? (hours_worked * XP_VALUES.PER_HOUR_WORKED * 0.5) : 0,
           on_time_bonus: was_on_time ? XP_VALUES.ON_TIME_ARRIVAL : 0,
           rating_bonus: rating === 5 ? XP_VALUES.FIVE_STAR_RATING : 0,
         },
-        new_xp: candidate.xp,
-        new_level: newLevel,
-        new_tier: newTier,
-        leveled_up: newLevel > candidate.level,
+        new_xp: updatedCandidate.xp,
+        new_level: updatedCandidate.level,
+        new_tier: updatedCandidate.current_tier,
+        leveled_up: result.leveledUp,
+        old_level: result.oldLevel || updatedCandidate.level,
       },
     });
   } catch (error) {
@@ -200,31 +252,46 @@ router.post('/xp/penalty', (req, res) => {
         return res.status(400).json({ success: false, error: 'Invalid penalty type' });
     }
 
-    // Add XP transaction (negative amount)
-    db.prepare(`
-      INSERT INTO xp_transactions (candidate_id, action_type, amount, reason, reference_id)
-      VALUES (?, ?, ?, ?, ?)
-    `).run(candidate_id, action_type, amount, reason, reference_id);
+    // Use transaction to ensure atomicity and prevent race conditions
+    const transaction = db.transaction(() => {
+      // Add XP transaction (negative amount)
+      db.prepare(`
+        INSERT INTO xp_transactions (candidate_id, action_type, amount, reason, reference_id)
+        VALUES (?, ?, ?, ?, ?)
+      `).run(candidate_id, action_type, amount, reason, reference_id);
 
-    // Update candidate XP (prevent going below 0)
-    db.prepare('UPDATE candidates SET xp = MAX(0, xp + ?) WHERE id = ?').run(amount, candidate_id);
+      // Update candidate XP (prevent going below 0)
+      db.prepare('UPDATE candidates SET xp = MAX(0, xp + ?) WHERE id = ?').run(amount, candidate_id);
 
-    // Check for level change
-    const candidate = db.prepare('SELECT xp, level FROM candidates WHERE id = ?').get(candidate_id);
-    const newLevel = calculateLevel(candidate.xp);
-    const newTier = getLevelTier(newLevel);
+      // Check for level change - all within the same transaction
+      const candidate = db.prepare('SELECT xp, level FROM candidates WHERE id = ?').get(candidate_id);
+      const newLevel = calculateLevel(candidate.xp);
+      const newTier = getLevelTier(newLevel);
 
-    if (newLevel !== candidate.level) {
-      db.prepare('UPDATE candidates SET level = ?, current_tier = ? WHERE id = ?').run(newLevel, newTier, candidate_id);
-    }
+      if (newLevel !== candidate.level) {
+        db.prepare('UPDATE candidates SET level = ?, current_tier = ? WHERE id = ?')
+          .run(newLevel, newTier, candidate_id);
+
+        return { levelChanged: true, oldLevel: candidate.level, newLevel, newTier };
+      }
+
+      return { levelChanged: false, level: candidate.level, tier: newTier };
+    });
+
+    // Execute the transaction atomically
+    const result = transaction();
+
+    // Get updated candidate data after transaction
+    const updatedCandidate = db.prepare('SELECT xp, level, current_tier FROM candidates WHERE id = ?').get(candidate_id);
 
     res.json({
       success: true,
       data: {
         penalty_applied: Math.abs(amount),
-        new_xp: candidate.xp,
-        new_level: newLevel,
-        new_tier: newTier,
+        new_xp: updatedCandidate.xp,
+        new_level: updatedCandidate.level,
+        new_tier: updatedCandidate.current_tier,
+        level_changed: result.levelChanged,
       },
     });
   } catch (error) {
@@ -235,8 +302,40 @@ router.post('/xp/penalty', (req, res) => {
 // Get all achievements
 router.get('/achievements', (req, res) => {
   try {
-    const achievements = db.prepare('SELECT * FROM achievements ORDER BY category, rarity').all();
-    res.json({ success: true, data: achievements });
+    const { page = 1, limit = 50, category } = req.query;
+    const offset = (parseInt(page) - 1) * parseInt(limit);
+
+    // Build WHERE clause for category filter
+    let whereClause = '';
+    let params = [];
+    if (category) {
+      whereClause = 'WHERE category = ?';
+      params.push(category);
+    }
+
+    // Get total count for pagination
+    const totalQuery = `SELECT COUNT(*) as total FROM achievements ${whereClause}`;
+    const { total } = db.prepare(totalQuery).get(...params);
+
+    // Get achievements with pagination
+    const achievementsQuery = `
+      SELECT * FROM achievements
+      ${whereClause}
+      ORDER BY category, rarity
+      LIMIT ? OFFSET ?
+    `;
+    const achievements = db.prepare(achievementsQuery).all(...params, parseInt(limit), offset);
+
+    res.json({
+      success: true,
+      data: achievements,
+      pagination: {
+        page: parseInt(page),
+        limit: parseInt(limit),
+        total,
+        pages: Math.ceil(total / parseInt(limit))
+      }
+    });
   } catch (error) {
     res.status(500).json({ success: false, error: error.message });
   }
@@ -246,16 +345,53 @@ router.get('/achievements', (req, res) => {
 router.get('/achievements/user/:candidateId', (req, res) => {
   try {
     const candidateId = req.params.candidateId;
+    const { page = 1, limit = 50, category, claimed } = req.query;
+    const offset = (parseInt(page) - 1) * parseInt(limit);
+
+    // Build WHERE clause for filters
+    let whereClause = 'WHERE ca.candidate_id = ?';
+    let params = [candidateId];
+
+    if (category) {
+      whereClause += ' AND a.category = ?';
+      params.push(category);
+    }
+
+    if (claimed !== undefined) {
+      whereClause += ' AND ca.claimed = ?';
+      params.push(claimed === 'true' ? 1 : 0);
+    }
+
+    // Get total count for pagination
+    const totalQuery = `
+      SELECT COUNT(*) as total
+      FROM candidate_achievements ca
+      JOIN achievements a ON ca.achievement_id = a.id
+      ${whereClause}
+    `;
+    const { total } = db.prepare(totalQuery).get(...params);
 
     // Get user's unlocked achievements with claimed status
-    const userAchievements = db.prepare(`
+    const userAchievementsQuery = `
       SELECT ca.*, a.name, a.description, a.icon, a.category, a.xp_reward, a.rarity
       FROM candidate_achievements ca
       JOIN achievements a ON ca.achievement_id = a.id
-      WHERE ca.candidate_id = ?
-    `).all(candidateId);
+      ${whereClause}
+      ORDER BY ca.unlocked_at DESC
+      LIMIT ? OFFSET ?
+    `;
+    const userAchievements = db.prepare(userAchievementsQuery).all(...params, parseInt(limit), offset);
 
-    res.json({ success: true, data: userAchievements });
+    res.json({
+      success: true,
+      data: userAchievements,
+      pagination: {
+        page: parseInt(page),
+        limit: parseInt(limit),
+        total,
+        pages: Math.ceil(total / parseInt(limit))
+      }
+    });
   } catch (error) {
     res.status(500).json({ success: false, error: error.message });
   }
@@ -334,9 +470,9 @@ router.post('/achievements/:achievementId/claim', (req, res) => {
       WHERE candidate_id = ? AND achievement_id = ?
     `).run(finalCandidateId, achievementId);
 
-    // Award XP
+    // Award XP and points (1:1)
     if (achievement.xp_reward > 0) {
-      db.prepare('UPDATE candidates SET xp = xp + ? WHERE id = ?').run(achievement.xp_reward, finalCandidateId);
+      db.prepare('UPDATE candidates SET xp = xp + ?, current_points = current_points + ? WHERE id = ?').run(achievement.xp_reward, achievement.xp_reward, finalCandidateId);
       db.prepare(`
         INSERT INTO xp_transactions (candidate_id, amount, reason, reference_id)
         VALUES (?, ?, 'achievement_claim', ?)
@@ -502,12 +638,45 @@ router.post('/achievements/check/:candidateId', (req, res) => {
 // Get all quests
 router.get('/quests', (req, res) => {
   try {
-    const quests = db.prepare('SELECT * FROM quests WHERE active = 1').all();
+    const { page = 1, limit = 20, type } = req.query;
+    const offset = (parseInt(page) - 1) * parseInt(limit);
+
+    // Build WHERE clause for type filter
+    let whereClause = 'WHERE active = 1';
+    let params = [];
+    if (type) {
+      whereClause += ' AND type = ?';
+      params.push(type);
+    }
+
+    // Get total count for pagination
+    const totalQuery = `SELECT COUNT(*) as total FROM quests ${whereClause}`;
+    const { total } = db.prepare(totalQuery).get(...params);
+
+    // Get quests with pagination
+    const questsQuery = `
+      SELECT * FROM quests
+      ${whereClause}
+      ORDER BY type, xp_reward DESC
+      LIMIT ? OFFSET ?
+    `;
+    const quests = db.prepare(questsQuery).all(...params, parseInt(limit), offset);
+
     const parsed = quests.map(q => ({
       ...q,
       requirement: JSON.parse(q.requirement || '{}'),
     }));
-    res.json({ success: true, data: parsed });
+
+    res.json({
+      success: true,
+      data: parsed,
+      pagination: {
+        page: parseInt(page),
+        limit: parseInt(limit),
+        total,
+        pages: Math.ceil(total / parseInt(limit))
+      }
+    });
   } catch (error) {
     res.status(500).json({ success: false, error: error.message });
   }
@@ -691,11 +860,12 @@ router.post('/quests/:questId/claim', (req, res) => {
     `).run(target, finalCandidateId, questId);
 
     // Get current XP before update
-    const candidateBefore = db.prepare('SELECT xp, level FROM candidates WHERE id = ?').get(finalCandidateId);
+    const candidateBefore = db.prepare('SELECT xp, level, current_points FROM candidates WHERE id = ?').get(finalCandidateId);
     const oldXP = candidateBefore?.xp || 0;
+    const oldPoints = candidateBefore?.current_points || 0;
 
-    // Award XP
-    db.prepare('UPDATE candidates SET xp = xp + ? WHERE id = ?').run(quest.xp_reward, finalCandidateId);
+    // Award XP and points (1:1)
+    db.prepare('UPDATE candidates SET xp = xp + ?, current_points = current_points + ? WHERE id = ?').run(quest.xp_reward, quest.xp_reward, finalCandidateId);
     db.prepare(`
       INSERT INTO xp_transactions (candidate_id, amount, reason, reference_id)
       VALUES (?, ?, 'quest_claim', ?)
@@ -913,7 +1083,7 @@ router.get('/leaderboard', (req, res) => {
     const { period = 'all', limit = 20 } = req.query;
 
     const leaderboard = db.prepare(`
-      SELECT id, name, xp, level, total_jobs_completed, rating, profile_photo, streak_days, profile_flair
+      SELECT id, name, xp, level, total_jobs_completed, rating, profile_photo, streak_days, profile_flair, selected_border_id
       FROM candidates
       WHERE status = 'active'
       ORDER BY xp DESC
@@ -930,12 +1100,14 @@ router.get('/leaderboard', (req, res) => {
 router.get('/borders/:candidateId', (req, res) => {
   try {
     const candidateId = req.params.candidateId;
-    
+    const { page = 1, limit = 20, tier, unlocked } = req.query;
+    const offset = (parseInt(page) - 1) * parseInt(limit);
+
     // Get candidate info for level check
     const candidate = db.prepare(`
       SELECT level, selected_border_id FROM candidates WHERE id = ?
     `).get(candidateId);
-    
+
     if (!candidate) {
       return res.status(404).json({ success: false, error: 'Candidate not found' });
     }
@@ -946,26 +1118,48 @@ router.get('/borders/:candidateId', (req, res) => {
     `).all(candidateId);
     const achievementIds = new Set(achievements.map(a => a.achievement_id));
 
-    // Get all borders
-    const borders = db.prepare(`
-      SELECT pb.*, 
+    // Build WHERE clause for filters
+    let whereClause = 'WHERE pb.active = 1';
+    let params = [candidateId];
+
+    if (tier) {
+      whereClause += ' AND pb.tier = ?';
+      params.push(tier);
+    }
+
+    // Get total count for pagination (before applying unlock filter since it's computed)
+    const totalQuery = `
+      SELECT COUNT(*) as total
+      FROM profile_borders pb
+      LEFT JOIN candidate_borders cb ON pb.id = cb.border_id AND cb.candidate_id = ?
+      ${whereClause.replace('WHERE pb.active = 1', '')}
+      WHERE pb.active = 1 ${tier ? 'AND pb.tier = ?' : ''}
+    `;
+    const totalParams = tier ? [candidateId, tier] : [candidateId];
+    const { total } = db.prepare(totalQuery).get(...totalParams);
+
+    // Get all borders with pagination
+    const bordersQuery = `
+      SELECT pb.*,
         CASE WHEN cb.candidate_id IS NOT NULL THEN 1 ELSE 0 END as manually_unlocked,
         cb.is_selected
       FROM profile_borders pb
       LEFT JOIN candidate_borders cb ON pb.id = cb.border_id AND cb.candidate_id = ?
-      WHERE pb.active = 1
-      ORDER BY 
-        CASE pb.tier 
-          WHEN 'bronze' THEN 1 
-          WHEN 'silver' THEN 2 
-          WHEN 'gold' THEN 3 
-          WHEN 'platinum' THEN 4 
-          WHEN 'diamond' THEN 5 
-          WHEN 'mythic' THEN 6 
-          WHEN 'special' THEN 7 
+      ${whereClause}
+      ORDER BY
+        CASE pb.tier
+          WHEN 'bronze' THEN 1
+          WHEN 'silver' THEN 2
+          WHEN 'gold' THEN 3
+          WHEN 'platinum' THEN 4
+          WHEN 'diamond' THEN 5
+          WHEN 'mythic' THEN 6
+          WHEN 'special' THEN 7
         END,
         pb.rarity
-    `).all(candidateId);
+      LIMIT ? OFFSET ?
+    `;
+    const borders = db.prepare(bordersQuery).all(...params, parseInt(limit), offset);
 
     const parsed = borders.map(border => {
       const requirement = JSON.parse(border.unlock_requirement || '{}');
@@ -1000,11 +1194,25 @@ router.get('/borders/:candidateId', (req, res) => {
       };
     });
 
-    res.json({ 
-      success: true, 
+    // Apply unlock filter if specified (after computing unlock status)
+    let filteredParsed = parsed;
+    if (unlocked !== undefined) {
+      filteredParsed = parsed.filter(border => {
+        return unlocked === 'true' ? border.unlocked : !border.unlocked;
+      });
+    }
+
+    res.json({
+      success: true,
       data: {
-        borders: parsed,
+        borders: filteredParsed,
         selectedBorderId: candidate.selected_border_id,
+      },
+      pagination: {
+        page: parseInt(page),
+        limit: parseInt(limit),
+        total,
+        pages: Math.ceil(total / parseInt(limit))
       }
     });
   } catch (error) {
@@ -1084,10 +1292,46 @@ router.post('/borders/:candidateId/select', (req, res) => {
 // Get all active rewards
 router.get('/rewards', (req, res) => {
   try {
-    const rewards = db.prepare(`
-      SELECT * FROM rewards WHERE active = 1 ORDER BY category, points_cost
-    `).all();
-    res.json({ success: true, data: rewards });
+    const { page = 1, limit = 20, category, tier_required } = req.query;
+    const offset = (parseInt(page) - 1) * parseInt(limit);
+
+    // Build WHERE clause for filters
+    let whereClause = 'WHERE active = 1';
+    let params = [];
+
+    if (category) {
+      whereClause += ' AND category = ?';
+      params.push(category);
+    }
+
+    if (tier_required) {
+      whereClause += ' AND tier_required = ?';
+      params.push(tier_required);
+    }
+
+    // Get total count for pagination
+    const totalQuery = `SELECT COUNT(*) as total FROM rewards ${whereClause}`;
+    const { total } = db.prepare(totalQuery).get(...params);
+
+    // Get rewards with pagination
+    const rewardsQuery = `
+      SELECT * FROM rewards
+      ${whereClause}
+      ORDER BY category, points_cost
+      LIMIT ? OFFSET ?
+    `;
+    const rewards = db.prepare(rewardsQuery).all(...params, parseInt(limit), offset);
+
+    res.json({
+      success: true,
+      data: rewards,
+      pagination: {
+        page: parseInt(page),
+        limit: parseInt(limit),
+        total,
+        pages: Math.ceil(total / parseInt(limit))
+      }
+    });
   } catch (error) {
     res.status(500).json({ success: false, error: error.message });
   }

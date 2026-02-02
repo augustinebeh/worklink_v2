@@ -4,7 +4,7 @@
 
 const express = require('express');
 const router = express.Router();
-const { db } = require('../../../db/database');
+const { db } = require('../../../db');
 const { validate, schemas } = require('../../../middleware/validation');
 
 // Random default avatar generator

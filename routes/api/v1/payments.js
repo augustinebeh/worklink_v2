@@ -1,9 +1,11 @@
 const express = require('express');
 const router = express.Router();
-const { db } = require('../../../db/database');
+const { db } = require('../../../db');
+const { authenticateAdmin, authenticateAdminOrOwner } = require('../../../middleware/auth');
+const { createValidationMiddleware } = require('../../../middleware/database-validation');
 
-// Get all payments with filters
-router.get('/', (req, res) => {
+// Get all payments with filters - Admin only
+router.get('/', authenticateAdmin, (req, res) => {
   try {
     const { status, candidate_id, from_date, to_date } = req.query;
     
@@ -51,8 +53,8 @@ router.get('/', (req, res) => {
   }
 });
 
-// Get payment stats
-router.get('/stats', (req, res) => {
+// Get payment stats - Admin only
+router.get('/stats', authenticateAdmin, (req, res) => {
   try {
     const stats = {
       total: db.prepare('SELECT COALESCE(SUM(total_amount), 0) as amount FROM payments').get().amount,
@@ -70,7 +72,7 @@ router.get('/stats', (req, res) => {
 });
 
 // Update payment status
-router.patch('/:id', (req, res) => {
+router.patch('/:id', authenticateAdmin, createValidationMiddleware('payment'), (req, res) => {
   try {
     const { status, transaction_id, payment_proof, notes } = req.body;
     const payment = db.prepare('SELECT * FROM payments WHERE id = ?').get(req.params.id);
@@ -143,20 +145,33 @@ router.post('/batch-paid', (req, res) => {
 
     const placeholders = payment_ids.map(() => '?').join(',');
     
-    // Get payments to update candidate earnings
-    const payments = db.prepare(`SELECT * FROM payments WHERE id IN (${placeholders}) AND status = 'approved'`).all(...payment_ids);
-    
-    // Update to paid
-    db.prepare(`
-      UPDATE payments 
-      SET status = 'paid', paid_at = CURRENT_TIMESTAMP, transaction_id = ?
-      WHERE id IN (${placeholders}) AND status = 'approved'
-    `).run(transaction_id, ...payment_ids);
+    // Use transaction to ensure atomicity
+    const transaction = db.transaction(() => {
+      // Get payments to update candidate earnings
+      const payments = db.prepare(`SELECT * FROM payments WHERE id IN (${placeholders}) AND status = 'approved'`).all(...payment_ids);
 
-    // Update candidate earnings (round to 2 decimal places)
-    payments.forEach(p => {
-      db.prepare(`UPDATE candidates SET total_earnings = ROUND(total_earnings + ?, 2) WHERE id = ?`).run(p.total_amount, p.candidate_id);
+      if (payments.length === 0) {
+        throw new Error('No approved payments found to process');
+      }
+
+      // Update to paid
+      db.prepare(`
+        UPDATE payments
+        SET status = 'paid', paid_at = CURRENT_TIMESTAMP, transaction_id = ?
+        WHERE id IN (${placeholders}) AND status = 'approved'
+      `).run(transaction_id, ...payment_ids);
+
+      // Update candidate earnings (round to 2 decimal places)
+      payments.forEach(p => {
+        db.prepare(`UPDATE candidates SET total_earnings = ROUND(total_earnings + ?, 2) WHERE id = ?`)
+          .run(p.total_amount, p.candidate_id);
+      });
+
+      return payments;
     });
+
+    // Execute transaction atomically
+    const payments = transaction();
 
     res.json({ success: true, message: `${payments.length} payments marked as paid` });
   } catch (error) {

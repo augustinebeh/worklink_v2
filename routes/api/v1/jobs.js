@@ -1,6 +1,8 @@
 const express = require('express');
 const router = express.Router();
-const { db } = require('../../../db/database');
+const { db } = require('../../../db');
+const { createValidationMiddleware } = require('../../../middleware/database-validation');
+const { createInputValidationMiddleware } = require('../../../middleware/input-validation');
 
 // Lazy-load telegram posting to avoid circular dependencies
 let telegramPostingService = null;
@@ -110,7 +112,10 @@ router.get('/:id/deployments', (req, res) => {
 });
 
 // Create job
-router.post('/', async (req, res) => {
+router.post('/',
+  createInputValidationMiddleware('job'),
+  createValidationMiddleware('job'),
+  async (req, res) => {
   try {
     const {
       client_id, title, description, job_date, start_time, end_time,

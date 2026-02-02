@@ -30,7 +30,7 @@ import Modal, { ModalFooter } from '../components/ui/Modal';
 import Input from '../components/ui/Input';
 import Select from '../components/ui/Select';
 import { clsx } from 'clsx';
-import { XP_THRESHOLDS as xpThresholds, LEVEL_TITLES } from '../utils/gamification';
+import { XP_THRESHOLDS as xpThresholds, LEVEL_TITLES } from '../../../shared/utils/gamification-esm';
 
 // Level configuration (uses shared LEVEL_TITLES)
 const levelConfig = {

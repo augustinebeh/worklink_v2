@@ -16,7 +16,7 @@ import { useAuth } from '../contexts/AuthContext';
 import { useToast } from '../components/ui/Toast';
 import { clsx } from 'clsx';
 import { QUEST_TYPE_LABELS, QUEST_TYPE_STYLES } from '../utils/constants';
-import { calculateLevel } from '../utils/gamification';
+import { calculateLevel } from '../../../shared/utils/gamification-esm';
 import XPBar from '../components/gamification/XPBar';
 import { PageHeader, FilterTabs, EmptyState, LoadingSkeleton } from '../components/common';
 

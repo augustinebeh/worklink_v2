@@ -5,7 +5,7 @@
 
 const express = require('express');
 const router = express.Router();
-const { db } = require('../../../db/database');
+const { db } = require('../../../db');
 
 // GeBIZ RSS Feed URL
 const GEBIZ_RSS_URL = 'https://www.gebiz.gov.sg/rss/ptn-rss.xml';
@@ -202,10 +202,15 @@ router.get('/dashboard', (req, res) => {
       { keyword: 'Term Contract Labour', reason: 'Long-term recurring contracts' },
     ];
 
-    // Filter out already existing alerts
-    const existingKeywords = db.prepare('SELECT keyword FROM tender_alerts').all().map(a => a.keyword.toLowerCase());
+    // Filter out already existing alerts using SQL for better performance
+    const placeholders = recommendedKeywords.map(() => '?').join(',');
+    const existingKeywords = db.prepare(
+      `SELECT keyword FROM tender_alerts WHERE LOWER(keyword) IN (${placeholders})`
+    ).all(...recommendedKeywords.map(r => r.keyword.toLowerCase()));
+
+    const existingSet = new Set(existingKeywords.map(a => a.keyword.toLowerCase()));
     const newRecommendations = recommendedKeywords.filter(
-      r => !existingKeywords.includes(r.keyword.toLowerCase())
+      r => !existingSet.has(r.keyword.toLowerCase())
     );
 
     res.json({

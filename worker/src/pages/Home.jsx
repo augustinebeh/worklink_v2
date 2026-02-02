@@ -13,15 +13,25 @@ import {
   FlameIcon,
   WalletIcon,
   GiftIcon,
+  TrendingUpIcon,
+  ActivityIcon,
+  CalendarIcon,
+  DollarSignIcon,
 } from 'lucide-react';
 import { useAuth } from '../contexts/AuthContext';
 import { useWebSocket } from '../contexts/WebSocketContext';
 import { useToast } from '../components/ui/Toast';
+import { useStreakProtection } from '../contexts/StreakProtectionContext';
 import { clsx } from 'clsx';
-import { LEVEL_TITLES as levelTitles, calculateLevel } from '../utils/gamification';
+import { LEVEL_TITLES as levelTitles, calculateLevel } from '../../../shared/utils/gamification-esm';
 import { LoadingSkeleton, EmptyState, StatPod, SectionHeader } from '../components/common';
 import { FloatingXP, LevelUpCelebration, AchievementUnlock } from '../components/gamification/Confetti';
 import XPBar from '../components/gamification/XPBar';
+import {
+  StreakProtectionModal,
+  StreakAlertBanner,
+  EnhancedDailyStreakCard
+} from '../components/gamification/StreakProtection';
 import {
   formatMoney,
   DEFAULT_START_TIME,
@@ -219,7 +229,10 @@ function LeagueCard({ user, userLevel, userXP, thisMonthEarnings, totalJobs, xpA
         <div className="flex items-center gap-3 mb-4">
           <div className="flex-1">
             <p className="text-white/60 text-sm">Welcome back</p>
-            <p className="text-white font-semibold text-lg">{user?.name || 'Worker'}</p>
+            <p className="text-white font-semibold text-lg">
+              {user?.name || 'Worker'}
+              {user?.profile_flair && <span className="ml-1">{user.profile_flair}</span>}
+            </p>
           </div>
           <div className="flex items-center gap-2 px-3 py-1.5 rounded-full bg-emerald-500/20 border border-emerald-500/30">
             <div className="w-2 h-2 rounded-full bg-emerald-400 animate-pulse" />
@@ -349,6 +362,208 @@ function Pagination({ currentPage, totalPages, onPageChange }) {
   );
 }
 
+// Live Activity Feed Component
+function LiveActivityFeed({ userLevel }) {
+  const [activities] = useState([
+    { text: "Sarah just earned 200 XP completing a 4-hour shift!", icon: ZapIcon, color: "text-violet-400" },
+    { text: "Mike leveled up to Silver League 🥈", icon: TrophyIcon, color: "text-amber-400" },
+    { text: "3 workers claimed the 'Early Bird' quest today", icon: GiftIcon, color: "text-emerald-400" },
+    { text: "Lisa just unlocked instant payouts!", icon: WalletIcon, color: "text-cyan-400" },
+  ]);
+
+  const [currentIndex, setCurrentIndex] = useState(0);
+
+  useEffect(() => {
+    const interval = setInterval(() => {
+      setCurrentIndex(prev => (prev + 1) % activities.length);
+    }, 4000);
+    return () => clearInterval(interval);
+  }, [activities.length]);
+
+  const activity = activities[currentIndex];
+  const Icon = activity.icon;
+
+  return (
+    <div className="mx-4 mt-6 p-4 rounded-2xl bg-gradient-to-r from-slate-800/30 to-slate-700/30 border border-white/10">
+      <div className="flex items-center gap-3">
+        <div className="w-10 h-10 rounded-full bg-white/10 flex items-center justify-center">
+          <ActivityIcon className="h-5 w-5 text-white/60" />
+        </div>
+        <div className="flex-1">
+          <div className="flex items-center gap-2 text-white/80 text-sm transition-all duration-500">
+            <Icon className={clsx("h-4 w-4", activity.color)} />
+            <span>{activity.text}</span>
+          </div>
+        </div>
+      </div>
+    </div>
+  );
+}
+
+
+// Earnings Potential Calculator Component
+function EarningsPotentialCard({ jobs }) {
+  const todayJobs = jobs.filter(job => isToday(job.job_date));
+  const totalHours = todayJobs.reduce((sum, job) => {
+    const hours = calculateJobHours(
+      job.start_time || DEFAULT_START_TIME,
+      job.end_time || DEFAULT_END_TIME,
+      job.break_minutes
+    );
+    return sum + hours;
+  }, 0);
+
+  const avgPayRate = todayJobs.length > 0
+    ? todayJobs.reduce((sum, job) => sum + job.pay_rate, 0) / todayJobs.length
+    : 15; // Default rate
+
+  const potentialEarnings = totalHours * avgPayRate;
+
+  if (todayJobs.length === 0) return null;
+
+  return (
+    <div className="mx-4 mt-4 p-4 rounded-2xl bg-gradient-to-r from-emerald-500/20 to-cyan-500/20 border border-emerald-500/30">
+      <div className="flex items-center gap-4">
+        <div className="w-12 h-12 rounded-full bg-emerald-500/30 flex items-center justify-center">
+          <TrendingUpIcon className="h-6 w-6 text-emerald-400" />
+        </div>
+
+        <div className="flex-1">
+          <h3 className="text-white font-bold mb-1">Today's Earning Potential</h3>
+          <p className="text-white/60 text-sm mb-2">
+            Based on {totalHours.toFixed(1)}h available jobs near you
+          </p>
+          <div className="flex items-center gap-3">
+            <div className="text-2xl font-bold text-emerald-400">
+              ${formatMoney(potentialEarnings)}
+            </div>
+            <span className="text-white/40 text-sm">possible today</span>
+          </div>
+        </div>
+
+        <button
+          onClick={() => window.location.href = '/jobs'}
+          className="px-4 py-2 rounded-xl bg-gradient-to-r from-emerald-500 to-cyan-500 text-white font-medium text-sm hover:shadow-lg transition-all"
+        >
+          Find Jobs →
+        </button>
+      </div>
+    </div>
+  );
+}
+
+// Enhanced Quest Section Component
+function QuestSection({ user, quests, allQuests, onClaim, claimingQuest, navigate }) {
+  const hasClaimableQuests = quests.length > 0;
+
+  if (hasClaimableQuests) {
+    // Show claimable quests (existing behavior)
+    return (
+      <div className="px-4 mt-6">
+        <SectionHeader
+          title="Rewards Ready!"
+          icon={GiftIcon}
+          iconColor="text-amber-400"
+          actionLabel="All Quests →"
+          onAction={() => navigate('/quests')}
+        />
+        <div className="space-y-3">
+          {quests.map(quest => (
+            <HomeQuestCard
+              key={quest.id}
+              quest={quest}
+              onClaim={onClaim}
+              isClaiming={claimingQuest === quest.id}
+            />
+          ))}
+        </div>
+      </div>
+    );
+  }
+
+  // Show quest preview for new/returning users with no claimable quests
+  return (
+    <div className="px-4 mt-6">
+      <SectionHeader
+        title="Daily Quests"
+        icon={CalendarIcon}
+        iconColor="text-violet-400"
+        actionLabel="View All →"
+        onAction={() => navigate('/quests')}
+      />
+      <div className="p-4 rounded-2xl bg-gradient-to-r from-violet-500/10 to-indigo-500/10 border border-violet-500/20">
+        <div className="space-y-3">
+          <QuestPreviewItem
+            title="Check-In Champion"
+            description="Open the app daily"
+            reward="10 XP"
+            progress={1}
+            total={1}
+            completed={true}
+          />
+          <QuestPreviewItem
+            title="Ready to Work"
+            description="Apply for a job"
+            reward="50 XP"
+            progress={0}
+            total={1}
+            completed={false}
+          />
+          <QuestPreviewItem
+            title="Fast Finger"
+            description="Apply within 5 minutes of posting"
+            reward="20 XP"
+            progress={0}
+            total={1}
+            completed={false}
+          />
+        </div>
+        <div className="mt-4 pt-3 border-t border-white/10">
+          <button
+            onClick={() => navigate('/quests')}
+            className="w-full py-2.5 rounded-xl bg-gradient-to-r from-violet-500/20 to-indigo-500/20 border border-violet-500/30 text-violet-300 font-medium hover:bg-violet-500/30 transition-all"
+          >
+            Start Daily Quests
+          </button>
+        </div>
+      </div>
+    </div>
+  );
+}
+
+// Quest Preview Item Component
+function QuestPreviewItem({ title, description, reward, progress, total, completed }) {
+  return (
+    <div className="flex items-center gap-3 p-3 rounded-xl bg-white/5">
+      <div className={clsx(
+        "w-8 h-8 rounded-full flex items-center justify-center border-2",
+        completed ? "bg-emerald-500/30 border-emerald-500" : "bg-white/5 border-white/20"
+      )}>
+        {completed ? (
+          <span className="text-emerald-400 text-sm">✓</span>
+        ) : (
+          <span className="text-white/40 text-xs">{progress}/{total}</span>
+        )}
+      </div>
+
+      <div className="flex-1 min-w-0">
+        <h4 className={clsx(
+          "font-medium text-sm",
+          completed ? "text-emerald-400" : "text-white"
+        )}>
+          {title}
+        </h4>
+        <p className="text-white/50 text-xs">{description}</p>
+      </div>
+
+      <div className="flex items-center gap-1 text-violet-400 text-sm font-medium">
+        <ZapIcon className="h-3 w-3" />
+        <span>+{reward}</span>
+      </div>
+    </div>
+  );
+}
+
 // Main Home Component
 export default function Home() {
   const { user, refreshUser } = useAuth();
@@ -356,14 +571,24 @@ export default function Home() {
   const ws = useWebSocket();
   const toast = useToast();
   const xpBarRef = useRef(null);
+  const {
+    streakStatus,
+    protectStreak,
+    recoverStreak,
+    quickCheckin,
+    registerPushNotifications
+  } = useStreakProtection();
   const [jobs, setJobs] = useState([]);
   const [quests, setQuests] = useState([]);
+  const [allQuests, setAllQuests] = useState([]);
   const [thisMonthEarnings, setThisMonthEarnings] = useState(0);
   const [loading, setLoading] = useState(true);
   const [currentPage, setCurrentPage] = useState(1);
   const [claimingQuest, setClaimingQuest] = useState(null);
   const [xpAnimating, setXpAnimating] = useState(false);
   const [flyingXP, setFlyingXP] = useState(null);
+  const [showStreakModal, setShowStreakModal] = useState(false);
+  const [streakAlertDismissed, setStreakAlertDismissed] = useState(false);
   const jobsPerPage = 5;
 
   // Gamification animation states
@@ -373,7 +598,12 @@ export default function Home() {
 
   useEffect(() => {
     fetchData();
-  }, [user]);
+
+    // Register for enhanced push notifications when user is available
+    if (user?.id) {
+      registerPushNotifications();
+    }
+  }, [user, registerPushNotifications]);
 
   useEffect(() => {
     if (!ws) return;
@@ -394,15 +624,17 @@ export default function Home() {
 
   const fetchData = async () => {
     try {
-      const [jobsRes, paymentsRes, questsRes] = await Promise.all([
+      const [jobsRes, paymentsRes, questsRes, allQuestsRes] = await Promise.all([
         fetch('/api/v1/jobs?status=open&limit=20'),
         user ? fetch(`/api/v1/payments?candidate_id=${user.id}&limit=10`) : Promise.resolve({ json: () => ({ data: [] }) }),
         user ? fetch(`/api/v1/gamification/quests/user/${user.id}`) : Promise.resolve({ json: () => ({ data: [] }) }),
+        user ? fetch(`/api/v1/gamification/quests`) : Promise.resolve({ json: () => ({ data: [] }) }),
       ]);
 
       const jobsData = await jobsRes.json();
       const paymentsData = await paymentsRes.json();
       const questsData = await questsRes.json();
+      const allQuestsData = await allQuestsRes.json();
 
       if (jobsData.success) {
         const sorted = [...jobsData.data].sort((a, b) => (b.featured || 0) - (a.featured || 0));
@@ -424,6 +656,10 @@ export default function Home() {
       if (questsData.success) {
         const claimable = (questsData.data || []).filter(q => q.status === 'claimable');
         setQuests(claimable.slice(0, 3));
+      }
+
+      if (allQuestsData.success) {
+        setAllQuests(allQuestsData.data || []);
       }
     } catch (error) {
       toast.error('Failed to load', 'Pull down to refresh');
@@ -472,11 +708,32 @@ export default function Home() {
   const handleFlyingXPComplete = () => {
     setXpAnimating(true);
     setXpGain({ amount: flyingXP?.amount || 0, trigger: Date.now() });
-    
+
     setTimeout(() => {
       setXpAnimating(false);
       setFlyingXP(null);
     }, 1500);
+  };
+
+  // Streak protection handlers
+  const handleStreakCardClick = () => {
+    setShowStreakModal(true);
+  };
+
+  const handleStreakProtect = async () => {
+    if (streakStatus?.streakBroken) {
+      await recoverStreak();
+    } else {
+      await protectStreak();
+    }
+  };
+
+  const handleStreakRecover = async () => {
+    await recoverStreak();
+  };
+
+  const handleStreakAlertDismiss = () => {
+    setStreakAlertDismissed(true);
   };
 
   const userXP = user?.xp || DEFAULTS.xp;
@@ -499,27 +756,34 @@ export default function Home() {
           xpBarRef={xpBarRef}
         />
 
-        {quests.length > 0 && (
-          <div className="px-4 mt-6">
-            <SectionHeader
-              title="Rewards Ready!"
-              icon={GiftIcon}
-              iconColor="text-amber-400"
-              actionLabel="All Quests →"
-              onAction={() => navigate('/quests')}
-            />
-            <div className="space-y-3">
-              {quests.map(quest => (
-                <HomeQuestCard
-                  key={quest.id}
-                  quest={quest}
-                  onClaim={handleQuestClaim}
-                  isClaiming={claimingQuest === quest.id}
-                />
-              ))}
-            </div>
-          </div>
+        {/* Phase 1 Enhanced Features */}
+        <LiveActivityFeed userLevel={userLevel} />
+
+        {/* Streak Alert Banner */}
+        {!streakAlertDismissed && (
+          <StreakAlertBanner
+            streakStatus={streakStatus}
+            onProtectClick={() => setShowStreakModal(true)}
+            onDismiss={handleStreakAlertDismiss}
+          />
         )}
+
+        <EnhancedDailyStreakCard
+          user={user}
+          streakStatus={streakStatus}
+          onClick={handleStreakCardClick}
+        />
+
+        <EarningsPotentialCard jobs={jobs} />
+
+        <QuestSection
+          user={user}
+          quests={quests}
+          allQuests={allQuests}
+          onClaim={handleQuestClaim}
+          claimingQuest={claimingQuest}
+          navigate={navigate}
+        />
 
         <div className="px-4 mt-8">
           <div className="flex items-center justify-between mb-3">
@@ -554,6 +818,16 @@ export default function Home() {
           </div>
         </div>
       </div>
+
+      {/* Streak Protection Modal */}
+      <StreakProtectionModal
+        isOpen={showStreakModal}
+        onClose={() => setShowStreakModal(false)}
+        user={user}
+        streakStatus={streakStatus}
+        onProtect={handleStreakProtect}
+        onRecover={handleStreakRecover}
+      />
 
       {/* Flying XP - dynamically targets the XP bar */}
       {flyingXP && (

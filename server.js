@@ -5,18 +5,69 @@
 
 require('dotenv').config();
 
+// Environment validation - ensure required variables are set
+function validateEnvironment() {
+  const requiredVars = [
+    'ANTHROPIC_API_KEY',
+    'TELEGRAM_BOT_TOKEN',
+    'GOOGLE_API_KEY',
+    'VAPID_PUBLIC_KEY',
+    'VAPID_PRIVATE_KEY',
+    'VAPID_EMAIL'
+  ];
+
+  const missingVars = requiredVars.filter(varName => !process.env[varName]);
+
+  if (missingVars.length > 0) {
+    logger.error('Missing required environment variables', {
+      missing_vars: missingVars,
+      module: 'environment'
+    });
+    process.exit(1);
+  }
+
+  // Validate API key formats
+  if (!process.env.ANTHROPIC_API_KEY.startsWith('sk-ant-')) {
+    logger.error('Invalid ANTHROPIC_API_KEY format', {
+      expected_prefix: 'sk-ant-',
+      module: 'environment'
+    });
+    process.exit(1);
+  }
+
+  if (!process.env.TELEGRAM_BOT_TOKEN.includes(':')) {
+    logger.error('Invalid TELEGRAM_BOT_TOKEN format', {
+      expected_format: 'contains ":"',
+      module: 'environment'
+    });
+    process.exit(1);
+  }
+
+  if (!process.env.VAPID_EMAIL.startsWith('mailto:')) {
+    logger.error('Invalid VAPID_EMAIL format', {
+      expected_prefix: 'mailto:',
+      module: 'environment'
+    });
+    process.exit(1);
+  }
+
+  logger.info('Environment validation passed', { module: 'environment' });
+}
+
+// Skip validation in development if explicitly disabled
+if (process.env.NODE_ENV !== 'development' || process.env.VALIDATE_ENV !== 'false') {
+  validateEnvironment();
+}
+
 const express = require('express');
 const compression = require('compression');
 const path = require('path');
 const fs = require('fs');
 const http = require('http');
-const logger = require('./utils/logger');
+const { logger } = require('./utils/structured-logger');
 
-// Initialize database
-const { db } = require('./db/database');
-
-// Run migrations
-require('./db/migrate');
+// Initialize database (schema, migrations, and seeding handled in db/index.js)
+const { db } = require('./db');
 
 const app = express();
 const server = http.createServer(app);
@@ -28,47 +79,119 @@ const wss = setupWebSocket(server);
 // Trust proxy for Railway
 app.set('trust proxy', 1);
 
+// Input validation and sanitization middleware
+const { sanitizeInput, validateRequestFrequency } = require('./middleware/input-validation');
+
 // Middleware
 app.use(compression());
 app.use(express.json({ limit: '10mb' }));
 app.use(express.urlencoded({ extended: true, limit: '10mb' }));
 
-// Request logging
+// Sanitize all input data
+app.use(sanitizeInput);
+
+// Rate limiting - 500 requests per minute per IP
+app.use('/api/', validateRequestFrequency(60000, 500));
+
+// Add correlation ID for request tracking
+app.use(logger.addCorrelationId);
+
+// Request logging with structured data
 app.use((req, res, next) => {
   const start = Date.now();
   res.on('finish', () => {
     const duration = Date.now() - start;
     if (req.path.startsWith('/api')) {
-      logger.api(req.method, req.path, res.statusCode, duration);
+      const reqLogger = req.logger || logger;
+      reqLogger.api(req.method, req.path, res.statusCode, duration, {
+        user_agent: req.headers['user-agent'],
+        ip: req.ip,
+        content_length: res.getHeader('content-length')
+      });
     }
   });
   next();
 });
 
-// CORS configuration
-const allowedOrigins = process.env.ALLOWED_ORIGINS 
-  ? process.env.ALLOWED_ORIGINS.split(',') 
-  : ['http://localhost:3000', 'http://localhost:5173', 'http://localhost:5174'];
+// CORS configuration - Secure implementation
+const allowedOrigins = process.env.ALLOWED_ORIGINS
+  ? process.env.ALLOWED_ORIGINS.split(',').map(origin => origin.trim())
+  : ['http://localhost:3000', 'http://localhost:5173', 'http://localhost:8080'];
+
+// Add Railway production URLs if available
+if (process.env.RAILWAY_STATIC_URL) {
+  allowedOrigins.push(`https://${process.env.RAILWAY_STATIC_URL}`);
+}
+if (process.env.RAILWAY_PUBLIC_DOMAIN) {
+  allowedOrigins.push(`https://${process.env.RAILWAY_PUBLIC_DOMAIN}`);
+}
 
 app.use((req, res, next) => {
   const origin = req.headers.origin;
-  
-  // In production, allow all origins from same domain or specified origins
-  if (process.env.NODE_ENV === 'production') {
-    res.header('Access-Control-Allow-Origin', origin || '*');
-  } else if (allowedOrigins.includes(origin)) {
-    res.header('Access-Control-Allow-Origin', origin);
+
+  // Check if origin is allowed
+  const isOriginAllowed = !origin || allowedOrigins.includes(origin);
+
+  if (isOriginAllowed) {
+    // Set specific origin (never use wildcard with credentials)
+    res.header('Access-Control-Allow-Origin', origin || allowedOrigins[0]);
+    res.header('Access-Control-Allow-Credentials', 'true');
   } else {
-    res.header('Access-Control-Allow-Origin', '*');
+    // Block the request for unauthorized origins in production
+    if (process.env.NODE_ENV === 'production') {
+      logger.warn('CORS violation attempt', {
+        origin,
+        userAgent: req.headers['user-agent'],
+        ip: req.ip
+      });
+      return res.status(403).json({
+        success: false,
+        error: 'CORS policy violation'
+      });
+    } else {
+      // In development, log warning but allow
+      logger.warn('Development CORS: Allowing unauthorized origin', { origin });
+      res.header('Access-Control-Allow-Origin', origin);
+      res.header('Access-Control-Allow-Credentials', 'true');
+    }
   }
-  
+
   res.header('Access-Control-Allow-Methods', 'GET, POST, PUT, PATCH, DELETE, OPTIONS');
   res.header('Access-Control-Allow-Headers', 'Origin, X-Requested-With, Content-Type, Accept, Authorization');
-  res.header('Access-Control-Allow-Credentials', 'true');
-  
+
   if (req.method === 'OPTIONS') {
     return res.sendStatus(200);
   }
+  next();
+});
+
+// Security headers
+app.use((req, res, next) => {
+  // Prevent clickjacking
+  res.header('X-Frame-Options', 'DENY');
+
+  // Prevent MIME type sniffing
+  res.header('X-Content-Type-Options', 'nosniff');
+
+  // Enable XSS protection
+  res.header('X-XSS-Protection', '1; mode=block');
+
+  // Only enforce HTTPS in production
+  if (process.env.NODE_ENV === 'production') {
+    res.header('Strict-Transport-Security', 'max-age=31536000; includeSubDomains');
+  }
+
+  // Content Security Policy (basic)
+  res.header(
+    'Content-Security-Policy',
+    "default-src 'self'; " +
+    "script-src 'self' 'unsafe-inline' 'unsafe-eval'; " +
+    "style-src 'self' 'unsafe-inline'; " +
+    "img-src 'self' data: https:; " +
+    "connect-src 'self' https:; " +
+    "font-src 'self' data:;"
+  );
+
   next();
 });
 
@@ -168,7 +291,14 @@ app.use((req, res) => {
 
 // Error handling middleware
 app.use((err, req, res, next) => {
-  logger.error('Server error:', err.message);
+  const reqLogger = req.logger || logger;
+  reqLogger.error('Server error', {
+    message: err.message,
+    stack: err.stack,
+    status: err.status,
+    module: 'server'
+  });
+
   res.status(err.status || 500).json({
     success: false,
     error: process.env.NODE_ENV === 'production' ? 'Internal Server Error' : err.message,
@@ -176,12 +306,42 @@ app.use((err, req, res, next) => {
   });
 });
 
+// Initialize retention notification service
+try {
+  require('./services/retention-notifications');
+  logger.info('Retention notification service initialized', { module: 'services' });
+} catch (error) {
+  logger.error('Failed to initialize retention notification service', {
+    error: error.message,
+    stack: error.stack,
+    module: 'services'
+  });
+}
+
 // Start server
 const PORT = process.env.PORT || 8080;
 const HOST = process.env.HOST || '0.0.0.0';
 
 server.listen(PORT, HOST, () => {
-  console.log(`
+  // Structured logging for startup
+  logger.info('WorkLink Platform Server v2 started successfully', {
+    module: 'server',
+    host: HOST,
+    port: PORT,
+    environment: process.env.NODE_ENV || 'development',
+    node_version: process.version,
+    urls: {
+      server: `http://${HOST}:${PORT}`,
+      admin: `http://${HOST}:${PORT}/admin`,
+      worker: `http://${HOST}:${PORT}`,
+      health: `http://${HOST}:${PORT}/health`,
+      websocket: `ws://${HOST}:${PORT}/ws`
+    }
+  });
+
+  // Pretty console output in development
+  if (process.env.NODE_ENV !== 'production') {
+    console.log(`
 ╔════════════════════════════════════════════════════════════╗
 ║                                                            ║
 ║   🚀 WorkLink Platform Server v2                          ║
@@ -197,6 +357,7 @@ server.listen(PORT, HOST, () => {
 ║                                                            ║
 ╚════════════════════════════════════════════════════════════╝
   `);
+  }
 });
 
 module.exports = { app, server, wss };

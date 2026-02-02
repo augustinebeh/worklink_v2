@@ -1,8 +1,9 @@
 const express = require('express');
 const router = express.Router();
 const crypto = require('crypto');
-const { db } = require('../../../db/database');
+const { db } = require('../../../db');
 const { validate, schemas } = require('../../../middleware/validation');
+const { generateToken, generateAdminToken, authenticateToken } = require('../../../middleware/auth');
 const logger = require('../../../utils/logger');
 
 // Telegram bot token from env
@@ -139,15 +140,17 @@ router.post('/login', (req, res) => {
       }
 
       if (email === adminEmail && password === adminPassword) {
+        const admin = {
+          id: 'ADMIN001',
+          name: 'Admin',
+          email: email,
+          role: 'admin',
+        };
+
         return res.json({
           success: true,
-          data: {
-            id: 'ADMIN001',
-            name: 'Admin',
-            email: email,
-            role: 'admin',
-          },
-          token: 'demo-admin-token',
+          data: admin,
+          token: generateAdminToken(admin),
         });
       }
       return res.status(401).json({ success: false, error: 'Invalid admin credentials' });
@@ -155,7 +158,7 @@ router.post('/login', (req, res) => {
 
     // Candidate login
     const candidate = db.prepare('SELECT * FROM candidates WHERE email = ?').get(email);
-    
+
     if (!candidate) {
       return res.status(401).json({ success: false, error: 'Invalid credentials' });
     }
@@ -165,7 +168,7 @@ router.post('/login', (req, res) => {
     res.json({
       success: true,
       data: candidate,
-      token: `demo-token-${candidate.id}`,
+      token: generateToken(candidate),
     });
   } catch (error) {
     res.status(500).json({ success: false, error: error.message });
@@ -261,7 +264,7 @@ router.post('/worker/login', (req, res) => {
     res.json({
       success: true,
       data: candidate,
-      token: `demo-token-${candidate.id}`,
+      token: generateToken(candidate),
     });
   } catch (error) {
     res.status(500).json({ success: false, error: error.message });
@@ -539,32 +542,25 @@ router.post('/register', validate(schemas.registration), (req, res) => {
 });
 
 // Get current user
-router.get('/me', (req, res) => {
+router.get('/me', authenticateToken, (req, res) => {
   try {
-    // In a real app, you'd verify the token
-    const token = req.headers.authorization?.replace('Bearer ', '');
-    
-    if (!token) {
-      return res.status(401).json({ success: false, error: 'Unauthorized' });
-    }
-
-    if (token === 'demo-admin-token') {
+    if (req.user.role === 'admin') {
       return res.json({
         success: true,
         data: {
-          id: 'ADMIN001',
-          name: 'Admin',
-          email: 'admin@talentvis.com',
-          role: 'admin',
+          id: req.user.id,
+          name: req.user.name,
+          email: req.user.email,
+          role: req.user.role,
         },
       });
     }
 
-    const candidateId = token.replace('demo-token-', '');
-    const candidate = db.prepare('SELECT * FROM candidates WHERE id = ?').get(candidateId);
+    // For candidates, get fresh data from database
+    const candidate = db.prepare('SELECT * FROM candidates WHERE id = ?').get(req.user.id);
 
     if (!candidate) {
-      return res.status(401).json({ success: false, error: 'Unauthorized' });
+      return res.status(401).json({ success: false, error: 'Candidate not found' });
     }
 
     candidate.certifications = JSON.parse(candidate.certifications || '[]');

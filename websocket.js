@@ -4,8 +4,11 @@
  */
 
 const WebSocket = require('ws');
-const { db } = require('./db/database');
-const logger = require('./utils/logger');
+const { db } = require('./db');
+const { verifyToken } = require('./middleware/auth');
+const { createLogger } = require('./utils/structured-logger');
+
+const logger = createLogger('websocket');
 
 // Lazy-loaded messaging service to avoid circular dependency
 let messagingService = null;
@@ -114,6 +117,34 @@ function validateConnection(token, candidateId, isAdmin) {
     return { valid: false, error: 'Missing authentication token' };
   }
 
+  // Try JWT token first
+  const decoded = verifyToken(token);
+  if (decoded) {
+    if (isAdmin && decoded.role === 'admin') {
+      return { valid: true, role: 'admin' };
+    }
+
+    if (!isAdmin && decoded.role === 'candidate') {
+      // For candidate connections, ensure token matches candidateId parameter
+      if (candidateId && decoded.id !== candidateId) {
+        return { valid: false, error: 'Token candidateId mismatch' };
+      }
+
+      // Verify candidate still exists in database
+      const candidate = db.prepare('SELECT id FROM candidates WHERE id = ?').get(decoded.id);
+      if (!candidate) {
+        return { valid: false, error: 'Candidate not found' };
+      }
+
+      return { valid: true, role: 'candidate', candidateId: decoded.id };
+    }
+
+    return { valid: false, error: 'Invalid role for connection type' };
+  }
+
+  // LEGACY: Fall back to demo tokens (temporary for migration)
+  logger.warn('Using legacy demo token for WebSocket auth', { token: token.substring(0, 10) + '...' });
+
   // Admin token validation
   if (isAdmin) {
     if (token === 'demo-admin-token') {
@@ -140,26 +171,82 @@ function validateConnection(token, candidateId, isAdmin) {
   return { valid: false, error: 'Invalid connection parameters' };
 }
 
+// Connection tracking for rate limiting
+const connectionTracker = new Map();
+const MAX_CONNECTIONS_PER_IP = 10;
+const RATE_LIMIT_WINDOW = 60000; // 1 minute
+
+// Message rate limiting
+const messageTracker = new Map();
+const MAX_MESSAGES_PER_CONNECTION = 50; // 50 messages per minute
+const MESSAGE_RATE_WINDOW = 60000; // 1 minute
+
 function setupWebSocket(server) {
-  const wss = new WebSocket.Server({ server, path: '/ws' });
+  const wss = new WebSocket.Server({
+    server,
+    path: '/ws',
+    // Enable client tracking for better connection management
+    clientTracking: true,
+    // Limit maximum connections
+    maxPayload: 100 * 1024, // 100KB max message size
+  });
 
   wss.on('connection', (ws, req) => {
+    const clientIp = req.headers['x-forwarded-for']?.split(',')[0] || req.socket.remoteAddress;
     const url = new URL(req.url, `http://${req.headers.host}`);
     const candidateId = url.searchParams.get('candidateId');
     const isAdmin = url.searchParams.get('admin') === 'true';
     const token = url.searchParams.get('token');
 
-    logger.info(`🔌 [WS] Connection attempt: isAdmin=${isAdmin}, candidateId=${candidateId}, hasToken=${!!token}`);
+    // Rate limiting check
+    const now = Date.now();
+    if (!connectionTracker.has(clientIp)) {
+      connectionTracker.set(clientIp, { count: 0, lastReset: now });
+    }
+
+    const tracker = connectionTracker.get(clientIp);
+    if (now - tracker.lastReset > RATE_LIMIT_WINDOW) {
+      // Reset count after window
+      tracker.count = 0;
+      tracker.lastReset = now;
+    }
+
+    if (tracker.count >= MAX_CONNECTIONS_PER_IP) {
+      logger.warn('WebSocket connection rate limit exceeded', {
+        ip: clientIp,
+        count: tracker.count,
+        limit: MAX_CONNECTIONS_PER_IP
+      });
+      ws.close(4008, 'Rate limit exceeded');
+      return;
+    }
+
+    tracker.count++;
+
+    logger.info('WebSocket connection attempt', {
+      ip: clientIp,
+      is_admin: isAdmin,
+      candidate_id: candidateId,
+      has_token: !!token
+    });
 
     // Validate authentication
     const authResult = validateConnection(token, candidateId, isAdmin);
     if (!authResult.valid) {
-      logger.error(`🔌 [WS] Auth failed: ${authResult.error}`);
+      logger.security('websocket_auth_failed', {
+        ip: clientIp,
+        candidate_id: candidateId,
+        is_admin: isAdmin,
+        error: authResult.error
+      });
       ws.close(4001, authResult.error || 'Authentication failed');
       return;
     }
 
-    logger.info(`🔌 [WS] Auth success: role=${authResult.role}`);
+    logger.auth('websocket_auth_success', authResult.candidateId || 'admin', {
+      role: authResult.role,
+      ip: clientIp
+    });
 
     if (isAdmin) {
       handleAdminConnection(ws);
@@ -173,6 +260,34 @@ function setupWebSocket(server) {
     // Handle incoming messages
     ws.on('message', (data) => {
       try {
+        // Message rate limiting
+        const connectionKey = `${clientIp}-${candidateId || 'admin'}`;
+        const now = Date.now();
+
+        if (!messageTracker.has(connectionKey)) {
+          messageTracker.set(connectionKey, { count: 0, lastReset: now });
+        }
+
+        const msgTracker = messageTracker.get(connectionKey);
+        if (now - msgTracker.lastReset > MESSAGE_RATE_WINDOW) {
+          msgTracker.count = 0;
+          msgTracker.lastReset = now;
+        }
+
+        if (msgTracker.count >= MAX_MESSAGES_PER_CONNECTION) {
+          logger.warn('🔌 [WS] Message rate limit exceeded', {
+            key: connectionKey,
+            count: msgTracker.count
+          });
+          ws.send(JSON.stringify({
+            type: 'error',
+            message: 'Message rate limit exceeded. Please slow down.'
+          }));
+          return;
+        }
+
+        msgTracker.count++;
+
         const message = JSON.parse(data);
         handleMessage(ws, message, candidateId, isAdmin);
       } catch (error) {
@@ -183,6 +298,17 @@ function setupWebSocket(server) {
 
     ws.on('error', (error) => {
       logger.error('WebSocket error:', error.message);
+    });
+
+    // Handle connection close
+    ws.on('close', (code, reason) => {
+      // Decrement connection count for rate limiting
+      if (connectionTracker.has(clientIp)) {
+        const tracker = connectionTracker.get(clientIp);
+        tracker.count = Math.max(0, tracker.count - 1);
+      }
+
+      logger.info(`🔌 [WS] Connection closed: ip=${clientIp}, code=${code}, reason=${reason?.toString()}`);
     });
 
     // Send initial connection success

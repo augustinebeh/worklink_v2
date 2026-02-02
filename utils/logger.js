@@ -1,7 +1,15 @@
 /**
- * Logger Utility for WorkLink Backend
- * Provides consistent logging with timestamps and log levels
+ * DEPRECATED: Legacy Logger for WorkLink Backend
+ *
+ * This logger is deprecated. Please use the new structured logger instead:
+ * const { createLogger } = require('./structured-logger');
+ * const logger = createLogger('your-module');
+ *
+ * Legacy wrapper for backward compatibility
  */
+
+const { createLogger } = require('./structured-logger');
+const structuredLogger = createLogger('legacy');
 
 const isDev = process.env.NODE_ENV !== 'production';
 
@@ -28,91 +36,69 @@ function formatMessage(level, ...args) {
   return [prefix, ...args];
 }
 
+// Legacy wrapper - delegates to structured logger for backward compatibility
 const logger = {
   /**
-   * General logging (development only)
+   * General logging - now uses structured logger
    */
   log: (...args) => {
-    if (isDev) {
-      console.log(...formatMessage('LOG'), ...args);
-    }
+    structuredLogger.info(args.join(' '));
   },
 
   /**
-   * Info level logging (development only)
+   * Info level logging - now uses structured logger
    */
   info: (...args) => {
-    if (isDev) {
-      console.info(`${colors.blue}[INFO]${colors.reset}`, getTimestamp(), ...args);
-    }
+    structuredLogger.info(args.join(' '));
   },
 
   /**
-   * Warning level logging (development only)
+   * Warning level logging - now uses structured logger
    */
   warn: (...args) => {
-    if (isDev) {
-      console.warn(`${colors.yellow}[WARN]${colors.reset}`, getTimestamp(), ...args);
-    }
+    structuredLogger.warn(args.join(' '));
   },
 
   /**
-   * Debug level logging (development only)
+   * Debug level logging - now uses structured logger
    */
   debug: (...args) => {
-    if (isDev && process.env.DEBUG) {
-      console.log(`${colors.cyan}[DEBUG]${colors.reset}`, getTimestamp(), ...args);
-    }
+    structuredLogger.debug(args.join(' '));
   },
 
   /**
-   * Error level logging (always logged)
+   * Error level logging - now uses structured logger
    */
   error: (...args) => {
-    console.error(`${colors.red}[ERROR]${colors.reset}`, getTimestamp(), ...args);
+    structuredLogger.error(args.join(' '));
   },
 
   /**
-   * Success messages (development only)
+   * Success messages - now uses structured logger
    */
   success: (...args) => {
-    if (isDev) {
-      console.log(`${colors.green}[SUCCESS]${colors.reset}`, getTimestamp(), ...args);
-    }
+    structuredLogger.info(args.join(' '), { category: 'success' });
   },
 
   /**
-   * Database operations logging
+   * Database operations logging - now uses structured logger
    */
   db: (...args) => {
-    if (isDev) {
-      console.log(`${colors.magenta}[DB]${colors.reset}`, getTimestamp(), ...args);
-    }
+    structuredLogger.db('operation', 'unknown', { message: args.join(' ') });
   },
 
   /**
-   * WebSocket logging
+   * WebSocket logging - now uses structured logger
    */
   ws: (...args) => {
-    if (isDev) {
-      console.log(`${colors.cyan}[WS]${colors.reset}`, getTimestamp(), ...args);
-    }
+    structuredLogger.ws('event', { message: args.join(' ') });
   },
 
   /**
-   * API request logging
+   * API request logging - now uses structured logger
    */
   api: (method, path, status, duration) => {
-    if (isDev) {
-      const statusColor = status >= 400 ? colors.red : status >= 300 ? colors.yellow : colors.green;
-      console.log(
-        `${colors.blue}[API]${colors.reset}`,
-        getTimestamp(),
-        `${method} ${path}`,
-        `${statusColor}${status}${colors.reset}`,
-        `${duration}ms`
-      );
-    }
+    structuredLogger.api(method, path, status, duration);
   },
 };
 

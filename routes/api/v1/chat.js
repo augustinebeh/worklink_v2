@@ -1,6 +1,6 @@
 const express = require('express');
 const router = express.Router();
-const { db } = require('../../../db/database');
+const { db } = require('../../../db');
 const { broadcastToCandidate, broadcastToAdmins, EventTypes } = require('../../../websocket');
 const messaging = require('../../../services/messaging');
 const logger = require('../../../utils/logger');
@@ -152,18 +152,54 @@ router.get('/:candidateId/quick-replies', async (req, res) => {
 router.get('/:candidateId/messages', (req, res) => {
   try {
     const { candidateId } = req.params;
-    const messages = db.prepare(`
-      SELECT * FROM messages 
-      WHERE candidate_id = ?
-      ORDER BY created_at ASC
-    `).all(candidateId);
+    const { page = 1, limit = 50, before } = req.query;
+    const offset = (parseInt(page) - 1) * parseInt(limit);
+
+    // Build WHERE clause for pagination
+    let whereClause = 'WHERE candidate_id = ?';
+    let params = [candidateId];
+
+    // Support "load more" pattern with before timestamp
+    if (before) {
+      whereClause += ' AND created_at < ?';
+      params.push(before);
+    }
+
+    // Get total count for pagination (without before filter for accurate total)
+    const totalQuery = `SELECT COUNT(*) as total FROM messages WHERE candidate_id = ?`;
+    const { total } = db.prepare(totalQuery).get(candidateId);
+
+    // Get messages with pagination (newest first)
+    const messagesQuery = `
+      SELECT * FROM messages
+      ${whereClause}
+      ORDER BY created_at DESC
+      LIMIT ? OFFSET ?
+    `;
+    const messages = db.prepare(messagesQuery).all(...params, parseInt(limit), offset);
+
+    // Reverse to show oldest first (chronological order)
+    const sortedMessages = messages.reverse();
 
     const unreadCount = db.prepare(`
-      SELECT COUNT(*) as count FROM messages 
+      SELECT COUNT(*) as count FROM messages
       WHERE candidate_id = ? AND sender = 'admin' AND read = 0
     `).get(candidateId).count;
 
-    res.json({ success: true, data: { messages, unreadCount } });
+    res.json({
+      success: true,
+      data: {
+        messages: sortedMessages,
+        unreadCount
+      },
+      pagination: {
+        page: parseInt(page),
+        limit: parseInt(limit),
+        total,
+        pages: Math.ceil(total / parseInt(limit)),
+        hasMore: messages.length === parseInt(limit)
+      }
+    });
   } catch (error) {
     res.status(500).json({ success: false, error: error.message });
   }
@@ -357,8 +393,52 @@ router.post('/admin/broadcast', (req, res) => {
 // Message templates
 router.get('/templates', (req, res) => {
   try {
-    const templates = db.prepare('SELECT * FROM message_templates ORDER BY category, name').all();
-    res.json({ success: true, data: templates });
+    const { page = 1, limit = 20, category, search } = req.query;
+    const offset = (parseInt(page) - 1) * parseInt(limit);
+
+    // Build WHERE clause for filters
+    let whereClause = '';
+    let params = [];
+
+    const conditions = [];
+    if (category) {
+      conditions.push('category = ?');
+      params.push(category);
+    }
+
+    if (search) {
+      conditions.push('(name LIKE ? OR content LIKE ?)');
+      const searchTerm = `%${search}%`;
+      params.push(searchTerm, searchTerm);
+    }
+
+    if (conditions.length > 0) {
+      whereClause = 'WHERE ' + conditions.join(' AND ');
+    }
+
+    // Get total count for pagination
+    const totalQuery = `SELECT COUNT(*) as total FROM message_templates ${whereClause}`;
+    const { total } = db.prepare(totalQuery).get(...params);
+
+    // Get message templates with pagination
+    const templatesQuery = `
+      SELECT * FROM message_templates
+      ${whereClause}
+      ORDER BY category, name
+      LIMIT ? OFFSET ?
+    `;
+    const templates = db.prepare(templatesQuery).all(...params, parseInt(limit), offset);
+
+    res.json({
+      success: true,
+      data: templates,
+      pagination: {
+        page: parseInt(page),
+        limit: parseInt(limit),
+        total,
+        pages: Math.ceil(total / parseInt(limit))
+      }
+    });
   } catch (error) {
     res.status(500).json({ success: false, error: error.message });
   }
