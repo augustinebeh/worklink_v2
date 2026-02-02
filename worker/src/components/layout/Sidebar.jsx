@@ -129,10 +129,19 @@ export default function Sidebar({ isOpen, onClose }) {
             <div className="flex items-center gap-3 mb-3">
               <div className="w-12 h-12 rounded-2xl bg-gradient-to-br from-emerald-500 to-cyan-500 flex items-center justify-center text-white font-bold overflow-hidden">
                 {user.profile_photo ? (
-                  <img src={user.profile_photo} alt="" className="w-full h-full object-cover" />
-                ) : (
-                  user.name?.charAt(0) || 'U'
-                )}
+                  <img
+                    src={user.profile_photo}
+                    alt=""
+                    className="w-full h-full object-cover"
+                    onError={(e) => {
+                      e.target.style.display = 'none';
+                      e.target.nextSibling.style.display = 'flex';
+                    }}
+                  />
+                ) : null}
+                <span style={{ display: user.profile_photo ? 'none' : 'flex' }}>
+                  {user.name?.charAt(0) || 'U'}
+                </span>
               </div>
               <div className="flex-1">
                 <p className="font-semibold text-white">{user.name || 'User'}</p>

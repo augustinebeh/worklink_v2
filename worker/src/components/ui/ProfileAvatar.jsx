@@ -168,15 +168,18 @@ export default function ProfileAvatar({
               src={photoUrl}
               alt={name}
               className="w-full h-full object-cover"
+              onError={(e) => {
+                e.target.style.display = 'none';
+                if (e.target.nextSibling) e.target.nextSibling.style.display = 'flex';
+              }}
             />
-          ) : (
-            <span className={clsx(
-              isCurrentUser ? 'text-primary-400' : '',
-              'select-none'
-            )}>
-              {initial}
-            </span>
-          )}
+          ) : null}
+          <span
+            className={clsx(isCurrentUser ? 'text-primary-400' : '', 'select-none')}
+            style={{ display: photoUrl ? 'none' : 'flex' }}
+          >
+            {initial}
+          </span>
         </div>
       </div>
 

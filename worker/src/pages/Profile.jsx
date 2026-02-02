@@ -58,63 +58,35 @@ const TIER_COLORS = {
   special: 'from-emerald-400 to-cyan-500',
 };
 
-// Profile Picture/Border Action Modal
-function ProfileActionModal({ isOpen, onClose, onSelectPhoto, onSelectBorder }) {
+// Profile Picture/Border Dropdown Menu
+function ProfileActionDropdown({ isOpen, onClose, onSelectPhoto, onSelectBorder, anchorRef }) {
   if (!isOpen) return null;
 
   return (
     <>
-      {/* Backdrop */}
-      <div 
-        className="fixed inset-0 z-[60] bg-black/70 backdrop-blur-sm"
-        onClick={onClose}
-      />
-      {/* Modal */}
-      <div className="fixed inset-x-0 bottom-0 z-[70] flex justify-center p-4">
-        <div 
-          className="w-full max-w-sm rounded-3xl bg-[#0a1628] border border-white/10 p-6 animate-slide-up"
-          onClick={e => e.stopPropagation()}
+      {/* Invisible backdrop to close dropdown */}
+      <div className="fixed inset-0 z-[60]" onClick={onClose} />
+
+      {/* Dropdown Menu */}
+      <div
+        className="absolute left-0 top-full mt-2 z-[70] w-56 rounded-xl bg-[#0a1628] border border-white/10 shadow-xl shadow-black/50 overflow-hidden animate-dropdown"
+        onClick={e => e.stopPropagation()}
+      >
+        <button
+          onClick={onSelectPhoto}
+          className="w-full flex items-center gap-3 px-4 py-3 hover:bg-white/5 transition-colors border-b border-white/5"
         >
-          <div className="w-12 h-1 bg-white/20 rounded-full mx-auto mb-6" />
-          <h3 className="text-lg font-bold text-white text-center mb-6">Customize Profile</h3>
-          
-          <div className="space-y-3">
-            <button
-              onClick={onSelectPhoto}
-              className="w-full flex items-center gap-4 p-4 rounded-2xl bg-white/5 border border-white/10 hover:bg-white/10 active:scale-[0.98] transition-all"
-            >
-              <div className="w-12 h-12 rounded-xl bg-emerald-500/20 flex items-center justify-center">
-                <CameraIcon className="h-6 w-6 text-emerald-400" />
-              </div>
-              <div className="flex-1 text-left">
-                <p className="text-white font-semibold">Change Profile Picture</p>
-                <p className="text-white/50 text-sm">Upload a new photo</p>
-              </div>
-              <ChevronRightIcon className="h-5 w-5 text-white/30" />
-            </button>
+          <CameraIcon className="h-5 w-5 text-emerald-400" />
+          <span className="text-white text-sm">Change Picture</span>
+        </button>
 
-            <button
-              onClick={onSelectBorder}
-              className="w-full flex items-center gap-4 p-4 rounded-2xl bg-white/5 border border-white/10 hover:bg-white/10 active:scale-[0.98] transition-all"
-            >
-              <div className="w-12 h-12 rounded-xl bg-violet-500/20 flex items-center justify-center">
-                <CircleIcon className="h-6 w-6 text-violet-400" />
-              </div>
-              <div className="flex-1 text-left">
-                <p className="text-white font-semibold">Change Profile Border</p>
-                <p className="text-white/50 text-sm">Customize your avatar frame</p>
-              </div>
-              <ChevronRightIcon className="h-5 w-5 text-white/30" />
-            </button>
-          </div>
-
-          <button
-            onClick={onClose}
-            className="w-full mt-4 py-3 rounded-xl bg-white/5 text-white/60 font-medium hover:bg-white/10 transition-all"
-          >
-            Cancel
-          </button>
-        </div>
+        <button
+          onClick={onSelectBorder}
+          className="w-full flex items-center gap-3 px-4 py-3 hover:bg-white/5 transition-colors"
+        >
+          <CircleIcon className="h-5 w-5 text-violet-400" />
+          <span className="text-white text-sm">Change Border</span>
+        </button>
       </div>
     </>
   );
@@ -559,33 +531,49 @@ export default function Profile() {
           <div className="relative p-6">
             <div className="flex items-center justify-between mb-6">
               <div className="flex items-center gap-4">
-                {/* Clickable Avatar */}
-                <button 
-                  onClick={() => setShowProfileActionModal(true)}
-                  className="relative group"
-                  disabled={uploadingPhoto}
-                >
-                  <ProfileAvatar
-                    name={userName}
-                    photoUrl={user.profile_photo}
-                    level={userLevel}
-                    size="xl"
-                    showLevel={false}
-                    selectedBorderId={selectedBorderId}
+                {/* Clickable Avatar with Dropdown */}
+                <div className="relative">
+                  <button
+                    onClick={() => setShowProfileActionModal(!showProfileActionModal)}
+                    className="relative group"
+                    disabled={uploadingPhoto}
+                  >
+                    <ProfileAvatar
+                      name={userName}
+                      photoUrl={user.profile_photo}
+                      level={userLevel}
+                      size="xl"
+                      showLevel={false}
+                      selectedBorderId={selectedBorderId}
+                    />
+                    {uploadingPhoto ? (
+                      <div className="absolute inset-0 bg-black/50 rounded-full flex items-center justify-center">
+                        <div className="animate-spin h-6 w-6 border-2 border-white border-t-transparent rounded-full" />
+                      </div>
+                    ) : (
+                      <div className="absolute inset-0 bg-black/0 group-hover:bg-black/30 rounded-full flex items-center justify-center transition-all">
+                        <CameraIcon className="h-6 w-6 text-white opacity-0 group-hover:opacity-100 transition-opacity" />
+                      </div>
+                    )}
+                    <div className="absolute bottom-0 right-0 w-8 h-8 rounded-full bg-emerald-500 border-2 border-[#0a1628] flex items-center justify-center">
+                      <CameraIcon className="h-4 w-4 text-white" />
+                    </div>
+                  </button>
+
+                  {/* Dropdown Menu */}
+                  <ProfileActionDropdown
+                    isOpen={showProfileActionModal}
+                    onClose={() => setShowProfileActionModal(false)}
+                    onSelectPhoto={() => {
+                      setShowProfileActionModal(false);
+                      document.getElementById('photo-upload-input')?.click();
+                    }}
+                    onSelectBorder={() => {
+                      setShowProfileActionModal(false);
+                      setShowBorderModal(true);
+                    }}
                   />
-                  {uploadingPhoto ? (
-                    <div className="absolute inset-0 bg-black/50 rounded-full flex items-center justify-center">
-                      <div className="animate-spin h-6 w-6 border-2 border-white border-t-transparent rounded-full" />
-                    </div>
-                  ) : (
-                    <div className="absolute inset-0 bg-black/0 group-hover:bg-black/30 rounded-full flex items-center justify-center transition-all">
-                      <CameraIcon className="h-6 w-6 text-white opacity-0 group-hover:opacity-100 transition-opacity" />
-                    </div>
-                  )}
-                  <div className="absolute bottom-0 right-0 w-8 h-8 rounded-full bg-emerald-500 border-2 border-[#0a1628] flex items-center justify-center">
-                    <CameraIcon className="h-4 w-4 text-white" />
-                  </div>
-                </button>
+                </div>
 
                 <div>
                   <h1 className="text-xl font-bold text-white">{userName}</h1>
@@ -715,19 +703,6 @@ export default function Profile() {
         <MenuLink icon={LogOutIcon} label="Log Out" onClick={handleLogout} danger />
       </div>
 
-      {/* Profile Action Modal */}
-      <ProfileActionModal
-        isOpen={showProfileActionModal}
-        onClose={() => setShowProfileActionModal(false)}
-        onSelectPhoto={() => {
-          setShowProfileActionModal(false);
-          document.getElementById('photo-upload-input')?.click();
-        }}
-        onSelectBorder={() => {
-          setShowProfileActionModal(false);
-          setShowBorderModal(true);
-        }}
-      />
 
       {/* Border Selection Modal */}
       <BorderSelectionModal
@@ -782,12 +757,12 @@ export default function Profile() {
       )}
 
       <style>{`
-        @keyframes slide-up {
-          from { transform: translateY(100%); opacity: 0; }
+        @keyframes dropdown {
+          from { transform: translateY(-8px); opacity: 0; }
           to { transform: translateY(0); opacity: 1; }
         }
-        .animate-slide-up {
-          animation: slide-up 0.3s ease-out;
+        .animate-dropdown {
+          animation: dropdown 0.15s ease-out;
         }
       `}</style>
     </div>
