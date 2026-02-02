@@ -484,7 +484,128 @@
     @apply bg-gradient-to-r from-accent-400 to-accent-500;
   }
 
-  /* ===== XP BAR ===== */
+  /* ===== SHARED XP BAR COMPONENT ===== */
+  /* Base XP bar container */
+  .xp-bar-shared {
+    @apply w-full;
+  }
+
+  /* XP bar header with level and progress */
+  .xp-bar-header {
+    @apply flex items-center justify-between mb-2 text-sm;
+  }
+
+  .xp-bar-level {
+    @apply flex items-center gap-2;
+  }
+
+  .xp-bar-level-badge {
+    @apply px-2.5 py-1 rounded-lg text-xs font-bold;
+  }
+
+  html.dark .xp-bar-level-badge {
+    @apply bg-violet-500/20 text-violet-400;
+  }
+
+  html.light .xp-bar-level-badge {
+    @apply bg-violet-100 text-violet-600;
+  }
+
+  .xp-bar-title {
+    @apply text-white/50;
+  }
+
+  html.light .xp-bar-title {
+    @apply text-slate-500;
+  }
+
+  .xp-bar-progress-text {
+    @apply text-white;
+  }
+
+  html.light .xp-bar-progress-text {
+    @apply text-slate-900;
+  }
+
+  .xp-bar-progress-current {
+    @apply font-bold text-emerald-400;
+  }
+
+  html.light .xp-bar-progress-current {
+    @apply text-emerald-600;
+  }
+
+  .xp-bar-progress-total {
+    @apply text-white/30;
+  }
+
+  html.light .xp-bar-progress-total {
+    @apply text-slate-400;
+  }
+
+  /* XP bar track */
+  .xp-bar-track {
+    @apply h-3 rounded-full overflow-hidden transition-all duration-300;
+  }
+
+  html.dark .xp-bar-track {
+    @apply bg-white/5;
+  }
+
+  html.light .xp-bar-track {
+    @apply bg-slate-200;
+  }
+
+  /* Animating state */
+  .xp-bar-track.animating {
+    box-shadow: 0 0 15px rgba(16, 185, 129, 0.5);
+  }
+
+  /* XP bar fill */
+  .xp-bar-fill-shared {
+    @apply h-full rounded-full bg-gradient-to-r from-emerald-500 via-cyan-500 to-violet-500 transition-all;
+  }
+
+  .xp-bar-fill-shared.animating {
+    @apply duration-1000;
+  }
+
+  .xp-bar-fill-shared:not(.animating) {
+    @apply duration-500;
+  }
+
+  /* XP bar footer */
+  .xp-bar-footer {
+    @apply text-xs mt-1.5 text-right;
+  }
+
+  html.dark .xp-bar-footer {
+    @apply text-white/40;
+  }
+
+  html.light .xp-bar-footer {
+    @apply text-slate-500;
+  }
+
+  /* Size variants */
+  .xp-bar-track.sm {
+    @apply h-2;
+  }
+
+  .xp-bar-track.lg {
+    @apply h-4;
+  }
+
+  /* Compact version (no header, just bar) */
+  .xp-bar-compact .xp-bar-header {
+    @apply hidden;
+  }
+
+  .xp-bar-compact .xp-bar-footer {
+    @apply hidden;
+  }
+
+  /* Legacy XP bar support */
   .xp-bar {
     @apply h-2 rounded-full overflow-hidden;
     background-color: rgba(255, 255, 255, 0.2);

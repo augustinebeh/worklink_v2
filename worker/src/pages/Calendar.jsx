@@ -15,6 +15,7 @@ import { useAuth } from '../contexts/AuthContext';
 import { useToast } from '../components/ui/Toast';
 import { clsx } from 'clsx';
 import { DEFAULT_LOCALE, TIMEZONE, getSGDateString, formatMoney } from '../utils/constants';
+import { EmptyState } from '../components/common';
 
 const DAYS = ['Sun', 'Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat'];
 const MONTHS = ['January', 'February', 'March', 'April', 'May', 'June', 'July', 'August', 'September', 'October', 'November', 'December'];
@@ -403,13 +404,12 @@ export default function Calendar() {
                 <div className="animate-spin h-6 w-6 border-2 border-emerald-500 border-t-transparent rounded-full" />
               </div>
             ) : selectedDeployments.length === 0 ? (
-              <div className="text-center py-12 rounded-2xl bg-[#0a1628]/50 border border-white/[0.05]">
-                <CalendarIcon className="h-12 w-12 mx-auto mb-3 text-white/10" />
-                <p className="text-white/40">No jobs scheduled</p>
-                {isDateAvailable(selectedDate.getDate()) && (
-                  <p className="text-sm text-emerald-400 mt-1">You're available this day</p>
-                )}
-              </div>
+              <EmptyState
+                icon={CalendarIcon}
+                title="No jobs scheduled"
+                description={isDateAvailable(selectedDate.getDate()) ? "You're available this day" : undefined}
+                compact
+              />
             ) : (
               <div className="space-y-3">
                 <p className="text-sm text-white/50 mb-2">{selectedDeployments.length} job{selectedDeployments.length !== 1 ? 's' : ''} scheduled</p>

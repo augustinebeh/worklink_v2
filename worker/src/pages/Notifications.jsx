@@ -2,7 +2,6 @@ import { useState, useEffect } from 'react';
 import {
   BellIcon,
   CheckIcon,
-  TrashIcon,
   BriefcaseIcon,
   DollarSignIcon,
   ZapIcon,
@@ -11,6 +10,7 @@ import {
 } from 'lucide-react';
 import { useAuth } from '../contexts/AuthContext';
 import { clsx } from 'clsx';
+import { PageHeader, FilterTabs, EmptyState, LoadingSkeleton } from '../components/common';
 
 const typeConfig = {
   job: { icon: BriefcaseIcon, color: 'text-cyan-400', bg: 'bg-cyan-500/20' },
@@ -28,7 +28,7 @@ function NotificationItem({ notification, onMarkRead }) {
 
   return (
     <div
-      onClick={() => !notification.read_at && onMarkRead(notification.id)}
+      onClick={() => isUnread && onMarkRead(notification.id)}
       className={clsx(
         'flex items-start gap-4 p-4 transition-colors cursor-pointer',
         isUnread ? 'bg-white/[0.02]' : 'hover:bg-white/[0.02]'
@@ -96,69 +96,46 @@ export default function Notifications() {
   };
 
   const unreadCount = notifications.filter(n => !n.read_at).length;
-  const filteredNotifications = notifications.filter(n => {
-    if (filter === 'unread') return !n.read_at;
-    return true;
-  });
+  const filteredNotifications = filter === 'unread'
+    ? notifications.filter(n => !n.read_at)
+    : notifications;
+
+  const tabs = [
+    { id: 'all', label: 'All' },
+    { id: 'unread', label: `Unread (${unreadCount})` },
+  ];
 
   return (
     <div className="min-h-screen bg-[#020817] pb-24">
-      {/* Header */}
       <div className="px-4 pt-4 pb-4">
-        <div className="flex items-center justify-between mb-4">
-          <div>
-            <h1 className="text-2xl font-bold text-white flex items-center gap-2">
-              Notifications <span className="text-2xl">🔔</span>
-            </h1>
-            <p className="text-white/40 text-sm">{unreadCount} unread</p>
-          </div>
-          {unreadCount > 0 && (
-            <button
-              onClick={handleMarkAllRead}
-              className="flex items-center gap-2 px-4 py-2 rounded-xl bg-emerald-500/20 border border-emerald-500/30 text-emerald-400 text-sm font-medium"
-            >
-              <CheckIcon className="h-4 w-4" />
-              Mark all read
-            </button>
-          )}
-        </div>
-
-        {/* Filter Tabs */}
-        <div className="flex gap-2">
-          {[
-            { id: 'all', label: 'All' },
-            { id: 'unread', label: `Unread (${unreadCount})` },
-          ].map(tab => (
-            <button
-              key={tab.id}
-              onClick={() => setFilter(tab.id)}
-              className={clsx(
-                'px-4 py-2 rounded-xl text-sm font-medium transition-all',
-                filter === tab.id
-                  ? 'bg-gradient-to-r from-emerald-500 to-cyan-500 text-white'
-                  : 'bg-[#0a1628] border border-white/[0.05] text-white/50'
-              )}
-            >
-              {tab.label}
-            </button>
-          ))}
-        </div>
+        <PageHeader
+          title="Notifications"
+          emoji="🔔"
+          subtitle={`${unreadCount} unread`}
+          rightAction={
+            unreadCount > 0 && (
+              <button
+                onClick={handleMarkAllRead}
+                className="flex items-center gap-2 px-4 py-2 rounded-xl bg-emerald-500/20 border border-emerald-500/30 text-emerald-400 text-sm font-medium"
+              >
+                <CheckIcon className="h-4 w-4" />
+                Mark all read
+              </button>
+            )
+          }
+        />
+        <FilterTabs tabs={tabs} activeFilter={filter} onFilterChange={setFilter} />
       </div>
 
-      {/* Notifications List */}
       <div className="px-4">
         {loading ? (
-          <div className="space-y-3">
-            {[1, 2, 3, 4].map(i => (
-              <div key={i} className="h-20 rounded-2xl bg-[#0a1628] animate-pulse" />
-            ))}
-          </div>
+          <LoadingSkeleton count={4} height="h-20" />
         ) : filteredNotifications.length === 0 ? (
-          <div className="text-center py-16 rounded-2xl bg-[#0a1628]/50 border border-white/[0.05]">
-            <BellIcon className="h-16 w-16 mx-auto mb-4 text-white/10" />
-            <h3 className="text-white font-semibold mb-2">No notifications</h3>
-            <p className="text-white/40 text-sm">You're all caught up!</p>
-          </div>
+          <EmptyState
+            icon={BellIcon}
+            title="No notifications"
+            description="You're all caught up!"
+          />
         ) : (
           <div className="rounded-2xl bg-[#0a1628]/50 border border-white/[0.05] divide-y divide-white/[0.05] overflow-hidden">
             {filteredNotifications.map(notification => (

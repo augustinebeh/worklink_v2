@@ -1,65 +1,138 @@
 import { clsx } from 'clsx';
+import { ZapIcon } from 'lucide-react';
 import { XP_THRESHOLDS as xpThresholds, LEVEL_TITLES as levelTitles } from '../../utils/gamification';
 
-export default function XPBar({ currentXP, level, showDetails = true, size = 'md' }) {
+/**
+ * Shared XP Bar Component
+ * Used on: Home, Profile, Quests pages
+ *
+ * @param {number} currentXP - User's total XP
+ * @param {number} level - User's current level
+ * @param {boolean} showDetails - Show header with level badge and progress text (default: true)
+ * @param {boolean} showFooter - Show "X XP to next level" text (default: true)
+ * @param {string} size - Bar height: 'sm' | 'md' | 'lg' (default: 'md')
+ * @param {boolean} animating - Whether the bar is currently animating (glow effect)
+ * @param {React.Ref} barRef - Ref to attach to the bar container (for flying XP animation)
+ * @param {boolean} compact - Compact mode (just the bar, no text)
+ */
+export default function XPBar({
+  currentXP = 0,
+  level = 1,
+  showDetails = true,
+  showFooter = true,
+  size = 'md',
+  animating = false,
+  barRef = null,
+  compact = false,
+}) {
+  const maxLevel = xpThresholds.length;
   const currentThreshold = xpThresholds[level - 1] || 0;
-  const nextThreshold = xpThresholds[level] || xpThresholds[xpThresholds.length - 1];
-  const xpInLevel = currentXP - currentThreshold;
-  const xpNeeded = nextThreshold - currentThreshold;
-  const progress = level >= 10 ? 100 : Math.min((xpInLevel / xpNeeded) * 100, 100);
+  const nextThreshold = xpThresholds[level] || xpThresholds[maxLevel - 1];
+  const xpInLevel = Math.max(0, currentXP - currentThreshold);
+  const xpNeeded = Math.max(1, nextThreshold - currentThreshold);
+  const progress = level >= maxLevel ? 100 : Math.min((xpInLevel / xpNeeded) * 100, 100);
+  const xpToNext = xpNeeded - xpInLevel;
+  const nextTitle = levelTitles[level + 1] || 'Max Level';
 
-  const sizes = {
-    sm: 'h-2',
-    md: 'h-3',
-    lg: 'h-4',
-  };
+  if (compact) {
+    return (
+      <div className="xp-bar-shared xp-bar-compact" ref={barRef}>
+        <div className={clsx('xp-bar-track', size, animating && 'animating')}>
+          <div
+            className={clsx('xp-bar-fill-shared', animating && 'animating')}
+            style={{ width: `${Math.max(progress, 2)}%` }}
+          />
+        </div>
+      </div>
+    );
+  }
 
   return (
-    <div className="w-full" role="region" aria-label={`Experience progress: Level ${level} ${levelTitles[level]}`}>
+    <div className="xp-bar-shared" ref={barRef}>
       {showDetails && (
-        <div className="flex items-center justify-between mb-2">
-          <div className="flex items-center gap-2">
-            <span
-              className={clsx(
-                'level-badge',
-                level >= 8 ? 'level-badge-elite' :
-                level >= 5 ? 'level-badge-pro' :
-                'level-badge-rookie'
-              )}
-              aria-hidden="true"
-            >
-              Lv.{level}
+        <div className="xp-bar-header">
+          <span className="xp-bar-title">Level Progress</span>
+          <span className={clsx(
+            'xp-bar-progress-text transition-all duration-300',
+            animating && 'scale-110'
+          )}>
+            <span className={clsx(
+              'xp-bar-progress-current transition-all duration-500',
+              animating && 'text-emerald-300'
+            )}>
+              {xpInLevel.toLocaleString()}
             </span>
-            <span className="text-sm text-dark-300">{levelTitles[level]}</span>
-          </div>
-          <div className="text-sm" aria-hidden="true">
-            <span className="font-semibold text-accent-400">{xpInLevel.toLocaleString()}</span>
-            <span className="text-dark-400"> / {xpNeeded.toLocaleString()} XP</span>
-          </div>
+            <span className="xp-bar-progress-total"> / {xpNeeded.toLocaleString()} XP</span>
+          </span>
         </div>
       )}
 
-      <div
-        className={clsx('xp-bar', sizes[size])}
-        role="progressbar"
-        aria-valuenow={Math.round(progress)}
-        aria-valuemin={0}
-        aria-valuemax={100}
-        aria-label={`${Math.round(progress)}% progress to next level`}
-      >
+      <div className={clsx('xp-bar-track', size, animating && 'animating')}>
         <div
-          className="xp-bar-fill"
-          style={{ width: `${progress}%` }}
+          className={clsx('xp-bar-fill-shared', animating && 'animating')}
+          style={{ width: `${Math.max(progress, 2)}%` }}
         />
       </div>
 
-      {level < 10 && showDetails && (
-        <p className="text-xs text-dark-500 mt-1.5 text-right" aria-live="polite">
-          {(xpNeeded - xpInLevel).toLocaleString()} XP to {levelTitles[level + 1]}
+      {showFooter && level < maxLevel && (
+        <p className="xp-bar-footer">
+          {xpToNext.toLocaleString()} XP to {nextTitle}
         </p>
       )}
     </div>
   );
 }
 
-export { levelTitles, xpThresholds } from '../../utils/gamification';
+// Alternative: XP Bar with level badge (for Profile page style)
+export function XPBarWithBadge({
+  currentXP = 0,
+  level = 1,
+  size = 'md',
+  animating = false,
+}) {
+  const maxLevel = xpThresholds.length;
+  const currentThreshold = xpThresholds[level - 1] || 0;
+  const nextThreshold = xpThresholds[level] || xpThresholds[maxLevel - 1];
+  const xpInLevel = Math.max(0, currentXP - currentThreshold);
+  const xpNeeded = Math.max(1, nextThreshold - currentThreshold);
+  const progress = level >= maxLevel ? 100 : Math.min((xpInLevel / xpNeeded) * 100, 100);
+  const xpToNext = xpNeeded - xpInLevel;
+  const nextTitle = levelTitles[level + 1] || 'Max Level';
+  const currentTitle = levelTitles[level] || 'Newcomer';
+
+  return (
+    <div className="xp-bar-shared">
+      <div className="flex items-center gap-3 mb-3">
+        <div className="flex items-center gap-2 px-3 py-1.5 rounded-xl bg-violet-500/20 border border-violet-500/30">
+          <ZapIcon className="h-4 w-4 text-violet-400" />
+          <span className="text-violet-400 font-bold">Level {level}</span>
+        </div>
+        <span className="text-emerald-400 text-sm font-medium">{currentTitle}</span>
+      </div>
+
+      <div className="xp-bar-header">
+        <span className="xp-bar-title">Level Progress</span>
+        <span className="xp-bar-progress-text">
+          <span className="xp-bar-progress-current">{xpInLevel.toLocaleString()}</span>
+          <span className="xp-bar-progress-total"> / {xpNeeded.toLocaleString()} XP</span>
+        </span>
+      </div>
+
+      <div className={clsx('xp-bar-track', size, animating && 'animating')}>
+        <div
+          className={clsx('xp-bar-fill-shared', animating && 'animating')}
+          style={{ width: `${Math.max(progress, 2)}%` }}
+        />
+      </div>
+
+      {level < maxLevel && (
+        <p className="xp-bar-footer">
+          {xpToNext.toLocaleString()} XP to {nextTitle}
+        </p>
+      )}
+    </div>
+  );
+}
+
+// Re-export utilities for convenience
+export { LEVEL_TITLES, XP_THRESHOLDS } from '../../utils/gamification';

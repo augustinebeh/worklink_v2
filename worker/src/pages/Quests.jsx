@@ -15,22 +15,26 @@ import {
 import { useAuth } from '../contexts/AuthContext';
 import { useToast } from '../components/ui/Toast';
 import { clsx } from 'clsx';
-import { QUEST_TYPE_LABELS } from '../utils/constants';
+import { QUEST_TYPE_LABELS, QUEST_TYPE_STYLES } from '../utils/constants';
+import { calculateLevel } from '../utils/gamification';
+import XPBar from '../components/gamification/XPBar';
+import { PageHeader, FilterTabs, EmptyState, LoadingSkeleton } from '../components/common';
 
-const questTypeConfig = {
-  daily: { color: 'text-cyan-400', bg: 'bg-cyan-500/20', border: 'border-cyan-500/30', icon: ClockIcon },
-  weekly: { color: 'text-violet-400', bg: 'bg-violet-500/20', border: 'border-violet-500/30', icon: StarIcon },
-  special: { color: 'text-amber-400', bg: 'bg-amber-500/20', border: 'border-amber-500/30', icon: SparklesIcon },
-  repeatable: { color: 'text-emerald-400', bg: 'bg-emerald-500/20', border: 'border-emerald-500/30', icon: RefreshCwIcon },
-  challenge: { color: 'text-red-400', bg: 'bg-red-500/20', border: 'border-red-500/30', icon: FlameIcon },
+// Quest type icons mapping
+const QUEST_ICONS = {
+  daily: ClockIcon,
+  weekly: StarIcon,
+  special: SparklesIcon,
+  repeatable: RefreshCwIcon,
+  challenge: FlameIcon,
 };
 
 function QuestCard({ quest, onClaim, onCheckin, claiming }) {
   const navigate = useNavigate();
-  const config = questTypeConfig[quest.type] || questTypeConfig.daily;
+  const config = QUEST_TYPE_STYLES[quest.type] || QUEST_TYPE_STYLES.daily;
   const typeLabel = QUEST_TYPE_LABELS?.[quest.type] || 'Daily';
   const progress = quest.target > 0 ? (quest.progress / quest.target) * 100 : 0;
-  const Icon = config.icon;
+  const Icon = QUEST_ICONS[quest.type] || QUEST_ICONS.daily;
 
   const isClaimed = quest.status === 'claimed';
   const isClaimable = quest.status === 'claimable';
@@ -300,59 +304,34 @@ export default function Quests() {
           </button>
         </div>
 
-        {/* Stats Cards */}
-        <div className="grid grid-cols-3 gap-3 mb-4">
-          <div className="p-3 rounded-2xl bg-emerald-500/10 border border-emerald-500/20 text-center">
-            <p className="text-2xl font-bold text-emerald-400">{claimableCount}</p>
-            <p className="text-xs text-white/40">Ready to Claim</p>
-          </div>
-          <div className="p-3 rounded-2xl bg-violet-500/10 border border-violet-500/20 text-center">
-            <p className="text-2xl font-bold text-violet-400">{quests.length - completedCount}</p>
-            <p className="text-xs text-white/40">Active</p>
-          </div>
-          <div className="p-3 rounded-2xl bg-cyan-500/10 border border-cyan-500/20 text-center">
-            <p className="text-2xl font-bold text-cyan-400">{completedCount}</p>
-            <p className="text-xs text-white/40">Completed</p>
-          </div>
+        {/* XP Progress Bar */}
+        <div className="mb-4 p-4 rounded-2xl bg-[#0a1628]/80 border border-white/[0.05]">
+          <XPBar currentXP={user?.xp || 0} level={calculateLevel(user?.xp || 0)} />
         </div>
 
         {/* Filter Tabs */}
-        <div className="flex gap-2">
-          {[
+        <FilterTabs
+          tabs={[
             { id: 'all', label: 'All' },
             { id: 'active', label: 'Active' },
             { id: 'completed', label: 'Completed' },
-          ].map(tab => (
-            <button
-              key={tab.id}
-              onClick={() => setFilter(tab.id)}
-              className={clsx(
-                'px-4 py-2 rounded-xl text-sm font-medium transition-all',
-                filter === tab.id
-                  ? 'bg-gradient-to-r from-violet-500 to-cyan-500 text-white shadow-lg shadow-violet-500/25'
-                  : 'bg-[#0a1628] border border-white/[0.05] text-white/50 hover:text-white'
-              )}
-            >
-              {tab.label}
-            </button>
-          ))}
-        </div>
+          ]}
+          activeFilter={filter}
+          onFilterChange={setFilter}
+          variant="violet"
+        />
       </div>
 
       {/* Quests List */}
       <div className="px-4 py-4">
         {loading ? (
-          <div className="space-y-3">
-            {[1, 2, 3, 4].map(i => (
-              <div key={i} className="h-32 rounded-2xl bg-[#0a1628] animate-pulse" />
-            ))}
-          </div>
+          <LoadingSkeleton count={4} height="h-32" />
         ) : filteredQuests.length === 0 ? (
-          <div className="text-center py-16 rounded-2xl bg-[#0a1628]/50 border border-white/[0.05]">
-            <TargetIcon className="h-16 w-16 mx-auto mb-4 text-white/10" />
-            <h3 className="text-white font-semibold mb-2">No quests found</h3>
-            <p className="text-white/40 text-sm">Check back later for new quests</p>
-          </div>
+          <EmptyState
+            icon={TargetIcon}
+            title="No quests found"
+            description="Check back later for new quests"
+          />
         ) : (
           <div className="space-y-3">
             {filteredQuests.map(quest => (

@@ -17,8 +17,10 @@ import { useAuth } from '../contexts/AuthContext';
 import { useWebSocket } from '../contexts/WebSocketContext';
 import { useToast } from '../components/ui/Toast';
 import { clsx } from 'clsx';
-import { XP_THRESHOLDS as xpThresholds, LEVEL_TITLES as levelTitles, calculateLevel } from '../utils/gamification';
+import { LEVEL_TITLES as levelTitles, calculateLevel } from '../utils/gamification';
+import { LoadingSkeleton, EmptyState, StatPod } from '../components/common';
 import { FloatingXP, LevelUpCelebration, AchievementUnlock } from '../components/gamification/Confetti';
+import XPBar from '../components/gamification/XPBar';
 import {
   formatMoney,
   DEFAULT_START_TIME,
@@ -30,15 +32,16 @@ import {
   isToday,
   isTomorrow,
   getSGDateString,
+  QUEST_TYPE_STYLES,
 } from '../utils/constants';
 
-// Quest type config
-const questTypeConfig = {
-  daily: { color: 'text-cyan-400', bg: 'bg-cyan-500/20', border: 'border-cyan-500/30', icon: ClockIcon },
-  weekly: { color: 'text-violet-400', bg: 'bg-violet-500/20', border: 'border-violet-500/30', icon: StarIcon },
-  special: { color: 'text-amber-400', bg: 'bg-amber-500/20', border: 'border-amber-500/30', icon: SparklesIcon },
-  repeatable: { color: 'text-emerald-400', bg: 'bg-emerald-500/20', border: 'border-emerald-500/30', icon: RefreshCwIcon },
-  challenge: { color: 'text-red-400', bg: 'bg-red-500/20', border: 'border-red-500/30', icon: FlameIcon },
+// Quest type icons mapping
+const QUEST_ICONS = {
+  daily: ClockIcon,
+  weekly: StarIcon,
+  special: SparklesIcon,
+  repeatable: RefreshCwIcon,
+  challenge: FlameIcon,
 };
 
 // Flying XP Animation Component
@@ -96,8 +99,8 @@ function FlyingXP({ amount, startPos, targetPos, onComplete }) {
 function HomeQuestCard({ quest, onClaim, isClaiming, xpBadgeRef }) {
   const [isExiting, setIsExiting] = useState(false);
   const claimButtonRef = useRef(null);
-  const config = questTypeConfig[quest.type] || questTypeConfig.daily;
-  const Icon = config.icon;
+  const config = QUEST_TYPE_STYLES[quest.type] || QUEST_TYPE_STYLES.daily;
+  const Icon = QUEST_ICONS[quest.type] || QUEST_ICONS.daily;
   
   const isClaimable = quest.status === 'claimable';
   const progress = quest.target > 0 ? (quest.progress / quest.target) * 100 : 0;
@@ -186,31 +189,23 @@ function HomeQuestCard({ quest, onClaim, isClaiming, xpBadgeRef }) {
 // League Header Card - Main pool-style banner
 function LeagueCard({ user, userLevel, userXP, thisMonthEarnings, totalJobs, poolEndsIn, xpAnimating, xpBarRef }) {
   const levelTitle = levelTitles[userLevel] || 'Newcomer';
-  
-  // XP progress calculations
-  const maxLevel = xpThresholds.length;
-  const currentThreshold = xpThresholds[userLevel - 1] || 0;
-  const nextThreshold = xpThresholds[userLevel] || xpThresholds[maxLevel - 1];
-  const xpInLevel = Math.max(0, userXP - currentThreshold);
-  const xpNeeded = Math.max(1, nextThreshold - currentThreshold);
-  const progress = userLevel >= maxLevel ? 100 : Math.min((xpInLevel / xpNeeded) * 100, 100);
-  
+
   return (
     <div className="relative mx-4 mt-4 rounded-3xl overflow-hidden">
       {/* Background with gradient and glow effects */}
       <div className="absolute inset-0 bg-gradient-to-br from-[#0a1628] via-[#0d1f3c] to-[#0f2847]" />
-      
+
       {/* Animated gradient orbs */}
       <div className="absolute top-0 right-0 w-64 h-64 bg-emerald-500/20 rounded-full blur-[80px] -translate-y-1/2 translate-x-1/4" />
       <div className="absolute bottom-0 left-0 w-48 h-48 bg-violet-500/20 rounded-full blur-[60px] translate-y-1/3 -translate-x-1/4" />
       <div className="absolute top-1/2 left-1/2 w-32 h-32 bg-cyan-500/10 rounded-full blur-[40px] -translate-x-1/2 -translate-y-1/2" />
-      
+
       {/* Border glow effect */}
       <div className={clsx(
         'absolute inset-0 rounded-3xl border transition-all duration-500',
         xpAnimating ? 'border-emerald-500/50 shadow-[0_0_30px_rgba(16,185,129,0.3)]' : 'border-white/[0.08]'
       )} />
-      
+
       {/* Content */}
       <div className="relative p-5">
         {/* Top row - User info */}
@@ -237,66 +232,27 @@ function LeagueCard({ user, userLevel, userXP, thisMonthEarnings, totalJobs, poo
           </div>
         </div>
 
-        {/* XP Progress Bar - with animation support */}
-        <div className="mb-6" ref={xpBarRef}>
-          <div className="flex items-center justify-between text-sm mb-2">
-            <span className="text-white/50">Level Progress</span>
-            <span className={clsx(
-              'text-white transition-all duration-300',
-              xpAnimating && 'scale-110'
-            )}>
-              <span className={clsx(
-                'font-bold transition-all duration-500',
-                xpAnimating ? 'text-emerald-300' : 'text-emerald-400'
-              )}>
-                {xpInLevel.toLocaleString()}
-              </span>
-              <span className="text-white/30"> / {xpNeeded.toLocaleString()} XP</span>
-            </span>
-          </div>
-          <div className={clsx(
-            'h-3 rounded-full bg-white/5 overflow-hidden transition-all duration-300',
-            xpAnimating && 'shadow-[0_0_15px_rgba(16,185,129,0.5)]'
-          )}>
-            <div
-              className={clsx(
-                'h-full rounded-full bg-gradient-to-r from-emerald-500 via-cyan-500 to-violet-500 transition-all',
-                xpAnimating ? 'duration-1000' : 'duration-500'
-              )}
-              style={{ width: `${Math.max(progress, 2)}%` }}
-            />
-          </div>
-          <p className="text-xs text-white/40 mt-1.5 text-right">
-            {(xpNeeded - xpInLevel).toLocaleString()} XP to {levelTitles[userLevel + 1] || 'Max Level'}
-          </p>
+        {/* XP Progress Bar - Shared Component */}
+        <div className="mb-6">
+          <XPBar
+            currentXP={userXP}
+            level={userLevel}
+            animating={xpAnimating}
+            barRef={xpBarRef}
+          />
         </div>
 
         {/* Stats Cards Row */}
         <div className="grid grid-cols-3 gap-3">
-          <StatPod label="This Month" value={`$${formatMoney(thisMonthEarnings)}`} emoji="💰" color="emerald" />
-          <StatPod label="Jobs Done" value={totalJobs.toString()} emoji="📋" color="violet" />
-          <StatPod label="Next Payout" value={poolEndsIn} emoji="⏰" color="cyan" />
+          <StatPod label="This Month" value={`$${formatMoney(thisMonthEarnings)}`} emoji="💰" color="emerald" whiteValue size="md" />
+          <StatPod label="Jobs Done" value={totalJobs.toString()} emoji="📋" color="violet" whiteValue size="md" />
+          <StatPod label="Next Payout" value={poolEndsIn} emoji="⏰" color="cyan" whiteValue size="md" />
         </div>
       </div>
     </div>
   );
 }
 
-// Stat Pod Component - Glass morphism style
-function StatPod({ label, value, emoji, color = 'emerald' }) {
-  const colorClasses = {
-    emerald: 'from-emerald-500/20 to-emerald-500/5 border-emerald-500/20',
-    violet: 'from-violet-500/20 to-violet-500/5 border-violet-500/20',
-    cyan: 'from-cyan-500/20 to-cyan-500/5 border-cyan-500/20',
-  };
-
-  return (
-    <div className={clsx('relative rounded-2xl p-4 border backdrop-blur-sm bg-gradient-to-br', colorClasses[color])}>
-      <p className="text-white/50 text-xs mb-1 flex items-center gap-1.5">{label} <span>{emoji}</span></p>
-      <p className="text-white font-bold text-lg">{value}</p>
-    </div>
-  );
-}
 
 // Activity Item for the feed
 function ActivityItem({ job }) {
@@ -601,17 +557,16 @@ export default function Home() {
 
           <div className="rounded-2xl border border-white/5 bg-[#0a1628]/50 overflow-hidden">
             {loading ? (
-              <div className="p-8">
-                {[1, 2, 3].map(i => (
-                  <div key={i} className="h-16 bg-white/5 rounded-xl animate-pulse mb-3" />
-                ))}
+              <div className="p-4">
+                <LoadingSkeleton count={3} height="h-16" />
               </div>
             ) : paginatedJobs.length === 0 ? (
-              <div className="text-center py-16">
-                <SparklesIcon className="h-12 w-12 mx-auto mb-4 text-white/20" />
-                <h3 className="text-white font-semibold mb-1">No jobs available</h3>
-                <p className="text-white/40 text-sm">Check back soon for new opportunities</p>
-              </div>
+              <EmptyState
+                icon={SparklesIcon}
+                title="No jobs available"
+                description="Check back soon for new opportunities"
+                compact
+              />
             ) : (
               <div className="divide-y divide-white/5">
                 {paginatedJobs.map((job) => (

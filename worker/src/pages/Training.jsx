@@ -13,6 +13,7 @@ import {
 import { useAuth } from '../contexts/AuthContext';
 import { useToast } from '../components/ui/Toast';
 import { clsx } from 'clsx';
+import { FilterTabs, LoadingSkeleton, EmptyState } from '../components/common';
 
 // Training Module Modal
 function TrainingModal({ module, onClose, onComplete }) {
@@ -332,42 +333,28 @@ export default function Training() {
 
       {/* Filter Tabs */}
       <div className="px-4 mt-4">
-        <div className="flex gap-2">
-          {[
+        <FilterTabs
+          tabs={[
             { id: 'all', label: 'All' },
             { id: 'available', label: 'Available' },
             { id: 'completed', label: 'Completed' },
-          ].map(tab => (
-            <button
-              key={tab.id}
-              onClick={() => setFilter(tab.id)}
-              className={clsx(
-                'px-4 py-2 rounded-xl text-sm font-medium transition-all',
-                filter === tab.id
-                  ? 'bg-gradient-to-r from-cyan-500 to-violet-500 text-white shadow-lg shadow-cyan-500/25'
-                  : 'bg-[#0a1628] border border-white/[0.05] text-white/50 hover:text-white'
-              )}
-            >
-              {tab.label}
-            </button>
-          ))}
-        </div>
+          ]}
+          activeFilter={filter}
+          onFilterChange={setFilter}
+          variant="cyan"
+        />
       </div>
 
       {/* Modules List */}
       <div className="px-4 py-4">
         {loading ? (
-          <div className="space-y-3">
-            {[1, 2, 3].map(i => (
-              <div key={i} className="h-28 rounded-2xl bg-[#0a1628] animate-pulse" />
-            ))}
-          </div>
+          <LoadingSkeleton count={3} height="h-28" />
         ) : filteredModules.length === 0 ? (
-          <div className="text-center py-16 rounded-2xl bg-[#0a1628]/50 border border-white/[0.05]">
-            <BookOpenIcon className="h-16 w-16 mx-auto mb-4 text-white/10" />
-            <h3 className="text-white font-semibold mb-2">No modules found</h3>
-            <p className="text-white/40 text-sm">Check back later for new training</p>
-          </div>
+          <EmptyState
+            icon={BookOpenIcon}
+            title="No modules found"
+            description="Check back later for new training"
+          />
         ) : (
           <div className="space-y-3">
             {filteredModules.map(module => (

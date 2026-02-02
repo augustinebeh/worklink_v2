@@ -46,6 +46,15 @@ export const QUEST_TYPE_LABELS = {
   challenge: 'Challenge',
 };
 
+// Quest type styling config (icons imported where needed)
+export const QUEST_TYPE_STYLES = {
+  daily: { color: 'text-cyan-400', bg: 'bg-cyan-500/20', border: 'border-cyan-500/30' },
+  weekly: { color: 'text-violet-400', bg: 'bg-violet-500/20', border: 'border-violet-500/30' },
+  special: { color: 'text-amber-400', bg: 'bg-amber-500/20', border: 'border-amber-500/30' },
+  repeatable: { color: 'text-emerald-400', bg: 'bg-emerald-500/20', border: 'border-emerald-500/30' },
+  challenge: { color: 'text-red-400', bg: 'bg-red-500/20', border: 'border-red-500/30' },
+};
+
 // Achievement rarity labels
 export const RARITY_LABELS = {
   common: 'Common',

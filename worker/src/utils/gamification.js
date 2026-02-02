@@ -158,8 +158,6 @@ export function getLevelTier(level) {
   return 'bronze';
 }
 
-export function formatXP(xp) {
-  if (xp >= 1000000) return `${(xp / 1000000).toFixed(1)}M`;
-  if (xp >= 1000) return `${(xp / 1000).toFixed(1)}K`;
-  return xp.toString();
-}
+// Re-export formatNumber as formatXP for backwards compatibility
+import { formatNumber } from './constants';
+export const formatXP = formatNumber;

@@ -4,23 +4,15 @@ import {
   CopyIcon,
   CheckIcon,
   UsersIcon,
-  DollarSignIcon,
   ShareIcon,
-  ChevronRightIcon,
   UserPlusIcon,
 } from 'lucide-react';
 import { useAuth } from '../contexts/AuthContext';
 import { useToast } from '../components/ui/Toast';
 import { clsx } from 'clsx';
+import { EmptyState, LoadingSkeleton, StatusBadge } from '../components/common';
 
 function ReferralItem({ referral }) {
-  const statusConfig = {
-    pending: { color: 'text-amber-400', bg: 'bg-amber-500/20', label: 'Pending' },
-    completed: { color: 'text-emerald-400', bg: 'bg-emerald-500/20', label: 'Completed' },
-    rewarded: { color: 'text-violet-400', bg: 'bg-violet-500/20', label: 'Rewarded' },
-  };
-  const config = statusConfig[referral.status] || statusConfig.pending;
-
   return (
     <div className="flex items-center gap-4 p-4 hover:bg-white/[0.02] transition-colors">
       <div className="w-10 h-10 rounded-xl bg-white/5 flex items-center justify-center">
@@ -31,9 +23,7 @@ function ReferralItem({ referral }) {
         <p className="text-white/40 text-sm">{new Date(referral.created_at).toLocaleDateString()}</p>
       </div>
       <div className="text-right">
-        <span className={clsx('px-2 py-1 rounded-lg text-xs font-medium', config.bg, config.color)}>
-          {config.label}
-        </span>
+        <StatusBadge status={referral.status} type="referral" />
         {referral.reward_amount > 0 && (
           <p className="text-emerald-400 text-sm font-medium mt-1">+${referral.reward_amount}</p>
         )}
@@ -107,7 +97,7 @@ export default function Referrals() {
           <div className="absolute top-0 right-0 w-64 h-64 bg-emerald-500/20 rounded-full blur-[80px] -translate-y-1/2 translate-x-1/4" />
           <div className="absolute bottom-0 left-0 w-48 h-48 bg-cyan-500/15 rounded-full blur-[60px] translate-y-1/3 -translate-x-1/4" />
           <div className="absolute inset-0 rounded-3xl border border-white/[0.08]" />
-          
+
           <div className="relative p-6">
             <div className="flex items-center gap-4 mb-4">
               <div className="w-14 h-14 rounded-2xl bg-emerald-500/20 border border-emerald-500/30 flex items-center justify-center">
@@ -191,19 +181,16 @@ export default function Referrals() {
         <h2 className="text-white font-semibold mb-3 flex items-center gap-2">
           Your Referrals <span className="text-lg">👥</span>
         </h2>
-        
+
         {loading ? (
-          <div className="space-y-3">
-            {[1, 2, 3].map(i => (
-              <div key={i} className="h-16 rounded-2xl bg-[#0a1628] animate-pulse" />
-            ))}
-          </div>
+          <LoadingSkeleton count={3} height="h-16" />
         ) : referrals.length === 0 ? (
-          <div className="text-center py-12 rounded-2xl bg-[#0a1628]/50 border border-white/[0.05]">
-            <UsersIcon className="h-12 w-12 mx-auto mb-3 text-white/10" />
-            <h3 className="text-white font-semibold mb-1">No referrals yet</h3>
-            <p className="text-white/40 text-sm">Share your code to start earning</p>
-          </div>
+          <EmptyState
+            icon={UsersIcon}
+            title="No referrals yet"
+            description="Share your code to start earning"
+            compact
+          />
         ) : (
           <div className="rounded-2xl bg-[#0a1628]/50 border border-white/[0.05] divide-y divide-white/[0.05] overflow-hidden">
             {referrals.map(referral => (

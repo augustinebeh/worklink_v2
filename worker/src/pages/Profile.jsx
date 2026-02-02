@@ -32,9 +32,11 @@ import { useAuth } from '../contexts/AuthContext';
 import { useTheme } from '../contexts/ThemeContext';
 import { usePushNotifications } from '../hooks/usePushNotifications';
 import { clsx } from 'clsx';
-import { XP_THRESHOLDS as xpThresholds, LEVEL_TITLES as levelTitles, calculateLevel, getLevelTier, LEVEL_TIERS } from '../utils/gamification';
+import { calculateLevel, getLevelTier, LEVEL_TITLES as levelTitles } from '../utils/gamification';
 import { DEFAULTS } from '../utils/constants';
 import ProfileAvatar from '../components/ui/ProfileAvatar';
+import XPBar from '../components/gamification/XPBar';
+import { StatCard } from '../components/common';
 
 // Availability Quick Selector
 function AvailabilitySelector({ user, onUpdate }) {
@@ -121,29 +123,6 @@ function AvailabilitySelector({ user, onUpdate }) {
   );
 }
 
-// Stat Card Component
-function StatCard({ icon: Icon, label, value, color = 'emerald' }) {
-  const colorClasses = {
-    emerald: 'from-emerald-500/20 to-emerald-500/5 border-emerald-500/20 text-emerald-400',
-    violet: 'from-violet-500/20 to-violet-500/5 border-violet-500/20 text-violet-400',
-    amber: 'from-amber-500/20 to-amber-500/5 border-amber-500/20 text-amber-400',
-    cyan: 'from-cyan-500/20 to-cyan-500/5 border-cyan-500/20 text-cyan-400',
-  };
-
-  return (
-    <div className={clsx(
-      'p-4 rounded-2xl border bg-gradient-to-br',
-      colorClasses[color].split(' ').slice(0, 3).join(' ')
-    )}>
-      <div className="flex items-center gap-2 mb-2">
-        <Icon className={clsx('h-4 w-4', colorClasses[color].split(' ').slice(-1))} />
-        <span className="text-white/50 text-xs">{label}</span>
-      </div>
-      <p className={clsx('text-2xl font-bold', colorClasses[color].split(' ').slice(-1))}>{value}</p>
-    </div>
-  );
-}
-
 // Menu Link Component
 function MenuLink({ icon: Icon, label, sublabel, onClick, danger, badge }) {
   return (
@@ -175,36 +154,6 @@ function MenuLink({ icon: Icon, label, sublabel, onClick, danger, badge }) {
   );
 }
 
-// XP Progress Component
-function XPProgress({ currentXP, level }) {
-  const maxLevel = xpThresholds.length;
-  const currentThreshold = xpThresholds[level - 1] || 0;
-  const nextThreshold = xpThresholds[level] || xpThresholds[maxLevel - 1];
-  const xpInLevel = Math.max(0, currentXP - currentThreshold);
-  const xpNeeded = Math.max(1, nextThreshold - currentThreshold);
-  const progress = level >= maxLevel ? 100 : Math.min((xpInLevel / xpNeeded) * 100, 100);
-
-  return (
-    <div className="w-full">
-      <div className="flex items-center justify-between mb-2 text-sm">
-        <span className="text-white/50">Level Progress</span>
-        <span className="text-white">
-          <span className="text-emerald-400 font-bold">{xpInLevel.toLocaleString()}</span>
-          <span className="text-white/30"> / {xpNeeded.toLocaleString()} XP</span>
-        </span>
-      </div>
-      <div className="h-3 rounded-full bg-white/5 overflow-hidden">
-        <div
-          className="h-full rounded-full bg-gradient-to-r from-emerald-500 via-cyan-500 to-violet-500 transition-all duration-500"
-          style={{ width: `${Math.max(progress, 2)}%` }}
-        />
-      </div>
-      <p className="text-xs text-white/40 mt-1.5 text-right">
-        {(xpNeeded - xpInLevel).toLocaleString()} XP to {levelTitles[level + 1] || 'Max Level'}
-      </p>
-    </div>
-  );
-}
 
 export default function Profile() {
   const navigate = useNavigate();
@@ -401,8 +350,8 @@ export default function Profile() {
               </div>
             </div>
 
-            {/* XP Progress */}
-            <XPProgress currentXP={userXP} level={userLevel} />
+            {/* XP Progress - Shared Component */}
+            <XPBar currentXP={userXP} level={userLevel} />
           </div>
         </div>
       </div>

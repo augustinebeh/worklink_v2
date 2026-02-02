@@ -15,6 +15,7 @@ import {
 } from 'lucide-react';
 import { useAuth } from '../contexts/AuthContext';
 import { clsx } from 'clsx';
+import { LoadingSkeleton, EmptyState } from '../components/common';
 import {
   formatMoney,
   DEFAULT_START_TIME,
@@ -396,17 +397,13 @@ export default function Jobs() {
       {/* Jobs List */}
       <div className="px-4 py-4">
         {loading ? (
-          <div className="space-y-4">
-            {[1, 2, 3, 4].map(i => (
-              <div key={i} className="h-32 rounded-2xl bg-[#0a1628] animate-pulse" />
-            ))}
-          </div>
+          <LoadingSkeleton count={4} height="h-32" />
         ) : paginatedJobs.length === 0 ? (
-          <div className="text-center py-16 rounded-2xl bg-[#0a1628]/50 border border-white/[0.05]">
-            <BriefcaseIcon className="h-16 w-16 mx-auto mb-4 text-white/10" />
-            <h3 className="text-white font-semibold mb-2">No jobs found</h3>
-            <p className="text-white/40 text-sm">Try adjusting your search or filters</p>
-          </div>
+          <EmptyState
+            icon={BriefcaseIcon}
+            title="No jobs found"
+            description="Try adjusting your search or filters"
+          />
         ) : (
           <>
             <div className="space-y-3">

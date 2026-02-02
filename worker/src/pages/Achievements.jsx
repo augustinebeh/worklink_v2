@@ -11,6 +11,7 @@ import {
 } from 'lucide-react';
 import { useAuth } from '../contexts/AuthContext';
 import { clsx } from 'clsx';
+import { FilterTabs, EmptyState, LoadingSkeleton } from '../components/common';
 
 const achievementCategories = {
   milestones: { icon: TrophyIcon, label: 'Milestones', color: 'amber' },
@@ -20,18 +21,17 @@ const achievementCategories = {
   special: { icon: AwardIcon, label: 'Special', color: 'emerald' },
 };
 
+const colorClasses = {
+  amber: { bg: 'bg-amber-500/20', border: 'border-amber-500/30', text: 'text-amber-400' },
+  violet: { bg: 'bg-violet-500/20', border: 'border-violet-500/30', text: 'text-violet-400' },
+  red: { bg: 'bg-red-500/20', border: 'border-red-500/30', text: 'text-red-400' },
+  cyan: { bg: 'bg-cyan-500/20', border: 'border-cyan-500/30', text: 'text-cyan-400' },
+  emerald: { bg: 'bg-emerald-500/20', border: 'border-emerald-500/30', text: 'text-emerald-400' },
+};
+
 function AchievementCard({ achievement, unlocked }) {
   const category = achievementCategories[achievement.category] || achievementCategories.milestones;
   const Icon = category.icon;
-  
-  const colorClasses = {
-    amber: { bg: 'bg-amber-500/20', border: 'border-amber-500/30', text: 'text-amber-400' },
-    violet: { bg: 'bg-violet-500/20', border: 'border-violet-500/30', text: 'text-violet-400' },
-    red: { bg: 'bg-red-500/20', border: 'border-red-500/30', text: 'text-red-400' },
-    cyan: { bg: 'bg-cyan-500/20', border: 'border-cyan-500/30', text: 'text-cyan-400' },
-    emerald: { bg: 'bg-emerald-500/20', border: 'border-emerald-500/30', text: 'text-emerald-400' },
-  };
-  
   const colors = colorClasses[category.color];
 
   return (
@@ -111,9 +111,14 @@ export default function Achievements() {
   const sortedAchievements = [...filteredAchievements].sort((a, b) => {
     const aUnlocked = userAchievements.includes(a.id);
     const bUnlocked = userAchievements.includes(b.id);
-    if (aUnlocked !== bUnlocked) return bUnlocked ? 1 : -1;
-    return 0;
+    return bUnlocked - aUnlocked;
   });
+
+  const tabs = [
+    { id: 'all', label: 'All' },
+    { id: 'unlocked', label: `Unlocked (${unlockedCount})` },
+    { id: 'locked', label: `Locked (${totalCount - unlockedCount})` },
+  ];
 
   return (
     <div className="min-h-screen bg-[#020817] pb-24">
@@ -123,7 +128,7 @@ export default function Achievements() {
           <div className="absolute inset-0 bg-gradient-to-br from-[#0a1628] via-[#0d1f3c] to-[#0f2847]" />
           <div className="absolute top-0 right-0 w-64 h-64 bg-amber-500/20 rounded-full blur-[80px] -translate-y-1/2 translate-x-1/4" />
           <div className="absolute inset-0 rounded-3xl border border-white/[0.08]" />
-          
+
           <div className="relative p-6">
             <div className="flex items-center gap-4 mb-6">
               <div className="w-16 h-16 rounded-2xl bg-amber-500/20 border border-amber-500/30 flex items-center justify-center">
@@ -149,44 +154,19 @@ export default function Achievements() {
         </div>
       </div>
 
-      {/* Filter Tabs */}
       <div className="px-4 mt-4">
-        <div className="flex gap-2">
-          {[
-            { id: 'all', label: 'All' },
-            { id: 'unlocked', label: `Unlocked (${unlockedCount})` },
-            { id: 'locked', label: `Locked (${totalCount - unlockedCount})` },
-          ].map(tab => (
-            <button
-              key={tab.id}
-              onClick={() => setFilter(tab.id)}
-              className={clsx(
-                'px-4 py-2 rounded-xl text-sm font-medium transition-all',
-                filter === tab.id
-                  ? 'bg-gradient-to-r from-amber-500 to-orange-500 text-white shadow-lg shadow-amber-500/25'
-                  : 'bg-[#0a1628] border border-white/[0.05] text-white/50 hover:text-white'
-              )}
-            >
-              {tab.label}
-            </button>
-          ))}
-        </div>
+        <FilterTabs tabs={tabs} activeFilter={filter} onFilterChange={setFilter} />
       </div>
 
-      {/* Achievements List */}
       <div className="px-4 py-4">
         {loading ? (
-          <div className="space-y-3">
-            {[1, 2, 3, 4].map(i => (
-              <div key={i} className="h-24 rounded-2xl bg-[#0a1628] animate-pulse" />
-            ))}
-          </div>
+          <LoadingSkeleton count={4} height="h-24" />
         ) : sortedAchievements.length === 0 ? (
-          <div className="text-center py-16 rounded-2xl bg-[#0a1628]/50 border border-white/[0.05]">
-            <TrophyIcon className="h-16 w-16 mx-auto mb-4 text-white/10" />
-            <h3 className="text-white font-semibold mb-2">No achievements found</h3>
-            <p className="text-white/40 text-sm">Keep working to unlock achievements</p>
-          </div>
+          <EmptyState
+            icon={TrophyIcon}
+            title="No achievements found"
+            description="Keep working to unlock achievements"
+          />
         ) : (
           <div className="space-y-3">
             {sortedAchievements.map(achievement => (

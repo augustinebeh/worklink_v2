@@ -183,6 +183,11 @@ router.post('/quests/:questId/start', (req, res) => {
   try {
     const { candidate_id } = req.body;
     const quest = db.prepare('SELECT * FROM quests WHERE id = ?').get(req.params.questId);
+    
+    if (!quest) {
+      return res.status(404).json({ success: false, error: 'Quest not found' });
+    }
+    
     const requirement = JSON.parse(quest.requirement || '{}');
 
     db.prepare(`
@@ -191,6 +196,65 @@ router.post('/quests/:questId/start', (req, res) => {
     `).run(candidate_id, req.params.questId, requirement.count || 1);
 
     res.json({ success: true });
+  } catch (error) {
+    res.status(500).json({ success: false, error: error.message });
+  }
+});
+
+// Update quest progress (for check-in type quests)
+router.post('/quests/:questId/progress', (req, res) => {
+  try {
+    const { candidateId, increment = 1 } = req.body;
+    const questId = req.params.questId;
+
+    // Check if quest exists
+    const quest = db.prepare('SELECT * FROM quests WHERE id = ?').get(questId);
+    if (!quest) {
+      return res.status(404).json({ success: false, error: 'Quest not found' });
+    }
+
+    const requirement = JSON.parse(quest.requirement || '{}');
+    const target = requirement.count || 1;
+
+    // Check if candidate has started this quest
+    let candidateQuest = db.prepare(`
+      SELECT * FROM candidate_quests WHERE candidate_id = ? AND quest_id = ?
+    `).get(candidateId, questId);
+
+    if (!candidateQuest) {
+      // Auto-start the quest
+      db.prepare(`
+        INSERT INTO candidate_quests (candidate_id, quest_id, progress, target, completed, claimed)
+        VALUES (?, ?, 0, ?, 0, 0)
+      `).run(candidateId, questId, target);
+      
+      candidateQuest = { progress: 0, target, completed: 0, claimed: 0 };
+    }
+
+    // Check if already claimed
+    if (candidateQuest.claimed) {
+      return res.status(400).json({ success: false, error: 'Quest already claimed' });
+    }
+
+    // Update progress
+    const newProgress = Math.min(candidateQuest.progress + increment, target);
+    const isCompleted = newProgress >= target;
+
+    db.prepare(`
+      UPDATE candidate_quests 
+      SET progress = ?, completed = ?, completed_at = CASE WHEN ? = 1 THEN CURRENT_TIMESTAMP ELSE completed_at END
+      WHERE candidate_id = ? AND quest_id = ?
+    `).run(newProgress, isCompleted ? 1 : 0, isCompleted ? 1 : 0, candidateId, questId);
+
+    res.json({
+      success: true,
+      data: {
+        progress: newProgress,
+        target,
+        completed: isCompleted,
+        status: isCompleted ? 'claimable' : 'in_progress',
+      },
+    });
   } catch (error) {
     res.status(500).json({ success: false, error: error.message });
   }
