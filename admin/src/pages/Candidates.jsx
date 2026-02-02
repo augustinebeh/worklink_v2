@@ -279,6 +279,45 @@ export default function Candidates() {
     }
   };
 
+  const handleExport = () => {
+    if (candidates.length === 0) {
+      alert('No candidates to export');
+      return;
+    }
+
+    // Define CSV headers
+    const headers = ['Name', 'Email', 'Phone', 'Status', 'Level', 'XP', 'Jobs Completed', 'Rating', 'Source', 'Created At'];
+
+    // Convert candidates to CSV rows
+    const rows = candidates.map(c => [
+      c.name || '',
+      c.email || '',
+      c.phone || '',
+      c.status || '',
+      c.level || 1,
+      c.xp || 0,
+      c.total_jobs_completed || 0,
+      c.rating || '',
+      c.source || '',
+      c.created_at ? new Date(c.created_at).toLocaleDateString() : '',
+    ]);
+
+    // Create CSV content
+    const csvContent = [
+      headers.join(','),
+      ...rows.map(row => row.map(cell => `"${String(cell).replace(/"/g, '""')}"`).join(','))
+    ].join('\n');
+
+    // Create and download file
+    const blob = new Blob([csvContent], { type: 'text/csv;charset=utf-8;' });
+    const link = document.createElement('a');
+    link.href = URL.createObjectURL(blob);
+    link.download = `candidates_export_${new Date().toISOString().split('T')[0]}.csv`;
+    document.body.appendChild(link);
+    link.click();
+    document.body.removeChild(link);
+  };
+
   // Table columns with profile photos
   const columns = [
     {
@@ -358,7 +397,7 @@ export default function Candidates() {
           </p>
         </div>
         <div className="flex items-center gap-3">
-          <Button variant="secondary" size="sm" icon={DownloadIcon}>Export</Button>
+          <Button variant="secondary" size="sm" icon={DownloadIcon} onClick={handleExport}>Export</Button>
           <Button size="sm" icon={UserPlusIcon} onClick={() => setShowAddModal(true)}>Add Candidate</Button>
         </div>
       </div>

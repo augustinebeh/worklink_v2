@@ -44,9 +44,21 @@ function isWeekend(year, month, day) {
 
 // Pending Account Overlay
 function PendingAccountOverlay() {
+  // Lock body scroll when overlay is shown
+  useEffect(() => {
+    document.body.style.overflow = 'hidden';
+    return () => {
+      document.body.style.overflow = '';
+    };
+  }, []);
+
   return (
-    <div className="fixed inset-0 z-50 flex items-center justify-center bg-[#020817]/95 backdrop-blur-sm overflow-hidden">
-      <div className="w-[90%] max-w-sm mx-auto p-5 sm:p-6 rounded-3xl bg-gradient-to-br from-amber-500/20 to-orange-500/10 border border-amber-500/30 shadow-2xl shadow-black/50">
+    <div
+      className="fixed inset-0 z-[100] bg-[#020817]/80 backdrop-blur-md"
+      style={{ position: 'fixed', height: '100dvh', width: '100vw' }}
+    >
+      {/* Centered Frame - does not scroll */}
+      <div className="absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 w-[calc(100%-2rem)] max-w-sm p-5 sm:p-6 rounded-3xl bg-[#0a1628] border border-amber-500/30 shadow-2xl">
         <div className="flex items-start gap-3 sm:gap-4">
           <div className="w-12 h-12 sm:w-14 sm:h-14 rounded-2xl bg-amber-500/20 flex items-center justify-center flex-shrink-0">
             <PendingIcon className="h-6 w-6 sm:h-7 sm:w-7 text-amber-400" />

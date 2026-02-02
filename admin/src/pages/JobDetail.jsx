@@ -17,10 +17,14 @@ import {
   StarIcon,
   PhoneIcon,
   MailIcon,
+  SearchIcon,
 } from 'lucide-react';
 import Card, { CardHeader, CardTitle, CardContent } from '../components/ui/Card';
 import Badge, { StatusBadge } from '../components/ui/Badge';
 import Button from '../components/ui/Button';
+import Modal, { ModalFooter } from '../components/ui/Modal';
+import Input from '../components/ui/Input';
+import Select from '../components/ui/Select';
 import { clsx } from 'clsx';
 
 function StatCard({ icon: Icon, label, value, color = 'primary' }) {
@@ -112,10 +116,45 @@ export default function JobDetail() {
   const [deployments, setDeployments] = useState([]);
   const [loading, setLoading] = useState(true);
   const [showAssignModal, setShowAssignModal] = useState(false);
+  const [showEditModal, setShowEditModal] = useState(false);
+  const [showCancelModal, setShowCancelModal] = useState(false);
+  const [saving, setSaving] = useState(false);
+  const [availableCandidates, setAvailableCandidates] = useState([]);
+  const [selectedCandidate, setSelectedCandidate] = useState('');
+  const [candidateSearch, setCandidateSearch] = useState('');
+  const [editForm, setEditForm] = useState({
+    title: '',
+    description: '',
+    location: '',
+    job_date: '',
+    start_time: '',
+    end_time: '',
+    pay_rate: '',
+    charge_rate: '',
+    total_slots: '',
+    xp_bonus: '',
+  });
 
   useEffect(() => {
     fetchJobData();
   }, [id]);
+
+  useEffect(() => {
+    if (job) {
+      setEditForm({
+        title: job.title || '',
+        description: job.description || '',
+        location: job.location || '',
+        job_date: job.job_date || '',
+        start_time: job.start_time || '',
+        end_time: job.end_time || '',
+        pay_rate: job.pay_rate || '',
+        charge_rate: job.charge_rate || '',
+        total_slots: job.total_slots || '',
+        xp_bonus: job.xp_bonus || '',
+      });
+    }
+  }, [job]);
 
   const fetchJobData = async () => {
     try {
@@ -146,6 +185,97 @@ export default function JobDetail() {
       fetchJobData();
     } catch (error) {
       console.error('Failed to update deployment:', error);
+    }
+  };
+
+  const fetchAvailableCandidates = async () => {
+    try {
+      const res = await fetch('/api/v1/candidates?status=active&limit=50');
+      const data = await res.json();
+      if (data.success) {
+        // Filter out already assigned candidates
+        const assignedIds = deployments.map(d => d.candidate_id);
+        setAvailableCandidates(data.data.filter(c => !assignedIds.includes(c.id)));
+      }
+    } catch (error) {
+      console.error('Failed to fetch candidates:', error);
+    }
+  };
+
+  const handleOpenAssignModal = () => {
+    fetchAvailableCandidates();
+    setShowAssignModal(true);
+  };
+
+  const handleAssignWorker = async () => {
+    if (!selectedCandidate) return;
+    setSaving(true);
+    try {
+      const res = await fetch('/api/v1/deployments', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          job_id: id,
+          candidate_id: selectedCandidate,
+          status: 'assigned',
+        }),
+      });
+      const data = await res.json();
+      if (data.success) {
+        setShowAssignModal(false);
+        setSelectedCandidate('');
+        fetchJobData();
+      }
+    } catch (error) {
+      console.error('Failed to assign worker:', error);
+    } finally {
+      setSaving(false);
+    }
+  };
+
+  const handleUpdateJob = async () => {
+    setSaving(true);
+    try {
+      const res = await fetch(`/api/v1/jobs/${id}`, {
+        method: 'PUT',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          ...editForm,
+          pay_rate: parseFloat(editForm.pay_rate),
+          charge_rate: parseFloat(editForm.charge_rate),
+          total_slots: parseInt(editForm.total_slots),
+          xp_bonus: parseInt(editForm.xp_bonus) || 0,
+        }),
+      });
+      const data = await res.json();
+      if (data.success) {
+        setShowEditModal(false);
+        fetchJobData();
+      }
+    } catch (error) {
+      console.error('Failed to update job:', error);
+    } finally {
+      setSaving(false);
+    }
+  };
+
+  const handleCancelJob = async () => {
+    setSaving(true);
+    try {
+      const res = await fetch(`/api/v1/jobs/${id}`, {
+        method: 'PUT',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ status: 'cancelled' }),
+      });
+      const data = await res.json();
+      if (data.success) {
+        setShowCancelModal(false);
+        fetchJobData();
+      }
+    } catch (error) {
+      console.error('Failed to cancel job:', error);
+    } finally {
+      setSaving(false);
     }
   };
 
@@ -201,7 +331,7 @@ export default function JobDetail() {
         </div>
         <div className="flex items-center gap-3">
           <StatusBadge status={job.status} />
-          <Button variant="secondary" size="sm" icon={EditIcon}>Edit</Button>
+          <Button variant="secondary" size="sm" icon={EditIcon} onClick={() => setShowEditModal(true)}>Edit</Button>
         </div>
       </div>
 
@@ -250,7 +380,7 @@ export default function JobDetail() {
             <CardHeader>
               <div className="flex items-center justify-between">
                 <CardTitle>Assigned Workers ({deployments.length})</CardTitle>
-                <Button size="sm" icon={PlusIcon} onClick={() => setShowAssignModal(true)}>
+                <Button size="sm" icon={PlusIcon} onClick={handleOpenAssignModal}>
                   Assign Worker
                 </Button>
               </div>
@@ -332,14 +462,14 @@ export default function JobDetail() {
             </CardHeader>
             <CardContent>
               <div className="space-y-2">
-                <Button variant="secondary" className="w-full justify-start" icon={UsersIcon}>
+                <Button variant="secondary" className="w-full justify-start" icon={UsersIcon} onClick={() => navigate(`/ai-sourcing?job=${id}`)}>
                   Find Candidates
                 </Button>
-                <Button variant="secondary" className="w-full justify-start" icon={MailIcon}>
+                <Button variant="secondary" className="w-full justify-start" icon={MailIcon} onClick={() => navigate(`/chat?job=${id}`)}>
                   Message Workers
                 </Button>
                 {job.status === 'open' && (
-                  <Button variant="error" className="w-full justify-start" icon={XCircleIcon}>
+                  <Button variant="danger" className="w-full justify-start" icon={XCircleIcon} onClick={() => setShowCancelModal(true)}>
                     Cancel Job
                   </Button>
                 )}
@@ -348,6 +478,158 @@ export default function JobDetail() {
           </Card>
         </div>
       </div>
+
+      {/* Edit Job Modal */}
+      <Modal
+        isOpen={showEditModal}
+        onClose={() => setShowEditModal(false)}
+        title="Edit Job"
+        size="lg"
+      >
+        <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+          <Input
+            label="Job Title"
+            value={editForm.title}
+            onChange={(e) => setEditForm({ ...editForm, title: e.target.value })}
+            containerClassName="md:col-span-2"
+          />
+          <div className="md:col-span-2">
+            <label className="block text-sm font-medium text-slate-700 dark:text-slate-300 mb-1">
+              Description
+            </label>
+            <textarea
+              value={editForm.description}
+              onChange={(e) => setEditForm({ ...editForm, description: e.target.value })}
+              rows={3}
+              className="w-full px-3 py-2 rounded-lg border border-slate-300 dark:border-slate-600 bg-white dark:bg-slate-800 text-slate-900 dark:text-white text-sm"
+            />
+          </div>
+          <Input
+            label="Location"
+            value={editForm.location}
+            onChange={(e) => setEditForm({ ...editForm, location: e.target.value })}
+          />
+          <Input
+            label="Date"
+            type="date"
+            value={editForm.job_date}
+            onChange={(e) => setEditForm({ ...editForm, job_date: e.target.value })}
+          />
+          <Input
+            label="Start Time"
+            type="time"
+            value={editForm.start_time}
+            onChange={(e) => setEditForm({ ...editForm, start_time: e.target.value })}
+          />
+          <Input
+            label="End Time"
+            type="time"
+            value={editForm.end_time}
+            onChange={(e) => setEditForm({ ...editForm, end_time: e.target.value })}
+          />
+          <Input
+            label="Pay Rate ($/hr)"
+            type="number"
+            value={editForm.pay_rate}
+            onChange={(e) => setEditForm({ ...editForm, pay_rate: e.target.value })}
+          />
+          <Input
+            label="Charge Rate ($/hr)"
+            type="number"
+            value={editForm.charge_rate}
+            onChange={(e) => setEditForm({ ...editForm, charge_rate: e.target.value })}
+          />
+          <Input
+            label="Total Slots"
+            type="number"
+            value={editForm.total_slots}
+            onChange={(e) => setEditForm({ ...editForm, total_slots: e.target.value })}
+          />
+          <Input
+            label="XP Bonus"
+            type="number"
+            value={editForm.xp_bonus}
+            onChange={(e) => setEditForm({ ...editForm, xp_bonus: e.target.value })}
+          />
+        </div>
+        <ModalFooter>
+          <Button variant="secondary" onClick={() => setShowEditModal(false)}>Cancel</Button>
+          <Button onClick={handleUpdateJob} loading={saving}>Save Changes</Button>
+        </ModalFooter>
+      </Modal>
+
+      {/* Assign Worker Modal */}
+      <Modal
+        isOpen={showAssignModal}
+        onClose={() => setShowAssignModal(false)}
+        title="Assign Worker"
+        description="Select a candidate to assign to this job"
+      >
+        <div className="space-y-4">
+          <Input
+            placeholder="Search candidates..."
+            icon={SearchIcon}
+            value={candidateSearch}
+            onChange={(e) => setCandidateSearch(e.target.value)}
+          />
+          <div className="max-h-64 overflow-y-auto space-y-2">
+            {availableCandidates
+              .filter(c => c.name.toLowerCase().includes(candidateSearch.toLowerCase()))
+              .map((candidate) => (
+              <div
+                key={candidate.id}
+                onClick={() => setSelectedCandidate(candidate.id)}
+                className={clsx(
+                  'p-3 rounded-lg cursor-pointer transition-colors flex items-center gap-3',
+                  selectedCandidate === candidate.id
+                    ? 'bg-primary-100 dark:bg-primary-900/30 border border-primary-300 dark:border-primary-700'
+                    : 'bg-slate-50 dark:bg-slate-800/50 hover:bg-slate-100 dark:hover:bg-slate-800'
+                )}
+              >
+                <div className="w-10 h-10 rounded-full bg-primary-500 flex items-center justify-center">
+                  <span className="text-white font-semibold">{candidate.name?.charAt(0)}</span>
+                </div>
+                <div className="flex-1">
+                  <p className="font-medium text-slate-900 dark:text-white">{candidate.name}</p>
+                  <p className="text-sm text-slate-500">Level {candidate.level || 1} • {candidate.total_jobs_completed || 0} jobs</p>
+                </div>
+                {candidate.rating > 0 && (
+                  <div className="flex items-center gap-1 text-amber-500">
+                    <StarIcon className="h-4 w-4 fill-amber-400" />
+                    <span>{candidate.rating.toFixed(1)}</span>
+                  </div>
+                )}
+              </div>
+            ))}
+            {availableCandidates.length === 0 && (
+              <p className="text-center text-slate-500 py-8">No available candidates</p>
+            )}
+          </div>
+        </div>
+        <ModalFooter>
+          <Button variant="secondary" onClick={() => setShowAssignModal(false)}>Cancel</Button>
+          <Button onClick={handleAssignWorker} loading={saving} disabled={!selectedCandidate}>Assign Worker</Button>
+        </ModalFooter>
+      </Modal>
+
+      {/* Cancel Job Modal */}
+      <Modal
+        isOpen={showCancelModal}
+        onClose={() => setShowCancelModal(false)}
+        title="Cancel Job"
+        description="Are you sure you want to cancel this job?"
+      >
+        <div className="p-4 rounded-lg bg-red-50 dark:bg-red-900/20 border border-red-200 dark:border-red-800">
+          <p className="text-sm text-red-700 dark:text-red-300">
+            <strong>Warning:</strong> This action will cancel the job and notify all assigned workers.
+            This cannot be undone.
+          </p>
+        </div>
+        <ModalFooter>
+          <Button variant="secondary" onClick={() => setShowCancelModal(false)}>Keep Job</Button>
+          <Button variant="danger" onClick={handleCancelJob} loading={saving}>Yes, Cancel Job</Button>
+        </ModalFooter>
+      </Modal>
     </div>
   );
 }

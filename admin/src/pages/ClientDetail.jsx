@@ -18,6 +18,9 @@ import Card, { CardHeader, CardTitle, CardContent } from '../components/ui/Card'
 import Badge, { StatusBadge } from '../components/ui/Badge';
 import Button from '../components/ui/Button';
 import Table from '../components/ui/Table';
+import Modal, { ModalFooter } from '../components/ui/Modal';
+import Input from '../components/ui/Input';
+import Select from '../components/ui/Select';
 import { clsx } from 'clsx';
 
 function StatCard({ icon: Icon, label, value, subvalue, color = 'primary' }) {
@@ -51,10 +54,37 @@ export default function ClientDetail() {
   const [jobs, setJobs] = useState([]);
   const [stats, setStats] = useState({ totalJobs: 0, totalRevenue: 0, activeJobs: 0 });
   const [loading, setLoading] = useState(true);
+  const [showEditModal, setShowEditModal] = useState(false);
+  const [saving, setSaving] = useState(false);
+  const [editForm, setEditForm] = useState({
+    company_name: '',
+    uen: '',
+    industry: '',
+    contact_name: '',
+    contact_email: '',
+    contact_phone: '',
+    payment_terms: '30',
+    notes: '',
+  });
 
   useEffect(() => {
     fetchClientData();
   }, [id]);
+
+  useEffect(() => {
+    if (client) {
+      setEditForm({
+        company_name: client.company_name || '',
+        uen: client.uen || '',
+        industry: client.industry || '',
+        contact_name: client.contact_name || '',
+        contact_email: client.contact_email || '',
+        contact_phone: client.contact_phone || '',
+        payment_terms: client.payment_terms?.toString() || '30',
+        notes: client.notes || '',
+      });
+    }
+  }, [client]);
 
   const fetchClientData = async () => {
     try {
@@ -84,6 +114,29 @@ export default function ClientDetail() {
       console.error('Failed to fetch client:', error);
     } finally {
       setLoading(false);
+    }
+  };
+
+  const handleUpdateClient = async () => {
+    setSaving(true);
+    try {
+      const res = await fetch(`/api/v1/clients/${id}`, {
+        method: 'PUT',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          ...editForm,
+          payment_terms: parseInt(editForm.payment_terms),
+        }),
+      });
+      const data = await res.json();
+      if (data.success) {
+        setShowEditModal(false);
+        fetchClientData();
+      }
+    } catch (error) {
+      console.error('Failed to update client:', error);
+    } finally {
+      setSaving(false);
     }
   };
 
@@ -142,7 +195,7 @@ export default function ClientDetail() {
             </div>
           </div>
         </div>
-        <Button variant="secondary" icon={EditIcon}>Edit Client</Button>
+        <Button variant="secondary" icon={EditIcon} onClick={() => setShowEditModal(true)}>Edit Client</Button>
       </div>
 
       {/* Stats */}
@@ -233,6 +286,87 @@ export default function ClientDetail() {
           />
         </Card>
       </div>
+
+      {/* Edit Client Modal */}
+      <Modal
+        isOpen={showEditModal}
+        onClose={() => setShowEditModal(false)}
+        title="Edit Client"
+        size="lg"
+      >
+        <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+          <Input
+            label="Company Name"
+            value={editForm.company_name}
+            onChange={(e) => setEditForm({ ...editForm, company_name: e.target.value })}
+            containerClassName="md:col-span-2"
+          />
+          <Input
+            label="UEN"
+            value={editForm.uen}
+            onChange={(e) => setEditForm({ ...editForm, uen: e.target.value })}
+          />
+          <Select
+            label="Industry"
+            value={editForm.industry}
+            onChange={(value) => setEditForm({ ...editForm, industry: value })}
+            options={[
+              { value: 'Hospitality', label: 'Hospitality' },
+              { value: 'Events', label: 'Events' },
+              { value: 'F&B', label: 'F&B' },
+              { value: 'Retail', label: 'Retail' },
+              { value: 'Aviation', label: 'Aviation' },
+              { value: 'Entertainment', label: 'Entertainment' },
+              { value: 'Corporate', label: 'Corporate' },
+              { value: 'Other', label: 'Other' },
+            ]}
+          />
+          <Input
+            label="Contact Name"
+            value={editForm.contact_name}
+            onChange={(e) => setEditForm({ ...editForm, contact_name: e.target.value })}
+          />
+          <Input
+            label="Contact Email"
+            type="email"
+            value={editForm.contact_email}
+            onChange={(e) => setEditForm({ ...editForm, contact_email: e.target.value })}
+          />
+          <Input
+            label="Contact Phone"
+            value={editForm.contact_phone}
+            onChange={(e) => setEditForm({ ...editForm, contact_phone: e.target.value })}
+          />
+          <Select
+            label="Payment Terms"
+            value={editForm.payment_terms}
+            onChange={(value) => setEditForm({ ...editForm, payment_terms: value })}
+            options={[
+              { value: '7', label: 'Net 7 days' },
+              { value: '14', label: 'Net 14 days' },
+              { value: '30', label: 'Net 30 days' },
+              { value: '45', label: 'Net 45 days' },
+              { value: '60', label: 'Net 60 days' },
+            ]}
+          />
+          <div className="md:col-span-2">
+            <label className="block text-sm font-medium text-slate-700 dark:text-slate-300 mb-1">
+              Notes
+            </label>
+            <textarea
+              value={editForm.notes}
+              onChange={(e) => setEditForm({ ...editForm, notes: e.target.value })}
+              rows={3}
+              className="w-full px-3 py-2 rounded-lg border border-slate-300 dark:border-slate-600 bg-white dark:bg-slate-800 text-slate-900 dark:text-white text-sm"
+              placeholder="Any additional notes about this client..."
+            />
+          </div>
+        </div>
+        <ModalFooter>
+          <Button variant="secondary" onClick={() => setShowEditModal(false)}>Cancel</Button>
+          <Button onClick={handleUpdateClient} loading={saving}>Save Changes</Button>
+        </ModalFooter>
+      </Modal>
     </div>
   );
 }

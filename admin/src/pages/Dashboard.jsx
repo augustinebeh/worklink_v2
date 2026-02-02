@@ -452,7 +452,7 @@ export default function Dashboard() {
             <GraduationCapIcon className="h-5 w-5 text-primary-500" />
             Learn & Grow
           </h3>
-          <Button variant="secondary" size="sm">View All Guides</Button>
+          <Link to="/training"><Button variant="secondary" size="sm">View All Guides</Button></Link>
         </div>
         <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
           {guideCards.map((guide) => {

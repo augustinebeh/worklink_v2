@@ -16,6 +16,8 @@ import Card, { CardHeader, CardTitle, CardContent } from '../components/ui/Card'
 import Badge from '../components/ui/Badge';
 import Button from '../components/ui/Button';
 import Input from '../components/ui/Input';
+import Select from '../components/ui/Select';
+import Modal, { ModalFooter } from '../components/ui/Modal';
 import Table from '../components/ui/Table';
 import { clsx } from 'clsx';
 
@@ -183,6 +185,35 @@ export default function Gamification() {
   const [loading, setLoading] = useState(true);
   const [activeTab, setActiveTab] = useState('overview');
 
+  // Modal states
+  const [showAchievementModal, setShowAchievementModal] = useState(false);
+  const [showQuestModal, setShowQuestModal] = useState(false);
+  const [showSchemeModal, setShowSchemeModal] = useState(false);
+  const [saving, setSaving] = useState(false);
+
+  // Form states
+  const [achievementForm, setAchievementForm] = useState({
+    name: '',
+    description: '',
+    icon: '🏆',
+    xp_reward: 100,
+    rarity: 'common',
+  });
+  const [questForm, setQuestForm] = useState({
+    title: '',
+    description: '',
+    type: 'daily',
+    xp_reward: 50,
+    active: true,
+  });
+  const [schemeForm, setSchemeForm] = useState({
+    name: '',
+    description: '',
+    bonus_amount: 20,
+    condition: '',
+    active: true,
+  });
+
   useEffect(() => {
     fetchData();
   }, []);
@@ -207,7 +238,7 @@ export default function Gamification() {
       const totalXP = leaderboardData.data?.reduce((sum, u) => sum + (u.xp || 0), 0) || 0;
       setStats({
         totalXP,
-        avgLevel: leaderboardData.data?.length > 0 
+        avgLevel: leaderboardData.data?.length > 0
           ? (leaderboardData.data.reduce((sum, u) => sum + (u.level || 1), 0) / leaderboardData.data.length).toFixed(1)
           : 0,
         activeStreaks: leaderboardData.data?.filter(u => u.streak_days > 0).length || 0,
@@ -216,6 +247,69 @@ export default function Gamification() {
       console.error('Failed to fetch gamification data:', error);
     } finally {
       setLoading(false);
+    }
+  };
+
+  const handleSaveAchievement = async () => {
+    setSaving(true);
+    try {
+      const res = await fetch('/api/v1/gamification/achievements', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify(achievementForm),
+      });
+      const data = await res.json();
+      if (data.success) {
+        setShowAchievementModal(false);
+        setAchievementForm({ name: '', description: '', icon: '🏆', xp_reward: 100, rarity: 'common' });
+        fetchData();
+      }
+    } catch (error) {
+      console.error('Failed to save achievement:', error);
+    } finally {
+      setSaving(false);
+    }
+  };
+
+  const handleSaveQuest = async () => {
+    setSaving(true);
+    try {
+      const res = await fetch('/api/v1/gamification/quests', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify(questForm),
+      });
+      const data = await res.json();
+      if (data.success) {
+        setShowQuestModal(false);
+        setQuestForm({ title: '', description: '', type: 'daily', xp_reward: 50, active: true });
+        fetchData();
+      }
+    } catch (error) {
+      console.error('Failed to save quest:', error);
+    } finally {
+      setSaving(false);
+    }
+  };
+
+  const handleSaveScheme = async () => {
+    setSaving(true);
+    try {
+      const res = await fetch('/api/v1/gamification/incentives', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify(schemeForm),
+      });
+      const data = await res.json();
+      if (data.success) {
+        setShowSchemeModal(false);
+        setSchemeForm({ name: '', description: '', bonus_amount: 20, condition: '', active: true });
+        fetchData();
+      }
+    } catch (error) {
+      console.error('Failed to save scheme:', error);
+    } finally {
+      setSaving(false);
     }
   };
 
@@ -245,7 +339,7 @@ export default function Gamification() {
             Manage achievements, quests, and worker incentives
           </p>
         </div>
-        <Button icon={PlusIcon}>Add Achievement</Button>
+        <Button icon={PlusIcon} onClick={() => setShowAchievementModal(true)}>Add Achievement</Button>
       </div>
 
       {/* Stats */}
@@ -324,7 +418,7 @@ export default function Gamification() {
           <CardHeader>
             <div className="flex items-center justify-between">
               <CardTitle>All Quests ({quests.length})</CardTitle>
-              <Button size="sm" icon={PlusIcon}>Add Quest</Button>
+              <Button size="sm" icon={PlusIcon} onClick={() => setShowQuestModal(true)}>Add Quest</Button>
             </div>
           </CardHeader>
           <CardContent>
@@ -353,7 +447,7 @@ export default function Gamification() {
           <CardHeader>
             <div className="flex items-center justify-between">
               <CardTitle>Incentive Schemes</CardTitle>
-              <Button size="sm" icon={PlusIcon}>Add Scheme</Button>
+              <Button size="sm" icon={PlusIcon} onClick={() => setShowSchemeModal(true)}>Add Scheme</Button>
             </div>
           </CardHeader>
           <CardContent>
@@ -370,7 +464,7 @@ export default function Gamification() {
                   <Badge variant="success">Active</Badge>
                 </div>
               </div>
-              
+
               <div className="p-4 rounded-xl bg-blue-50 dark:bg-blue-900/20 border border-blue-200 dark:border-blue-800">
                 <div className="flex items-center justify-between">
                   <div className="flex items-center gap-3">
@@ -383,7 +477,7 @@ export default function Gamification() {
                   <Badge variant="success">Active</Badge>
                 </div>
               </div>
-              
+
               <div className="p-4 rounded-xl bg-purple-50 dark:bg-purple-900/20 border border-purple-200 dark:border-purple-800">
                 <div className="flex items-center justify-between">
                   <div className="flex items-center gap-3">
@@ -400,6 +494,186 @@ export default function Gamification() {
           </CardContent>
         </Card>
       )}
+
+      {/* Add Achievement Modal */}
+      <Modal
+        isOpen={showAchievementModal}
+        onClose={() => setShowAchievementModal(false)}
+        title="Add Achievement"
+        description="Create a new achievement for workers to unlock"
+      >
+        <div className="space-y-4">
+          <Input
+            label="Achievement Name"
+            value={achievementForm.name}
+            onChange={(e) => setAchievementForm({ ...achievementForm, name: e.target.value })}
+            placeholder="e.g., First Job Complete"
+          />
+          <div>
+            <label className="block text-sm font-medium text-slate-700 dark:text-slate-300 mb-1">
+              Description
+            </label>
+            <textarea
+              value={achievementForm.description}
+              onChange={(e) => setAchievementForm({ ...achievementForm, description: e.target.value })}
+              placeholder="e.g., Complete your first job successfully"
+              rows={2}
+              className="w-full px-3 py-2 rounded-lg border border-slate-300 dark:border-slate-600 bg-white dark:bg-slate-800 text-slate-900 dark:text-white text-sm"
+            />
+          </div>
+          <div className="grid grid-cols-2 gap-4">
+            <Input
+              label="Icon (emoji)"
+              value={achievementForm.icon}
+              onChange={(e) => setAchievementForm({ ...achievementForm, icon: e.target.value })}
+              placeholder="🏆"
+            />
+            <Input
+              label="XP Reward"
+              type="number"
+              value={achievementForm.xp_reward}
+              onChange={(e) => setAchievementForm({ ...achievementForm, xp_reward: parseInt(e.target.value) || 0 })}
+            />
+          </div>
+          <Select
+            label="Rarity"
+            value={achievementForm.rarity}
+            onChange={(value) => setAchievementForm({ ...achievementForm, rarity: value })}
+            options={[
+              { value: 'common', label: 'Common' },
+              { value: 'rare', label: 'Rare' },
+              { value: 'epic', label: 'Epic' },
+              { value: 'legendary', label: 'Legendary' },
+            ]}
+          />
+        </div>
+        <ModalFooter>
+          <Button variant="secondary" onClick={() => setShowAchievementModal(false)}>Cancel</Button>
+          <Button onClick={handleSaveAchievement} loading={saving}>Create Achievement</Button>
+        </ModalFooter>
+      </Modal>
+
+      {/* Add Quest Modal */}
+      <Modal
+        isOpen={showQuestModal}
+        onClose={() => setShowQuestModal(false)}
+        title="Add Quest"
+        description="Create a new quest for workers to complete"
+      >
+        <div className="space-y-4">
+          <Input
+            label="Quest Title"
+            value={questForm.title}
+            onChange={(e) => setQuestForm({ ...questForm, title: e.target.value })}
+            placeholder="e.g., Complete 3 Jobs This Week"
+          />
+          <div>
+            <label className="block text-sm font-medium text-slate-700 dark:text-slate-300 mb-1">
+              Description
+            </label>
+            <textarea
+              value={questForm.description}
+              onChange={(e) => setQuestForm({ ...questForm, description: e.target.value })}
+              placeholder="e.g., Complete 3 jobs within the current week"
+              rows={2}
+              className="w-full px-3 py-2 rounded-lg border border-slate-300 dark:border-slate-600 bg-white dark:bg-slate-800 text-slate-900 dark:text-white text-sm"
+            />
+          </div>
+          <div className="grid grid-cols-2 gap-4">
+            <Select
+              label="Quest Type"
+              value={questForm.type}
+              onChange={(value) => setQuestForm({ ...questForm, type: value })}
+              options={[
+                { value: 'daily', label: 'Daily' },
+                { value: 'weekly', label: 'Weekly' },
+                { value: 'special', label: 'Special' },
+              ]}
+            />
+            <Input
+              label="XP Reward"
+              type="number"
+              value={questForm.xp_reward}
+              onChange={(e) => setQuestForm({ ...questForm, xp_reward: parseInt(e.target.value) || 0 })}
+            />
+          </div>
+          <div className="flex items-center gap-2">
+            <input
+              type="checkbox"
+              id="questActive"
+              checked={questForm.active}
+              onChange={(e) => setQuestForm({ ...questForm, active: e.target.checked })}
+              className="rounded border-slate-300"
+            />
+            <label htmlFor="questActive" className="text-sm text-slate-700 dark:text-slate-300">
+              Active (visible to workers)
+            </label>
+          </div>
+        </div>
+        <ModalFooter>
+          <Button variant="secondary" onClick={() => setShowQuestModal(false)}>Cancel</Button>
+          <Button onClick={handleSaveQuest} loading={saving}>Create Quest</Button>
+        </ModalFooter>
+      </Modal>
+
+      {/* Add Incentive Scheme Modal */}
+      <Modal
+        isOpen={showSchemeModal}
+        onClose={() => setShowSchemeModal(false)}
+        title="Add Incentive Scheme"
+        description="Create a new incentive scheme for workers"
+      >
+        <div className="space-y-4">
+          <Input
+            label="Scheme Name"
+            value={schemeForm.name}
+            onChange={(e) => setSchemeForm({ ...schemeForm, name: e.target.value })}
+            placeholder="e.g., Consistency Bonus"
+          />
+          <div>
+            <label className="block text-sm font-medium text-slate-700 dark:text-slate-300 mb-1">
+              Description
+            </label>
+            <textarea
+              value={schemeForm.description}
+              onChange={(e) => setSchemeForm({ ...schemeForm, description: e.target.value })}
+              placeholder="e.g., $20 bonus for completing 5+ jobs per month"
+              rows={2}
+              className="w-full px-3 py-2 rounded-lg border border-slate-300 dark:border-slate-600 bg-white dark:bg-slate-800 text-slate-900 dark:text-white text-sm"
+            />
+          </div>
+          <div className="grid grid-cols-2 gap-4">
+            <Input
+              label="Bonus Amount ($)"
+              type="number"
+              value={schemeForm.bonus_amount}
+              onChange={(e) => setSchemeForm({ ...schemeForm, bonus_amount: parseFloat(e.target.value) || 0 })}
+            />
+            <Input
+              label="Condition"
+              value={schemeForm.condition}
+              onChange={(e) => setSchemeForm({ ...schemeForm, condition: e.target.value })}
+              placeholder="e.g., 5+ jobs/month"
+            />
+          </div>
+          <div className="flex items-center gap-2">
+            <input
+              type="checkbox"
+              id="schemeActive"
+              checked={schemeForm.active}
+              onChange={(e) => setSchemeForm({ ...schemeForm, active: e.target.checked })}
+              className="rounded border-slate-300"
+            />
+            <label htmlFor="schemeActive" className="text-sm text-slate-700 dark:text-slate-300">
+              Active (applying to workers)
+            </label>
+          </div>
+        </div>
+        <ModalFooter>
+          <Button variant="secondary" onClick={() => setShowSchemeModal(false)}>Cancel</Button>
+          <Button onClick={handleSaveScheme} loading={saving}>Create Scheme</Button>
+        </ModalFooter>
+      </Modal>
     </div>
   );
 }
