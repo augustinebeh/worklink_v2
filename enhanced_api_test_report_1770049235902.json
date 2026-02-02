@@ -1,0 +1,613 @@
+{
+  "metadata": {
+    "timestamp": "2026-02-02T16:20:35.902Z",
+    "testTarget": "http://localhost:8080",
+    "environment": "development",
+    "testDuration": "0.30 seconds"
+  },
+  "summary": {
+    "totalTests": 45,
+    "passed": 30,
+    "failed": 10,
+    "warnings": 5,
+    "securityIssues": 1,
+    "highSeverityIssues": 1
+  },
+  "testResults": {
+    "Auth": [
+      {
+        "category": "Auth",
+        "name": "API Discovery",
+        "status": "PASS",
+        "details": {
+          "status": 200,
+          "responseTime": 12,
+          "endpoints": 23
+        },
+        "timestamp": "2026-02-02T16:20:35.616Z"
+      },
+      {
+        "category": "Auth",
+        "name": "Invalid login test 1",
+        "status": "PASS",
+        "details": {
+          "status": 401,
+          "responseTime": 3,
+          "credentials": [
+            "email",
+            "password"
+          ]
+        },
+        "timestamp": "2026-02-02T16:20:35.620Z"
+      },
+      {
+        "category": "Auth",
+        "name": "Invalid login test 2",
+        "status": "PASS",
+        "details": {
+          "status": 401,
+          "responseTime": 3,
+          "credentials": [
+            "email",
+            "password"
+          ]
+        },
+        "timestamp": "2026-02-02T16:20:35.623Z"
+      },
+      {
+        "category": "Auth",
+        "name": "Invalid login test 3",
+        "status": "PASS",
+        "details": {
+          "status": 401,
+          "responseTime": 2,
+          "credentials": [
+            "email",
+            "password"
+          ]
+        },
+        "timestamp": "2026-02-02T16:20:35.625Z"
+      },
+      {
+        "category": "Auth",
+        "name": "Invalid login test 4",
+        "status": "FAIL",
+        "details": {
+          "status": 200,
+          "responseTime": 3,
+          "credentials": [
+            "email",
+            "password"
+          ]
+        },
+        "timestamp": "2026-02-02T16:20:35.628Z"
+      },
+      {
+        "category": "Auth",
+        "name": "Invalid login test 5",
+        "status": "PASS",
+        "details": {
+          "status": 401,
+          "responseTime": 2,
+          "credentials": [
+            "email",
+            "password"
+          ]
+        },
+        "timestamp": "2026-02-02T16:20:35.630Z"
+      },
+      {
+        "category": "Auth",
+        "name": "Invalid login test 6",
+        "status": "FAIL",
+        "details": {
+          "status": 200,
+          "responseTime": 3,
+          "credentials": [
+            "email"
+          ]
+        },
+        "timestamp": "2026-02-02T16:20:35.634Z"
+      },
+      {
+        "category": "Auth",
+        "name": "Demo login (Sarah Tan)",
+        "status": "PASS",
+        "details": {
+          "status": 200,
+          "responseTime": 3,
+          "hasToken": true,
+          "userData": "Sarah Tan"
+        },
+        "timestamp": "2026-02-02T16:20:35.638Z"
+      },
+      {
+        "category": "Auth",
+        "name": "User registration",
+        "status": "PASS",
+        "details": {
+          "status": 201,
+          "responseTime": 3
+        },
+        "timestamp": "2026-02-02T16:20:35.641Z"
+      },
+      {
+        "category": "Auth",
+        "name": "Token validation",
+        "status": "PASS",
+        "details": {
+          "status": 200,
+          "responseTime": 2,
+          "hasUserData": true
+        },
+        "timestamp": "2026-02-02T16:20:35.644Z"
+      },
+      {
+        "category": "Auth",
+        "name": "telegram OAuth config",
+        "status": "WARN",
+        "details": {
+          "status": 500,
+          "responseTime": 2,
+          "configured": false
+        },
+        "timestamp": "2026-02-02T16:20:35.646Z"
+      },
+      {
+        "category": "Auth",
+        "name": "google OAuth config",
+        "status": "WARN",
+        "details": {
+          "status": 500,
+          "responseTime": 2,
+          "configured": false
+        },
+        "timestamp": "2026-02-02T16:20:35.648Z"
+      }
+    ],
+    "Admin": [
+      {
+        "category": "Admin",
+        "name": "/admin/stats (GET)",
+        "status": "PASS",
+        "details": {
+          "status": 200,
+          "responseTime": 2,
+          "hasData": true
+        },
+        "timestamp": "2026-02-02T16:20:35.651Z"
+      },
+      {
+        "category": "Admin",
+        "name": "/admin/settings (GET)",
+        "status": "PASS",
+        "details": {
+          "status": 200,
+          "responseTime": 2,
+          "hasData": true
+        },
+        "timestamp": "2026-02-02T16:20:35.653Z"
+      },
+      {
+        "category": "Admin",
+        "name": "/admin/reset-to-sample (POST)",
+        "status": "PASS",
+        "details": {
+          "status": 200,
+          "responseTime": 60,
+          "hasData": false
+        },
+        "timestamp": "2026-02-02T16:20:35.713Z"
+      }
+    ],
+    "Business": [
+      {
+        "category": "Business",
+        "name": "Candidates list",
+        "status": "FAIL",
+        "details": {
+          "status": 403,
+          "responseTime": 2,
+          "hasAuth": true,
+          "dataCount": "unknown"
+        },
+        "timestamp": "2026-02-02T16:20:35.715Z"
+      },
+      {
+        "category": "Business",
+        "name": "Jobs list",
+        "status": "PASS",
+        "details": {
+          "status": 200,
+          "responseTime": 2,
+          "hasAuth": true,
+          "dataCount": 0
+        },
+        "timestamp": "2026-02-02T16:20:35.718Z"
+      },
+      {
+        "category": "Business",
+        "name": "Deployments list",
+        "status": "PASS",
+        "details": {
+          "status": 200,
+          "responseTime": 2,
+          "hasAuth": true,
+          "dataCount": 0
+        },
+        "timestamp": "2026-02-02T16:20:35.720Z"
+      },
+      {
+        "category": "Business",
+        "name": "Payments list",
+        "status": "FAIL",
+        "details": {
+          "status": 403,
+          "responseTime": 2,
+          "hasAuth": true,
+          "dataCount": "unknown"
+        },
+        "timestamp": "2026-02-02T16:20:35.722Z"
+      },
+      {
+        "category": "Business",
+        "name": "Clients list",
+        "status": "PASS",
+        "details": {
+          "status": 200,
+          "responseTime": 2,
+          "hasAuth": true,
+          "dataCount": 0
+        },
+        "timestamp": "2026-02-02T16:20:35.724Z"
+      },
+      {
+        "category": "Business",
+        "name": "Tenders list",
+        "status": "PASS",
+        "details": {
+          "status": 200,
+          "responseTime": 1,
+          "hasAuth": true,
+          "dataCount": 0
+        },
+        "timestamp": "2026-02-02T16:20:35.725Z"
+      },
+      {
+        "category": "Business",
+        "name": "Create job (POST)",
+        "status": "FAIL",
+        "details": {
+          "status": 500,
+          "responseTime": 2
+        },
+        "timestamp": "2026-02-02T16:20:35.727Z"
+      }
+    ],
+    "Gamification": [
+      {
+        "category": "Gamification",
+        "name": "Main gamification data",
+        "status": "WARN",
+        "details": {
+          "status": 404,
+          "responseTime": 1,
+          "hasData": false
+        },
+        "timestamp": "2026-02-02T16:20:35.729Z"
+      },
+      {
+        "category": "Gamification",
+        "name": "Achievements",
+        "status": "PASS",
+        "details": {
+          "status": 200,
+          "responseTime": 2,
+          "hasData": true
+        },
+        "timestamp": "2026-02-02T16:20:35.731Z"
+      },
+      {
+        "category": "Gamification",
+        "name": "Leaderboard",
+        "status": "PASS",
+        "details": {
+          "status": 200,
+          "responseTime": 3,
+          "hasData": true
+        },
+        "timestamp": "2026-02-02T16:20:35.734Z"
+      },
+      {
+        "category": "Gamification",
+        "name": "Quests",
+        "status": "PASS",
+        "details": {
+          "status": 200,
+          "responseTime": 2,
+          "hasData": true
+        },
+        "timestamp": "2026-02-02T16:20:35.737Z"
+      },
+      {
+        "category": "Gamification",
+        "name": "User progress",
+        "status": "WARN",
+        "details": {
+          "status": 404,
+          "responseTime": 2,
+          "hasData": false
+        },
+        "timestamp": "2026-02-02T16:20:35.739Z"
+      },
+      {
+        "category": "Gamification",
+        "name": "XP history",
+        "status": "WARN",
+        "details": {
+          "status": 404,
+          "responseTime": 2,
+          "hasData": false
+        },
+        "timestamp": "2026-02-02T16:20:35.741Z"
+      }
+    ],
+    "AI/ML": [
+      {
+        "category": "AI/ML",
+        "name": "AI Chat",
+        "status": "FAIL",
+        "details": {
+          "status": 404,
+          "responseTime": 2,
+          "hasResponse": false
+        },
+        "timestamp": "2026-02-02T16:20:35.743Z"
+      },
+      {
+        "category": "AI/ML",
+        "name": "/ml endpoint",
+        "status": "PASS",
+        "details": {
+          "status": 404,
+          "responseTime": 2
+        },
+        "timestamp": "2026-02-02T16:20:35.745Z"
+      },
+      {
+        "category": "AI/ML",
+        "name": "/ai endpoint",
+        "status": "PASS",
+        "details": {
+          "status": 404,
+          "responseTime": 1
+        },
+        "timestamp": "2026-02-02T16:20:35.747Z"
+      },
+      {
+        "category": "AI/ML",
+        "name": "/ad-ml endpoint",
+        "status": "PASS",
+        "details": {
+          "status": 404,
+          "responseTime": 2
+        },
+        "timestamp": "2026-02-02T16:20:35.749Z"
+      }
+    ],
+    "Real-time": [
+      {
+        "category": "Real-time",
+        "name": "/chat endpoint",
+        "status": "FAIL",
+        "details": {
+          "status": 404,
+          "responseTime": 2
+        },
+        "timestamp": "2026-02-02T16:20:35.751Z"
+      },
+      {
+        "category": "Real-time",
+        "name": "/conversations endpoint",
+        "status": "PASS",
+        "details": {
+          "status": 200,
+          "responseTime": 2
+        },
+        "timestamp": "2026-02-02T16:20:35.753Z"
+      },
+      {
+        "category": "Real-time",
+        "name": "/messaging endpoint",
+        "status": "FAIL",
+        "details": {
+          "status": 404,
+          "responseTime": 2
+        },
+        "timestamp": "2026-02-02T16:20:35.755Z"
+      },
+      {
+        "category": "Real-time",
+        "name": "/notifications endpoint",
+        "status": "FAIL",
+        "details": {
+          "status": 404,
+          "responseTime": 2
+        },
+        "timestamp": "2026-02-02T16:20:35.757Z"
+      },
+      {
+        "category": "Real-time",
+        "name": "WebSocket Connection",
+        "status": "PASS",
+        "details": {
+          "success": true,
+          "connectionTime": 1770049235861
+        },
+        "timestamp": "2026-02-02T16:20:35.861Z"
+      }
+    ],
+    "Security": [
+      {
+        "category": "Security",
+        "name": "CORS Policy",
+        "status": "FAIL",
+        "details": {
+          "allowsAllOrigins": true
+        },
+        "timestamp": "2026-02-02T16:20:35.864Z"
+      },
+      {
+        "category": "Security",
+        "name": "SQL Injection (' OR '1'='...)",
+        "status": "PASS",
+        "details": {
+          "status": 401
+        },
+        "timestamp": "2026-02-02T16:20:35.866Z"
+      },
+      {
+        "category": "Security",
+        "name": "SQL Injection ('; DROP TA...)",
+        "status": "PASS",
+        "details": {
+          "status": 401
+        },
+        "timestamp": "2026-02-02T16:20:35.868Z"
+      },
+      {
+        "category": "Security",
+        "name": "SQL Injection (admin'--...)",
+        "status": "PASS",
+        "details": {
+          "status": 401
+        },
+        "timestamp": "2026-02-02T16:20:35.870Z"
+      },
+      {
+        "category": "Security",
+        "name": "XSS Protection",
+        "status": "PASS",
+        "details": {
+          "payloadEscaped": true
+        },
+        "timestamp": "2026-02-02T16:20:35.872Z"
+      },
+      {
+        "category": "Security",
+        "name": "Security Headers",
+        "status": "PASS",
+        "details": {
+          "present": 3,
+          "missing": 0
+        },
+        "timestamp": "2026-02-02T16:20:35.874Z"
+      }
+    ],
+    "Performance": [
+      {
+        "category": "Performance",
+        "name": "Response Time Analysis",
+        "status": "PASS",
+        "details": {
+          "avgMs": "1.40",
+          "maxMs": 2,
+          "minMs": 1
+        },
+        "timestamp": "2026-02-02T16:20:35.888Z"
+      },
+      {
+        "category": "Performance",
+        "name": "Concurrent Requests",
+        "status": "PASS",
+        "details": {
+          "successful": 20,
+          "total": 20,
+          "throughputPerSec": "1538.46",
+          "totalTimeMs": 13
+        },
+        "timestamp": "2026-02-02T16:20:35.901Z"
+      }
+    ]
+  },
+  "securityIssues": [
+    {
+      "issue": "CORS allows all origins",
+      "severity": "HIGH",
+      "details": {},
+      "timestamp": "2026-02-02T16:20:35.863Z"
+    }
+  ],
+  "performanceMetrics": [
+    {
+      "metric": "Average Response Time",
+      "value": "1.40",
+      "threshold": 500,
+      "passed": true,
+      "details": {
+        "unit": "ms"
+      },
+      "timestamp": "2026-02-02T16:20:35.888Z"
+    },
+    {
+      "metric": "Max Response Time",
+      "value": 2,
+      "threshold": 1000,
+      "passed": true,
+      "details": {
+        "unit": "ms"
+      },
+      "timestamp": "2026-02-02T16:20:35.888Z"
+    },
+    {
+      "metric": "Min Response Time",
+      "value": 1,
+      "threshold": 100,
+      "passed": true,
+      "details": {
+        "unit": "ms"
+      },
+      "timestamp": "2026-02-02T16:20:35.888Z"
+    },
+    {
+      "metric": "Concurrent Request Success Rate",
+      "value": "20/20",
+      "threshold": 18,
+      "passed": false,
+      "details": {
+        "unit": " requests"
+      },
+      "timestamp": "2026-02-02T16:20:35.901Z"
+    },
+    {
+      "metric": "Throughput",
+      "value": "1538.46",
+      "threshold": 10,
+      "passed": false,
+      "details": {
+        "unit": " req/s"
+      },
+      "timestamp": "2026-02-02T16:20:35.901Z"
+    }
+  ],
+  "recommendations": [
+    {
+      "priority": "HIGH",
+      "category": "Security",
+      "issue": "High severity security vulnerabilities detected",
+      "recommendation": "Address SQL injection, XSS, or CORS issues immediately"
+    },
+    {
+      "priority": "MEDIUM",
+      "category": "Reliability",
+      "issue": "High failure rate in API tests",
+      "recommendation": "Review failed endpoints and improve error handling"
+    },
+    {
+      "priority": "MEDIUM",
+      "category": "Performance",
+      "issue": "Performance thresholds exceeded",
+      "recommendation": "Optimize slow endpoints and database queries"
+    }
+  ]
+}

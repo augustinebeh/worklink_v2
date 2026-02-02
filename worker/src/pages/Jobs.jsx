@@ -25,15 +25,30 @@ import {
   isToday as checkIsToday,
   isTomorrow as checkIsTomorrow,
 } from '../utils/constants';
+// import { useModalKeyboard } from '../hooks/useModalKeyboard';
 
 // Pending Account Overlay
 function PendingAccountOverlay() {
+  const { logout } = useAuth();
+
+  // Add keyboard navigation support
+  // const { modalRef } = useModalKeyboard({
+  //   isOpen: true,
+  //   onClose: null, // No close action - this is a blocking overlay
+  //   autoFocus: true,
+  //   trapFocus: true
+  // });
+
   useEffect(() => {
     document.body.classList.add('stop-scrolling');
     return () => {
       document.body.classList.remove('stop-scrolling');
     };
   }, []);
+
+  const handleLogout = () => {
+    logout();
+  };
 
   return (
     <>
@@ -90,9 +105,25 @@ function PendingAccountOverlay() {
               </div>
             </div>
             <div className="mt-3 sm:mt-4 pt-3 sm:pt-4 border-t border-white/[0.08]">
-              <p className="text-[10px] sm:text-xs text-white/40">
+              <p className="text-[10px] sm:text-xs text-white/40 mb-3 sm:mb-4">
                 This usually takes 1-2 business days. You'll receive a notification when your account is approved.
               </p>
+
+              {/* Navigation Options */}
+              <div className="flex gap-2">
+                <Link
+                  to="/profile"
+                  className="flex-1 flex items-center justify-center gap-2 px-3 py-2 rounded-xl bg-white/5 border border-white/10 text-white/70 text-sm font-medium hover:bg-white/10 transition-colors"
+                >
+                  View Profile
+                </Link>
+                <button
+                  onClick={handleLogout}
+                  className="flex-1 flex items-center justify-center gap-2 px-3 py-2 rounded-xl bg-red-500/20 border border-red-500/30 text-red-400 text-sm font-medium hover:bg-red-500/30 transition-colors"
+                >
+                  Logout
+                </button>
+              </div>
             </div>
           </div>
           </div>

@@ -1,0 +1,140 @@
+{
+  "timestamp": "2026-02-02T16:06:07.081Z",
+  "summary": {
+    "total": 11,
+    "passed": 7,
+    "failed": 3,
+    "warnings": 1
+  },
+  "tests": [
+    {
+      "name": "Admin Portal Login",
+      "status": "PASS",
+      "details": {},
+      "timestamp": "2026-02-02T16:06:11.557Z"
+    },
+    {
+      "name": "Worker PWA Login",
+      "status": "PASS",
+      "details": {},
+      "timestamp": "2026-02-02T16:06:17.444Z"
+    },
+    {
+      "name": "Candidate Data Sync - Basic Info",
+      "status": "FAIL",
+      "details": {
+        "error": "Data mismatch between admin and worker",
+        "data": {
+          "workerData": {},
+          "adminData": {
+            "text": "\n  WorkLinkRecruitment PlatformDashboardOverview & guidesBPO & TendersBPOTender acquisitionTender PipelineTender AlertsNEWTender AI ToolsClientsRecruitmentHRCandidate acquisitionCandidatesJobsSourcing AITelegram GroupsChatAI & MLAIIntelligence & learningML DashboardNEWAd OptimizationNEWOperationsDay-to-day workDeploymentsPaymentsPerformanceTrack successFinancialsRetention AnalyticsNEWGamificationTrainingSettingsConfigurationPro TipCheck GeBIZ daily for new tenders. Set up keyword alerts to never miss an opportunity!WorkLink v2.0 • © 20252ADAdminAdministratorCandidates22 workers in your talent poolExportAdd Candidate💰 Fair PayPay 5-10% above market to attract and keep the best.5pendingAwaiting verification17activeReady to deploy0inactiveNot availableAll StatusNo candidates foundStart building your talent poolAdd Your First Candidate\n        @keyframes page-fade-in {\n          from {\n            opacity: 0;\n            transform: translateY(8px);\n          }\n          to {\n            opacity: 1;\n            transform: translateY(0);\n          }\n        }\n        @keyframes page-fade-out {\n          from {\n            opacity: 1;\n            transform: translateY(0);\n          }\n          to {\n            opacity: 0;\n            transform: translateY(-8px);\n          }\n        }\n      \n  \n\n\n"
+          }
+        }
+      },
+      "timestamp": "2026-02-02T16:06:28.438Z"
+    },
+    {
+      "name": "Job Management - Jobs Visibility",
+      "status": "FAIL",
+      "details": {
+        "error": "Job visibility mismatch between platforms",
+        "data": {
+          "adminJobs": {
+            "count": 1,
+            "visible": true
+          },
+          "workerJobs": {
+            "count": 0,
+            "visible": false
+          }
+        }
+      },
+      "timestamp": "2026-02-02T16:06:33.198Z"
+    },
+    {
+      "name": "Gamification Sync - Data Retrieval",
+      "status": "PASS",
+      "details": {
+        "data": {
+          "worker": {
+            "level": 0,
+            "xp": 0,
+            "achievements": []
+          },
+          "workerAchievements": 0
+        }
+      },
+      "timestamp": "2026-02-02T16:06:43.953Z"
+    },
+    {
+      "name": "Profile Updates Sync",
+      "status": "FAIL",
+      "details": {
+        "error": "SyntaxError: Failed to execute 'querySelector' on 'Document': 'button:has-text(\"Edit\")' is not a valid selector."
+      },
+      "timestamp": "2026-02-02T16:06:45.557Z"
+    },
+    {
+      "name": "Payment Processing - Wallet Visibility",
+      "status": "WARN",
+      "details": {
+        "data": {
+          "workerWallet": {
+            "visible": false,
+            "text": "Not found"
+          },
+          "adminPayments": {
+            "count": 0,
+            "visible": false
+          }
+        }
+      },
+      "timestamp": "2026-02-02T16:06:52.187Z"
+    },
+    {
+      "name": "Real-time Updates - WebSocket Support",
+      "status": "PASS",
+      "details": {
+        "data": {
+          "worker": true,
+          "admin": true
+        }
+      },
+      "timestamp": "2026-02-02T16:06:52.190Z"
+    },
+    {
+      "name": "Real-time Updates - Chat Pages Accessible",
+      "status": "PASS",
+      "details": {},
+      "timestamp": "2026-02-02T16:06:55.933Z"
+    },
+    {
+      "name": "Status Changes - Status Elements Visible",
+      "status": "PASS",
+      "details": {
+        "data": {
+          "admin": {
+            "count": 0,
+            "visible": false
+          },
+          "worker": {
+            "count": 0,
+            "visible": false
+          }
+        }
+      },
+      "timestamp": "2026-02-02T16:06:59.868Z"
+    },
+    {
+      "name": "Data Conflict Resolution - Simultaneous Access",
+      "status": "PASS",
+      "details": {
+        "data": {
+          "adminResponsive": true,
+          "workerResponsive": true
+        }
+      },
+      "timestamp": "2026-02-02T16:07:02.886Z"
+    }
+  ]
+}

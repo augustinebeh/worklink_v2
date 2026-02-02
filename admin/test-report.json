@@ -1,0 +1,385 @@
+{
+  "passed": [
+    {
+      "test": "Login form elements visible",
+      "details": "Email, password inputs and submit button found",
+      "timestamp": "2026-02-02T15:56:52.238Z"
+    },
+    {
+      "test": "Logo visible on login page",
+      "details": "",
+      "timestamp": "2026-02-02T15:56:52.238Z"
+    },
+    {
+      "test": "Invalid login error handling",
+      "details": "Error message displayed for wrong credentials",
+      "timestamp": "2026-02-02T15:56:53.839Z"
+    },
+    {
+      "test": "Successful login",
+      "details": "Redirected to dashboard",
+      "timestamp": "2026-02-02T15:56:53.961Z"
+    },
+    {
+      "test": "Sidebar visible",
+      "details": "",
+      "timestamp": "2026-02-02T15:56:54.338Z"
+    },
+    {
+      "test": "Header visible",
+      "details": "",
+      "timestamp": "2026-02-02T15:56:54.339Z"
+    },
+    {
+      "test": "Navigation items found",
+      "details": "24 navigation items",
+      "timestamp": "2026-02-02T15:56:54.342Z"
+    },
+    {
+      "test": "Theme toggle works",
+      "details": "Dark mode: true",
+      "timestamp": "2026-02-02T15:56:54.905Z"
+    },
+    {
+      "test": "Dashboard page loads",
+      "details": "URL: /",
+      "timestamp": "2026-02-02T15:56:57.390Z"
+    },
+    {
+      "test": "Jobs page loads",
+      "details": "URL: /jobs",
+      "timestamp": "2026-02-02T15:57:00.930Z"
+    },
+    {
+      "test": "BPO Dashboard page loads",
+      "details": "URL: /bpo",
+      "timestamp": "2026-02-02T15:57:02.737Z"
+    },
+    {
+      "test": "Tender Monitor page loads",
+      "details": "URL: /tender-monitor",
+      "timestamp": "2026-02-02T15:57:04.600Z"
+    },
+    {
+      "test": "Clients page loads",
+      "details": "URL: /clients",
+      "timestamp": "2026-02-02T15:57:14.037Z"
+    },
+    {
+      "test": "Deployments page loads",
+      "details": "URL: /deployments",
+      "timestamp": "2026-02-02T15:57:16.333Z"
+    },
+    {
+      "test": "Financials page loads",
+      "details": "URL: /financials",
+      "timestamp": "2026-02-02T15:57:25.285Z"
+    },
+    {
+      "test": "Retention Analytics page loads",
+      "details": "URL: /retention-analytics",
+      "timestamp": "2026-02-02T15:57:27.113Z"
+    },
+    {
+      "test": "Gamification page loads",
+      "details": "URL: /gamification",
+      "timestamp": "2026-02-02T15:57:29.070Z"
+    },
+    {
+      "test": "Training page loads",
+      "details": "URL: /training",
+      "timestamp": "2026-02-02T15:57:30.754Z"
+    },
+    {
+      "test": "AI Automation page loads",
+      "details": "URL: /ai-automation",
+      "timestamp": "2026-02-02T15:57:32.683Z"
+    },
+    {
+      "test": "AI Sourcing page loads",
+      "details": "URL: /ai-sourcing",
+      "timestamp": "2026-02-02T15:57:34.431Z"
+    },
+    {
+      "test": "ML Dashboard page loads",
+      "details": "URL: /ml-dashboard",
+      "timestamp": "2026-02-02T15:57:36.166Z"
+    },
+    {
+      "test": "Telegram Groups page loads",
+      "details": "URL: /telegram-groups",
+      "timestamp": "2026-02-02T15:57:37.870Z"
+    },
+    {
+      "test": "Ad Optimization page loads",
+      "details": "URL: /ad-optimization",
+      "timestamp": "2026-02-02T15:57:39.549Z"
+    },
+    {
+      "test": "Settings page loads",
+      "details": "URL: /settings",
+      "timestamp": "2026-02-02T15:57:41.214Z"
+    },
+    {
+      "test": "Candidates search input works",
+      "details": "",
+      "timestamp": "2026-02-02T15:57:43.419Z"
+    },
+    {
+      "test": "Filter buttons found",
+      "details": "3 filter buttons",
+      "timestamp": "2026-02-02T15:57:43.422Z"
+    },
+    {
+      "test": "Jobs data displayed",
+      "details": "20 job items",
+      "timestamp": "2026-02-02T15:57:47.176Z"
+    },
+    {
+      "test": "BPO Dashboard has action buttons",
+      "details": "20 buttons found",
+      "timestamp": "2026-02-02T15:57:50.534Z"
+    },
+    {
+      "test": "Financial charts rendered",
+      "details": "5 charts found",
+      "timestamp": "2026-02-02T15:57:53.229Z"
+    },
+    {
+      "test": "ARIA labels present",
+      "details": "11 elements with aria-label",
+      "timestamp": "2026-02-02T15:57:58.474Z"
+    },
+    {
+      "test": "Semantic HTML elements used",
+      "details": "4 semantic elements",
+      "timestamp": "2026-02-02T15:57:58.477Z"
+    },
+    {
+      "test": "Keyboard navigation works",
+      "details": "Focused: BUTTON",
+      "timestamp": "2026-02-02T15:57:58.684Z"
+    },
+    {
+      "test": "No page errors detected",
+      "details": "",
+      "timestamp": "2026-02-02T15:57:58.684Z"
+    },
+    {
+      "test": "404 handling works",
+      "details": "Redirected to dashboard",
+      "timestamp": "2026-02-02T15:57:59.738Z"
+    },
+    {
+      "test": "Page load performance",
+      "details": "674ms (< 3s)",
+      "timestamp": "2026-02-02T15:58:00.412Z"
+    }
+  ],
+  "failed": [],
+  "warnings": [
+    {
+      "test": "Form validation",
+      "details": "No validation messages shown for empty form",
+      "timestamp": "2026-02-02T15:56:52.772Z"
+    },
+    {
+      "test": "Sidebar collapse button not found",
+      "details": "",
+      "timestamp": "2026-02-02T15:56:55.663Z"
+    },
+    {
+      "test": "Candidates page content",
+      "details": "Content selector \"table, .candidate\" not found",
+      "timestamp": "2026-02-02T15:56:59.233Z"
+    },
+    {
+      "test": "Payments page content",
+      "details": "Content selector \"table, .payment\" not found",
+      "timestamp": "2026-02-02T15:57:21.415Z"
+    },
+    {
+      "test": "Chat page content",
+      "details": "Content selector \".chat, .message\" not found",
+      "timestamp": "2026-02-02T15:57:23.335Z"
+    },
+    {
+      "test": "Add Candidate modal did not appear",
+      "details": "",
+      "timestamp": "2026-02-02T15:57:44.469Z"
+    },
+    {
+      "test": "No candidate data in table",
+      "details": "",
+      "timestamp": "2026-02-02T15:57:44.472Z"
+    },
+    {
+      "test": "Create Job modal did not appear",
+      "details": "",
+      "timestamp": "2026-02-02T15:57:47.173Z"
+    },
+    {
+      "test": "No forms found on Settings page",
+      "details": "",
+      "timestamp": "2026-02-02T15:57:48.821Z"
+    },
+    {
+      "test": "No export button found",
+      "details": "",
+      "timestamp": "2026-02-02T15:57:50.536Z"
+    },
+    {
+      "test": "No charts found on ML Dashboard",
+      "details": "",
+      "timestamp": "2026-02-02T15:57:55.966Z"
+    },
+    {
+      "test": "Mobile menu button not found",
+      "details": "",
+      "timestamp": "2026-02-02T15:57:57.729Z"
+    },
+    {
+      "test": "Console errors detected",
+      "details": "7 errors",
+      "timestamp": "2026-02-02T15:57:58.684Z"
+    }
+  ],
+  "timestamp": "2026-02-02T15:56:51.298Z",
+  "screenshots": [
+    {
+      "name": "login-page",
+      "filename": "login-page-1770047812166.png",
+      "filepath": "/home/augustine/Augustine_Projects/worklink_v2/admin/test-screenshots/login-page-1770047812166.png"
+    },
+    {
+      "name": "login-error",
+      "filename": "login-error-1770047813839.png",
+      "filepath": "/home/augustine/Augustine_Projects/worklink_v2/admin/test-screenshots/login-error-1770047813839.png"
+    },
+    {
+      "name": "dashboard-initial",
+      "filename": "dashboard-initial-1770047813961.png",
+      "filepath": "/home/augustine/Augustine_Projects/worklink_v2/admin/test-screenshots/dashboard-initial-1770047813961.png"
+    },
+    {
+      "name": "dark-mode",
+      "filename": "dark-mode-1770047814905.png",
+      "filepath": "/home/augustine/Augustine_Projects/worklink_v2/admin/test-screenshots/dark-mode-1770047814905.png"
+    },
+    {
+      "name": "page-dashboard",
+      "filename": "page-dashboard-1770047817390.png",
+      "filepath": "/home/augustine/Augustine_Projects/worklink_v2/admin/test-screenshots/page-dashboard-1770047817390.png"
+    },
+    {
+      "name": "page-candidates",
+      "filename": "page-candidates-1770047819234.png",
+      "filepath": "/home/augustine/Augustine_Projects/worklink_v2/admin/test-screenshots/page-candidates-1770047819234.png"
+    },
+    {
+      "name": "page-jobs",
+      "filename": "page-jobs-1770047820930.png",
+      "filepath": "/home/augustine/Augustine_Projects/worklink_v2/admin/test-screenshots/page-jobs-1770047820930.png"
+    },
+    {
+      "name": "page-bpo-dashboard",
+      "filename": "page-bpo-dashboard-1770047822737.png",
+      "filepath": "/home/augustine/Augustine_Projects/worklink_v2/admin/test-screenshots/page-bpo-dashboard-1770047822737.png"
+    },
+    {
+      "name": "page-tender-monitor",
+      "filename": "page-tender-monitor-1770047824600.png",
+      "filepath": "/home/augustine/Augustine_Projects/worklink_v2/admin/test-screenshots/page-tender-monitor-1770047824600.png"
+    },
+    {
+      "name": "page-clients",
+      "filename": "page-clients-1770047834037.png",
+      "filepath": "/home/augustine/Augustine_Projects/worklink_v2/admin/test-screenshots/page-clients-1770047834037.png"
+    },
+    {
+      "name": "page-deployments",
+      "filename": "page-deployments-1770047836333.png",
+      "filepath": "/home/augustine/Augustine_Projects/worklink_v2/admin/test-screenshots/page-deployments-1770047836333.png"
+    },
+    {
+      "name": "page-payments",
+      "filename": "page-payments-1770047841415.png",
+      "filepath": "/home/augustine/Augustine_Projects/worklink_v2/admin/test-screenshots/page-payments-1770047841415.png"
+    },
+    {
+      "name": "page-chat",
+      "filename": "page-chat-1770047843336.png",
+      "filepath": "/home/augustine/Augustine_Projects/worklink_v2/admin/test-screenshots/page-chat-1770047843336.png"
+    },
+    {
+      "name": "page-financials",
+      "filename": "page-financials-1770047845285.png",
+      "filepath": "/home/augustine/Augustine_Projects/worklink_v2/admin/test-screenshots/page-financials-1770047845285.png"
+    },
+    {
+      "name": "page-retention-analytics",
+      "filename": "page-retention-analytics-1770047847113.png",
+      "filepath": "/home/augustine/Augustine_Projects/worklink_v2/admin/test-screenshots/page-retention-analytics-1770047847113.png"
+    },
+    {
+      "name": "page-gamification",
+      "filename": "page-gamification-1770047849071.png",
+      "filepath": "/home/augustine/Augustine_Projects/worklink_v2/admin/test-screenshots/page-gamification-1770047849071.png"
+    },
+    {
+      "name": "page-training",
+      "filename": "page-training-1770047850754.png",
+      "filepath": "/home/augustine/Augustine_Projects/worklink_v2/admin/test-screenshots/page-training-1770047850754.png"
+    },
+    {
+      "name": "page-ai-automation",
+      "filename": "page-ai-automation-1770047852683.png",
+      "filepath": "/home/augustine/Augustine_Projects/worklink_v2/admin/test-screenshots/page-ai-automation-1770047852683.png"
+    },
+    {
+      "name": "page-ai-sourcing",
+      "filename": "page-ai-sourcing-1770047854431.png",
+      "filepath": "/home/augustine/Augustine_Projects/worklink_v2/admin/test-screenshots/page-ai-sourcing-1770047854431.png"
+    },
+    {
+      "name": "page-ml-dashboard",
+      "filename": "page-ml-dashboard-1770047856166.png",
+      "filepath": "/home/augustine/Augustine_Projects/worklink_v2/admin/test-screenshots/page-ml-dashboard-1770047856166.png"
+    },
+    {
+      "name": "page-telegram-groups",
+      "filename": "page-telegram-groups-1770047857870.png",
+      "filepath": "/home/augustine/Augustine_Projects/worklink_v2/admin/test-screenshots/page-telegram-groups-1770047857870.png"
+    },
+    {
+      "name": "page-ad-optimization",
+      "filename": "page-ad-optimization-1770047859549.png",
+      "filepath": "/home/augustine/Augustine_Projects/worklink_v2/admin/test-screenshots/page-ad-optimization-1770047859549.png"
+    },
+    {
+      "name": "page-settings",
+      "filename": "page-settings-1770047861214.png",
+      "filepath": "/home/augustine/Augustine_Projects/worklink_v2/admin/test-screenshots/page-settings-1770047861214.png"
+    },
+    {
+      "name": "settings-page",
+      "filename": "settings-page-1770047868822.png",
+      "filepath": "/home/augustine/Augustine_Projects/worklink_v2/admin/test-screenshots/settings-page-1770047868822.png"
+    },
+    {
+      "name": "bpo-dashboard",
+      "filename": "bpo-dashboard-1770047870536.png",
+      "filepath": "/home/augustine/Augustine_Projects/worklink_v2/admin/test-screenshots/bpo-dashboard-1770047870536.png"
+    },
+    {
+      "name": "financials-charts",
+      "filename": "financials-charts-1770047873229.png",
+      "filepath": "/home/augustine/Augustine_Projects/worklink_v2/admin/test-screenshots/financials-charts-1770047873229.png"
+    },
+    {
+      "name": "ml-dashboard-charts",
+      "filename": "ml-dashboard-charts-1770047875966.png",
+      "filepath": "/home/augustine/Augustine_Projects/worklink_v2/admin/test-screenshots/ml-dashboard-charts-1770047875966.png"
+    }
+  ]
+}

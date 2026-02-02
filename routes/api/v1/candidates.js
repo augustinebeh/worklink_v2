@@ -115,12 +115,13 @@ router.post('/', (req, res) => {
   try {
     const { name, email, phone, date_of_birth, source = 'direct', status = 'lead' } = req.body;
     const id = 'CND' + Date.now().toString(36).toUpperCase();
+    const referralCode = name.split(' ')[0].toUpperCase() + Date.now().toString(36).toUpperCase().slice(-4);
 
     const stmt = db.prepare(`
-      INSERT INTO candidates (id, name, email, phone, date_of_birth, source, status, profile_photo)
-      VALUES (?, ?, ?, ?, ?, ?, ?, ?)
+      INSERT INTO candidates (id, name, email, phone, date_of_birth, source, status, profile_photo, referral_code)
+      VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)
     `);
-    stmt.run(id, name, email, phone, date_of_birth, source, status, generateRandomAvatar(name));
+    stmt.run(id, name, email, phone, date_of_birth, source, status, generateRandomAvatar(name), referralCode);
 
     const candidate = db.prepare('SELECT * FROM candidates WHERE id = ?').get(id);
     
@@ -142,14 +143,14 @@ function checkProfileCompletion(candidateId) {
     if (isComplete) {
       // Check if quest already completed/claimed
       const questProgress = db.prepare(`
-        SELECT * FROM candidate_quests WHERE candidate_id = ? AND quest_id = 'QST008'
+        SELECT * FROM candidate_quests WHERE candidate_id = ? AND quest_id = 'QST_PROFILE'
       `).get(candidateId);
 
       if (!questProgress || (!questProgress.completed && !questProgress.claimed)) {
         // Mark profile quest as complete (ready to claim)
         db.prepare(`
           INSERT INTO candidate_quests (candidate_id, quest_id, progress, target, completed, claimed)
-          VALUES (?, 'QST008', 1, 1, 1, 0)
+          VALUES (?, 'QST_PROFILE', 1, 1, 1, 0)
           ON CONFLICT(candidate_id, quest_id) DO UPDATE SET progress = 1, completed = 1, completed_at = CURRENT_TIMESTAMP
         `).run(candidateId);
         return true; // Quest is now claimable

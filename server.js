@@ -318,11 +318,24 @@ try {
   });
 }
 
+// Initialize job scheduler
+try {
+  const jobScheduler = require('./services/job-scheduler');
+  jobScheduler.initialize();
+  logger.info('Background job scheduler initialized', { module: 'services' });
+} catch (error) {
+  logger.error('Failed to initialize background job scheduler', {
+    error: error.message,
+    stack: error.stack,
+    module: 'services'
+  });
+}
+
 // Start server
 const PORT = process.env.PORT || 8080;
 const HOST = process.env.HOST || '0.0.0.0';
 
-server.listen(PORT, HOST, () => {
+server.listen(PORT, HOST, async () => {
   // Structured logging for startup
   logger.info('WorkLink Platform Server v2 started successfully', {
     module: 'server',
@@ -338,6 +351,25 @@ server.listen(PORT, HOST, () => {
       websocket: `ws://${HOST}:${PORT}/ws`
     }
   });
+
+  // Initialize email service and scheduler
+  try {
+    const emailService = require('./services/email');
+    const emailScheduler = require('./services/email/scheduler');
+
+    // Initialize email service
+    await emailService.initialize();
+    logger.info('Email service initialized successfully', { module: 'email' });
+
+    // Start email scheduler
+    emailScheduler.start();
+    logger.info('Email scheduler started successfully', { module: 'email' });
+  } catch (error) {
+    logger.warn('Email service initialization failed - continuing without email features', {
+      module: 'email',
+      error: error.message
+    });
+  }
 
   // Pretty console output in development
   if (process.env.NODE_ENV !== 'production') {
@@ -358,6 +390,45 @@ server.listen(PORT, HOST, () => {
 ╚════════════════════════════════════════════════════════════╝
   `);
   }
+});
+
+// Graceful shutdown handling
+process.on('SIGINT', () => {
+  logger.info('Received SIGINT, shutting down gracefully...', { module: 'server' });
+
+  // Stop email scheduler
+  try {
+    const emailScheduler = require('./services/email/scheduler');
+    emailScheduler.stop();
+    logger.info('Email scheduler stopped', { module: 'email' });
+  } catch (error) {
+    logger.warn('Error stopping email scheduler', { module: 'email', error: error.message });
+  }
+
+  // Close server
+  server.close(() => {
+    logger.info('Server closed', { module: 'server' });
+    process.exit(0);
+  });
+});
+
+process.on('SIGTERM', () => {
+  logger.info('Received SIGTERM, shutting down gracefully...', { module: 'server' });
+
+  // Stop email scheduler
+  try {
+    const emailScheduler = require('./services/email/scheduler');
+    emailScheduler.stop();
+    logger.info('Email scheduler stopped', { module: 'email' });
+  } catch (error) {
+    logger.warn('Error stopping email scheduler', { module: 'email', error: error.message });
+  }
+
+  // Close server
+  server.close(() => {
+    logger.info('Server closed', { module: 'server' });
+    process.exit(0);
+  });
 });
 
 module.exports = { app, server, wss };

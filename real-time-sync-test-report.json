@@ -1,0 +1,67 @@
+{
+  "testDate": "2026-02-02T16:49:46.535Z",
+  "overallPassRate": 86.7,
+  "totalTests": 15,
+  "categoryBreakdown": {
+    "Connection": {
+      "passed": 1,
+      "total": 1,
+      "rate": "100.0"
+    },
+    "Job Workflow": {
+      "passed": 3,
+      "total": 4,
+      "rate": "75.0"
+    },
+    "Gamification": {
+      "passed": 3,
+      "total": 3,
+      "rate": "100.0"
+    },
+    "Notifications": {
+      "passed": 2,
+      "total": 3,
+      "rate": "66.7"
+    },
+    "Chat": {
+      "passed": 2,
+      "total": 2,
+      "rate": "100.0"
+    },
+    "Data Consistency": {
+      "passed": 2,
+      "total": 2,
+      "rate": "100.0"
+    }
+  },
+  "keyFindings": [
+    {
+      "area": "WebSocket Connectivity",
+      "status": "EXCELLENT"
+    },
+    {
+      "area": "Live Chat System",
+      "status": "GOOD"
+    },
+    {
+      "area": "Job Workflow Integration",
+      "status": "PARTIAL"
+    },
+    {
+      "area": "Gamification Sync",
+      "status": "API-BASED"
+    },
+    {
+      "area": "Data Integrity",
+      "status": "EXCELLENT"
+    }
+  ],
+  "wsConnections": {
+    "candidate": true,
+    "admin": true
+  },
+  "messageStats": {
+    "candidateReceived": 4,
+    "adminReceived": 6
+  }
+}

@@ -6,6 +6,8 @@
 const express = require('express');
 const router = express.Router();
 const { db } = require('../../../db');
+const Parser = require('rss-parser');
+const parser = new Parser();
 
 // GeBIZ RSS Feed URL
 const GEBIZ_RSS_URL = 'https://www.gebiz.gov.sg/rss/ptn-rss.xml';
@@ -269,30 +271,329 @@ async function checkGeBIZFeed() {
     return { message: 'No active alerts to check' };
   }
 
-  // Note: In production, you'd actually fetch the RSS feed
-  // For now, we'll simulate the check and update timestamps
   const now = new Date().toISOString();
-  db.prepare('UPDATE tender_alerts SET last_checked = ? WHERE active = 1').run(now);
-
-  // In a real implementation:
-  // 1. Fetch GEBIZ_RSS_URL
-  // 2. Parse XML to get tender items
-  // 3. Match against alert keywords
-  // 4. Create tender_matches for new matches
-  // 5. Optionally send email notifications
-
-  return {
+  let results = {
     checkedAt: now,
     alertsChecked: alerts.length,
-    message: 'RSS feed check simulated. Implement actual RSS parsing for production.',
-    rssUrl: GEBIZ_RSS_URL,
-    implementation: {
-      step1: 'npm install rss-parser',
-      step2: 'Fetch and parse GEBIZ_RSS_URL',
-      step3: 'Match items against alert keywords',
-      step4: 'Store matches and send notifications',
-    },
+    newTenders: 0,
+    newMatches: 0,
+    processedItems: 0,
+    errors: []
   };
+
+  try {
+    console.log(`[${now}] Checking GeBIZ RSS feed: ${GEBIZ_RSS_URL}`);
+
+    // Fetch and parse RSS feed
+    const feed = await parser.parseURL(GEBIZ_RSS_URL);
+    console.log(`Found ${feed.items.length} items in RSS feed`);
+
+    results.processedItems = feed.items.length;
+
+    // Process each RSS item
+    for (const item of feed.items) {
+      try {
+        // Extract tender information from RSS item
+        const tenderData = extractTenderFromRSSItem(item);
+
+        // Check if tender already exists
+        const existingTender = db.prepare(
+          'SELECT id FROM tenders WHERE external_id = ? AND source = "gebiz"'
+        ).get(tenderData.external_id);
+
+        let tenderId;
+
+        if (!existingTender) {
+          // Create new tender
+          tenderId = 'TND' + Date.now().toString(36).toUpperCase() + Math.random().toString(36).slice(2, 4);
+
+          db.prepare(`
+            INSERT INTO tenders (
+              id, source, external_id, title, agency, category,
+              estimated_value, closing_date, status, location,
+              created_at, updated_at
+            ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+          `).run(
+            tenderId,
+            'gebiz',
+            tenderData.external_id,
+            tenderData.title,
+            tenderData.agency,
+            tenderData.category,
+            tenderData.estimated_value,
+            tenderData.closing_date,
+            'new',
+            tenderData.location,
+            now,
+            now
+          );
+
+          results.newTenders++;
+          console.log(`Created new tender: ${tenderId} - ${tenderData.title}`);
+        } else {
+          tenderId = existingTender.id;
+        }
+
+        // Check against all active alerts
+        for (const alert of alerts) {
+          const isMatch = checkKeywordMatch(tenderData.title, tenderData.category, alert.keyword);
+
+          if (isMatch) {
+            // Check if match already exists
+            const existingMatch = db.prepare(
+              'SELECT id FROM tender_matches WHERE alert_id = ? AND tender_id = ?'
+            ).get(alert.id, tenderId);
+
+            if (!existingMatch) {
+              db.prepare(`
+                INSERT INTO tender_matches (
+                  alert_id, tender_id, external_url, title,
+                  matched_keyword, notified, created_at
+                ) VALUES (?, ?, ?, ?, ?, 0, ?)
+              `).run(
+                alert.id,
+                tenderId,
+                tenderData.external_url,
+                tenderData.title,
+                alert.keyword,
+                now
+              );
+
+              results.newMatches++;
+              console.log(`New match: ${alert.keyword} -> ${tenderData.title}`);
+
+              // Send email notification if enabled
+              if (alert.email_notify) {
+                await sendTenderAlert(alert, tenderData);
+              }
+            }
+          }
+        }
+
+      } catch (itemError) {
+        console.error('Error processing RSS item:', itemError);
+        results.errors.push(`Item processing error: ${itemError.message}`);
+      }
+    }
+
+    // Update last checked timestamps
+    db.prepare('UPDATE tender_alerts SET last_checked = ? WHERE active = 1').run(now);
+
+    console.log(`RSS check completed: ${results.newTenders} new tenders, ${results.newMatches} new matches`);
+
+  } catch (error) {
+    console.error('Error fetching GeBIZ RSS feed:', error);
+    results.errors.push(`RSS fetch error: ${error.message}`);
+
+    // Still update timestamp to avoid constant retries
+    db.prepare('UPDATE tender_alerts SET last_checked = ? WHERE active = 1').run(now);
+  }
+
+  return results;
+}
+
+// Helper: Extract tender data from RSS item
+function extractTenderFromRSSItem(item) {
+  // GeBIZ RSS item typically has:
+  // - title: "Agency - Tender Title"
+  // - description: HTML with tender details
+  // - link: URL to tender on GeBIZ
+  // - pubDate: Publication date
+  // - guid: Unique identifier
+
+  const title = item.title || '';
+  const description = item.description || item.content || '';
+  const external_url = item.link || item.guid || '';
+
+  // Extract agency (usually before first dash)
+  const agencyMatch = title.match(/^([^-]+)-(.+)$/);
+  const agency = agencyMatch ? agencyMatch[1].trim() : null;
+  const actualTitle = agencyMatch ? agencyMatch[2].trim() : title;
+
+  // Extract tender ID from URL or GUID
+  const external_id = extractTenderIdFromUrl(external_url) || item.guid || external_url;
+
+  // Try to extract estimated value from description
+  const estimated_value = extractEstimatedValue(description);
+
+  // Try to extract closing date
+  const closing_date = extractClosingDate(description, item.pubDate);
+
+  // Categorize tender based on title/description
+  const category = categorizeTender(actualTitle, description);
+
+  return {
+    external_id,
+    title: actualTitle,
+    agency,
+    category,
+    estimated_value,
+    closing_date,
+    external_url,
+    location: 'Singapore' // Default for GeBIZ
+  };
+}
+
+// Helper: Check if tender matches keyword
+function checkKeywordMatch(title, category, keyword) {
+  const searchText = `${title} ${category || ''}`.toLowerCase();
+  const keywordLower = keyword.toLowerCase();
+
+  // Direct substring match
+  if (searchText.includes(keywordLower)) {
+    return true;
+  }
+
+  // Check individual words for better matching
+  const keywordWords = keywordLower.split(/\s+/);
+  const allWordsMatch = keywordWords.every(word =>
+    searchText.includes(word)
+  );
+
+  return allWordsMatch && keywordWords.length > 1;
+}
+
+// Helper: Extract tender ID from URL
+function extractTenderIdFromUrl(url) {
+  if (!url) return null;
+
+  // Try to extract ID from GeBIZ URL patterns
+  const patterns = [
+    /ptn_no=([^&]+)/i,
+    /tender[_-]id=([^&]+)/i,
+    /id=([^&]+)/i,
+    /\/([A-Z0-9]+)$/i
+  ];
+
+  for (const pattern of patterns) {
+    const match = url.match(pattern);
+    if (match) {
+      return match[1];
+    }
+  }
+
+  // Fallback: use last part of URL
+  const urlParts = url.split('/').filter(Boolean);
+  return urlParts[urlParts.length - 1] || null;
+}
+
+// Helper: Extract estimated value from description
+function extractEstimatedValue(description) {
+  if (!description) return null;
+
+  const patterns = [
+    /value[:\s]*S?\$?([\d,]+(?:\.\d{2})?)/i,
+    /amount[:\s]*S?\$?([\d,]+(?:\.\d{2})?)/i,
+    /budget[:\s]*S?\$?([\d,]+(?:\.\d{2})?)/i,
+    /S\$([\d,]+(?:\.\d{2})?)/i
+  ];
+
+  for (const pattern of patterns) {
+    const match = description.match(pattern);
+    if (match) {
+      const value = parseFloat(match[1].replace(/,/g, ''));
+      if (!isNaN(value) && value > 0) {
+        return value;
+      }
+    }
+  }
+
+  return null;
+}
+
+// Helper: Extract closing date from description
+function extractClosingDate(description, pubDate) {
+  if (!description) return null;
+
+  const patterns = [
+    /closing[:\s]*(\d{1,2}[\/\-]\d{1,2}[\/\-]\d{4})/i,
+    /deadline[:\s]*(\d{1,2}[\/\-]\d{1,2}[\/\-]\d{4})/i,
+    /due[:\s]*(\d{1,2}[\/\-]\d{1,2}[\/\-]\d{4})/i,
+    /(\d{1,2}[\/\-]\d{1,2}[\/\-]\d{4})/g
+  ];
+
+  for (const pattern of patterns) {
+    const match = description.match(pattern);
+    if (match) {
+      try {
+        const dateStr = match[1];
+        const date = new Date(dateStr);
+        if (!isNaN(date.getTime()) && date > new Date()) {
+          return date.toISOString();
+        }
+      } catch (error) {
+        continue;
+      }
+    }
+  }
+
+  return null;
+}
+
+// Helper: Categorize tender based on content
+function categorizeTender(title, description) {
+  const content = `${title} ${description}`.toLowerCase();
+
+  const categories = {
+    'Manpower Services': ['manpower', 'staff', 'personnel', 'human resource', 'temporary', 'contract worker'],
+    'Event Services': ['event', 'exhibition', 'conference', 'seminar', 'ceremony'],
+    'Security Services': ['security', 'guard', 'surveillance', 'protection'],
+    'Cleaning Services': ['cleaning', 'housekeeping', 'maintenance', 'janitorial'],
+    'IT Services': ['information technology', 'software', 'hardware', 'digital', 'system'],
+    'Professional Services': ['consultancy', 'advisory', 'professional', 'expert'],
+    'Logistics Services': ['logistics', 'transportation', 'delivery', 'warehouse'],
+    'Construction': ['construction', 'building', 'renovation', 'infrastructure'],
+    'F&B Services': ['catering', 'food', 'beverage', 'meal', 'dining']
+  };
+
+  for (const [category, keywords] of Object.entries(categories)) {
+    if (keywords.some(keyword => content.includes(keyword))) {
+      return category;
+    }
+  }
+
+  return 'General Services';
+}
+
+// Helper: Send email alert
+async function sendTenderAlert(alert, tenderData) {
+  try {
+    console.log(`Sending email alert for keyword "${alert.keyword}": ${tenderData.title}`);
+
+    // Import email service
+    const emailService = require('../../../services/email');
+
+    // Send tender alert email
+    const result = await emailService.sendTenderAlert(alert, tenderData);
+
+    console.log(`Tender alert email sent successfully. Results:`, result);
+    return result;
+  } catch (error) {
+    console.error(`Failed to send tender alert for keyword "${alert.keyword}":`, error);
+
+    // Log the failure but don't throw - we don't want email failures to break tender monitoring
+    try {
+      const { db } = require('../../../db');
+      db.prepare(`
+        INSERT INTO email_delivery_log (
+          tracking_id, recipient_email, subject, category, status,
+          last_error, created_at
+        ) VALUES (?, ?, ?, ?, ?, ?, ?)
+      `).run(
+        'tender_alert_' + Date.now(),
+        'admin@worklink.sg', // Default admin email
+        `Tender Alert: ${alert.keyword} - ${tenderData.title}`,
+        'tender-alert',
+        'failed_permanent',
+        error.message,
+        new Date().toISOString()
+      );
+    } catch (logError) {
+      console.error('Failed to log email failure:', logError);
+    }
+
+    return { success: false, error: error.message };
+  }
 }
 
 // Webhook endpoint for external tender sources (e.g., Zapier, Make.com)

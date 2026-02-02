@@ -26,6 +26,7 @@ import {
   BrainIcon,
   ZapIcon,
   TrendingUpIcon,
+  ThunderboltIcon,
 } from 'lucide-react';
 import { clsx } from 'clsx';
 import Logo, { LogoIcon } from '../ui/Logo';
@@ -76,6 +77,8 @@ const navigation = [
     description: 'Intelligence & learning',
     badge: 'AI',
     children: [
+      { name: '100x Performance', href: '/consultant-performance', icon: ThunderboltIcon, highlight: true, description: '100x consultant automation' },
+      { name: 'Interview Scheduling', href: '/interview-scheduling', icon: CalendarCheckIcon, highlight: true, description: 'AI interview scheduling' },
       { name: 'ML Dashboard', href: '/ml-dashboard', icon: BrainIcon, highlight: true, description: 'Knowledge base' },
       { name: 'Ad Optimization', href: '/ad-optimization', icon: ZapIcon, highlight: true, description: 'A/B testing' },
     ],

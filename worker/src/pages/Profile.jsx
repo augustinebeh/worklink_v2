@@ -34,7 +34,7 @@ import { useTheme } from '../contexts/ThemeContext';
 import { useAppSettings } from '../contexts/AppSettingsContext';
 import { usePushNotifications } from '../hooks/usePushNotifications';
 import { clsx } from 'clsx';
-import { calculateLevel, getLevelTier, LEVEL_TITLES as levelTitles } from '../../../shared/utils/gamification-esm';
+import { calculateLevel, getLevelTier, LEVEL_TITLES as levelTitles } from '../../../shared/utils/gamification-browser';
 import { DEFAULTS } from '../utils/constants';
 import ProfileAvatar from '../components/ui/ProfileAvatar';
 import XPBar from '../components/gamification/XPBar';

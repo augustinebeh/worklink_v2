@@ -21,7 +21,7 @@ import { useAuth } from '../../contexts/AuthContext';
 import { clsx } from 'clsx';
 import { LogoIcon } from '../ui/Logo';
 import { haptic } from '../../hooks/useHaptic';
-import { XP_THRESHOLDS, calculateLevel, LEVEL_TITLES } from '../../../../shared/utils/gamification-esm';
+import { XP_THRESHOLDS, calculateLevel, LEVEL_TITLES } from '../../../../shared/utils/gamification-browser';
 
 const menuSections = [
   {

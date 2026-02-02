@@ -10,6 +10,7 @@ import Header from './components/layout/Header';
 import BottomNav from './components/layout/BottomNav';
 import { PageTransition } from './components/layout/PageTransition';
 import InstallPrompt from './components/InstallPrompt';
+// import PWAUpdatePrompt from './components/PWAUpdatePrompt';
 import ErrorBoundary from './components/ErrorBoundary';
 
 // Lazy load pages for code splitting
@@ -231,16 +232,17 @@ export default function App() {
       <ThemeProvider>
         <AuthProvider>
           <AppSettingsProvider>
-            <WebSocketProvider>
-              <StreakProtectionProvider>
-                <ToastProvider>
+            <ToastProvider>
+              <WebSocketProvider>
+                <StreakProtectionProvider>
                   <ErrorBoundary>
                     <AppRoutes />
                   </ErrorBoundary>
                   <InstallPrompt />
-                </ToastProvider>
-              </StreakProtectionProvider>
-            </WebSocketProvider>
+                  {/* <PWAUpdatePrompt /> */}
+                </StreakProtectionProvider>
+              </WebSocketProvider>
+            </ToastProvider>
           </AppSettingsProvider>
         </AuthProvider>
       </ThemeProvider>

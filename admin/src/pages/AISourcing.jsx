@@ -418,43 +418,139 @@ export default function AISourcing() {
                   )}
                 >
                   <p className="font-medium text-slate-900 dark:text-white text-sm">{job.title}</p>
-                  <p className="text-xs text-slate-500">{job.job_date}</p>
+                  <p className="text-xs text-slate-500">{job.job_date} • ${job.pay_rate}/hr</p>
+                  <div className="flex items-center gap-2 mt-1">
+                    <Badge variant={job.total_slots - job.filled_slots > 0 ? 'success' : 'neutral'} size="sm">
+                      {job.total_slots - job.filled_slots} slots open
+                    </Badge>
+                  </div>
                 </div>
               ))}
             </CardContent>
           </Card>
 
-          {/* Recommendations */}
+          {/* Enhanced Recommendations */}
           <Card className="lg:col-span-2">
             <CardHeader>
-              <CardTitle className="flex items-center gap-2">
-                <UsersIcon className="h-5 w-5 text-emerald-500" />
-                AI Recommended Candidates
-              </CardTitle>
+              <div className="flex items-center justify-between">
+                <CardTitle className="flex items-center gap-2">
+                  <SparklesIcon className="h-5 w-5 text-emerald-500" />
+                  Enhanced AI Recommendations
+                </CardTitle>
+                {recommendations && (
+                  <div className="flex items-center gap-2 text-xs text-slate-500">
+                    {recommendations.aiEnhanced && (
+                      <span className="px-2 py-1 bg-violet-100 dark:bg-violet-900/30 text-violet-700 dark:text-violet-400 rounded">
+                        AI Enhanced
+                      </span>
+                    )}
+                    <span>{recommendations.qualifiedCandidates} qualified candidates</span>
+                  </div>
+                )}
+              </div>
             </CardHeader>
             <CardContent>
               {recommendations?.recommendations?.length > 0 ? (
-                <div className="space-y-3">
-                  {recommendations.recommendations.map((cand) => (
-                    <div key={cand.id} className="p-4 rounded-lg bg-slate-50 dark:bg-slate-800/50 flex items-center justify-between">
-                      <div className="flex items-center gap-3">
-                        <div className="w-10 h-10 rounded-full bg-emerald-100 dark:bg-emerald-900/50 flex items-center justify-center">
-                          <span className="text-emerald-700 dark:text-emerald-400 font-medium">
-                            {cand.name?.charAt(0) || '?'}
-                          </span>
-                        </div>
-                        <div>
-                          <p className="font-medium text-slate-900 dark:text-white">{cand.name}</p>
-                          <p className="text-xs text-slate-500">
-                            Level {cand.level} • {cand.total_jobs_completed} jobs • ⭐ {cand.rating || 'New'}
-                          </p>
+                <div className="space-y-4">
+                  {/* Summary Stats */}
+                  <div className="grid grid-cols-3 gap-4 p-3 bg-slate-50 dark:bg-slate-800/50 rounded-lg">
+                    <div className="text-center">
+                      <p className="text-sm font-medium text-slate-900 dark:text-white">{recommendations.totalCandidates}</p>
+                      <p className="text-xs text-slate-500">Total Candidates</p>
+                    </div>
+                    <div className="text-center">
+                      <p className="text-sm font-medium text-slate-900 dark:text-white">{recommendations.averageScore}%</p>
+                      <p className="text-xs text-slate-500">Average Score</p>
+                    </div>
+                    <div className="text-center">
+                      <p className="text-sm font-medium text-slate-900 dark:text-white">{recommendations.recommendations.length}</p>
+                      <p className="text-xs text-slate-500">Top Matches</p>
+                    </div>
+                  </div>
+
+                  {/* Candidate List */}
+                  <div className="space-y-3">
+                    {recommendations.recommendations.map((cand, index) => (
+                      <div key={cand.id} className="p-4 rounded-lg bg-slate-50 dark:bg-slate-800/50 border border-slate-200 dark:border-slate-700">
+                        <div className="flex items-start justify-between">
+                          <div className="flex items-start gap-3">
+                            <div className="w-10 h-10 rounded-full bg-emerald-100 dark:bg-emerald-900/50 flex items-center justify-center relative">
+                              <span className="text-emerald-700 dark:text-emerald-400 font-medium">
+                                {cand.name?.charAt(0) || '?'}
+                              </span>
+                              <span className="absolute -top-1 -right-1 bg-slate-700 dark:bg-slate-300 text-white dark:text-slate-800 text-xs rounded-full w-5 h-5 flex items-center justify-center">
+                                {index + 1}
+                              </span>
+                            </div>
+                            <div className="flex-1 min-w-0">
+                              <div className="flex items-center gap-2">
+                                <p className="font-medium text-slate-900 dark:text-white">{cand.name}</p>
+                                {cand.keyStrengths && cand.keyStrengths.length > 0 && (
+                                  <span className="text-xs text-emerald-600 dark:text-emerald-400">
+                                    ⭐ {cand.keyStrengths.length} strengths
+                                  </span>
+                                )}
+                              </div>
+                              <p className="text-xs text-slate-500 mb-2">
+                                Level {cand.level} • {cand.total_jobs_completed} jobs completed •
+                                {cand.rating ? ` ⭐ ${cand.rating}/5` : ' New worker'}
+                                {cand.confidence && (
+                                  <span className="ml-2 text-blue-600 dark:text-blue-400">
+                                    {Math.round(cand.confidence * 100)}% confidence
+                                  </span>
+                                )}
+                              </p>
+
+                              {/* Match Reason */}
+                              {cand.matchReason && (
+                                <p className="text-sm text-slate-600 dark:text-slate-400 mb-2">
+                                  {cand.matchReason}
+                                </p>
+                              )}
+
+                              {/* Key Strengths */}
+                              {cand.keyStrengths && cand.keyStrengths.length > 0 && (
+                                <div className="flex flex-wrap gap-1 mb-2">
+                                  {cand.keyStrengths.map((strength, i) => (
+                                    <span key={i} className="px-2 py-1 text-xs bg-emerald-100 dark:bg-emerald-900/30 text-emerald-700 dark:text-emerald-400 rounded">
+                                      {strength}
+                                    </span>
+                                  ))}
+                                </div>
+                              )}
+
+                              {/* Match Breakdown */}
+                              {cand.breakdown && (
+                                <div className="grid grid-cols-3 gap-2 text-xs">
+                                  <div className="text-center p-2 bg-white dark:bg-slate-700 rounded">
+                                    <p className="font-medium">{Math.round(cand.breakdown.experience || 0)}</p>
+                                    <p className="text-slate-500">Experience</p>
+                                  </div>
+                                  <div className="text-center p-2 bg-white dark:bg-slate-700 rounded">
+                                    <p className="font-medium">{Math.round(cand.breakdown.skills || 0)}</p>
+                                    <p className="text-slate-500">Skills</p>
+                                  </div>
+                                  <div className="text-center p-2 bg-white dark:bg-slate-700 rounded">
+                                    <p className="font-medium">{Math.round(cand.breakdown.availability || 0)}</p>
+                                    <p className="text-slate-500">Availability</p>
+                                  </div>
+                                </div>
+                              )}
+                            </div>
+                          </div>
+
+                          <div className="flex flex-col items-end gap-2">
+                            <Badge variant={cand.matchScore >= 80 ? 'success' : cand.matchScore >= 60 ? 'warning' : 'neutral'}>
+                              {cand.matchScore}% match
+                            </Badge>
+                            <button className="text-xs text-emerald-600 dark:text-emerald-400 hover:underline">
+                              Send Invite
+                            </button>
+                          </div>
                         </div>
                       </div>
-                      <Badge variant={cand.matchScore >= 70 ? 'success' : cand.matchScore >= 50 ? 'warning' : 'neutral'}>
-                        {cand.matchScore}% match
-                      </Badge>
-                    </div>
-                  ))}
+                    ))}
+                  </div>
                 </div>
               ) : (
                 <div className="flex flex-col items-center justify-center py-12 text-center">
@@ -466,8 +562,8 @@ export default function AISourcing() {
                   </h3>
                   <p className="text-sm text-slate-500 dark:text-slate-400">
                     {selectedJob
-                      ? 'No matching candidates found for this job.'
-                      : 'Choose a job to see AI-powered candidate recommendations.'}
+                      ? 'No matching candidates found for this job. Try adjusting the criteria.'
+                      : 'Choose a job to see enhanced AI-powered candidate recommendations with detailed matching insights.'}
                   </p>
                 </div>
               )}

@@ -1,0 +1,345 @@
+{
+  "summary": {
+    "totalTests": 30,
+    "passedTests": 27,
+    "failedTests": 3,
+    "successRate": "90.0%",
+    "timestamp": "2026-02-02T16:21:33.265Z"
+  },
+  "categories": {
+    "Gamification": {
+      "total": 6,
+      "passed": 6
+    },
+    "Real-time": {
+      "total": 7,
+      "passed": 7
+    },
+    "AI/ML": {
+      "total": 4,
+      "passed": 3
+    },
+    "Advanced": {
+      "total": 7,
+      "passed": 7
+    },
+    "Business": {
+      "total": 6,
+      "passed": 4
+    }
+  },
+  "testResults": [
+    {
+      "category": "Gamification",
+      "name": "Main Gamification Data",
+      "passed": true,
+      "details": {
+        "status": 404,
+        "responseTime": 3
+      },
+      "timestamp": "2026-02-02T16:21:32.622Z"
+    },
+    {
+      "category": "Gamification",
+      "name": "User Achievements",
+      "passed": true,
+      "details": {
+        "status": 200,
+        "responseTime": 2
+      },
+      "timestamp": "2026-02-02T16:21:32.624Z"
+    },
+    {
+      "category": "Gamification",
+      "name": "Leaderboard",
+      "passed": true,
+      "details": {
+        "status": 200,
+        "responseTime": 3
+      },
+      "timestamp": "2026-02-02T16:21:32.627Z"
+    },
+    {
+      "category": "Gamification",
+      "name": "Available Quests",
+      "passed": true,
+      "details": {
+        "status": 200,
+        "responseTime": 2
+      },
+      "timestamp": "2026-02-02T16:21:32.629Z"
+    },
+    {
+      "category": "Gamification",
+      "name": "XP History",
+      "passed": true,
+      "details": {
+        "status": 404,
+        "responseTime": 2
+      },
+      "timestamp": "2026-02-02T16:21:32.631Z"
+    },
+    {
+      "category": "Gamification",
+      "name": "User Progress",
+      "passed": true,
+      "details": {
+        "status": 404,
+        "responseTime": 2
+      },
+      "timestamp": "2026-02-02T16:21:32.633Z"
+    },
+    {
+      "category": "Real-time",
+      "name": "Chat System",
+      "passed": true,
+      "details": {
+        "status": 404,
+        "responseTime": 2
+      },
+      "timestamp": "2026-02-02T16:21:32.635Z"
+    },
+    {
+      "category": "Real-time",
+      "name": "User Conversations",
+      "passed": true,
+      "details": {
+        "status": 200,
+        "responseTime": 4
+      },
+      "timestamp": "2026-02-02T16:21:32.639Z"
+    },
+    {
+      "category": "Real-time",
+      "name": "Messaging Service",
+      "passed": true,
+      "details": {
+        "status": 404,
+        "responseTime": 2
+      },
+      "timestamp": "2026-02-02T16:21:32.641Z"
+    },
+    {
+      "category": "Real-time",
+      "name": "User Notifications",
+      "passed": true,
+      "details": {
+        "status": 404,
+        "responseTime": 2
+      },
+      "timestamp": "2026-02-02T16:21:32.643Z"
+    },
+    {
+      "category": "Real-time",
+      "name": "Chat Attachments",
+      "passed": true,
+      "details": {
+        "status": 404,
+        "responseTime": 1
+      },
+      "timestamp": "2026-02-02T16:21:32.645Z"
+    },
+    {
+      "category": "Real-time",
+      "name": "Quick Replies",
+      "passed": true,
+      "details": {
+        "status": 404,
+        "responseTime": 1
+      },
+      "timestamp": "2026-02-02T16:21:32.646Z"
+    },
+    {
+      "category": "AI/ML",
+      "name": "AI Chat Service",
+      "passed": false,
+      "details": {
+        "status": 404,
+        "responseTime": 2
+      },
+      "timestamp": "2026-02-02T16:21:32.648Z"
+    },
+    {
+      "category": "AI/ML",
+      "name": "ML Services",
+      "passed": true,
+      "details": {
+        "status": 404,
+        "responseTime": 3
+      },
+      "timestamp": "2026-02-02T16:21:32.651Z"
+    },
+    {
+      "category": "AI/ML",
+      "name": "AI Automation",
+      "passed": true,
+      "details": {
+        "status": 404,
+        "responseTime": 2
+      },
+      "timestamp": "2026-02-02T16:21:32.653Z"
+    },
+    {
+      "category": "AI/ML",
+      "name": "Advertisement ML",
+      "passed": true,
+      "details": {
+        "status": 404,
+        "responseTime": 2
+      },
+      "timestamp": "2026-02-02T16:21:32.655Z"
+    },
+    {
+      "category": "Advanced",
+      "name": "Analytics Dashboard",
+      "passed": true,
+      "details": {
+        "status": 404,
+        "responseTime": 2,
+        "method": "GET"
+      },
+      "timestamp": "2026-02-02T16:21:32.657Z"
+    },
+    {
+      "category": "Advanced",
+      "name": "Referral System",
+      "passed": true,
+      "details": {
+        "status": 404,
+        "responseTime": 2,
+        "method": "GET"
+      },
+      "timestamp": "2026-02-02T16:21:32.659Z"
+    },
+    {
+      "category": "Advanced",
+      "name": "Training Modules",
+      "passed": true,
+      "details": {
+        "status": 200,
+        "responseTime": 2,
+        "method": "GET"
+      },
+      "timestamp": "2026-02-02T16:21:32.661Z"
+    },
+    {
+      "category": "Advanced",
+      "name": "Telegram Groups",
+      "passed": true,
+      "details": {
+        "status": 200,
+        "responseTime": 2,
+        "method": "GET"
+      },
+      "timestamp": "2026-02-02T16:21:32.663Z"
+    },
+    {
+      "category": "Advanced",
+      "name": "Tender Monitoring",
+      "passed": true,
+      "details": {
+        "status": 404,
+        "responseTime": 1,
+        "method": "GET"
+      },
+      "timestamp": "2026-02-02T16:21:32.664Z"
+    },
+    {
+      "category": "Advanced",
+      "name": "Worker Availability",
+      "passed": true,
+      "details": {
+        "status": 404,
+        "responseTime": 2,
+        "method": "GET"
+      },
+      "timestamp": "2026-02-02T16:21:32.666Z"
+    },
+    {
+      "category": "Advanced",
+      "name": "Telegram Webhook",
+      "passed": true,
+      "details": {
+        "status": 200,
+        "responseTime": 573,
+        "method": "POST"
+      },
+      "timestamp": "2026-02-02T16:21:33.239Z"
+    },
+    {
+      "category": "Business",
+      "name": "Candidates List",
+      "passed": false,
+      "details": {
+        "status": 403,
+        "responseTime": 2,
+        "hasAuth": true
+      },
+      "timestamp": "2026-02-02T16:21:33.242Z"
+    },
+    {
+      "category": "Business",
+      "name": "Jobs List",
+      "passed": true,
+      "details": {
+        "status": 200,
+        "responseTime": 2,
+        "hasAuth": true
+      },
+      "timestamp": "2026-02-02T16:21:33.244Z"
+    },
+    {
+      "category": "Business",
+      "name": "Deployments List",
+      "passed": true,
+      "details": {
+        "status": 200,
+        "responseTime": 2,
+        "hasAuth": true
+      },
+      "timestamp": "2026-02-02T16:21:33.246Z"
+    },
+    {
+      "category": "Business",
+      "name": "Payments List",
+      "passed": false,
+      "details": {
+        "status": 403,
+        "responseTime": 3,
+        "hasAuth": true
+      },
+      "timestamp": "2026-02-02T16:21:33.249Z"
+    },
+    {
+      "category": "Business",
+      "name": "Clients List",
+      "passed": true,
+      "details": {
+        "status": 200,
+        "responseTime": 2,
+        "hasAuth": true
+      },
+      "timestamp": "2026-02-02T16:21:33.251Z"
+    },
+    {
+      "category": "Business",
+      "name": "Tenders List",
+      "passed": true,
+      "details": {
+        "status": 200,
+        "responseTime": 2,
+        "hasAuth": true
+      },
+      "timestamp": "2026-02-02T16:21:33.253Z"
+    },
+    {
+      "category": "Real-time",
+      "name": "WebSocket Connection",
+      "passed": true,
+      "details": {
+        "responseTime": "Connected"
+      },
+      "timestamp": "2026-02-02T16:21:33.265Z"
+    }
+  ]
+}

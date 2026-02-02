@@ -1,0 +1,264 @@
+{
+  "metadata": {
+    "timestamp": "2026-02-02T16:19:16.476Z",
+    "target": "http://localhost:8080",
+    "testsPerformed": 15
+  },
+  "summary": {
+    "totalTests": 15,
+    "passed": 11,
+    "warnings": 1,
+    "failed": 3,
+    "overallScore": "75.56",
+    "performanceGrade": "GOOD"
+  },
+  "results": [
+    {
+      "test": "API Info Response Times",
+      "result": {
+        "status": "PASS",
+        "details": {
+          "Average": "1.80ms",
+          "Minimum": "1ms",
+          "Maximum": "11ms",
+          "P50 (Median)": "1ms",
+          "P95": "11ms",
+          "P99": "11ms",
+          "Successful Requests": "20/20",
+          "Error Rate": "0.0%"
+        }
+      },
+      "timestamp": "2026-02-02T16:19:10.353Z"
+    },
+    {
+      "test": "Health Check Response Times",
+      "result": {
+        "status": "PASS",
+        "details": {
+          "Average": "2.50ms",
+          "Minimum": "2ms",
+          "Maximum": "5ms",
+          "P50 (Median)": "2ms",
+          "P95": "5ms",
+          "P99": "5ms",
+          "Successful Requests": "20/20",
+          "Error Rate": "0.0%"
+        }
+      },
+      "timestamp": "2026-02-02T16:19:10.415Z"
+    },
+    {
+      "test": "Demo Login Response Times",
+      "result": {
+        "status": "PASS",
+        "details": {
+          "Average": "2.40ms",
+          "Minimum": "2ms",
+          "Maximum": "4ms",
+          "P50 (Median)": "2ms",
+          "P95": "4ms",
+          "P99": "4ms",
+          "Successful Requests": "20/20",
+          "Error Rate": "0.0%"
+        }
+      },
+      "timestamp": "2026-02-02T16:19:10.471Z"
+    },
+    {
+      "test": "Gamification Data Response Times",
+      "result": {
+        "status": "PASS",
+        "details": {
+          "Average": "1.15ms",
+          "Minimum": "1ms",
+          "Maximum": "2ms",
+          "P50 (Median)": "1ms",
+          "P95": "2ms",
+          "P99": "2ms",
+          "Successful Requests": "20/20",
+          "Error Rate": "0.0%"
+        }
+      },
+      "timestamp": "2026-02-02T16:19:10.507Z"
+    },
+    {
+      "test": "Concurrency 1",
+      "result": {
+        "status": "PASS",
+        "details": {
+          "Requests": 1,
+          "Successful": 1,
+          "Failed": 0,
+          "Success Rate": "100.0%",
+          "Duration": "2ms",
+          "Throughput": "500.00 req/s",
+          "Avg Response Time": "1.00ms"
+        }
+      },
+      "timestamp": "2026-02-02T16:19:10.509Z"
+    },
+    {
+      "test": "Concurrency 5",
+      "result": {
+        "status": "PASS",
+        "details": {
+          "Requests": 5,
+          "Successful": 5,
+          "Failed": 0,
+          "Success Rate": "100.0%",
+          "Duration": "5ms",
+          "Throughput": "1000.00 req/s",
+          "Avg Response Time": "3.00ms"
+        }
+      },
+      "timestamp": "2026-02-02T16:19:11.515Z"
+    },
+    {
+      "test": "Concurrency 10",
+      "result": {
+        "status": "PASS",
+        "details": {
+          "Requests": 10,
+          "Successful": 10,
+          "Failed": 0,
+          "Success Rate": "100.0%",
+          "Duration": "7ms",
+          "Throughput": "1428.57 req/s",
+          "Avg Response Time": "4.50ms"
+        }
+      },
+      "timestamp": "2026-02-02T16:19:12.523Z"
+    },
+    {
+      "test": "Concurrency 25",
+      "result": {
+        "status": "PASS",
+        "details": {
+          "Requests": 25,
+          "Successful": 25,
+          "Failed": 0,
+          "Success Rate": "100.0%",
+          "Duration": "18ms",
+          "Throughput": "1388.89 req/s",
+          "Avg Response Time": "11.08ms"
+        }
+      },
+      "timestamp": "2026-02-02T16:19:13.543Z"
+    },
+    {
+      "test": "Concurrency 50",
+      "result": {
+        "status": "PASS",
+        "details": {
+          "Requests": 50,
+          "Successful": 50,
+          "Failed": 0,
+          "Success Rate": "100.0%",
+          "Duration": "58ms",
+          "Throughput": "862.07 req/s",
+          "Avg Response Time": "45.26ms"
+        }
+      },
+      "timestamp": "2026-02-02T16:19:14.601Z"
+    },
+    {
+      "test": "Rate Limiting Test",
+      "result": {
+        "status": "WARN",
+        "details": {
+          "Total Requests": 150,
+          "Duration": "779ms",
+          "Request Rate": "192.55 req/s",
+          "Successful": 150,
+          "Rate Limited (429)": 0,
+          "Errors": 0,
+          "Rate Limiting Active": "No"
+        }
+      },
+      "timestamp": "2026-02-02T16:19:16.381Z"
+    },
+    {
+      "test": "Large Payload 1024B",
+      "result": {
+        "status": "FAIL",
+        "details": {
+          "Payload Size": "1024 bytes",
+          "Response Status": 400,
+          "Response Time": "1ms",
+          "Response Size": "90 bytes",
+          "Handled": "No"
+        }
+      },
+      "timestamp": "2026-02-02T16:19:16.383Z"
+    },
+    {
+      "test": "Large Payload 10240B",
+      "result": {
+        "status": "FAIL",
+        "details": {
+          "Payload Size": "10240 bytes",
+          "Response Status": 400,
+          "Response Time": "1ms",
+          "Response Size": "90 bytes",
+          "Handled": "No"
+        }
+      },
+      "timestamp": "2026-02-02T16:19:16.384Z"
+    },
+    {
+      "test": "Large Payload 102400B",
+      "result": {
+        "status": "FAIL",
+        "details": {
+          "Payload Size": "102400 bytes",
+          "Response Status": 400,
+          "Response Time": "2ms",
+          "Response Size": "90 bytes",
+          "Handled": "No"
+        }
+      },
+      "timestamp": "2026-02-02T16:19:16.387Z"
+    },
+    {
+      "test": "100 Small Requests",
+      "result": {
+        "status": "PASS",
+        "details": {
+          "Total Requests": 100,
+          "Successful": 100,
+          "Total Duration": "74ms",
+          "Avg Response Time": "49.03ms",
+          "Throughput": "1351.35 req/s"
+        }
+      },
+      "timestamp": "2026-02-02T16:19:16.461Z"
+    },
+    {
+      "test": "Connection Management",
+      "result": {
+        "status": "PASS",
+        "details": {
+          "Sequential Requests": 10,
+          "Total Time": "15ms",
+          "Avg Per Request": "1.50ms",
+          "Efficiency": "Good"
+        }
+      },
+      "timestamp": "2026-02-02T16:19:16.476Z"
+    }
+  ],
+  "recommendations": [
+    {
+      "category": "Response Times",
+      "recommendation": "Aim for average response times under 200ms for optimal user experience"
+    },
+    {
+      "category": "Concurrency",
+      "recommendation": "Ensure 95%+ success rate under concurrent load"
+    },
+    {
+      "category": "Rate Limiting",
+      "recommendation": "Implement progressive rate limiting to prevent abuse"
+    }
+  ]
+}

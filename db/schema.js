@@ -504,6 +504,17 @@ function createSchema(db) {
       FOREIGN KEY (candidate_id) REFERENCES candidates(id)
     );
 
+    -- Per-conversation SLM settings (overrides global)
+    CREATE TABLE IF NOT EXISTS conversation_slm_settings (
+      id INTEGER PRIMARY KEY AUTOINCREMENT,
+      candidate_id TEXT NOT NULL UNIQUE,
+      mode TEXT DEFAULT 'inherit', -- inherit | off | auto | interview_only
+      custom_instructions TEXT,
+      created_at DATETIME DEFAULT CURRENT_TIMESTAMP,
+      updated_at DATETIME DEFAULT CURRENT_TIMESTAMP,
+      FOREIGN KEY (candidate_id) REFERENCES candidates(id)
+    );
+
     -- AI response logs for quality monitoring
     CREATE TABLE IF NOT EXISTS ai_response_logs (
       id INTEGER PRIMARY KEY AUTOINCREMENT,
@@ -756,6 +767,128 @@ function createSchema(db) {
     );
 
     -- =====================================================
+    -- CANDIDATE OUTREACH SYSTEM
+    -- =====================================================
+
+    -- Outreach campaigns
+    CREATE TABLE IF NOT EXISTS outreach_campaigns (
+      id TEXT PRIMARY KEY,
+      name TEXT NOT NULL,
+      type TEXT NOT NULL, -- job_invitation, bulk_opportunity, follow_up, re_engagement, skill_match, urgent_fill
+      job_id TEXT, -- Optional: for job-specific campaigns
+      target_criteria TEXT, -- JSON: criteria for candidate selection
+      channels TEXT, -- JSON: ['whatsapp', 'email', 'sms', 'push_notification', 'in_app_message']
+      priority INTEGER DEFAULT 2, -- 1=low, 2=medium, 3=high, 4=urgent
+      status TEXT DEFAULT 'draft', -- draft, active, completed, failed, cancelled
+      scheduled_at DATETIME,
+      template_data TEXT, -- JSON: message templates and personalization data
+      candidates_targeted INTEGER DEFAULT 0,
+      messages_sent INTEGER DEFAULT 0,
+      error TEXT,
+      created_at DATETIME DEFAULT CURRENT_TIMESTAMP,
+      updated_at DATETIME DEFAULT CURRENT_TIMESTAMP,
+      completed_at DATETIME,
+      FOREIGN KEY (job_id) REFERENCES jobs(id)
+    );
+
+    -- Individual outreach messages log
+    CREATE TABLE IF NOT EXISTS outreach_messages (
+      id INTEGER PRIMARY KEY AUTOINCREMENT,
+      campaign_id TEXT NOT NULL,
+      candidate_id TEXT NOT NULL,
+      channel TEXT NOT NULL, -- whatsapp, email, sms, push_notification, in_app_message
+      message TEXT NOT NULL,
+      status TEXT DEFAULT 'pending', -- pending, sent, delivered, read, replied, failed
+      error TEXT,
+      campaign_type TEXT, -- For analytics
+      external_message_id TEXT, -- Provider message ID
+      delivered_at DATETIME,
+      read_at DATETIME,
+      replied_at DATETIME,
+      created_at DATETIME DEFAULT CURRENT_TIMESTAMP,
+      FOREIGN KEY (campaign_id) REFERENCES outreach_campaigns(id),
+      FOREIGN KEY (candidate_id) REFERENCES candidates(id)
+    );
+
+    -- Candidate engagement tracking
+    CREATE TABLE IF NOT EXISTS candidate_engagement (
+      id INTEGER PRIMARY KEY AUTOINCREMENT,
+      candidate_id TEXT NOT NULL,
+      engagement_type TEXT NOT NULL, -- message_open, message_reply, job_view, job_apply, app_login, profile_update
+      engagement_data TEXT, -- JSON: additional data about the engagement
+      source TEXT, -- whatsapp, email, app, etc.
+      campaign_id TEXT, -- If engagement is from a campaign
+      job_id TEXT, -- If engagement is job-related
+      engagement_score INTEGER DEFAULT 1, -- Weight of this engagement (1-10)
+      created_at DATETIME DEFAULT CURRENT_TIMESTAMP,
+      FOREIGN KEY (candidate_id) REFERENCES candidates(id),
+      FOREIGN KEY (campaign_id) REFERENCES outreach_campaigns(id),
+      FOREIGN KEY (job_id) REFERENCES jobs(id)
+    );
+
+    -- Follow-up sequences
+    CREATE TABLE IF NOT EXISTS follow_up_sequences (
+      id TEXT PRIMARY KEY,
+      name TEXT NOT NULL,
+      description TEXT,
+      trigger_type TEXT NOT NULL, -- no_response, job_declined, job_completed, onboarding_incomplete
+      trigger_conditions TEXT, -- JSON: conditions for triggering
+      sequence_data TEXT, -- JSON: array of follow-up steps
+      active INTEGER DEFAULT 1,
+      created_at DATETIME DEFAULT CURRENT_TIMESTAMP
+    );
+
+    -- Follow-up sequence instances (active follow-ups for specific candidates)
+    CREATE TABLE IF NOT EXISTS follow_up_instances (
+      id TEXT PRIMARY KEY,
+      sequence_id TEXT NOT NULL,
+      candidate_id TEXT NOT NULL,
+      trigger_event TEXT, -- What triggered this sequence
+      trigger_data TEXT, -- JSON: data about the trigger event
+      current_step INTEGER DEFAULT 0,
+      status TEXT DEFAULT 'active', -- active, paused, completed, cancelled
+      next_action_at DATETIME,
+      completed_steps TEXT DEFAULT '[]', -- JSON: array of completed step IDs
+      created_at DATETIME DEFAULT CURRENT_TIMESTAMP,
+      updated_at DATETIME DEFAULT CURRENT_TIMESTAMP,
+      completed_at DATETIME,
+      FOREIGN KEY (sequence_id) REFERENCES follow_up_sequences(id),
+      FOREIGN KEY (candidate_id) REFERENCES candidates(id)
+    );
+
+    -- Candidate communication preferences
+    CREATE TABLE IF NOT EXISTS candidate_communication_preferences (
+      candidate_id TEXT PRIMARY KEY,
+      whatsapp_enabled INTEGER DEFAULT 1,
+      email_enabled INTEGER DEFAULT 1,
+      sms_enabled INTEGER DEFAULT 1,
+      push_enabled INTEGER DEFAULT 1,
+      job_alerts_enabled INTEGER DEFAULT 1,
+      marketing_enabled INTEGER DEFAULT 1,
+      frequency_preference TEXT DEFAULT 'normal', -- low, normal, high
+      best_contact_time TEXT DEFAULT 'anytime', -- morning, afternoon, evening, anytime
+      timezone TEXT DEFAULT 'Asia/Singapore',
+      do_not_contact_until DATETIME, -- Temporary communication pause
+      unsubscribed_channels TEXT DEFAULT '[]', -- JSON: array of unsubscribed channels
+      updated_at DATETIME DEFAULT CURRENT_TIMESTAMP,
+      FOREIGN KEY (candidate_id) REFERENCES candidates(id)
+    );
+
+    -- Campaign analytics and performance
+    CREATE TABLE IF NOT EXISTS campaign_analytics (
+      id INTEGER PRIMARY KEY AUTOINCREMENT,
+      campaign_id TEXT NOT NULL,
+      metric_name TEXT NOT NULL, -- sent_count, delivered_count, open_rate, response_rate, conversion_rate, etc.
+      metric_value REAL NOT NULL,
+      calculated_at DATETIME DEFAULT CURRENT_TIMESTAMP,
+      FOREIGN KEY (campaign_id) REFERENCES outreach_campaigns(id)
+    );
+
+    -- =====================================================
+    -- END OF OUTREACH SYSTEM TABLES
+    -- =====================================================
+
+    -- =====================================================
     -- END OF AI/ML TABLES
     -- =====================================================
 
@@ -924,6 +1057,44 @@ function runMigrations(db) {
       try {
         db.exec(`ALTER TABLE xp_transactions ADD COLUMN action_type TEXT`);
       } catch (e) {}
+    },
+
+    // Add engagement tracking columns to candidates if not exists
+    () => {
+      try {
+        db.exec(`ALTER TABLE candidates ADD COLUMN engagement_score INTEGER DEFAULT 0`);
+      } catch (e) {}
+      try {
+        db.exec(`ALTER TABLE candidates ADD COLUMN engagement_tier TEXT DEFAULT 'inactive'`);
+      } catch (e) {}
+      try {
+        db.exec(`ALTER TABLE candidates ADD COLUMN response_rate INTEGER DEFAULT 0`);
+      } catch (e) {}
+      try {
+        db.exec(`ALTER TABLE candidates ADD COLUMN total_engagements INTEGER DEFAULT 0`);
+      } catch (e) {}
+      try {
+        db.exec(`ALTER TABLE candidates ADD COLUMN last_engagement DATETIME`);
+      } catch (e) {}
+    },
+
+    // Add SLM conversation settings table if not exists
+    () => {
+      try {
+        db.exec(`
+          CREATE TABLE IF NOT EXISTS conversation_slm_settings (
+            id INTEGER PRIMARY KEY AUTOINCREMENT,
+            candidate_id TEXT NOT NULL UNIQUE,
+            mode TEXT DEFAULT 'inherit',
+            custom_instructions TEXT,
+            created_at DATETIME DEFAULT CURRENT_TIMESTAMP,
+            updated_at DATETIME DEFAULT CURRENT_TIMESTAMP,
+            FOREIGN KEY (candidate_id) REFERENCES candidates(id)
+          )
+        `);
+      } catch (e) {
+        console.warn('SLM conversation settings table creation warning:', e.message);
+      }
     }
   ];
 

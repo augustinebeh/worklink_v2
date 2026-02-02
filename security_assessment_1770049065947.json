@@ -1,0 +1,240 @@
+{
+  "metadata": {
+    "timestamp": "2026-02-02T16:17:45.946Z",
+    "target": "http://localhost:8080",
+    "testsPerformed": 17,
+    "duration": "N/A"
+  },
+  "summary": {
+    "totalFindings": 17,
+    "critical": 0,
+    "high": 15,
+    "medium": 2,
+    "low": 0,
+    "riskScore": 113,
+    "riskLevel": "CRITICAL"
+  },
+  "findings": [
+    {
+      "id": 1,
+      "title": "Reflected XSS Vulnerability",
+      "severity": "HIGH",
+      "description": "Script tag injection - XSS payload reflected without encoding",
+      "evidence": "Payload: <script>alert('XSS')</script>",
+      "impact": "Session hijacking, credential theft, malicious redirects",
+      "cvssScore": 8.2,
+      "remediation": "Implement output encoding, Content Security Policy",
+      "endpoint": "http://localhost:8080/api/v1/auth/register",
+      "timestamp": "2026-02-02T16:17:45.723Z"
+    },
+    {
+      "id": 2,
+      "title": "Reflected XSS Vulnerability",
+      "severity": "HIGH",
+      "description": "Image onerror injection - XSS payload reflected without encoding",
+      "evidence": "Payload: <img src=x onerror=alert('XSS')>",
+      "impact": "Session hijacking, credential theft, malicious redirects",
+      "cvssScore": 8.2,
+      "remediation": "Implement output encoding, Content Security Policy",
+      "endpoint": "http://localhost:8080/api/v1/auth/register",
+      "timestamp": "2026-02-02T16:17:45.726Z"
+    },
+    {
+      "id": 3,
+      "title": "Reflected XSS Vulnerability",
+      "severity": "HIGH",
+      "description": "SVG onload injection - XSS payload reflected without encoding",
+      "evidence": "Payload: <svg onload=alert('XSS')>",
+      "impact": "Session hijacking, credential theft, malicious redirects",
+      "cvssScore": 8.2,
+      "remediation": "Implement output encoding, Content Security Policy",
+      "endpoint": "http://localhost:8080/api/v1/auth/register",
+      "timestamp": "2026-02-02T16:17:45.729Z"
+    },
+    {
+      "id": 4,
+      "title": "Reflected XSS Vulnerability",
+      "severity": "HIGH",
+      "description": "JavaScript protocol injection - XSS payload reflected without encoding",
+      "evidence": "Payload: javascript:alert('XSS')",
+      "impact": "Session hijacking, credential theft, malicious redirects",
+      "cvssScore": 8.2,
+      "remediation": "Implement output encoding, Content Security Policy",
+      "endpoint": "http://localhost:8080/api/v1/auth/register",
+      "timestamp": "2026-02-02T16:17:45.733Z"
+    },
+    {
+      "id": 5,
+      "title": "Reflected XSS Vulnerability",
+      "severity": "HIGH",
+      "description": "Quote escape injection - XSS payload reflected without encoding",
+      "evidence": "Payload: '><script>alert('XSS')</script>",
+      "impact": "Session hijacking, credential theft, malicious redirects",
+      "cvssScore": 8.2,
+      "remediation": "Implement output encoding, Content Security Policy",
+      "endpoint": "http://localhost:8080/api/v1/auth/register",
+      "timestamp": "2026-02-02T16:17:45.736Z"
+    },
+    {
+      "id": 6,
+      "title": "Reflected XSS Vulnerability",
+      "severity": "HIGH",
+      "description": "Double quote escape injection - XSS payload reflected without encoding",
+      "evidence": "Payload: \"><script>alert('XSS')</script>",
+      "impact": "Session hijacking, credential theft, malicious redirects",
+      "cvssScore": 8.2,
+      "remediation": "Implement output encoding, Content Security Policy",
+      "endpoint": "http://localhost:8080/api/v1/auth/register",
+      "timestamp": "2026-02-02T16:17:45.739Z"
+    },
+    {
+      "id": 7,
+      "title": "Reflected XSS Vulnerability",
+      "severity": "HIGH",
+      "description": "Iframe javascript injection - XSS payload reflected without encoding",
+      "evidence": "Payload: <iframe src=javascript:alert('XSS')></iframe>",
+      "impact": "Session hijacking, credential theft, malicious redirects",
+      "cvssScore": 8.2,
+      "remediation": "Implement output encoding, Content Security Policy",
+      "endpoint": "http://localhost:8080/api/v1/auth/register",
+      "timestamp": "2026-02-02T16:17:45.741Z"
+    },
+    {
+      "id": 8,
+      "title": "Reflected XSS Vulnerability",
+      "severity": "HIGH",
+      "description": "Object data injection - XSS payload reflected without encoding",
+      "evidence": "Payload: <object data=data:text/html,<script>alert('XSS')</script>>",
+      "impact": "Session hijacking, credential theft, malicious redirects",
+      "cvssScore": 8.2,
+      "remediation": "Implement output encoding, Content Security Policy",
+      "endpoint": "http://localhost:8080/api/v1/auth/register",
+      "timestamp": "2026-02-02T16:17:45.744Z"
+    },
+    {
+      "id": 9,
+      "title": "Reflected XSS Vulnerability",
+      "severity": "HIGH",
+      "description": "HTML5 event injection - XSS payload reflected without encoding",
+      "evidence": "Payload: <details open ontoggle=alert('XSS')>",
+      "impact": "Session hijacking, credential theft, malicious redirects",
+      "cvssScore": 8.2,
+      "remediation": "Implement output encoding, Content Security Policy",
+      "endpoint": "http://localhost:8080/api/v1/auth/register",
+      "timestamp": "2026-02-02T16:17:45.747Z"
+    },
+    {
+      "id": 10,
+      "title": "Reflected XSS Vulnerability",
+      "severity": "HIGH",
+      "description": "Nested tag bypass - XSS payload reflected without encoding",
+      "evidence": "Payload: <scr<script>ipt>alert('XSS')</scr</script>ipt>",
+      "impact": "Session hijacking, credential theft, malicious redirects",
+      "cvssScore": 8.2,
+      "remediation": "Implement output encoding, Content Security Policy",
+      "endpoint": "http://localhost:8080/api/v1/auth/register",
+      "timestamp": "2026-02-02T16:17:45.751Z"
+    },
+    {
+      "id": 11,
+      "title": "Reflected XSS Vulnerability",
+      "severity": "HIGH",
+      "description": "Case variation bypass - XSS payload reflected without encoding",
+      "evidence": "Payload: <SCRIPT>alert('XSS')</SCRIPT>",
+      "impact": "Session hijacking, credential theft, malicious redirects",
+      "cvssScore": 8.2,
+      "remediation": "Implement output encoding, Content Security Policy",
+      "endpoint": "http://localhost:8080/api/v1/auth/register",
+      "timestamp": "2026-02-02T16:17:45.754Z"
+    },
+    {
+      "id": 12,
+      "title": "Reflected XSS Vulnerability",
+      "severity": "HIGH",
+      "description": "HTML entity bypass - XSS payload reflected without encoding",
+      "evidence": "Payload: &#60;script&#62;alert('XSS')&#60;/script&#62;",
+      "impact": "Session hijacking, credential theft, malicious redirects",
+      "cvssScore": 8.2,
+      "remediation": "Implement output encoding, Content Security Policy",
+      "endpoint": "http://localhost:8080/api/v1/auth/register",
+      "timestamp": "2026-02-02T16:17:45.757Z"
+    },
+    {
+      "id": 13,
+      "title": "Reflected XSS Vulnerability",
+      "severity": "HIGH",
+      "description": "URL encoding bypass - XSS payload reflected without encoding",
+      "evidence": "Payload: %3Cscript%3Ealert('XSS')%3C/script%3E",
+      "impact": "Session hijacking, credential theft, malicious redirects",
+      "cvssScore": 8.2,
+      "remediation": "Implement output encoding, Content Security Policy",
+      "endpoint": "http://localhost:8080/api/v1/auth/register",
+      "timestamp": "2026-02-02T16:17:45.770Z"
+    },
+    {
+      "id": 14,
+      "title": "Token Reuse Detected",
+      "severity": "HIGH",
+      "description": "Authentication tokens are being reused across sessions",
+      "evidence": "Generated 5 tokens, 1 unique",
+      "impact": "Session fixation, token prediction attacks",
+      "cvssScore": 7.8,
+      "remediation": "Generate cryptographically random, unique tokens",
+      "endpoint": "/api/v1/auth/worker/login",
+      "timestamp": "2026-02-02T16:17:45.944Z"
+    },
+    {
+      "id": 15,
+      "title": "Missing Security Header: strict-transport-security",
+      "severity": "HIGH",
+      "description": "HTTPS enforcement - Header not present",
+      "evidence": "Missing header: strict-transport-security",
+      "impact": "Increased attack surface for various web attacks",
+      "cvssScore": 6.1,
+      "remediation": "Add strict-transport-security header to all responses",
+      "endpoint": "All endpoints",
+      "timestamp": "2026-02-02T16:17:45.946Z"
+    },
+    {
+      "id": 16,
+      "title": "Missing Security Header: referrer-policy",
+      "severity": "MEDIUM",
+      "description": "Referrer information control - Header not present",
+      "evidence": "Missing header: referrer-policy",
+      "impact": "Increased attack surface for various web attacks",
+      "cvssScore": 4.3,
+      "remediation": "Add referrer-policy header to all responses",
+      "endpoint": "All endpoints",
+      "timestamp": "2026-02-02T16:17:45.946Z"
+    },
+    {
+      "id": 17,
+      "title": "Missing Security Header: permissions-policy",
+      "severity": "MEDIUM",
+      "description": "Browser feature control - Header not present",
+      "evidence": "Missing header: permissions-policy",
+      "impact": "Increased attack surface for various web attacks",
+      "cvssScore": 4.3,
+      "remediation": "Add permissions-policy header to all responses",
+      "endpoint": "All endpoints",
+      "timestamp": "2026-02-02T16:17:45.946Z"
+    }
+  ],
+  "recommendations": [
+    {
+      "priority": "IMMEDIATE",
+      "action": "Fix all CRITICAL and HIGH severity vulnerabilities",
+      "details": "These pose immediate risk to system security"
+    },
+    {
+      "priority": "SHORT_TERM",
+      "action": "Implement security headers and input validation",
+      "details": "Strengthen overall security posture"
+    },
+    {
+      "priority": "LONG_TERM",
+      "action": "Regular security assessments and penetration testing",
+      "details": "Maintain security awareness and catch new vulnerabilities"
+    }
+  ]
+}

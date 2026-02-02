@@ -1,0 +1,342 @@
+{
+  "timestamp": "2026-02-02T14:47:38.594Z",
+  "baseUrl": "http://localhost:8080",
+  "summary": {
+    "total": 55,
+    "passed": 39,
+    "failed": 16,
+    "warnings": 0
+  },
+  "tests": [
+    {
+      "category": "Routes",
+      "test": "Public route /login loads",
+      "status": "PASS",
+      "details": "Title: WorkLink - Level Up Your Career"
+    },
+    {
+      "category": "Authentication",
+      "test": "Login successful",
+      "status": "PASS",
+      "details": ""
+    },
+    {
+      "category": "Routes",
+      "test": "Protected route / loads",
+      "status": "PASS",
+      "details": ""
+    },
+    {
+      "category": "Routes",
+      "test": "Protected route /jobs loads",
+      "status": "PASS",
+      "details": ""
+    },
+    {
+      "category": "Routes",
+      "test": "Protected route /wallet loads",
+      "status": "PASS",
+      "details": ""
+    },
+    {
+      "category": "Routes",
+      "test": "Protected route /profile loads",
+      "status": "PASS",
+      "details": ""
+    },
+    {
+      "category": "Routes",
+      "test": "Protected route /calendar loads",
+      "status": "PASS",
+      "details": ""
+    },
+    {
+      "category": "Routes",
+      "test": "Protected route /chat loads",
+      "status": "PASS",
+      "details": ""
+    },
+    {
+      "category": "Routes",
+      "test": "Protected route /notifications loads",
+      "status": "PASS",
+      "details": ""
+    },
+    {
+      "category": "Routes",
+      "test": "Protected route /quests loads",
+      "status": "PASS",
+      "details": ""
+    },
+    {
+      "category": "Routes",
+      "test": "Protected route /achievements loads",
+      "status": "PASS",
+      "details": ""
+    },
+    {
+      "category": "Routes",
+      "test": "Protected route /rewards loads",
+      "status": "PASS",
+      "details": ""
+    },
+    {
+      "category": "Routes",
+      "test": "Protected route /leaderboard loads",
+      "status": "PASS",
+      "details": ""
+    },
+    {
+      "category": "Routes",
+      "test": "Protected route /training loads",
+      "status": "PASS",
+      "details": ""
+    },
+    {
+      "category": "Routes",
+      "test": "Protected route /referrals loads",
+      "status": "PASS",
+      "details": ""
+    },
+    {
+      "category": "Routes",
+      "test": "Protected route /complete-profile loads",
+      "status": "PASS",
+      "details": ""
+    },
+    {
+      "category": "Bottom Nav",
+      "test": "Bottom nav is visible on home page",
+      "status": "PASS",
+      "details": ""
+    },
+    {
+      "category": "Bottom Nav",
+      "test": "Navigate to Home (/)",
+      "status": "PASS",
+      "details": ""
+    },
+    {
+      "category": "Bottom Nav",
+      "test": "Home has active state indicator",
+      "status": "PASS",
+      "details": ""
+    },
+    {
+      "category": "Bottom Nav",
+      "test": "Navigate to Jobs (/jobs)",
+      "status": "PASS",
+      "details": ""
+    },
+    {
+      "category": "Bottom Nav",
+      "test": "Jobs has active state indicator",
+      "status": "PASS",
+      "details": ""
+    },
+    {
+      "category": "Bottom Nav",
+      "test": "Navigate to Wallet (/wallet)",
+      "status": "PASS",
+      "details": ""
+    },
+    {
+      "category": "Bottom Nav",
+      "test": "Wallet has active state indicator",
+      "status": "PASS",
+      "details": ""
+    },
+    {
+      "category": "Bottom Nav",
+      "test": "Navigate to Profile (/profile)",
+      "status": "PASS",
+      "details": ""
+    },
+    {
+      "category": "Bottom Nav",
+      "test": "Profile has active state indicator",
+      "status": "PASS",
+      "details": ""
+    },
+    {
+      "category": "Bottom Nav",
+      "test": "Bottom nav hidden on login page",
+      "status": "FAIL",
+      "details": "Bottom nav still visible on login page"
+    },
+    {
+      "category": "Bottom Nav",
+      "test": "Bottom nav hidden on chat page",
+      "status": "PASS",
+      "details": ""
+    },
+    {
+      "category": "Sidebar",
+      "test": "Open sidebar via menu button",
+      "status": "PASS",
+      "details": ""
+    },
+    {
+      "category": "Sidebar",
+      "test": "Navigate to Home (/)",
+      "status": "PASS",
+      "details": ""
+    },
+    {
+      "category": "Sidebar",
+      "test": "Sidebar closes after navigating to Home",
+      "status": "PASS",
+      "details": ""
+    },
+    {
+      "category": "Sidebar",
+      "test": "Navigate to Find Jobs (/jobs)",
+      "status": "FAIL",
+      "details": "Node is either not clickable or not an Element"
+    },
+    {
+      "category": "Sidebar",
+      "test": "Navigate to Wallet (/wallet)",
+      "status": "FAIL",
+      "details": "Node is either not clickable or not an Element"
+    },
+    {
+      "category": "Sidebar",
+      "test": "Navigate to Availability (/calendar)",
+      "status": "FAIL",
+      "details": "Node is either not clickable or not an Element"
+    },
+    {
+      "category": "Sidebar",
+      "test": "Navigate to Quests (/quests)",
+      "status": "FAIL",
+      "details": "Node is either not clickable or not an Element"
+    },
+    {
+      "category": "Sidebar",
+      "test": "Navigate to Achievements (/achievements)",
+      "status": "FAIL",
+      "details": "Node is either not clickable or not an Element"
+    },
+    {
+      "category": "Sidebar",
+      "test": "Navigate to Rewards Shop (/rewards)",
+      "status": "FAIL",
+      "details": "Node is either not clickable or not an Element"
+    },
+    {
+      "category": "Sidebar",
+      "test": "Navigate to Leaderboard (/leaderboard)",
+      "status": "FAIL",
+      "details": "Node is either not clickable or not an Element"
+    },
+    {
+      "category": "Sidebar",
+      "test": "Navigate to Refer & Earn (/referrals)",
+      "status": "FAIL",
+      "details": "Node is either not clickable or not an Element"
+    },
+    {
+      "category": "Sidebar",
+      "test": "Navigate to Training (/training)",
+      "status": "FAIL",
+      "details": "Node is either not clickable or not an Element"
+    },
+    {
+      "category": "Sidebar",
+      "test": "Navigate to Edit Profile (/complete-profile)",
+      "status": "FAIL",
+      "details": "Node is either not clickable or not an Element"
+    },
+    {
+      "category": "Sidebar",
+      "test": "Navigate to Notifications (/notifications)",
+      "status": "FAIL",
+      "details": "Node is either not clickable or not an Element"
+    },
+    {
+      "category": "Sidebar",
+      "test": "Navigate to Profile (/profile)",
+      "status": "FAIL",
+      "details": "Node is either not clickable or not an Element"
+    },
+    {
+      "category": "Header",
+      "test": "Header visible on home page",
+      "status": "PASS",
+      "details": ""
+    },
+    {
+      "category": "Header",
+      "test": "Chat button navigates to /chat",
+      "status": "FAIL",
+      "details": "Chat button not found"
+    },
+    {
+      "category": "Header",
+      "test": "Notifications button navigates to /notifications",
+      "status": "FAIL",
+      "details": "Notifications button not found"
+    },
+    {
+      "category": "Header",
+      "test": "Header hidden on login page",
+      "status": "FAIL",
+      "details": "Header still visible on login page"
+    },
+    {
+      "category": "Header",
+      "test": "Header hidden on chat page",
+      "status": "PASS",
+      "details": ""
+    },
+    {
+      "category": "Route Protection",
+      "test": "Protected route / redirects to login",
+      "status": "PASS",
+      "details": ""
+    },
+    {
+      "category": "Route Protection",
+      "test": "Protected route /jobs redirects to login",
+      "status": "PASS",
+      "details": ""
+    },
+    {
+      "category": "Route Protection",
+      "test": "Protected route /wallet redirects to login",
+      "status": "PASS",
+      "details": ""
+    },
+    {
+      "category": "Route Protection",
+      "test": "Protected route /profile redirects to login",
+      "status": "PASS",
+      "details": ""
+    },
+    {
+      "category": "Route Protection",
+      "test": "Protected route /calendar redirects to login",
+      "status": "PASS",
+      "details": ""
+    },
+    {
+      "category": "Route Protection",
+      "test": "Catch-all route redirects to home/login",
+      "status": "PASS",
+      "details": ""
+    },
+    {
+      "category": "Back Button",
+      "test": "Navigate to job detail page",
+      "status": "PASS",
+      "details": ""
+    },
+    {
+      "category": "Back Button",
+      "test": "Back button returns to jobs list",
+      "status": "PASS",
+      "details": ""
+    }
+  ]
+}

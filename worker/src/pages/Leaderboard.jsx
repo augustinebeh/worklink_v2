@@ -12,7 +12,7 @@ import {
 } from 'lucide-react';
 import { useAuth } from '../contexts/AuthContext';
 import { clsx } from 'clsx';
-import { calculateLevel } from '../../../shared/utils/gamification-esm';
+import { calculateLevel } from '../../../shared/utils/gamification-browser';
 import ProfileAvatar from '../components/ui/ProfileAvatar';
 import { SectionHeader } from '../components/common';
 

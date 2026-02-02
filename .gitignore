@@ -28,7 +28,7 @@ Thumbs.db
 *.swp
 *.swo
 *~
-
+*.md
 # Database files - IMPORTANT: These are excluded to prevent data loss
 # Railway uses a persistent volume for the database
 data/*.db

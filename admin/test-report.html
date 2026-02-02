@@ -1,0 +1,500 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Admin Portal Test Report</title>
+  <style>
+    body { font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif; margin: 0; padding: 20px; background: #f5f5f5; }
+    .container { max-width: 1200px; margin: 0 auto; background: white; padding: 30px; border-radius: 8px; box-shadow: 0 2px 4px rgba(0,0,0,0.1); }
+    h1 { color: #1e40af; margin-bottom: 10px; }
+    .timestamp { color: #666; font-size: 14px; margin-bottom: 30px; }
+    .summary { display: grid; grid-template-columns: repeat(auto-fit, minmax(200px, 1fr)); gap: 20px; margin-bottom: 40px; }
+    .summary-card { padding: 20px; border-radius: 8px; text-align: center; }
+    .summary-card.passed { background: #d1fae5; color: #065f46; }
+    .summary-card.failed { background: #fee2e2; color: #991b1b; }
+    .summary-card.warnings { background: #fef3c7; color: #92400e; }
+    .summary-card h2 { margin: 0; font-size: 36px; }
+    .summary-card p { margin: 10px 0 0 0; font-size: 14px; text-transform: uppercase; font-weight: 600; }
+    .section { margin-bottom: 40px; }
+    .section h2 { color: #333; border-bottom: 2px solid #e5e7eb; padding-bottom: 10px; }
+    .test-item { padding: 15px; margin: 10px 0; border-radius: 6px; border-left: 4px solid; }
+    .test-item.pass { background: #f0fdf4; border-color: #10b981; }
+    .test-item.fail { background: #fef2f2; border-color: #ef4444; }
+    .test-item.warn { background: #fffbeb; border-color: #f59e0b; }
+    .test-item .test-name { font-weight: 600; margin-bottom: 5px; }
+    .test-item .test-details { font-size: 14px; color: #666; }
+    .test-item .test-time { font-size: 12px; color: #999; margin-top: 5px; }
+    .screenshots { display: grid; grid-template-columns: repeat(auto-fill, minmax(300px, 1fr)); gap: 20px; }
+    .screenshot { border: 1px solid #e5e7eb; border-radius: 8px; overflow: hidden; }
+    .screenshot img { width: 100%; height: 200px; object-fit: cover; }
+    .screenshot .caption { padding: 10px; background: #f9fafb; font-size: 14px; }
+    .icon { margin-right: 5px; }
+  </style>
+</head>
+<body>
+  <div class="container">
+    <h1>🚀 Admin Portal Test Report</h1>
+    <div class="timestamp">Generated: 2/2/2026, 11:56:51 PM</div>
+
+    <div class="summary">
+      <div class="summary-card passed">
+        <h2>35</h2>
+        <p>✓ Passed</p>
+      </div>
+      <div class="summary-card failed">
+        <h2>0</h2>
+        <p>✗ Failed</p>
+      </div>
+      <div class="summary-card warnings">
+        <h2>13</h2>
+        <p>⚠ Warnings</p>
+      </div>
+    </div>
+
+    <div class="section">
+      <h2>✓ Passed Tests (35)</h2>
+      
+        <div class="test-item pass">
+          <div class="test-name"><span class="icon">✓</span>Login form elements visible</div>
+          <div class="test-details">Email, password inputs and submit button found</div>
+          <div class="test-time">11:56:52 PM</div>
+        </div>
+      
+        <div class="test-item pass">
+          <div class="test-name"><span class="icon">✓</span>Logo visible on login page</div>
+          
+          <div class="test-time">11:56:52 PM</div>
+        </div>
+      
+        <div class="test-item pass">
+          <div class="test-name"><span class="icon">✓</span>Invalid login error handling</div>
+          <div class="test-details">Error message displayed for wrong credentials</div>
+          <div class="test-time">11:56:53 PM</div>
+        </div>
+      
+        <div class="test-item pass">
+          <div class="test-name"><span class="icon">✓</span>Successful login</div>
+          <div class="test-details">Redirected to dashboard</div>
+          <div class="test-time">11:56:53 PM</div>
+        </div>
+      
+        <div class="test-item pass">
+          <div class="test-name"><span class="icon">✓</span>Sidebar visible</div>
+          
+          <div class="test-time">11:56:54 PM</div>
+        </div>
+      
+        <div class="test-item pass">
+          <div class="test-name"><span class="icon">✓</span>Header visible</div>
+          
+          <div class="test-time">11:56:54 PM</div>
+        </div>
+      
+        <div class="test-item pass">
+          <div class="test-name"><span class="icon">✓</span>Navigation items found</div>
+          <div class="test-details">24 navigation items</div>
+          <div class="test-time">11:56:54 PM</div>
+        </div>
+      
+        <div class="test-item pass">
+          <div class="test-name"><span class="icon">✓</span>Theme toggle works</div>
+          <div class="test-details">Dark mode: true</div>
+          <div class="test-time">11:56:54 PM</div>
+        </div>
+      
+        <div class="test-item pass">
+          <div class="test-name"><span class="icon">✓</span>Dashboard page loads</div>
+          <div class="test-details">URL: /</div>
+          <div class="test-time">11:56:57 PM</div>
+        </div>
+      
+        <div class="test-item pass">
+          <div class="test-name"><span class="icon">✓</span>Jobs page loads</div>
+          <div class="test-details">URL: /jobs</div>
+          <div class="test-time">11:57:00 PM</div>
+        </div>
+      
+        <div class="test-item pass">
+          <div class="test-name"><span class="icon">✓</span>BPO Dashboard page loads</div>
+          <div class="test-details">URL: /bpo</div>
+          <div class="test-time">11:57:02 PM</div>
+        </div>
+      
+        <div class="test-item pass">
+          <div class="test-name"><span class="icon">✓</span>Tender Monitor page loads</div>
+          <div class="test-details">URL: /tender-monitor</div>
+          <div class="test-time">11:57:04 PM</div>
+        </div>
+      
+        <div class="test-item pass">
+          <div class="test-name"><span class="icon">✓</span>Clients page loads</div>
+          <div class="test-details">URL: /clients</div>
+          <div class="test-time">11:57:14 PM</div>
+        </div>
+      
+        <div class="test-item pass">
+          <div class="test-name"><span class="icon">✓</span>Deployments page loads</div>
+          <div class="test-details">URL: /deployments</div>
+          <div class="test-time">11:57:16 PM</div>
+        </div>
+      
+        <div class="test-item pass">
+          <div class="test-name"><span class="icon">✓</span>Financials page loads</div>
+          <div class="test-details">URL: /financials</div>
+          <div class="test-time">11:57:25 PM</div>
+        </div>
+      
+        <div class="test-item pass">
+          <div class="test-name"><span class="icon">✓</span>Retention Analytics page loads</div>
+          <div class="test-details">URL: /retention-analytics</div>
+          <div class="test-time">11:57:27 PM</div>
+        </div>
+      
+        <div class="test-item pass">
+          <div class="test-name"><span class="icon">✓</span>Gamification page loads</div>
+          <div class="test-details">URL: /gamification</div>
+          <div class="test-time">11:57:29 PM</div>
+        </div>
+      
+        <div class="test-item pass">
+          <div class="test-name"><span class="icon">✓</span>Training page loads</div>
+          <div class="test-details">URL: /training</div>
+          <div class="test-time">11:57:30 PM</div>
+        </div>
+      
+        <div class="test-item pass">
+          <div class="test-name"><span class="icon">✓</span>AI Automation page loads</div>
+          <div class="test-details">URL: /ai-automation</div>
+          <div class="test-time">11:57:32 PM</div>
+        </div>
+      
+        <div class="test-item pass">
+          <div class="test-name"><span class="icon">✓</span>AI Sourcing page loads</div>
+          <div class="test-details">URL: /ai-sourcing</div>
+          <div class="test-time">11:57:34 PM</div>
+        </div>
+      
+        <div class="test-item pass">
+          <div class="test-name"><span class="icon">✓</span>ML Dashboard page loads</div>
+          <div class="test-details">URL: /ml-dashboard</div>
+          <div class="test-time">11:57:36 PM</div>
+        </div>
+      
+        <div class="test-item pass">
+          <div class="test-name"><span class="icon">✓</span>Telegram Groups page loads</div>
+          <div class="test-details">URL: /telegram-groups</div>
+          <div class="test-time">11:57:37 PM</div>
+        </div>
+      
+        <div class="test-item pass">
+          <div class="test-name"><span class="icon">✓</span>Ad Optimization page loads</div>
+          <div class="test-details">URL: /ad-optimization</div>
+          <div class="test-time">11:57:39 PM</div>
+        </div>
+      
+        <div class="test-item pass">
+          <div class="test-name"><span class="icon">✓</span>Settings page loads</div>
+          <div class="test-details">URL: /settings</div>
+          <div class="test-time">11:57:41 PM</div>
+        </div>
+      
+        <div class="test-item pass">
+          <div class="test-name"><span class="icon">✓</span>Candidates search input works</div>
+          
+          <div class="test-time">11:57:43 PM</div>
+        </div>
+      
+        <div class="test-item pass">
+          <div class="test-name"><span class="icon">✓</span>Filter buttons found</div>
+          <div class="test-details">3 filter buttons</div>
+          <div class="test-time">11:57:43 PM</div>
+        </div>
+      
+        <div class="test-item pass">
+          <div class="test-name"><span class="icon">✓</span>Jobs data displayed</div>
+          <div class="test-details">20 job items</div>
+          <div class="test-time">11:57:47 PM</div>
+        </div>
+      
+        <div class="test-item pass">
+          <div class="test-name"><span class="icon">✓</span>BPO Dashboard has action buttons</div>
+          <div class="test-details">20 buttons found</div>
+          <div class="test-time">11:57:50 PM</div>
+        </div>
+      
+        <div class="test-item pass">
+          <div class="test-name"><span class="icon">✓</span>Financial charts rendered</div>
+          <div class="test-details">5 charts found</div>
+          <div class="test-time">11:57:53 PM</div>
+        </div>
+      
+        <div class="test-item pass">
+          <div class="test-name"><span class="icon">✓</span>ARIA labels present</div>
+          <div class="test-details">11 elements with aria-label</div>
+          <div class="test-time">11:57:58 PM</div>
+        </div>
+      
+        <div class="test-item pass">
+          <div class="test-name"><span class="icon">✓</span>Semantic HTML elements used</div>
+          <div class="test-details">4 semantic elements</div>
+          <div class="test-time">11:57:58 PM</div>
+        </div>
+      
+        <div class="test-item pass">
+          <div class="test-name"><span class="icon">✓</span>Keyboard navigation works</div>
+          <div class="test-details">Focused: BUTTON</div>
+          <div class="test-time">11:57:58 PM</div>
+        </div>
+      
+        <div class="test-item pass">
+          <div class="test-name"><span class="icon">✓</span>No page errors detected</div>
+          
+          <div class="test-time">11:57:58 PM</div>
+        </div>
+      
+        <div class="test-item pass">
+          <div class="test-name"><span class="icon">✓</span>404 handling works</div>
+          <div class="test-details">Redirected to dashboard</div>
+          <div class="test-time">11:57:59 PM</div>
+        </div>
+      
+        <div class="test-item pass">
+          <div class="test-name"><span class="icon">✓</span>Page load performance</div>
+          <div class="test-details">674ms (< 3s)</div>
+          <div class="test-time">11:58:00 PM</div>
+        </div>
+      
+    </div>
+
+    
+
+    
+    <div class="section">
+      <h2>⚠ Warnings (13)</h2>
+      
+        <div class="test-item warn">
+          <div class="test-name"><span class="icon">⚠</span>Form validation</div>
+          <div class="test-details">No validation messages shown for empty form</div>
+          <div class="test-time">11:56:52 PM</div>
+        </div>
+      
+        <div class="test-item warn">
+          <div class="test-name"><span class="icon">⚠</span>Sidebar collapse button not found</div>
+          
+          <div class="test-time">11:56:55 PM</div>
+        </div>
+      
+        <div class="test-item warn">
+          <div class="test-name"><span class="icon">⚠</span>Candidates page content</div>
+          <div class="test-details">Content selector "table, .candidate" not found</div>
+          <div class="test-time">11:56:59 PM</div>
+        </div>
+      
+        <div class="test-item warn">
+          <div class="test-name"><span class="icon">⚠</span>Payments page content</div>
+          <div class="test-details">Content selector "table, .payment" not found</div>
+          <div class="test-time">11:57:21 PM</div>
+        </div>
+      
+        <div class="test-item warn">
+          <div class="test-name"><span class="icon">⚠</span>Chat page content</div>
+          <div class="test-details">Content selector ".chat, .message" not found</div>
+          <div class="test-time">11:57:23 PM</div>
+        </div>
+      
+        <div class="test-item warn">
+          <div class="test-name"><span class="icon">⚠</span>Add Candidate modal did not appear</div>
+          
+          <div class="test-time">11:57:44 PM</div>
+        </div>
+      
+        <div class="test-item warn">
+          <div class="test-name"><span class="icon">⚠</span>No candidate data in table</div>
+          
+          <div class="test-time">11:57:44 PM</div>
+        </div>
+      
+        <div class="test-item warn">
+          <div class="test-name"><span class="icon">⚠</span>Create Job modal did not appear</div>
+          
+          <div class="test-time">11:57:47 PM</div>
+        </div>
+      
+        <div class="test-item warn">
+          <div class="test-name"><span class="icon">⚠</span>No forms found on Settings page</div>
+          
+          <div class="test-time">11:57:48 PM</div>
+        </div>
+      
+        <div class="test-item warn">
+          <div class="test-name"><span class="icon">⚠</span>No export button found</div>
+          
+          <div class="test-time">11:57:50 PM</div>
+        </div>
+      
+        <div class="test-item warn">
+          <div class="test-name"><span class="icon">⚠</span>No charts found on ML Dashboard</div>
+          
+          <div class="test-time">11:57:55 PM</div>
+        </div>
+      
+        <div class="test-item warn">
+          <div class="test-name"><span class="icon">⚠</span>Mobile menu button not found</div>
+          
+          <div class="test-time">11:57:57 PM</div>
+        </div>
+      
+        <div class="test-item warn">
+          <div class="test-name"><span class="icon">⚠</span>Console errors detected</div>
+          <div class="test-details">7 errors</div>
+          <div class="test-time">11:57:58 PM</div>
+        </div>
+      
+    </div>
+    
+
+    <div class="section">
+      <h2>📸 Screenshots (27)</h2>
+      <div class="screenshots">
+        
+          <div class="screenshot">
+            <img src="test-screenshots/login-page-1770047812166.png" alt="login-page">
+            <div class="caption">login-page</div>
+          </div>
+        
+          <div class="screenshot">
+            <img src="test-screenshots/login-error-1770047813839.png" alt="login-error">
+            <div class="caption">login-error</div>
+          </div>
+        
+          <div class="screenshot">
+            <img src="test-screenshots/dashboard-initial-1770047813961.png" alt="dashboard-initial">
+            <div class="caption">dashboard-initial</div>
+          </div>
+        
+          <div class="screenshot">
+            <img src="test-screenshots/dark-mode-1770047814905.png" alt="dark-mode">
+            <div class="caption">dark-mode</div>
+          </div>
+        
+          <div class="screenshot">
+            <img src="test-screenshots/page-dashboard-1770047817390.png" alt="page-dashboard">
+            <div class="caption">page-dashboard</div>
+          </div>
+        
+          <div class="screenshot">
+            <img src="test-screenshots/page-candidates-1770047819234.png" alt="page-candidates">
+            <div class="caption">page-candidates</div>
+          </div>
+        
+          <div class="screenshot">
+            <img src="test-screenshots/page-jobs-1770047820930.png" alt="page-jobs">
+            <div class="caption">page-jobs</div>
+          </div>
+        
+          <div class="screenshot">
+            <img src="test-screenshots/page-bpo-dashboard-1770047822737.png" alt="page-bpo-dashboard">
+            <div class="caption">page-bpo-dashboard</div>
+          </div>
+        
+          <div class="screenshot">
+            <img src="test-screenshots/page-tender-monitor-1770047824600.png" alt="page-tender-monitor">
+            <div class="caption">page-tender-monitor</div>
+          </div>
+        
+          <div class="screenshot">
+            <img src="test-screenshots/page-clients-1770047834037.png" alt="page-clients">
+            <div class="caption">page-clients</div>
+          </div>
+        
+          <div class="screenshot">
+            <img src="test-screenshots/page-deployments-1770047836333.png" alt="page-deployments">
+            <div class="caption">page-deployments</div>
+          </div>
+        
+          <div class="screenshot">
+            <img src="test-screenshots/page-payments-1770047841415.png" alt="page-payments">
+            <div class="caption">page-payments</div>
+          </div>
+        
+          <div class="screenshot">
+            <img src="test-screenshots/page-chat-1770047843336.png" alt="page-chat">
+            <div class="caption">page-chat</div>
+          </div>
+        
+          <div class="screenshot">
+            <img src="test-screenshots/page-financials-1770047845285.png" alt="page-financials">
+            <div class="caption">page-financials</div>
+          </div>
+        
+          <div class="screenshot">
+            <img src="test-screenshots/page-retention-analytics-1770047847113.png" alt="page-retention-analytics">
+            <div class="caption">page-retention-analytics</div>
+          </div>
+        
+          <div class="screenshot">
+            <img src="test-screenshots/page-gamification-1770047849071.png" alt="page-gamification">
+            <div class="caption">page-gamification</div>
+          </div>
+        
+          <div class="screenshot">
+            <img src="test-screenshots/page-training-1770047850754.png" alt="page-training">
+            <div class="caption">page-training</div>
+          </div>
+        
+          <div class="screenshot">
+            <img src="test-screenshots/page-ai-automation-1770047852683.png" alt="page-ai-automation">
+            <div class="caption">page-ai-automation</div>
+          </div>
+        
+          <div class="screenshot">
+            <img src="test-screenshots/page-ai-sourcing-1770047854431.png" alt="page-ai-sourcing">
+            <div class="caption">page-ai-sourcing</div>
+          </div>
+        
+          <div class="screenshot">
+            <img src="test-screenshots/page-ml-dashboard-1770047856166.png" alt="page-ml-dashboard">
+            <div class="caption">page-ml-dashboard</div>
+          </div>
+        
+          <div class="screenshot">
+            <img src="test-screenshots/page-telegram-groups-1770047857870.png" alt="page-telegram-groups">
+            <div class="caption">page-telegram-groups</div>
+          </div>
+        
+          <div class="screenshot">
+            <img src="test-screenshots/page-ad-optimization-1770047859549.png" alt="page-ad-optimization">
+            <div class="caption">page-ad-optimization</div>
+          </div>
+        
+          <div class="screenshot">
+            <img src="test-screenshots/page-settings-1770047861214.png" alt="page-settings">
+            <div class="caption">page-settings</div>
+          </div>
+        
+          <div class="screenshot">
+            <img src="test-screenshots/settings-page-1770047868822.png" alt="settings-page">
+            <div class="caption">settings-page</div>
+          </div>
+        
+          <div class="screenshot">
+            <img src="test-screenshots/bpo-dashboard-1770047870536.png" alt="bpo-dashboard">
+            <div class="caption">bpo-dashboard</div>
+          </div>
+        
+          <div class="screenshot">
+            <img src="test-screenshots/financials-charts-1770047873229.png" alt="financials-charts">
+            <div class="caption">financials-charts</div>
+          </div>
+        
+          <div class="screenshot">
+            <img src="test-screenshots/ml-dashboard-charts-1770047875966.png" alt="ml-dashboard-charts">
+            <div class="caption">ml-dashboard-charts</div>
+          </div>
+        
+      </div>
+    </div>
+  </div>
+</body>
+</html>

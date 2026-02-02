@@ -66,6 +66,79 @@ function getConversationMode(candidateId) {
 }
 
 /**
+ * Get SLM settings
+ */
+function getSLMSettings() {
+  const rows = db.prepare(`
+    SELECT key, value FROM ai_settings WHERE key LIKE 'slm_%'
+  `).all();
+  console.log(`🤖 [SLM] getSLMSettings: Found ${rows.length} settings in database`);
+
+  const settings = {};
+  rows.forEach(row => {
+    const cleanKey = row.key.replace('slm_', '');
+    if (row.value === 'true') settings[cleanKey] = true;
+    else if (row.value === 'false') settings[cleanKey] = false;
+    else if (!isNaN(parseFloat(row.value))) settings[cleanKey] = parseFloat(row.value);
+    else settings[cleanKey] = row.value;
+  });
+
+  // Default SLM settings if none exist
+  if (Object.keys(settings).length === 0) {
+    settings.enabled = true;
+    settings.default_mode = 'auto';
+    settings.interview_scheduling_enabled = true;
+    settings.max_context_messages = 10;
+  }
+
+  console.log(`🤖 [SLM] getSLMSettings result:`, JSON.stringify(settings));
+  return settings;
+}
+
+/**
+ * Get conversation SLM mode for a candidate
+ * Returns: 'off' | 'auto' | 'interview_only' | 'inherit'
+ */
+function getConversationSLMMode(candidateId) {
+  const settings = getSLMSettings();
+
+  console.log(`🤖 [SLM] getConversationSLMMode: slm_enabled=${settings.enabled} (type: ${typeof settings.enabled})`);
+
+  if (!settings.enabled) {
+    console.log(`🤖 [SLM] SLM is disabled globally, returning 'off'`);
+    return 'off';
+  }
+
+  // Check per-conversation override
+  const conversationSettings = db.prepare(`
+    SELECT mode FROM conversation_slm_settings WHERE candidate_id = ?
+  `).get(candidateId);
+
+  console.log(`🤖 [SLM] Conversation override for ${candidateId}:`, conversationSettings || 'none');
+
+  if (conversationSettings && conversationSettings.mode !== 'inherit') {
+    console.log(`🤖 [SLM] Using conversation override: ${conversationSettings.mode}`);
+    return conversationSettings.mode;
+  }
+
+  // Fall back to global default
+  const mode = settings.default_mode || 'auto';
+  console.log(`🤖 [SLM] Using global default: ${mode}`);
+  return mode;
+}
+
+/**
+ * Set conversation SLM mode for a candidate
+ */
+function setConversationSLMMode(candidateId, mode) {
+  db.prepare(`
+    INSERT INTO conversation_slm_settings (candidate_id, mode, updated_at)
+    VALUES (?, ?, datetime('now'))
+    ON CONFLICT(candidate_id) DO UPDATE SET mode = ?, updated_at = datetime('now')
+  `).run(candidateId, mode, mode);
+}
+
+/**
  * Set conversation AI mode for a candidate
  */
 function setConversationMode(candidateId, mode) {
@@ -152,7 +225,7 @@ function getPendingUserResponse(message, candidateName) {
   if (lowerMessage.includes('account') || lowerMessage.includes('verify') || lowerMessage.includes('status') ||
       lowerMessage.includes('approved') || lowerMessage.includes('review') || lowerMessage.includes('pending')) {
     return {
-      content: `Your account is pending verification. Our admin team will review your profile and reach out soon. To help speed things up, make sure your profile is complete with accurate information! 🙏`,
+      content: `Your account is pending verification. Our admin team will review your profile and reach out soon. To help speed things up, I can also help schedule a quick verification interview with our friendly consultant - this often fast-tracks approval! Let me know if you'd like me to check available time slots. 📅`,
       isPendingResponse: true,
     };
   }
@@ -169,7 +242,7 @@ function getPendingUserResponse(message, candidateName) {
   // Check for greetings
   if (lowerMessage.match(/^(hi|hello|hey|good morning|good afternoon|good evening)/)) {
     return {
-      content: `Hi${firstName ? ' ' + firstName : ''}! Welcome to WorkLink! 👋 Your account is being reviewed by our team. Feel free to explore the app and complete your profile while you wait for verification!`,
+      content: `Hi${firstName ? ' ' + firstName : ''}! Welcome to WorkLink! 👋 Your account is being reviewed by our team. While you wait, I can help speed up the process by scheduling a quick verification interview with one of our consultants. This often leads to faster approval! Would you like me to find a good time for you?`,
       isPendingResponse: true,
     };
   }
@@ -185,13 +258,14 @@ function getPendingUserResponse(message, candidateName) {
 
   // Default response for pending users
   return {
-    content: `Thanks for reaching out${firstName ? ', ' + firstName : ''}! Your account is currently pending verification. Please be patient while our admin team reviews your profile. In the meantime, you can browse the app and complete your profile to expedite the verification process! 🙏`,
+    content: `Thanks for reaching out${firstName ? ', ' + firstName : ''}! Your account is currently pending verification. To potentially speed up the process, I can help schedule a quick verification interview with our recruitment consultant. This often fast-tracks approval significantly! Would you like me to check available time slots? 🙏`,
     isPendingResponse: true,
   };
 }
 
 /**
  * Generate AI response for a candidate message
+ * Now integrated with Smart Response Router for improved accuracy and reliability
  *
  * @param {string} candidateId - Candidate ID
  * @param {string} message - The candidate's message
@@ -203,22 +277,75 @@ async function generateResponse(candidateId, message, options = {}) {
   const startTime = Date.now();
   const settings = getSettings();
 
-  // Check candidate status - pending users get limited responses
+  // SMART RESPONSE ROUTER INTEGRATION
+  // Check if Smart Response Router is available and should be used
+  try {
+    const smartRouterIntegration = require('./smart-router-integration');
+
+    console.log(`🎯 [SMART ROUTER] Using Smart Response Router integration for ${candidateId}`);
+
+    const smartResponse = await smartRouterIntegration.generateResponse(candidateId, message, options);
+
+    console.log(`🎯 [SMART ROUTER] Response generated: ${smartResponse.source}, System: ${smartResponse.systemUsed}`);
+
+    return smartResponse;
+
+  } catch (smartRouterError) {
+    console.error('🚨 [SMART ROUTER] Integration failed, falling back to legacy system:', smartRouterError.message);
+    // Continue with legacy system below
+  }
+
+  // LEGACY SYSTEM (fallback)
+  console.log(`🤖 [LEGACY AI] Using legacy AI system for ${candidateId}`);
+
+  // IMPROVED: Use enhanced chat engine with interview scheduling for pending candidates
   const candidate = getCandidate(candidateId);
   if (candidate && candidate.status === 'pending') {
-    console.log(`🤖 [AI] Candidate ${candidateId} is PENDING - returning limited response`);
-    const pendingResponse = getPendingUserResponse(message, candidate.name);
-    const responseTime = Date.now() - startTime;
+    console.log(`🤖 [AI] IMPROVED - Candidate ${candidateId} is PENDING - using interview scheduling system`);
 
-    return {
-      content: pendingResponse.content,
-      source: 'pending_status',
-      confidence: 1.0,
-      intent: 'pending_user',
-      responseTimeMs: responseTime,
-      fromKB: false,
-      isPendingUser: true,
-    };
+    try {
+      // Use improved chat engine for pending candidates
+      const ImprovedChatEngine = require('./improved-chat-engine');
+      const improvedEngine = new ImprovedChatEngine();
+
+      const enhancedResponse = await improvedEngine.handlePendingCandidateWithScheduling(
+        candidateId,
+        message,
+        candidate
+      );
+
+      const responseTime = Date.now() - startTime;
+
+      console.log(`🎯 [IMPROVED AI] Enhanced pending response: ${enhancedResponse.source}, Intent: ${enhancedResponse.intent}`);
+
+      return {
+        content: enhancedResponse.content,
+        source: enhancedResponse.source,
+        confidence: enhancedResponse.confidence,
+        intent: enhancedResponse.intent,
+        responseTimeMs: responseTime,
+        fromKB: false,
+        isPendingUser: true,
+        canScheduleInterview: enhancedResponse.canScheduleInterview,
+        metadata: enhancedResponse.metadata
+      };
+
+    } catch (error) {
+      console.error('❌ Enhanced chat engine error:', error);
+      // Fallback to basic response
+      const pendingResponse = getPendingUserResponse(message, candidate.name);
+      const responseTime = Date.now() - startTime;
+
+      return {
+        content: pendingResponse.content,
+        source: 'pending_status_fallback',
+        confidence: 0.7,
+        intent: 'pending_user',
+        responseTimeMs: responseTime,
+        fromKB: false,
+        isPendingUser: true,
+      };
+    }
   }
 
   // Check if this query needs real-time data (payment amounts, job status, etc.)
@@ -230,37 +357,86 @@ async function generateResponse(candidateId, message, options = {}) {
     lowerMessage.includes('my earning') ||
     (lowerMessage.includes('pending') && (lowerMessage.includes('amount') || lowerMessage.includes('much') || lowerMessage.includes('payment')));
 
-  // 1. Try knowledge base first (FREE!) - but skip for real-time data queries
-  console.log(`🤖 [AI] Checking knowledge base (kb_enabled=${settings.kb_enabled}, needsRealTimeData=${needsRealTimeData})`);
+  // 1. Try improved fact-based responses first, then knowledge base
+  console.log(`🤖 [AI] Checking fact-based responses first, then knowledge base (kb_enabled=${settings.kb_enabled}, needsRealTimeData=${needsRealTimeData})`);
+
+  try {
+    // First, try improved fact-based responses for active candidates
+    const ImprovedChatEngine = require('./improved-chat-engine');
+    const improvedEngine = new ImprovedChatEngine();
+
+    const improvedResponse = await improvedEngine.processMessage(candidateId, message, 'auto');
+
+    // If improved engine handled it (not an error or escalation), use it
+    if (improvedResponse && !improvedResponse.error && improvedResponse.source !== 'llm_with_real_data') {
+      const responseTime = Date.now() - startTime;
+
+      console.log(`🎯 [IMPROVED AI] Using fact-based response: ${improvedResponse.source}`);
+
+      return {
+        content: improvedResponse.content,
+        source: `improved_${improvedResponse.source}`,
+        confidence: improvedResponse.confidence,
+        intent: improvedResponse.intent,
+        responseTimeMs: responseTime,
+        fromKB: false,
+        usesRealData: improvedResponse.usesRealData,
+        requiresAdminAttention: improvedResponse.requiresAdminAttention
+      };
+    }
+  } catch (error) {
+    console.log(`🤖 [AI] Improved engine not available, falling back to KB: ${error.message}`);
+  }
+
+  // Fallback to knowledge base (but filter out problematic responses)
   if (settings.kb_enabled !== false && !needsRealTimeData) {
     const kbAnswer = await ml.findAnswer(message);
     console.log(`🤖 [AI] KB answer:`, kbAnswer ? 'Found' : 'Not found');
 
     if (kbAnswer) {
-      ml.recordKBHit();
+      // FILTER OUT PROBLEMATIC RESPONSES
+      const problematicPhrases = [
+        'usually arrive within 24 hours',
+        'auto-approve',
+        'within 72 hours max',
+        'completely free',
+        'usually within a few hours',
+        'our system will'
+      ];
 
-      const responseTime = Date.now() - startTime;
+      const hasProblematicContent = problematicPhrases.some(phrase =>
+        kbAnswer.answer.toLowerCase().includes(phrase)
+      );
 
-      // Log the response
-      const logId = ml.logResponse(candidateId, message, kbAnswer.answer, {
-        mode: options.mode || 'suggest',
-        source: kbAnswer.source,
-        kbEntryId: kbAnswer.sourceId,
-        confidence: kbAnswer.confidence,
-        intent: kbAnswer.intent || kbAnswer.category,
-        responseTimeMs: responseTime,
-      });
+      if (hasProblematicContent) {
+        console.log(`⚠️ [AI] Filtering out problematic KB response: "${kbAnswer.answer.substring(0, 50)}..."`);
+        // Don't return the problematic response, let it fall through to LLM
+      } else {
+        ml.recordKBHit();
 
-      return {
-        content: kbAnswer.answer,
-        source: kbAnswer.source,
-        sourceId: kbAnswer.sourceId,
-        confidence: kbAnswer.confidence,
-        intent: kbAnswer.intent || kbAnswer.category,
-        responseTimeMs: responseTime,
-        logId,
-        fromKB: true,
-      };
+        const responseTime = Date.now() - startTime;
+
+        // Log the response
+        const logId = ml.logResponse(candidateId, message, kbAnswer.answer, {
+          mode: options.mode || 'suggest',
+          source: kbAnswer.source,
+          kbEntryId: kbAnswer.sourceId,
+          confidence: kbAnswer.confidence,
+          intent: kbAnswer.intent || kbAnswer.category,
+          responseTimeMs: responseTime,
+        });
+
+        return {
+          content: kbAnswer.answer,
+          source: kbAnswer.source,
+          sourceId: kbAnswer.sourceId,
+          confidence: kbAnswer.confidence,
+          intent: kbAnswer.intent || kbAnswer.category,
+          responseTimeMs: responseTime,
+          logId,
+          fromKB: true,
+        };
+      }
     }
   }
 
@@ -352,9 +528,10 @@ async function generateResponse(candidateId, message, options = {}) {
 }
 
 /**
- * Process an incoming message and take action based on AI mode
+ * Process an incoming message with SLM integration
  *
- * This is the main entry point called when a candidate sends a message.
+ * This function first checks if SLM should handle the message, then falls back to AI if needed.
+ * SLM is particularly designed for pending candidates and interview scheduling.
  *
  * @param {string} candidateId - Candidate ID
  * @param {string} content - Message content
@@ -362,23 +539,104 @@ async function generateResponse(candidateId, message, options = {}) {
  */
 async function processIncomingMessage(candidateId, content, channel = 'app') {
   const settings = getSettings();
-  const mode = getConversationMode(candidateId);
+  const slmSettings = getSLMSettings();
+  const aiMode = getConversationMode(candidateId);
+  const slmMode = getConversationSLMMode(candidateId);
 
-  console.log(`🤖 [AI] Processing message for ${candidateId}`);
-  console.log(`🤖 [AI] Settings: ai_enabled=${settings.ai_enabled}, default_mode=${settings.default_mode}`);
-  console.log(`🤖 [AI] Resolved mode for this conversation: ${mode}`);
+  console.log(`🤖 [PROCESSING] Message for ${candidateId}`);
+  console.log(`🤖 [PROCESSING] AI mode: ${aiMode}, SLM mode: ${slmMode}`);
 
-  if (mode === 'off') {
-    console.log(`🤖 [AI] Mode is OFF, skipping AI response`);
+  // Check if SLM should handle this message first
+  if (slmMode !== 'off' && slmSettings.enabled) {
+    console.log(`🤖 [SLM] SLM is enabled, checking if it should handle this message...`);
+
+    try {
+      const SLMSchedulingBridge = require('../../utils/slm-scheduling-bridge');
+      const slmBridge = new SLMSchedulingBridge();
+
+      // Get candidate info to determine if SLM should handle
+      const candidate = getCandidate(candidateId);
+
+      // SLM handles messages in these cases:
+      const shouldSLMHandle =
+        candidate?.status === 'pending' ||  // Pending candidates always go to SLM
+        slmMode === 'interview_only' ||     // Interview-only mode
+        (slmMode === 'auto' && (           // Auto mode with interview-related keywords
+          /\b(schedule|interview|meet|talk|verification|available|time)\b/i.test(content)
+        ));
+
+      if (shouldSLMHandle) {
+        console.log(`🤖 [SLM] SLM will handle this message (reason: ${candidate?.status === 'pending' ? 'pending candidate' : slmMode})`);
+
+        const slmResponse = await slmBridge.integrateWithChatSLM(candidateId, content, {
+          channel,
+          mode: slmMode,
+          timestamp: new Date().toISOString()
+        });
+
+        if (slmResponse) {
+          console.log(`🤖 [SLM] SLM generated response: "${slmResponse.content?.substring(0, 50)}..."`);
+
+          if (slmMode === 'auto') {
+            // Auto mode: Send SLM response immediately
+            try {
+              const messaging = require('../messaging');
+              const result = await messaging.sendToCandidate(candidateId, slmResponse.content, {
+                channel: channel,
+                aiGenerated: true,
+                aiSource: 'slm',
+                slmGenerated: true,
+              });
+              console.log(`🤖 [SLM] SLM response sent successfully via ${result.channel}`);
+            } catch (err) {
+              console.error(`🤖 [SLM] Failed to send SLM response:`, err.message);
+            }
+          } else {
+            // For suggest mode or manual review, broadcast to admins
+            const { broadcastToAdmins } = require('../../websocket');
+
+            broadcastToAdmins({
+              type: 'slm_suggestion',
+              candidateId,
+              suggestion: {
+                id: Date.now(), // Temporary ID
+                content: slmResponse.content,
+                intent: slmResponse.metadata?.flow || 'interview_scheduling',
+                confidence: 0.9,
+                source: 'slm',
+                fromSLM: true,
+                generatedAt: new Date().toISOString(),
+                metadata: slmResponse.metadata,
+              },
+            });
+          }
+
+          return {
+            mode: 'slm_' + slmMode,
+            response: slmResponse,
+            handledBy: 'slm',
+          };
+        }
+      }
+    } catch (error) {
+      console.error(`🤖 [SLM] SLM processing failed, falling back to AI:`, error.message);
+    }
+  }
+
+  // Fall back to regular AI processing
+  console.log(`🤖 [AI] Processing with regular AI system...`);
+
+  if (aiMode === 'off') {
+    console.log(`🤖 [AI] AI mode is OFF, no response generated`);
     return null;
   }
 
   // Generate AI response
-  console.log(`🤖 [AI] Generating response...`);
-  const response = await generateResponse(candidateId, content, { mode });
+  console.log(`🤖 [AI] Generating AI response...`);
+  const response = await generateResponse(candidateId, content, { mode: aiMode });
   console.log(`🤖 [AI] Response generated:`, response ? `"${response.content?.substring(0, 50)}..."` : 'NULL');
 
-  if (mode === 'auto') {
+  if (aiMode === 'auto') {
     // Auto mode: Send response immediately
     console.log(`🤖 [AI] AUTO mode: Sending response immediately`);
     try {
@@ -391,7 +649,7 @@ async function processIncomingMessage(candidateId, content, channel = 'app') {
       mode: 'auto',
       response,
     };
-  } else if (mode === 'suggest') {
+  } else if (aiMode === 'suggest') {
     // Suggest mode: Broadcast suggestion to admins
     const { broadcastToAdmins } = require('../../websocket');
 
@@ -424,44 +682,134 @@ async function processIncomingMessage(candidateId, content, channel = 'app') {
  * Routes to the same channel the worker messaged from
  */
 async function sendAIResponse(candidateId, response, channel = 'app', originalQuestion = null) {
-  console.log(`📤 [AI] Sending response to ${candidateId} via ${channel}: "${response.content.substring(0, 50)}..."`);
-  const messaging = require('../messaging');
+  const startTime = Date.now();
+  console.log(`📤 [AI ENHANCED] Sending response to ${candidateId} via ${channel}: "${response.content.substring(0, 50)}..."`);
 
-  // Send via unified messaging service with explicit channel
-  // The messaging service will route to the correct channel
-  const result = await messaging.sendToCandidate(candidateId, response.content, {
-    channel: channel,  // Use the channel the worker messaged from
-    replyToChannel: channel,  // Explicit: reply on same channel
-    aiGenerated: true,
-    aiSource: response.source || 'llm',
-  });
-  console.log(`📤 [AI] Send result:`, result.success ? `SUCCESS via ${result.channel}` : `FAILED: ${result.error}`);
+  try {
+    const messaging = require('../messaging');
 
-  // Update the log to mark as sent
-  if (response.logId) {
-    db.prepare(`
-      UPDATE ai_response_logs SET status = 'sent', channel = ? WHERE id = ?
-    `).run(channel, response.logId);
+    // Enhanced channel routing for SLM responses
+    const routingOptions = {
+      channel: channel,  // Use the channel the worker messaged from
+      replyToChannel: channel,  // Explicit: reply on same channel
+      aiGenerated: true,
+      aiSource: response.source || 'llm',
+    };
 
-    // Store pending feedback for implicit learning (Auto mode)
-    if (originalQuestion) {
-      ml.storePendingFeedback(candidateId, response.logId, originalQuestion);
+    // Special handling for SLM-related responses
+    if (response.source && (
+        response.source.includes('smart_response_router') ||
+        response.source.includes('interview_scheduling') ||
+        response.source.includes('slm_bridge') ||
+        response.source.includes('slm') ||
+        response.source.includes('fact_based_real_data')
+      )) {
+      routingOptions.slmGenerated = true;
+      routingOptions.requiresReliability = true;
+      routingOptions.isPendingCandidate = response.isPendingUser || false;
+      routingOptions.usesRealData = response.usesRealData || false;
+
+      console.log(`📤 [AI ENHANCED] SLM response detected, using enhanced routing`, {
+        candidateId,
+        source: response.source,
+        slmGenerated: true,
+        usesRealData: routingOptions.usesRealData,
+        channel
+      });
     }
+
+    // Send via unified messaging service with enhanced options
+    const result = await messaging.sendToCandidate(candidateId, response.content, routingOptions);
+
+    const responseTime = Date.now() - startTime;
+
+    console.log(`📤 [AI ENHANCED] Send result:`, {
+      success: result.success,
+      channel: result.channel,
+      error: result.error,
+      responseTime: `${responseTime}ms`,
+      slmGenerated: routingOptions.slmGenerated || false
+    });
+
+    // Update the log to mark as sent with enhanced metadata
+    if (response.logId) {
+      // Basic update that works with existing schema
+      db.prepare(`
+        UPDATE ai_response_logs SET status = 'sent', channel = ? WHERE id = ?
+      `).run(channel, response.logId);
+
+      // Store pending feedback for implicit learning (Auto mode)
+      if (originalQuestion) {
+        try {
+          ml.storePendingFeedback(candidateId, response.logId, originalQuestion);
+        } catch (feedbackError) {
+          console.warn('Failed to store pending feedback:', feedbackError.message);
+        }
+      }
+    }
+
+    // Enhanced admin notification with more context
+    const { broadcastToAdmins } = require('../../websocket');
+
+    broadcastToAdmins({
+      type: 'ai_message_sent',
+      candidateId,
+      message: result.message,
+      aiLogId: response.logId,
+      source: response.source,
+      channel: channel,
+      slmGenerated: routingOptions.slmGenerated || false,
+      usesRealData: routingOptions.usesRealData || false,
+      responseTime: responseTime,
+      routingSuccess: result.success,
+      timestamp: new Date().toISOString()
+    });
+
+    return result;
+
+  } catch (error) {
+    const responseTime = Date.now() - startTime;
+
+    console.error(`📤 [AI ENHANCED] Failed to send AI response:`, {
+      candidateId,
+      error: error.message,
+      responseTime: `${responseTime}ms`,
+      source: response.source
+    });
+
+    // Update log with failure status if possible
+    if (response.logId) {
+      try {
+        db.prepare(`
+          UPDATE ai_response_logs SET status = 'send_failed' WHERE id = ?
+        `).run(response.logId);
+      } catch (dbError) {
+        console.warn('Failed to update log with error status:', dbError.message);
+      }
+    }
+
+    // Notify admins of send failure
+    try {
+      const { broadcastToAdmins } = require('../../websocket');
+
+      broadcastToAdmins({
+        type: 'ai_message_send_failed',
+        candidateId,
+        aiLogId: response.logId,
+        source: response.source,
+        error: error.message,
+        channel: channel,
+        responseTime: responseTime,
+        requiresManualIntervention: true,
+        timestamp: new Date().toISOString()
+      });
+    } catch (adminNotifyError) {
+      console.error('Failed to notify admins of send failure:', adminNotifyError.message);
+    }
+
+    // Re-throw error for upstream handling
+    throw error;
   }
-
-  // Broadcast to admins that AI sent a message
-  const { broadcastToAdmins } = require('../../websocket');
-
-  broadcastToAdmins({
-    type: 'ai_message_sent',
-    candidateId,
-    message: result.message,
-    aiLogId: response.logId,
-    source: response.source,
-    channel: channel,
-  });
-
-  return result;
 }
 
 /**
@@ -560,6 +908,11 @@ module.exports = {
   updateSetting,
   getConversationMode,
   setConversationMode,
+
+  // SLM Settings
+  getSLMSettings,
+  getConversationSLMMode,
+  setConversationSLMMode,
 
   // Core functions
   generateResponse,

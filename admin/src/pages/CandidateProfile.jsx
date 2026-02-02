@@ -29,8 +29,9 @@ import Avatar from '../components/ui/Avatar';
 import Modal, { ModalFooter } from '../components/ui/Modal';
 import Input from '../components/ui/Input';
 import Select from '../components/ui/Select';
+import PerformanceScores from '../components/candidate/PerformanceScores';
 import { clsx } from 'clsx';
-import { XP_THRESHOLDS as xpThresholds, LEVEL_TITLES } from '../../../shared/utils/gamification-esm';
+import { XP_THRESHOLDS as xpThresholds, LEVEL_TITLES } from '../../../shared/utils/gamification-browser';
 
 // Level configuration (uses shared LEVEL_TITLES)
 const levelConfig = {
@@ -394,7 +395,7 @@ export default function CandidateProfile() {
 
       {/* Tab Content */}
       {activeTab === 'overview' && (
-        <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
+        <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
           {/* Certifications */}
           <Card>
             <CardHeader>
@@ -446,8 +447,11 @@ export default function CandidateProfile() {
             </CardContent>
           </Card>
 
+          {/* Performance Scores */}
+          <PerformanceScores candidateId={candidate.id} />
+
           {/* Recent Achievements */}
-          <Card className="lg:col-span-2">
+          <Card className="lg:col-span-3">
             <CardHeader>
               <CardTitle className="flex items-center gap-2">
                 <TrophyIcon className="h-5 w-5 text-amber-500" />

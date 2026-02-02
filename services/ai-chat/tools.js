@@ -168,12 +168,26 @@ function getWorkerPaymentStatus(candidateId) {
  */
 function escalateConversation(candidateId, reason) {
   try {
-    const conversationManager = require('../conversation-manager');
+    // Use new escalation system
+    const escalationSystem = require('../admin-escalation-system');
 
-    // Update conversation metadata
+    // Create formal escalation with AI context
+    const escalation = escalationSystem.createEscalation(
+      candidateId,
+      escalationSystem.TRIGGER_TYPES.AI_CONFIDENCE,
+      reason,
+      'HIGH', // AI-triggered escalations are high priority
+      {
+        aiGenerated: true,
+        source: 'ai_tools',
+        timestamp: new Date().toISOString()
+      }
+    );
+
+    // Also update conversation metadata for backward compatibility
+    const conversationManager = require('../conversation-manager');
     conversationManager.updateStatus(candidateId, 'open');
     conversationManager.updatePriority(candidateId, 'high');
-    conversationManager.escalate(candidateId, reason, 'ai');
 
     // Get candidate name for notification
     const candidate = db.prepare('SELECT name FROM candidates WHERE id = ?').get(candidateId);

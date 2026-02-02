@@ -494,7 +494,7 @@ function createSchema() {
       candidate_id TEXT,
       registration_date DATE,
       first_job_date DATE,
-      is_active INTEGER DEFAULT 1,
+      active INTEGER DEFAULT 1,
       created_at DATETIME DEFAULT CURRENT_TIMESTAMP,
       FOREIGN KEY (candidate_id) REFERENCES candidates(id)
     );
@@ -1042,6 +1042,13 @@ function seedEssentialData() {
   // Clear old achievements and insert new ones based on GamificationStrategy.md
   if (achievementCount === 0) {
     const achievements = [
+      // GETTING STARTED - Special category for newcomers
+      ['ACH_WELCOME', 'Welcome Aboard', 'Complete your first login to WorkLink', 'user-check', 'special', 'first_login', 1, 50, 'common'],
+      ['ACH_ALL_SET', 'All Set', 'Complete your profile with name, phone, photo, and address', 'check-circle', 'special', 'profile_complete', 1, 100, 'common'],
+      ['ACH_VERIFIED', 'Verified Worker', 'Successfully verify your email address', 'mail-check', 'special', 'email_verified', 1, 75, 'common'],
+      ['ACH_QUEST_STARTER', 'Quest Starter', 'Complete your first quest', 'map', 'special', 'first_quest', 1, 100, 'common'],
+      ['ACH_FIRST_SHIFT', 'First Shift Hero', 'Successfully complete your very first job shift', 'star', 'special', 'first_job_complete', 1, 250, 'rare'],
+
       // THE RELIABLE - Attendance Focused
       ['ACH_IRONCLAD_1', 'Ironclad I', 'Complete 10 shifts without a single cancellation', 'shield', 'reliable', 'no_cancel_streak', 10, 300, 'common'],
       ['ACH_IRONCLAD_2', 'Ironclad II', 'Complete 50 shifts without a single cancellation', 'shield-check', 'reliable', 'no_cancel_streak', 50, 750, 'rare'],
@@ -1067,6 +1074,9 @@ function seedEssentialData() {
   const questCount = db.prepare('SELECT COUNT(*) as c FROM quests').get().c;
   if (questCount === 0) {
     const quests = [
+      // One-time Quests (Special category) - Objective: Onboarding completion
+      ['QST_PROFILE', 'Complete Your Profile', 'Fill in all profile details: name, phone, photo, and address', 'special', '{"type":"profile_completion","count":1}', 100, 50, 1],
+
       // Daily Quests (Reset 00:00) - Objective: Daily Active Users (DAU)
       ['QST_CHECKIN', 'Check-in', 'Open the app today', 'daily', '{"type":"app_open","count":1}', 10, 0, 1],
       ['QST_READY', 'Ready to Work', 'Update availability calendar for the next 3 days', 'daily', '{"type":"update_availability","days":3}', 50, 0, 1],

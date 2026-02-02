@@ -1,0 +1,328 @@
+{
+  "passed": [
+    {
+      "category": "Login",
+      "description": "Login page loads successfully",
+      "title": "WorkLink Command Center"
+    },
+    {
+      "category": "Login",
+      "description": "Invalid credentials show error message",
+      "message": "Invalid admin credentials"
+    },
+    {
+      "category": "Navigation",
+      "description": "Found 19 navigation links",
+      "count": 19
+    },
+    {
+      "category": "Navigation",
+      "description": "Candidates page loads successfully",
+      "path": "/candidates"
+    },
+    {
+      "category": "Navigation",
+      "description": "Jobs page loads successfully",
+      "path": "/jobs"
+    },
+    {
+      "category": "Navigation",
+      "description": "Clients page loads successfully",
+      "path": "/clients"
+    },
+    {
+      "category": "Navigation",
+      "description": "BPO Dashboard page loads successfully",
+      "path": "/bpo"
+    },
+    {
+      "category": "Navigation",
+      "description": "Deployments page loads successfully",
+      "path": "/deployments"
+    },
+    {
+      "category": "Navigation",
+      "description": "Payments page loads successfully",
+      "path": "/payments"
+    },
+    {
+      "category": "Navigation",
+      "description": "Financials page loads successfully",
+      "path": "/financials"
+    },
+    {
+      "category": "Navigation",
+      "description": "Settings page loads successfully",
+      "path": "/settings"
+    },
+    {
+      "category": "Navigation",
+      "description": "Chat page loads successfully",
+      "path": "/chat"
+    },
+    {
+      "category": "Navigation",
+      "description": "Training page loads successfully",
+      "path": "/training"
+    },
+    {
+      "category": "Navigation",
+      "description": "Gamification page loads successfully",
+      "path": "/gamification"
+    },
+    {
+      "category": "Navigation",
+      "description": "Tender Monitor page loads successfully",
+      "path": "/tender-monitor"
+    },
+    {
+      "category": "Navigation",
+      "description": "AI Automation page loads successfully",
+      "path": "/ai-automation"
+    },
+    {
+      "category": "Navigation",
+      "description": "AI Sourcing page loads successfully",
+      "path": "/ai-sourcing"
+    },
+    {
+      "category": "Navigation",
+      "description": "ML Dashboard page loads successfully",
+      "path": "/ml-dashboard"
+    },
+    {
+      "category": "Navigation",
+      "description": "Telegram Groups page loads successfully",
+      "path": "/telegram-groups"
+    },
+    {
+      "category": "Navigation",
+      "description": "Ad Optimization page loads successfully",
+      "path": "/ad-optimization"
+    },
+    {
+      "category": "Navigation",
+      "description": "Retention Analytics page loads successfully",
+      "path": "/retention-analytics"
+    },
+    {
+      "category": "Navigation",
+      "description": "Browser back/forward navigation works"
+    },
+    {
+      "category": "Interactive",
+      "description": "Found 19 visible buttons on dashboard",
+      "count": 19
+    },
+    {
+      "category": "Interactive",
+      "description": "Theme toggle found and clicked"
+    },
+    {
+      "category": "Tables",
+      "description": "Jobs list/table renders"
+    },
+    {
+      "category": "Dashboard",
+      "description": "Dashboard displays 14 stat cards",
+      "count": 14
+    },
+    {
+      "category": "Dashboard",
+      "description": "Dashboard contains 67 visualization(s)",
+      "count": 67
+    },
+    {
+      "category": "Dashboard",
+      "description": "Financials page displays 50 visualization(s)",
+      "count": 50
+    },
+    {
+      "category": "Error Handling",
+      "description": "404 routes redirect to valid page"
+    },
+    {
+      "category": "Error Handling",
+      "description": "No critical network errors detected"
+    }
+  ],
+  "failed": [
+    {
+      "category": "Login",
+      "description": "Login did not redirect properly",
+      "severity": "Critical",
+      "expected": "Redirect to dashboard",
+      "actual": "http://localhost:5173/admin"
+    },
+    {
+      "category": "Tables",
+      "description": "Candidates table not found",
+      "severity": "High"
+    },
+    {
+      "category": "Session",
+      "description": "Session management may be broken",
+      "severity": "High",
+      "url": "http://localhost:5173/admin/"
+    },
+    {
+      "category": "General",
+      "description": "Critical error during testing",
+      "severity": "Critical",
+      "error": "No element found for selector: input[name=\"email\"]",
+      "stack": "Error: No element found for selector: input[name=\"email\"]\n    at assert (/home/augustine/Augustine_Projects/worklink_v2/node_modules/puppeteer-core/lib/cjs/puppeteer/util/assert.js:18:15)\n    at CdpFrame.type (/home/augustine/Augustine_Projects/worklink_v2/node_modules/puppeteer-core/lib/cjs/puppeteer/api/Frame.js:885:40)\n    at async runTests (/home/augustine/Augustine_Projects/worklink_v2/test_admin_portal.js:481:5)"
+    }
+  ],
+  "warnings": [
+    {
+      "category": "Login",
+      "description": "Empty form validation may not be working",
+      "severity": "Medium"
+    },
+    {
+      "category": "Interactive",
+      "description": "Sidebar collapse button not found",
+      "severity": "Low"
+    },
+    {
+      "category": "Forms",
+      "description": "No forms found on Settings page",
+      "severity": "Medium"
+    },
+    {
+      "category": "Modals",
+      "description": "No modals could be opened for testing",
+      "severity": "Low"
+    },
+    {
+      "category": "Error Handling",
+      "description": "Console errors detected: 9",
+      "severity": "Medium",
+      "errors": [
+        "Failed to load resource: the server responded with a status of 401 (Unauthorized)",
+        "Failed to load resource: the server responded with a status of 401 (Unauthorized)",
+        "Failed to load resource: the server responded with a status of 401 (Unauthorized)",
+        "Failed to load resource: the server responded with a status of 401 (Unauthorized)",
+        "Failed to load resource: the server responded with a status of 401 (Unauthorized)",
+        "Failed to load resource: the server responded with a status of 401 (Unauthorized)",
+        "Failed to load resource: the server responded with a status of 401 (Unauthorized)",
+        "Failed to load resource: the server responded with a status of 401 (Unauthorized)",
+        "Failed to load resource: the server responded with a status of 401 (Unauthorized)"
+      ]
+    }
+  ],
+  "screenshots": [
+    {
+      "name": "login_page",
+      "path": "/home/augustine/Augustine_Projects/worklink_v2/test_screenshots/login_page_1770047365190.png"
+    },
+    {
+      "name": "login_error",
+      "path": "/home/augustine/Augustine_Projects/worklink_v2/test_screenshots/login_error_1770047366479.png"
+    },
+    {
+      "name": "after_login",
+      "path": "/home/augustine/Augustine_Projects/worklink_v2/test_screenshots/after_login_1770047371207.png"
+    },
+    {
+      "name": "route__candidates",
+      "path": "/home/augustine/Augustine_Projects/worklink_v2/test_screenshots/route__candidates_1770047372947.png"
+    },
+    {
+      "name": "route__jobs",
+      "path": "/home/augustine/Augustine_Projects/worklink_v2/test_screenshots/route__jobs_1770047375030.png"
+    },
+    {
+      "name": "route__clients",
+      "path": "/home/augustine/Augustine_Projects/worklink_v2/test_screenshots/route__clients_1770047377019.png"
+    },
+    {
+      "name": "route__bpo",
+      "path": "/home/augustine/Augustine_Projects/worklink_v2/test_screenshots/route__bpo_1770047378689.png"
+    },
+    {
+      "name": "route__deployments",
+      "path": "/home/augustine/Augustine_Projects/worklink_v2/test_screenshots/route__deployments_1770047381094.png"
+    },
+    {
+      "name": "route__payments",
+      "path": "/home/augustine/Augustine_Projects/worklink_v2/test_screenshots/route__payments_1770047393055.png"
+    },
+    {
+      "name": "route__financials",
+      "path": "/home/augustine/Augustine_Projects/worklink_v2/test_screenshots/route__financials_1770047394769.png"
+    },
+    {
+      "name": "route__settings",
+      "path": "/home/augustine/Augustine_Projects/worklink_v2/test_screenshots/route__settings_1770047397127.png"
+    },
+    {
+      "name": "route__chat",
+      "path": "/home/augustine/Augustine_Projects/worklink_v2/test_screenshots/route__chat_1770047399068.png"
+    },
+    {
+      "name": "route__training",
+      "path": "/home/augustine/Augustine_Projects/worklink_v2/test_screenshots/route__training_1770047400824.png"
+    },
+    {
+      "name": "route__gamification",
+      "path": "/home/augustine/Augustine_Projects/worklink_v2/test_screenshots/route__gamification_1770047402706.png"
+    },
+    {
+      "name": "route__tender-monitor",
+      "path": "/home/augustine/Augustine_Projects/worklink_v2/test_screenshots/route__tender-monitor_1770047405609.png"
+    },
+    {
+      "name": "route__ai-automation",
+      "path": "/home/augustine/Augustine_Projects/worklink_v2/test_screenshots/route__ai-automation_1770047426928.png"
+    },
+    {
+      "name": "route__ai-sourcing",
+      "path": "/home/augustine/Augustine_Projects/worklink_v2/test_screenshots/route__ai-sourcing_1770047428930.png"
+    },
+    {
+      "name": "route__ml-dashboard",
+      "path": "/home/augustine/Augustine_Projects/worklink_v2/test_screenshots/route__ml-dashboard_1770047430948.png"
+    },
+    {
+      "name": "route__telegram-groups",
+      "path": "/home/augustine/Augustine_Projects/worklink_v2/test_screenshots/route__telegram-groups_1770047432953.png"
+    },
+    {
+      "name": "route__ad-optimization",
+      "path": "/home/augustine/Augustine_Projects/worklink_v2/test_screenshots/route__ad-optimization_1770047434949.png"
+    },
+    {
+      "name": "route__retention-analytics",
+      "path": "/home/augustine/Augustine_Projects/worklink_v2/test_screenshots/route__retention-analytics_1770047436953.png"
+    },
+    {
+      "name": "theme_toggle",
+      "path": "/home/augustine/Augustine_Projects/worklink_v2/test_screenshots/theme_toggle_1770047440895.png"
+    },
+    {
+      "name": "jobs_table",
+      "path": "/home/augustine/Augustine_Projects/worklink_v2/test_screenshots/jobs_table_1770047445498.png"
+    },
+    {
+      "name": "settings_page",
+      "path": "/home/augustine/Augustine_Projects/worklink_v2/test_screenshots/settings_page_1770047447499.png"
+    },
+    {
+      "name": "dashboard_overview",
+      "path": "/home/augustine/Augustine_Projects/worklink_v2/test_screenshots/dashboard_overview_1770047452000.png"
+    },
+    {
+      "name": "financials_page",
+      "path": "/home/augustine/Augustine_Projects/worklink_v2/test_screenshots/financials_page_1770047454507.png"
+    },
+    {
+      "name": "not_found_page",
+      "path": "/home/augustine/Augustine_Projects/worklink_v2/test_screenshots/not_found_page_1770047456500.png"
+    },
+    {
+      "name": "session_cleared",
+      "path": "/home/augustine/Augustine_Projects/worklink_v2/test_screenshots/session_cleared_1770047459501.png"
+    }
+  ]
+}

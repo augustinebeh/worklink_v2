@@ -1,7 +1,7 @@
 import { forwardRef } from 'react';
 import { clsx } from 'clsx';
 import { ZapIcon } from 'lucide-react';
-import { XP_THRESHOLDS as xpThresholds, LEVEL_TITLES as levelTitles } from '../../../../shared/utils/gamification-esm';
+import { XP_THRESHOLDS as xpThresholds, LEVEL_TITLES as levelTitles } from '../../../../shared/utils/gamification-browser';
 
 /**
  * Shared XP Bar Component
@@ -137,4 +137,4 @@ export function XPBarWithBadge({
 }
 
 // Re-export utilities for convenience
-export { LEVEL_TITLES, XP_THRESHOLDS } from '../../../../shared/utils/gamification-esm';
+export { LEVEL_TITLES, XP_THRESHOLDS } from '../../../../shared/utils/gamification-browser';

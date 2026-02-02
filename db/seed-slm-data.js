@@ -27,18 +27,66 @@ function getDb() {
 // ============================================
 
 const seedData = [
-  // Finance - Withdrawal
-  { intent: "finance_withdrawal", prompt: "How do I cash out my earnings?", completion: "Go to the Wallet tab and tap 'Withdraw'. Funds usually arrive within 24 hours! 💰" },
-  { intent: "finance_withdrawal", prompt: "Can I transfer my money to PayNow?", completion: "Yes! We support PayNow, bank transfer, and GrabPay. Set up your payout method in Profile > Payment Settings." },
-  { intent: "finance_withdrawal", prompt: "Why is the withdraw button greyed out?", completion: "The withdraw button is locked if your balance is below $20 minimum or if your account is under review." },
-  { intent: "finance_withdrawal", prompt: "When can I withdraw my pay?", completion: "You can withdraw anytime once your balance hits $20. Most workers get their money within 24 hours!" },
-  { intent: "finance_withdrawal", prompt: "Is there a withdrawal fee?", completion: "Nope, withdrawals are free! We don't charge any fees for PayNow or bank transfers." },
+  // PAYMENT INQUIRIES - FACT-BASED ONLY
+  {
+    intent: "payment",
+    prompt: "When will I get paid?",
+    completion: "Payment timing depends on job completion and client approval. I'll check with the admin team on your specific jobs and provide an accurate timeline."
+  },
+  {
+    intent: "payment",
+    prompt: "How long does payment take?",
+    completion: "Payment processing time varies by job type and client requirements. Let me have the admin team check your specific situation and get back to you with accurate timing."
+  },
+  {
+    intent: "payment",
+    prompt: "Why is my payment pending?",
+    completion: "I can see you have pending earnings. Payment status depends on job completion verification and client approval processes. I'll flag this for admin review to get you specific details."
+  },
+  {
+    intent: "payment",
+    prompt: "How do I cash out my earnings?",
+    completion: "Go to the Wallet tab and tap 'Withdraw'. Processing time varies by payment method - I'll have the admin team check your specific situation for accurate timing. 💰"
+  },
+  {
+    intent: "payment",
+    prompt: "Is there a withdrawal fee?",
+    completion: "I'll check with the admin team about current withdrawal fees and policies to give you accurate, up-to-date information."
+  },
 
-  // Finance - Pending
-  { intent: "finance_pending", prompt: "Why is my payment still pending after 3 days?", completion: "Payments stay 'Pending' until the client verifies your work. If it's been over 72 hours, our system will auto-approve it." },
-  { intent: "finance_pending", prompt: "I finished the job but didn't get paid.", completion: "Earnings go to 'Pending' right after job completion. Check Wallet > History to see the status. It'll be released soon!" },
-  { intent: "finance_pending", prompt: "How long until pending becomes available?", completion: "Usually 24-48 hours after the client confirms. If it takes longer, we auto-release after 72 hours." },
-  { intent: "finance_pending", prompt: "My money is stuck in pending.", completion: "Don't worry! Pending funds are released within 72 hours max. If there's an issue, I'll flag this for the team to check." },
+  // VERIFICATION INQUIRIES - WITH INTERVIEW SCHEDULING
+  {
+    intent: "verification",
+    prompt: "How long does verification take?",
+    completion: "Account verification typically takes 2-3 business days through our standard review process. However, I can help speed this up by scheduling a verification interview with our friendly consultant, which often leads to same-day approval. Would you like me to check available time slots?"
+  },
+  {
+    intent: "verification",
+    prompt: "When will my account be approved?",
+    completion: "Your account is currently under review by our team. To potentially speed up the process, I can help schedule a quick verification interview with our consultant. This often fast-tracks approval significantly. Would you like me to find a good time for you?"
+  },
+  {
+    intent: "verification",
+    prompt: "Why is my account pending?",
+    completion: "Account reviews ensure quality and safety for all users. While our team completes the standard review process, I can offer to schedule a verification interview which typically accelerates approval. Would you be interested in scheduling one?"
+  },
+
+  // WITHDRAWAL INQUIRIES - NO FALSE PROMISES
+  {
+    intent: "withdrawal",
+    prompt: "How do I withdraw money?",
+    completion: "I'll have the admin team provide you with the current withdrawal process and any requirements. Each situation can be different, so they'll give you accurate, personalized instructions."
+  },
+  {
+    intent: "withdrawal",
+    prompt: "Are withdrawals free?",
+    completion: "I'll check with the admin team about current withdrawal fees and policies to give you accurate, up-to-date information."
+  },
+  {
+    intent: "withdrawal",
+    prompt: "How fast are withdrawals?",
+    completion: "Withdrawal timing depends on the method and various factors. Let me have the admin team check your specific situation and provide accurate timing information."
+  },
 
   // Finance - Payment Amount Queries (triggers tool lookup)
   { intent: "finance_amount", prompt: "How much is my pending payment?", completion: "Let me check your pending earnings... [SYSTEM: Use payment data to show exact amount]" },
@@ -50,21 +98,68 @@ const seedData = [
   { intent: "finance_amount", prompt: "What is my total earnings?", completion: "Let me pull up your earnings summary... [SYSTEM: Show monthly and pending earnings]" },
   { intent: "finance_amount", prompt: "How much have I earned this month?", completion: "Checking your monthly earnings... [SYSTEM: Show monthly earnings total]" },
 
-  // Gamification - XP
-  { intent: "gamification_xp", prompt: "How do I level up to Silver tier?", completion: "Hit 5,000 XP to reach Silver! Earn XP by completing jobs, maintaining streaks, and getting 5-star ratings. You're almost there! 💪" },
-  { intent: "gamification_xp", prompt: "What is the max level?", completion: "Currently Level 50 (Diamond Tier) is the max. We release new prestige levels every season!" },
-  { intent: "gamification_xp", prompt: "How do I earn XP faster?", completion: "Pro tip: Complete jobs during peak hours for 2x XP, maintain your streak, and aim for 5-star ratings. Every little bit adds up!" },
-  { intent: "gamification_xp", prompt: "I lost XP, why?", completion: "XP can be deducted for no-shows or late cancellations. Check your notification history to see what happened." },
+  // JOB INQUIRIES - REALISTIC RESPONSES
+  {
+    intent: "jobs",
+    prompt: "When will I get jobs?",
+    completion: "Job availability depends on your skills, location, and current demand. I'll have the admin team check for opportunities that match your profile and get back to you with specific options."
+  },
+  {
+    intent: "jobs",
+    prompt: "Why am I not getting jobs?",
+    completion: "There could be several factors affecting job assignments. Let me flag this for admin review so they can check your profile, availability settings, and current opportunities in your area."
+  },
+  {
+    intent: "jobs",
+    prompt: "How do I get more work?",
+    completion: "I'll have the admin team review your profile and availability to suggest ways to increase your job opportunities. They can provide personalized advice based on current demand in your area."
+  },
 
-  // Gamification - Rewards & Badges
-  { intent: "gamification_rewards", prompt: "Where can I spend my bonus points?", completion: "Head to the Shop tab! You can get profile glows, avatar frames, or job priority boosters. The Neon Glow is popular!" },
-  { intent: "gamification_badges", prompt: "How do I get the Speedster badge?", completion: "Complete 10 jobs in a row ahead of schedule! It shows clients you're super reliable." },
-  { intent: "gamification_badges", prompt: "What badges can I earn?", completion: "We have Speedster, Reliable Worker, Night Owl, Early Bird, and more! Each one unlocks at different milestones." },
+  // TECHNICAL ISSUES - ESCALATION FOCUSED
+  {
+    intent: "technical",
+    prompt: "The app is not working",
+    completion: "I've flagged this technical issue for immediate admin attention. Please describe the specific problem you're experiencing so they can assist you properly and resolve it quickly."
+  },
+  {
+    intent: "technical",
+    prompt: "I can't log in",
+    completion: "Login issues need immediate attention. I've escalated this to the admin team and they'll contact you directly to resolve this access problem."
+  },
+  {
+    intent: "technical",
+    prompt: "App keeps crashing",
+    completion: "I've flagged this app stability issue for urgent technical review. The admin team will investigate this immediately and may reach out for additional details to fix it."
+  },
 
-  // Gamification - Streak
-  { intent: "gamification_streak", prompt: "I missed one day, is my streak gone?", completion: "Alamak, yes - missing a day resets your streak. But you can buy a 'Streak Freeze' from the Shop to protect it next time!" },
-  { intent: "gamification_streak", prompt: "How do I get the blue fire streak icon?", completion: "The Blue Fire icon unlocks at a 30-day streak! It shows everyone you're consistently crushing it. 🔥" },
-  { intent: "gamification_streak", prompt: "What's the point of maintaining a streak?", completion: "Streaks give you bonus XP daily and unlock exclusive badges. A 7-day streak gives 50 bonus XP per day!" },
+  // GENERAL SUPPORT - HONEST AND HELPFUL
+  {
+    intent: "general",
+    prompt: "I need help",
+    completion: "I'm here to help! Can you tell me more about what you need assistance with? I'll make sure the right team member gets back to you with accurate information."
+  },
+  {
+    intent: "general",
+    prompt: "Who can I contact?",
+    completion: "I'll make sure your message reaches the appropriate admin team member who can best assist with your specific question. They'll respond personally within a few hours."
+  },
+  {
+    intent: "general",
+    prompt: "Is there a phone number?",
+    completion: "I'll have the admin team provide you with the best contact method for your specific situation. Different issues may have different preferred contact channels."
+  },
+
+  // URGENT/EMERGENCY - IMMEDIATE ESCALATION
+  {
+    intent: "urgent",
+    prompt: "This is urgent",
+    completion: "I understand this is urgent for you. I've immediately flagged your message for priority admin attention and they'll respond as quickly as possible."
+  },
+  {
+    intent: "urgent",
+    prompt: "I have a complaint",
+    completion: "I've escalated your complaint to the admin team for immediate review. They'll address your concerns personally and work to resolve the issue quickly."
+  },
 
   // Job Execution
   { intent: "job_execution", prompt: "The GPS won't let me check in.", completion: "Make sure you're within 50m of the job site. Try toggling WiFi off/on to refresh your location. Still stuck? Use the manual check-in option." },
@@ -247,38 +342,38 @@ const synonyms = {
 
 const templates = [
   // ============================================
-  // FINANCE - WITHDRAWAL (20+ variations)
+  // WITHDRAWAL INQUIRIES - FACT-BASED ONLY
   // ============================================
-  { intent: "finance_withdrawal", text: "{I want to} {cash out} my {earnings}.", answer: "Go to the Wallet tab and tap 'Withdraw'. Should take about 24 hours!" },
-  { intent: "finance_withdrawal", text: "{How do I} {cash out}?", answer: "Head to Wallet > Withdraw. You can use PayNow, bank transfer, or GrabPay!" },
-  { intent: "finance_withdrawal", text: "{Can I} {cash out} my {earnings} {today}?", answer: "Yes! Go to Wallet > Withdraw. Minimum is $20." },
-  { intent: "finance_withdrawal", text: "{I want to} get my {earnings} out.", answer: "Tap Withdraw in your Wallet. Money arrives within 24 hours!" },
-  { intent: "finance_withdrawal", text: "When {can} I {cash out}?", answer: "Anytime your balance is $20 or more. Go to Wallet > Withdraw." },
-  { intent: "finance_withdrawal", text: "Is there a fee to {cash out}?", answer: "Nope! Withdrawals are completely free." },
-  { intent: "finance_withdrawal", text: "{Where is} the {cash out} button?", answer: "Open Wallet tab, you'll see the Withdraw button at the top." },
-  { intent: "finance_withdrawal", text: "Minimum {cash out} amount?", answer: "Minimum withdrawal is $20. Once you hit that, you can withdraw anytime!" },
-  { intent: "finance_withdrawal", text: "{How do I} transfer {earnings} to bank?", answer: "Wallet > Withdraw > Select Bank Transfer. Add your bank details first in Profile." },
-  { intent: "finance_withdrawal", text: "{cash out} to PayNow {can}?", answer: "Yes! PayNow is the fastest - usually within a few hours." },
-  { intent: "finance_withdrawal", text: "{I want to} {cash out} everything.", answer: "Go to Wallet > Withdraw and enter the full amount. Minimum $20 though!" },
-  { intent: "finance_withdrawal", text: "Why {can} I not {cash out}?", answer: "Check if your balance is at least $20. Also make sure your bank details are verified." },
-  { intent: "finance_withdrawal", text: "{cash out} button grey.", answer: "Grey button means balance below $20 minimum, or account under review." },
-  { intent: "finance_withdrawal", text: "How long for {cash out}?", answer: "PayNow: few hours. Bank transfer: 1-2 business days. Usually fast!" },
+  { intent: "withdrawal", text: "{I want to} {cash out} my {earnings}.", answer: "Go to the Wallet tab and tap 'Withdraw'. I'll have the admin team provide accurate timing for your specific case." },
+  { intent: "withdrawal", text: "{How do I} {cash out}?", answer: "Head to Wallet > Withdraw. I'll check with admin about current processing times and fees." },
+  { intent: "withdrawal", text: "{Can I} {cash out} my {earnings} {today}?", answer: "You can request withdrawal if your balance is above the minimum. Processing time varies - let me check with admin." },
+  { intent: "withdrawal", text: "{I want to} get my {earnings} out.", answer: "I'll have the admin team provide you with the current withdrawal process and timeline for your situation." },
+  { intent: "withdrawal", text: "When {can} I {cash out}?", answer: "Once you meet the minimum balance requirement. I'll check current policies with the admin team." },
+  { intent: "withdrawal", text: "Is there a fee to {cash out}?", answer: "I'll check with the admin team about current withdrawal fees and policies to give you accurate information." },
+  { intent: "withdrawal", text: "{Where is} the {cash out} button?", answer: "Open Wallet tab to find the Withdraw option. I'll have admin verify the current process for you." },
+  { intent: "withdrawal", text: "Minimum {cash out} amount?", answer: "I'll check with the admin team about current minimum withdrawal amounts and requirements." },
+  { intent: "withdrawal", text: "{How do I} transfer {earnings} to bank?", answer: "I'll have the admin team guide you through the bank transfer process and requirements." },
+  { intent: "withdrawal", text: "{cash out} to PayNow {can}?", answer: "I'll check with admin about available withdrawal methods and their processing requirements." },
+  { intent: "withdrawal", text: "{I want to} {cash out} everything.", answer: "I'll have the admin team help you with the complete withdrawal process and any requirements." },
+  { intent: "withdrawal", text: "Why {can} I not {cash out}?", answer: "Let me flag this for admin review to check your account status and withdrawal eligibility." },
+  { intent: "withdrawal", text: "{cash out} button grey.", answer: "Grey button usually indicates restrictions. I'll have the admin team check your account status." },
+  { intent: "withdrawal", text: "How long for {cash out}?", answer: "Processing time varies by method and situation. I'll have admin provide accurate timing for your case." },
 
   // ============================================
-  // FINANCE - PENDING (15+ variations)
+  // PAYMENT INQUIRIES - FACT-BASED ONLY
   // ============================================
-  { intent: "finance_pending", text: "{Why is} my payment {pending}?", answer: "Payments stay pending until the client verifies. Usually 24-48 hours, max 72 hours." },
-  { intent: "finance_pending", text: "My {earnings} are {pending} too long.", answer: "If it's been over 72 hours, our system auto-approves it. Let me check your account." },
-  { intent: "finance_pending", text: "{Why is} my {earnings} still {pending}?", answer: "Client verification takes 24-48 hours. Auto-releases after 72 hours max." },
-  { intent: "finance_pending", text: "Payment {pending} for days already.", answer: "Let me check. If over 72 hours, it should auto-release. I'll flag this for the team." },
-  { intent: "finance_pending", text: "{I want to} know why {earnings} {pending}.", answer: "Pending means waiting for client verification. Usually clears in 24-48 hours." },
-  { intent: "finance_pending", text: "{earnings} never come.", answer: "Check Wallet > History for status. If pending over 72hrs, it auto-releases." },
-  { intent: "finance_pending", text: "Still waiting for {earnings}.", answer: "Pending payments clear within 72 hours max. I can check the status for you." },
-  { intent: "finance_pending", text: "{What is} {pending} payment?", answer: "Pending = waiting for client to verify your work. Auto-releases after 72 hours." },
-  { intent: "finance_pending", text: "When will {pending} clear?", answer: "Usually 24-48 hours after job completion. Max 72 hours then auto-releases." },
-  { intent: "finance_pending", text: "{client} never approve my {earnings}.", answer: "Don't worry! After 72 hours, the system automatically releases your payment." },
-  { intent: "finance_pending", text: "Payment stuck.", answer: "Let me check. Payments auto-release after 72 hours if client doesn't verify." },
-  { intent: "finance_pending", text: "{How do I} speed up {pending}?", answer: "Unfortunately you need to wait for client verification. Max 72 hours though!" },
+  { intent: "payment", text: "{Why is} my payment {pending}?", answer: "Payment status depends on job completion verification and client processes. I'll flag this for admin review to get you specific details." },
+  { intent: "payment", text: "My {earnings} are {pending} too long.", answer: "I'll have the admin team check your specific payment status and provide accurate timing information." },
+  { intent: "payment", text: "{Why is} my {earnings} still {pending}?", answer: "Payment processing time varies. Let me have the admin team check your specific situation and provide updates." },
+  { intent: "payment", text: "Payment {pending} for days already.", answer: "I'll flag this for immediate admin attention to review your payment status and provide accurate information." },
+  { intent: "payment", text: "{I want to} know why {earnings} {pending}.", answer: "Payment status depends on various factors. I'll have the admin team provide specific details about your case." },
+  { intent: "payment", text: "{earnings} never come.", answer: "I'll escalate this to the admin team for immediate review of your payment status and timeline." },
+  { intent: "payment", text: "Still waiting for {earnings}.", answer: "I'll have the admin team check your payment status and provide you with accurate timing information." },
+  { intent: "payment", text: "{What is} {pending} payment?", answer: "Pending means payment is being processed. I'll have admin explain the specific status of your payment." },
+  { intent: "payment", text: "When will {pending} clear?", answer: "Processing time varies by situation. Let me have the admin team check your specific case and provide accurate timing." },
+  { intent: "payment", text: "{client} never approve my {earnings}.", answer: "I'll flag this for admin review to check the approval process and provide you with specific updates." },
+  { intent: "payment", text: "Payment stuck.", answer: "I'll escalate this to the admin team for immediate review of your payment status." },
+  { intent: "payment", text: "{How do I} speed up {pending}?", answer: "I'll have the admin team review your situation and explain the current process and any options available." },
 
   // ============================================
   // JOB SEARCH (25+ variations)

@@ -17,6 +17,13 @@ import { clsx } from 'clsx';
 import EmojiPicker from 'emoji-picker-react';
 import { LogoIcon } from '../components/ui/Logo';
 import { DEFAULT_LOCALE, TIMEZONE, getSGDateString, MS_PER_DAY } from '../utils/constants';
+import {
+  InterviewOfferCard,
+  AvailabilitySelector,
+  InterviewConfirmation,
+  SchedulingStatusIndicator,
+  useInterviewScheduling
+} from '../components/chat/InterviewSchedulingComponents';
 
 // Parse DB timestamp (stored as UTC without timezone indicator)
 function parseUTCTimestamp(timestamp) {
@@ -180,6 +187,22 @@ export default function Chat() {
   const fileInputRef = useRef(null);
   const typingTimeoutRef = useRef(null);
   const isTypingSentRef = useRef(false);
+
+  // Interview scheduling state
+  const [showAvailabilitySelector, setShowAvailabilitySelector] = useState(false);
+  const [pendingInterviewOffer, setPendingInterviewOffer] = useState(null);
+  const [availableSlots, setAvailableSlots] = useState([]);
+  const [slotsLoading, setSlotsLoading] = useState(false);
+
+  // Use interview scheduling hook
+  const {
+    status: interviewStatus,
+    loading: interviewLoading,
+    error: interviewError,
+    refetch: refetchInterviewStatus,
+    fetchAvailableSlots,
+    scheduleInterview
+  } = useInterviewScheduling(user?.id);
 
   useEffect(() => {
     if (user) fetchMessages();
@@ -390,6 +413,137 @@ export default function Chat() {
     inputRef.current?.focus();
   };
 
+  // Interview scheduling handlers
+  const handleInterviewOfferAccept = async (offer) => {
+    try {
+      if (offer?.suggestedSlot) {
+        // Book the suggested slot directly
+        await scheduleInterview(
+          offer.suggestedSlot.date,
+          offer.suggestedSlot.time,
+          'Accepted suggested slot from SLM'
+        );
+        setPendingInterviewOffer(null);
+      } else {
+        // Show availability selector
+        setSlotsLoading(true);
+        try {
+          const slots = await fetchAvailableSlots(7);
+          setAvailableSlots(slots);
+          setShowAvailabilitySelector(true);
+          setPendingInterviewOffer(null);
+        } catch (error) {
+          console.error('Failed to fetch available slots:', error);
+          // Could show an error message here
+        } finally {
+          setSlotsLoading(false);
+        }
+      }
+    } catch (error) {
+      console.error('Failed to accept interview offer:', error);
+      // Could show an error message here
+    }
+  };
+
+  const handleInterviewOfferDecline = () => {
+    setPendingInterviewOffer(null);
+    // Could send a message back to chat indicating decline
+  };
+
+  const handleInterviewOfferViewAvailability = async () => {
+    setSlotsLoading(true);
+    try {
+      const slots = await fetchAvailableSlots(7);
+      setAvailableSlots(slots);
+      setShowAvailabilitySelector(true);
+      setPendingInterviewOffer(null);
+    } catch (error) {
+      console.error('Failed to fetch available slots:', error);
+      // Could show an error message here
+    } finally {
+      setSlotsLoading(false);
+    }
+  };
+
+  const handleAvailabilitySlotSelect = async (slot) => {
+    try {
+      await scheduleInterview(slot.date, slot.time, 'Selected from availability picker');
+      setShowAvailabilitySelector(false);
+      setAvailableSlots([]);
+    } catch (error) {
+      console.error('Failed to schedule interview:', error);
+      // Could show an error message here
+    }
+  };
+
+  const handleAvailabilityCancel = () => {
+    setShowAvailabilitySelector(false);
+    setAvailableSlots([]);
+  };
+
+  const handleInterviewReschedule = async () => {
+    setSlotsLoading(true);
+    try {
+      const slots = await fetchAvailableSlots(7);
+      setAvailableSlots(slots);
+      setShowAvailabilitySelector(true);
+    } catch (error) {
+      console.error('Failed to fetch available slots for reschedule:', error);
+    } finally {
+      setSlotsLoading(false);
+    }
+  };
+
+  const handleAddToCalendar = (interview) => {
+    // Create calendar event
+    const startDate = new Date(`${interview.scheduled_date}T${interview.scheduled_time}:00`);
+    const endDate = new Date(startDate.getTime() + (interview.duration_minutes || 30) * 60000);
+
+    const eventDetails = {
+      title: 'WorkLink Interview - Verification Call',
+      start: startDate.toISOString(),
+      end: endDate.toISOString(),
+      details: `Interview with WorkLink consultant.\n\nMeeting Link: ${interview.meeting_link}\n\nNotes: ${interview.notes || 'Verification interview for account approval'}`
+    };
+
+    // Create calendar URLs
+    const googleCalUrl = `https://calendar.google.com/calendar/render?action=TEMPLATE&text=${encodeURIComponent(eventDetails.title)}&dates=${startDate.toISOString().replace(/[-:]/g, '').split('.')[0]}Z/${endDate.toISOString().replace(/[-:]/g, '').split('.')[0]}Z&details=${encodeURIComponent(eventDetails.details)}`;
+
+    // Open in new window
+    window.open(googleCalUrl, '_blank');
+  };
+
+  // Parse interview offers from SLM messages
+  useEffect(() => {
+    if (!messages.length) return;
+
+    const lastMessage = messages[messages.length - 1];
+
+    // Check if the last message from admin contains interview offer
+    if (lastMessage.sender === 'admin' && lastMessage.content) {
+      const content = lastMessage.content.toLowerCase();
+
+      // Look for interview scheduling keywords
+      if (content.includes('schedule') && content.includes('interview') ||
+          content.includes('verification call') ||
+          content.includes('15-minute') ||
+          content.includes('book now')) {
+
+        // Extract suggested time if present (this would be enhanced with actual SLM integration)
+        const timeMatch = content.match(/(\d{1,2}:\d{2}|\d{1,2}\s*(am|pm))/i);
+        const dateMatch = content.match(/(monday|tuesday|wednesday|thursday|friday|saturday|sunday|today|tomorrow)/i);
+
+        if (timeMatch || dateMatch) {
+          setPendingInterviewOffer({
+            messageId: lastMessage.id,
+            content: lastMessage.content,
+            suggestedSlot: null // Would be extracted from SLM response
+          });
+        }
+      }
+    }
+  }, [messages]);
+
   const sortedMessages = [...messages].sort((a, b) => {
     const timeA = parseUTCTimestamp(a.created_at).getTime();
     const timeB = parseUTCTimestamp(b.created_at).getTime();
@@ -431,6 +585,14 @@ export default function Chat() {
               <span className="text-xs text-white/40">
                 {ws?.isConnected ? (isTyping ? 'Typing...' : 'Online') : 'Connecting...'}
               </span>
+              {interviewStatus?.isInSchedulingFlow && (
+                <SchedulingStatusIndicator
+                  stage={interviewStatus.schedulingStage}
+                  interview={interviewStatus.interview}
+                  size="sm"
+                  className="ml-1"
+                />
+              )}
             </div>
           </div>
         </div>
@@ -463,6 +625,34 @@ export default function Chat() {
               </div>
             ))}
             {isTyping && <TypingIndicator />}
+
+            {/* Interview Scheduling Components */}
+            {pendingInterviewOffer && (
+              <InterviewOfferCard
+                offer={pendingInterviewOffer}
+                onAccept={handleInterviewOfferAccept}
+                onDecline={handleInterviewOfferDecline}
+                onViewAvailability={handleInterviewOfferViewAvailability}
+              />
+            )}
+
+            {showAvailabilitySelector && (
+              <AvailabilitySelector
+                availableSlots={availableSlots}
+                onSelectSlot={handleAvailabilitySlotSelect}
+                onCancel={handleAvailabilityCancel}
+                loading={slotsLoading}
+              />
+            )}
+
+            {interviewStatus?.interview && interviewStatus.schedulingStage === 'interview_scheduled' && (
+              <InterviewConfirmation
+                interview={interviewStatus.interview}
+                onReschedule={handleInterviewReschedule}
+                onAddToCalendar={() => handleAddToCalendar(interviewStatus.interview)}
+              />
+            )}
+
             <div ref={messagesEndRef} />
           </div>
         )}

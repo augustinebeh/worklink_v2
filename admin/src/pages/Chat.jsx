@@ -39,6 +39,8 @@ import {
   Download,
   Languages,
   Briefcase,
+  Calendar,
+  ArrowDown,
 } from 'lucide-react';
 import EmojiPicker from 'emoji-picker-react';
 import Card from '../components/ui/Card';
@@ -46,6 +48,14 @@ import Badge from '../components/ui/Badge';
 import { useToast } from '../components/ui/Toast';
 import { clsx } from 'clsx';
 import { useAdminWebSocket } from '../contexts/WebSocketContext';
+import {
+  InterviewStatusHeader,
+  InterviewDetailsPanel,
+  SchedulingQuickActions,
+  InterviewTimeline,
+  SLMActivityIndicator,
+  useAdminInterviewScheduling
+} from '../components/chat/InterviewSchedulingComponents';
 
 // Notification sound using Web Audio API
 let audioContext = null;
@@ -491,6 +501,80 @@ function AISuggestionBubble({ suggestion, onAccept, onEdit, onDismiss }) {
   );
 }
 
+// SLM Suggestion bubble component
+function SLMSuggestionBubble({ suggestion, onAccept, onEdit, onDismiss }) {
+  const [editMode, setEditMode] = useState(false);
+  const [editedContent, setEditedContent] = useState(suggestion.content);
+
+  const handleEdit = () => {
+    if (editMode) {
+      onEdit(editedContent);
+      setEditMode(false);
+    } else {
+      setEditMode(true);
+    }
+  };
+
+  return (
+    <div className="mx-4 mb-3 p-4 rounded-xl bg-gradient-to-r from-blue-500/10 to-cyan-500/10 border border-blue-200 dark:border-blue-800">
+      <div className="flex items-center gap-2 mb-2">
+        <Calendar className="h-4 w-4 text-blue-500" />
+        <span className="text-sm font-medium text-blue-700 dark:text-blue-300">SLM Suggestion</span>
+        {suggestion.intent && (
+          <span className="text-xs px-2 py-0.5 rounded-full bg-blue-100 text-blue-700 dark:bg-blue-900/50 dark:text-blue-300">
+            {suggestion.intent.replace(/_/g, ' ')}
+          </span>
+        )}
+        {suggestion.confidence && (
+          <span className="text-xs text-slate-500">
+            {Math.round(suggestion.confidence * 100)}% confidence
+          </span>
+        )}
+        <span className="text-xs px-2 py-0.5 rounded-full bg-amber-100 text-amber-700 dark:bg-amber-900/50 dark:text-amber-300">
+          Interview Scheduling
+        </span>
+      </div>
+
+      {editMode ? (
+        <textarea
+          value={editedContent}
+          onChange={(e) => setEditedContent(e.target.value)}
+          className="w-full px-3 py-2 rounded-lg bg-white dark:bg-slate-800 border border-slate-200 dark:border-slate-700 text-slate-900 dark:text-white text-sm resize-none focus:outline-none focus:ring-2 focus:ring-blue-500"
+          rows={4}
+        />
+      ) : (
+        <p className="text-sm text-slate-700 dark:text-slate-300 whitespace-pre-wrap">
+          {suggestion.content}
+        </p>
+      )}
+
+      <div className="flex items-center gap-2 mt-3">
+        <button
+          onClick={() => onAccept(suggestion)}
+          className="flex items-center gap-1.5 px-3 py-1.5 rounded-lg bg-blue-500 text-white text-sm font-medium hover:bg-blue-600 transition-colors"
+        >
+          <Calendar className="h-3.5 w-3.5" />
+          {editMode ? 'Send Edited' : 'Accept & Send'}
+        </button>
+        <button
+          onClick={handleEdit}
+          className="flex items-center gap-1.5 px-3 py-1.5 rounded-lg bg-slate-200 dark:bg-slate-700 text-slate-700 dark:text-slate-300 text-sm font-medium hover:bg-slate-300 dark:hover:bg-slate-600 transition-colors"
+        >
+          <Edit3 className="h-3.5 w-3.5" />
+          {editMode ? 'Cancel' : 'Edit'}
+        </button>
+        <button
+          onClick={() => onDismiss(suggestion)}
+          className="flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-slate-500 dark:text-slate-400 text-sm hover:bg-slate-100 dark:hover:bg-slate-800 transition-colors"
+        >
+          <X className="h-3.5 w-3.5" />
+          Dismiss
+        </button>
+      </div>
+    </div>
+  );
+}
+
 // AI Mode selector component
 function AIModeSelector({ mode, onChange, candidateId }) {
   const modes = [
@@ -520,6 +604,54 @@ function AIModeSelector({ mode, onChange, candidateId }) {
           {label}
         </button>
       ))}
+    </div>
+  );
+}
+
+// SLM Mode selector component
+function SLMModeSelector({ mode, onChange, candidateId }) {
+  const modes = [
+    { value: 'off', label: 'Off', icon: Power, color: 'slate' },
+    { value: 'auto', label: 'Auto', icon: Bot, color: 'blue' },
+    { value: 'interview_only', label: 'Interview Only', icon: Calendar, color: 'amber' },
+    { value: 'inherit', label: 'Inherit', icon: ArrowDown, color: 'slate' },
+  ];
+
+  return (
+    <div className="flex flex-col gap-2">
+      <div className="flex items-center gap-2">
+        <Calendar className="h-4 w-4 text-blue-500" />
+        <span className="text-sm font-medium text-slate-700 dark:text-slate-300">SLM</span>
+      </div>
+      <div className="flex items-center gap-1 p-1 rounded-lg bg-blue-50 dark:bg-blue-900/20 border border-blue-200 dark:border-blue-800">
+        {modes.map(({ value, label, icon: Icon, color }) => (
+          <button
+            key={value}
+            onClick={() => onChange(value)}
+            className={clsx(
+              'flex items-center gap-1 px-2 py-1 rounded text-xs font-medium transition-colors whitespace-nowrap',
+              mode === value
+                ? color === 'slate'
+                  ? 'bg-slate-600 text-white'
+                  : color === 'blue'
+                    ? 'bg-blue-500 text-white'
+                    : color === 'amber'
+                      ? 'bg-amber-500 text-white'
+                      : 'bg-slate-500 text-white'
+                : 'text-slate-600 dark:text-slate-400 hover:bg-blue-100 dark:hover:bg-blue-800/50'
+            )}
+            title={
+              value === 'off' ? 'No SLM processing'
+              : value === 'auto' ? 'Automatic SLM responses for pending candidates'
+              : value === 'interview_only' ? 'Only interview scheduling'
+              : 'Use global default SLM setting'
+            }
+          >
+            <Icon className="h-3 w-3" />
+            {label === 'Interview Only' ? 'Interview' : label}
+          </button>
+        ))}
+      </div>
     </div>
   );
 }
@@ -786,6 +918,11 @@ export default function AdminChat() {
   const [responseStyle, setResponseStyle] = useState('concise'); // 'concise' or 'normal'
   const [languageStyle, setLanguageStyle] = useState('singlish'); // 'singlish' or 'professional'
 
+  // SLM Chat state
+  const [slmMode, setSlmMode] = useState('inherit');
+  const [slmSuggestion, setSlmSuggestion] = useState(null);
+  const [slmLoading, setSlmLoading] = useState(false);
+
   // New feature states
   const [messageSearchQuery, setMessageSearchQuery] = useState('');
   const [showMessageSearch, setShowMessageSearch] = useState(false);
@@ -793,6 +930,23 @@ export default function AdminChat() {
   const [priorityFilter, setPriorityFilter] = useState('all');
   const [uploadingFile, setUploadingFile] = useState(false);
   const fileInputRef = useRef(null);
+
+  // Interview scheduling state
+  const [showInterviewDetails, setShowInterviewDetails] = useState(false);
+  const [showSchedulingModal, setShowSchedulingModal] = useState(false);
+  const [interviewTimeline, setInterviewTimeline] = useState([]);
+
+  // Use interview scheduling hook
+  const {
+    status: interviewStatus,
+    loading: interviewLoading,
+    error: interviewError,
+    fetchCandidateStatus,
+    scheduleInterview,
+    updateInterviewStatus,
+    rescheduleInterview,
+    fetchAnalytics
+  } = useAdminInterviewScheduling();
 
   // Toggle sound and save preference
   const toggleSound = useCallback(() => {
@@ -997,6 +1151,29 @@ export default function AdminChat() {
       }
     });
 
+    const unsubSlmSuggestion = subscribe('slm_suggestion', (data) => {
+      console.log('SLM suggestion received:', data);
+      const currentConv = selectedConversationRef.current;
+      if (currentConv?.candidate_id === data.candidateId) {
+        setSlmSuggestion(data.suggestion);
+      }
+    });
+
+    const unsubSlmUpdate = subscribe('slm_suggestion_update', () => {
+      setSlmSuggestion(null);
+    });
+
+    const unsubSlmMessageSent = subscribe('slm_message_sent', (data) => {
+      console.log('SLM message sent:', data);
+      fetchMessages(data.candidateId);
+    });
+
+    const unsubSlmModeUpdated = subscribe('slm_mode_updated', (data) => {
+      if (selectedConversationRef.current?.candidate_id === data.candidateId) {
+        setSlmMode(data.mode);
+      }
+    });
+
     // AI action notifications
     const unsubAiAction = subscribe('ai_action', (data) => {
       console.log('AI action:', data);
@@ -1031,6 +1208,10 @@ export default function AdminChat() {
       unsubAiUpdate();
       unsubAiMessageSent();
       unsubAiModeUpdated();
+      unsubSlmSuggestion();
+      unsubSlmUpdate();
+      unsubSlmMessageSent();
+      unsubSlmModeUpdated();
       unsubAiAction();
       unsubEscalation();
     };
@@ -1044,9 +1225,17 @@ export default function AdminChat() {
     if (selectedConversation) {
       fetchMessages(selectedConversation.candidate_id);
       fetchAIMode(selectedConversation.candidate_id);
+      fetchSLMMode(selectedConversation.candidate_id);
       setAiSuggestion(null); // Clear suggestion when switching conversations
+      setSlmSuggestion(null); // Clear SLM suggestion when switching conversations
       setMessageSearchQuery(''); // Clear message search
       setShowMessageSearch(false);
+      setShowInterviewDetails(false); // Close interview details when switching
+
+      // Fetch interview status for selected candidate
+      if (selectedConversation.candidate_id) {
+        fetchCandidateStatus(selectedConversation.candidate_id);
+      }
 
       // Mark messages as read when opening conversation
       if (isConnected && selectedConversation.unread_count > 0) {
@@ -1124,6 +1313,19 @@ export default function AdminChat() {
     }
   };
 
+  const fetchSLMMode = async (candidateId) => {
+    try {
+      const res = await fetch(`/api/v1/slm-chat/conversations/${candidateId}/mode`);
+      const data = await res.json();
+      if (data.success) {
+        setSlmMode(data.data.mode);
+      }
+    } catch (error) {
+      console.error('Failed to fetch SLM mode:', error);
+      setSlmMode('inherit');
+    }
+  };
+
   const handleAIModeChange = async (newMode) => {
     if (!selectedConversation) return;
 
@@ -1142,6 +1344,27 @@ export default function AdminChat() {
       }
     } catch (error) {
       console.error('Failed to update AI mode:', error);
+    }
+  };
+
+  const handleSLMModeChange = async (newMode) => {
+    if (!selectedConversation) return;
+
+    try {
+      const res = await fetch(`/api/v1/slm-chat/conversations/${selectedConversation.candidate_id}/mode`, {
+        method: 'PUT',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ mode: newMode }),
+      });
+      const data = await res.json();
+      if (data.success) {
+        setSlmMode(newMode);
+        if (newMode === 'off') {
+          setSlmSuggestion(null);
+        }
+      }
+    } catch (error) {
+      console.error('Failed to update SLM mode:', error);
     }
   };
 
@@ -1196,6 +1419,124 @@ export default function AdminChat() {
       setAiSuggestion(null);
     } catch (error) {
       console.error('Failed to dismiss suggestion:', error);
+    }
+  };
+
+  // SLM suggestion handlers
+  const handleAcceptSLMSuggestion = async (suggestion) => {
+    if (!selectedConversation || !suggestion) return;
+
+    try {
+      // For now, just send the suggestion content as a regular message
+      // Later this can be enhanced to use proper SLM endpoints
+      const content = suggestion.content;
+      setSlmSuggestion(null);
+
+      // Send the message
+      if (isConnected) {
+        send({
+          type: 'message',
+          candidateId: selectedConversation.candidate_id,
+          content,
+          source: 'slm_suggestion',
+        });
+      }
+
+      fetchMessages(selectedConversation.candidate_id);
+    } catch (error) {
+      console.error('Failed to accept SLM suggestion:', error);
+    }
+  };
+
+  const handleEditSLMSuggestion = async (editedContent) => {
+    if (!selectedConversation || !slmSuggestion) return;
+
+    try {
+      setSlmSuggestion(null);
+
+      // Send the edited content
+      if (isConnected) {
+        send({
+          type: 'message',
+          candidateId: selectedConversation.candidate_id,
+          content: editedContent,
+          source: 'slm_suggestion_edited',
+        });
+      }
+
+      fetchMessages(selectedConversation.candidate_id);
+    } catch (error) {
+      console.error('Failed to edit SLM suggestion:', error);
+    }
+  };
+
+  const handleDismissSLMSuggestion = async (suggestion) => {
+    if (!suggestion) return;
+    setSlmSuggestion(null);
+  };
+
+  // Interview scheduling handlers
+  const handleScheduleInterview = async () => {
+    if (!selectedConversation) return;
+    setShowSchedulingModal(true);
+  };
+
+  const handleInterviewScheduled = async (date, time, notes = '') => {
+    if (!selectedConversation) return;
+
+    try {
+      await scheduleInterview(selectedConversation.candidate_id, date, time, notes);
+      setShowSchedulingModal(false);
+      toast.success('Interview scheduled successfully');
+
+      // Refresh candidate status
+      await fetchCandidateStatus(selectedConversation.candidate_id);
+    } catch (error) {
+      toast.error('Failed to schedule interview', error.message);
+    }
+  };
+
+  const handleInterviewStatusUpdate = async (interviewId, status, notes = '') => {
+    try {
+      await updateInterviewStatus(interviewId, status, notes);
+      toast.success(`Interview status updated to ${status}`);
+
+      // Refresh candidate status
+      if (selectedConversation?.candidate_id) {
+        await fetchCandidateStatus(selectedConversation.candidate_id);
+      }
+    } catch (error) {
+      toast.error('Failed to update interview status', error.message);
+    }
+  };
+
+  const handleInterviewReschedule = async (interviewId, date, time, reason = '') => {
+    try {
+      await rescheduleInterview(interviewId, date, time, reason);
+      toast.success('Interview rescheduled successfully');
+
+      // Refresh candidate status
+      if (selectedConversation?.candidate_id) {
+        await fetchCandidateStatus(selectedConversation.candidate_id);
+      }
+    } catch (error) {
+      toast.error('Failed to reschedule interview', error.message);
+    }
+  };
+
+  const handleInterviewCancel = async (interviewId) => {
+    if (!confirm('Are you sure you want to cancel this interview?')) return;
+
+    try {
+      await updateInterviewStatus(interviewId, 'cancelled', 'Cancelled by admin');
+      toast.success('Interview cancelled');
+
+      // Refresh candidate status
+      if (selectedConversation?.candidate_id) {
+        await fetchCandidateStatus(selectedConversation.candidate_id);
+      }
+    } catch (error) {
+      toast.error('Failed to cancel interview', error.message);
     }
   };
 
@@ -1623,11 +1964,24 @@ export default function AdminChat() {
 
                     <div className="w-px h-6 bg-slate-200 dark:bg-slate-700" />
 
-                    <AIModeSelector
-                      mode={aiMode}
-                      onChange={handleAIModeChange}
-                      candidateId={selectedConversation.candidate_id}
-                    />
+                    <div className="flex items-center gap-3">
+                      <div>
+                        <div className="flex items-center gap-2 mb-1">
+                          <Bot className="h-4 w-4 text-violet-500" />
+                          <span className="text-sm font-medium text-slate-700 dark:text-slate-300">AI</span>
+                        </div>
+                        <AIModeSelector
+                          mode={aiMode}
+                          onChange={handleAIModeChange}
+                          candidateId={selectedConversation.candidate_id}
+                        />
+                      </div>
+                      <SLMModeSelector
+                        mode={slmMode}
+                        onChange={handleSLMModeChange}
+                        candidateId={selectedConversation.candidate_id}
+                      />
+                    </div>
                     <button
                       onClick={toggleTypingDelay}
                       className={clsx(
@@ -1722,6 +2076,40 @@ export default function AdminChat() {
                 )}
               </div>
 
+              {/* Interview Scheduling Status */}
+              {interviewStatus?.isInSchedulingFlow && (
+                <div className="flex-shrink-0 px-6">
+                  <InterviewStatusHeader
+                    candidateId={selectedConversation.candidate_id}
+                    interviewData={interviewStatus}
+                    onSchedule={handleScheduleInterview}
+                    onReschedule={() => {
+                      if (interviewStatus.interview?.id) {
+                        // Would open reschedule modal - simplified for now
+                        console.log('Reschedule interview:', interviewStatus.interview.id);
+                      }
+                    }}
+                    onCancel={() => {
+                      if (interviewStatus.interview?.id) {
+                        handleInterviewCancel(interviewStatus.interview.id);
+                      }
+                    }}
+                    onViewDetails={() => setShowInterviewDetails(true)}
+                  />
+                </div>
+              )}
+
+              {/* SLM Activity Indicator */}
+              {selectedConversation?.candidate_id && (
+                <div className="flex-shrink-0 px-6">
+                  <SLMActivityIndicator
+                    isActive={slmLoading}
+                    activityType="scheduling_conversation"
+                    lastActivity={new Date()}
+                  />
+                </div>
+              )}
+
               {/* Quick replies bar */}
               {templates.length > 0 && (
                 <div className="flex-shrink-0 px-6 py-2 bg-white dark:bg-slate-900 border-b border-slate-200 dark:border-slate-800">
@@ -1775,6 +2163,16 @@ export default function AdminChat() {
                   onAccept={handleAcceptSuggestion}
                   onEdit={handleEditSuggestion}
                   onDismiss={handleDismissSuggestion}
+                />
+              )}
+
+              {/* SLM Suggestion */}
+              {slmSuggestion && (
+                <SLMSuggestionBubble
+                  suggestion={slmSuggestion}
+                  onAccept={handleAcceptSLMSuggestion}
+                  onEdit={handleEditSLMSuggestion}
+                  onDismiss={handleDismissSLMSuggestion}
                 />
               )}
 
@@ -1876,6 +2274,47 @@ export default function AdminChat() {
             </div>
           )}
         </div>
+
+        {/* Interview Details Panel */}
+        {showInterviewDetails && interviewStatus?.interview && (
+          <div className="fixed inset-0 bg-slate-900/50 backdrop-blur-sm flex items-center justify-center z-50">
+            <div className="w-full max-w-2xl max-h-[90vh] overflow-hidden">
+              <InterviewDetailsPanel
+                interview={interviewStatus.interview}
+                candidate={selectedConversation}
+                onClose={() => setShowInterviewDetails(false)}
+                onUpdateStatus={handleInterviewStatusUpdate}
+                onReschedule={(interviewId) => {
+                  console.log('Reschedule interview:', interviewId);
+                  setShowInterviewDetails(false);
+                  // Would open reschedule modal
+                }}
+                onCancel={(interviewId) => {
+                  handleInterviewCancel(interviewId);
+                  setShowInterviewDetails(false);
+                }}
+              />
+            </div>
+          </div>
+        )}
+
+        {/* Scheduling Quick Actions */}
+        {selectedConversation && (
+          <div className="fixed bottom-6 right-6 z-40">
+            <SchedulingQuickActions
+              candidateId={selectedConversation.candidate_id}
+              onScheduleInterview={handleScheduleInterview}
+              onViewQueue={() => {
+                console.log('View queue');
+                // Would open queue management modal
+              }}
+              onViewAnalytics={() => {
+                console.log('View analytics');
+                // Would open analytics modal
+              }}
+            />
+          </div>
+        )}
 
         {/* New chat modal */}
         {showNewChat && (

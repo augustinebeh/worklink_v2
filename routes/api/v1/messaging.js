@@ -174,14 +174,14 @@ router.get('/telegram/groups', (req, res) => {
         name TEXT,
         description TEXT,
         member_count INTEGER,
-        is_active INTEGER DEFAULT 1,
+        active INTEGER DEFAULT 1,
         auto_post_jobs INTEGER DEFAULT 0,
         created_at DATETIME DEFAULT CURRENT_TIMESTAMP
       )
     `);
 
     const groups = db.prepare(`
-      SELECT * FROM telegram_groups WHERE is_active = 1 ORDER BY name
+      SELECT * FROM telegram_groups WHERE active = 1 ORDER BY name
     `).all();
 
     res.json({ success: true, data: groups });
@@ -213,7 +213,7 @@ router.post('/telegram/groups', (req, res) => {
         name TEXT,
         description TEXT,
         member_count INTEGER,
-        is_active INTEGER DEFAULT 1,
+        active INTEGER DEFAULT 1,
         auto_post_jobs INTEGER DEFAULT 0,
         created_at DATETIME DEFAULT CURRENT_TIMESTAMP
       )
@@ -259,7 +259,7 @@ router.patch('/telegram/groups/:id', (req, res) => {
       values.push(description);
     }
     if (isActive !== undefined) {
-      updates.push('is_active = ?');
+      updates.push('active = ?');
       values.push(isActive ? 1 : 0);
     }
     if (autoPostJobs !== undefined) {
@@ -333,12 +333,12 @@ router.post('/telegram/post-job', async (req, res) => {
     let groups;
     if (groupIds && groupIds.length > 0) {
       groups = db.prepare(`
-        SELECT chat_id FROM telegram_groups WHERE id IN (${groupIds.map(() => '?').join(',')}) AND is_active = 1
+        SELECT chat_id FROM telegram_groups WHERE id IN (${groupIds.map(() => '?').join(',')}) AND active = 1
       `).all(...groupIds);
     } else {
       // Post to all auto-post groups
       groups = db.prepare(`
-        SELECT chat_id FROM telegram_groups WHERE is_active = 1 AND auto_post_jobs = 1
+        SELECT chat_id FROM telegram_groups WHERE active = 1 AND auto_post_jobs = 1
       `).all();
     }
 

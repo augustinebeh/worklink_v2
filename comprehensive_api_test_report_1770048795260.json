@@ -1,0 +1,1471 @@
+{
+  "summary": {
+    "totalTests": 44,
+    "passedTests": 28,
+    "failedTests": 16,
+    "successRate": "63.64%",
+    "timestamp": "2026-02-02T16:13:15.260Z",
+    "environment": "development"
+  },
+  "categories": {
+    "Auth": {
+      "total": 9,
+      "passed": 8,
+      "failed": 1,
+      "tests": [
+        {
+          "category": "Auth",
+          "name": "API Info Endpoint",
+          "passed": true,
+          "details": {
+            "response": {
+              "name": "WorkLink API",
+              "version": "2.0.0",
+              "endpoints": {
+                "auth": "/api/v1/auth",
+                "candidates": "/api/v1/candidates",
+                "jobs": "/api/v1/jobs",
+                "deployments": "/api/v1/deployments",
+                "payments": "/api/v1/payments",
+                "clients": "/api/v1/clients",
+                "tenders": "/api/v1/tenders",
+                "training": "/api/v1/training",
+                "gamification": "/api/v1/gamification",
+                "chat": "/api/v1/chat",
+                "analytics": "/api/v1/analytics",
+                "admin": "/api/v1/admin",
+                "ai": "/api/v1/ai",
+                "referrals": "/api/v1/referrals",
+                "availability": "/api/v1/availability",
+                "notifications": "/api/v1/notifications",
+                "tenderMonitor": "/api/v1/tender-monitor",
+                "messaging": "/api/v1/messaging",
+                "webhooks": {
+                  "telegram": "/api/v1/webhooks/telegram"
+                },
+                "aiChat": "/api/v1/ai-chat",
+                "ml": "/api/v1/ml",
+                "adMl": "/api/v1/ad-ml",
+                "telegramGroups": "/api/v1/telegram-groups"
+              }
+            },
+            "responseTime": 13
+          },
+          "timestamp": "2026-02-02T16:13:13.632Z"
+        },
+        {
+          "category": "Auth",
+          "name": "Login with invalid credentials",
+          "passed": true,
+          "details": {
+            "expectedStatus": 401,
+            "actualStatus": 401,
+            "responseTime": 4
+          },
+          "timestamp": "2026-02-02T16:13:13.636Z"
+        },
+        {
+          "category": "Auth",
+          "name": "Demo worker login (Sarah Tan)",
+          "passed": true,
+          "details": {
+            "response": {
+              "success": true,
+              "data": {
+                "id": "CND_DEMO_001",
+                "name": "Sarah Tan",
+                "email": "sarah.tan@email.com",
+                "phone": "+6598887777",
+                "date_of_birth": null,
+                "nric_last4": null,
+                "status": "active",
+                "source": "direct",
+                "xp": 15500,
+                "lifetime_xp": 16000,
+                "current_points": 510,
+                "current_tier": "silver",
+                "level": 14,
+                "streak_days": 5,
+                "streak_last_date": "2026-02-02",
+                "streak_protected_until": null,
+                "profile_flair": null,
+                "selected_border_id": null,
+                "total_jobs_completed": 42,
+                "certifications": [
+                  "Food Safety",
+                  "First Aid",
+                  "Customer Service"
+                ],
+                "skills": "[\"Customer Service\", \"Cash Handling\", \"Event Support\", \"F&B Service\"]",
+                "preferred_locations": "[\"Central\", \"East\", \"West\"]",
+                "referral_code": "SARAH001",
+                "referred_by": null,
+                "referral_tier": 2,
+                "total_referral_earnings": 180,
+                "total_incentives_earned": 250,
+                "total_earnings": 661,
+                "rating": 4.8,
+                "profile_photo": "https://api.dicebear.com/7.x/avataaars/svg?seed=Sarah%20Tan",
+                "bank_name": null,
+                "bank_account": null,
+                "address": "123 Test Avenue, Singapore",
+                "availability_mode": "all",
+                "online_status": "offline",
+                "last_seen": "2026-02-02 15:30:56",
+                "push_token": null,
+                "whatsapp_opted_in": 1,
+                "telegram_chat_id": null,
+                "telegram_username": null,
+                "google_id": null,
+                "preferred_contact": "app",
+                "theme_preference": "default",
+                "created_at": "2025-08-06 14:23:49",
+                "updated_at": "2026-02-02 16:13:13"
+              },
+              "token": "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpZCI6IkNORF9ERU1PXzAwMSIsImVtYWlsIjoic2FyYWgudGFuQGVtYWlsLmNvbSIsIm5hbWUiOiJTYXJhaCBUYW4iLCJyb2xlIjoiY2FuZGlkYXRlIiwiaWF0IjoxNzcwMDQ4NzkzLCJleHAiOjE3NzAxMzUxOTN9.OXWbCnOjR4t5oKccLvvAVUxY9sZcQcYx_RFZQy4JXKQ"
+            },
+            "responseTime": 3
+          },
+          "timestamp": "2026-02-02T16:13:13.639Z"
+        },
+        {
+          "category": "Auth",
+          "name": "Admin login attempt",
+          "passed": true,
+          "details": {
+            "expectedStatus": "401 or 500",
+            "actualStatus": 401,
+            "responseTime": 3
+          },
+          "timestamp": "2026-02-02T16:13:13.642Z"
+        },
+        {
+          "category": "Auth",
+          "name": "Get current user without token",
+          "passed": true,
+          "details": {
+            "expectedStatus": 401,
+            "actualStatus": 401,
+            "responseTime": 2
+          },
+          "timestamp": "2026-02-02T16:13:13.644Z"
+        },
+        {
+          "category": "Auth",
+          "name": "Get current user with valid token",
+          "passed": true,
+          "details": {
+            "response": {
+              "success": true,
+              "data": {
+                "id": "CND_DEMO_001",
+                "name": "Sarah Tan",
+                "email": "sarah.tan@email.com",
+                "phone": "+6598887777",
+                "date_of_birth": null,
+                "nric_last4": null,
+                "status": "active",
+                "source": "direct",
+                "xp": 15500,
+                "lifetime_xp": 16000,
+                "current_points": 510,
+                "current_tier": "silver",
+                "level": 14,
+                "streak_days": 5,
+                "streak_last_date": "2026-02-02",
+                "streak_protected_until": null,
+                "profile_flair": null,
+                "selected_border_id": null,
+                "total_jobs_completed": 42,
+                "certifications": [
+                  "Food Safety",
+                  "First Aid",
+                  "Customer Service"
+                ],
+                "skills": "[\"Customer Service\", \"Cash Handling\", \"Event Support\", \"F&B Service\"]",
+                "preferred_locations": "[\"Central\", \"East\", \"West\"]",
+                "referral_code": "SARAH001",
+                "referred_by": null,
+                "referral_tier": 2,
+                "total_referral_earnings": 180,
+                "total_incentives_earned": 250,
+                "total_earnings": 661,
+                "rating": 4.8,
+                "profile_photo": "https://api.dicebear.com/7.x/avataaars/svg?seed=Sarah%20Tan",
+                "bank_name": null,
+                "bank_account": null,
+                "address": "123 Test Avenue, Singapore",
+                "availability_mode": "all",
+                "online_status": "offline",
+                "last_seen": "2026-02-02 15:30:56",
+                "push_token": null,
+                "whatsapp_opted_in": 1,
+                "telegram_chat_id": null,
+                "telegram_username": null,
+                "google_id": null,
+                "preferred_contact": "app",
+                "theme_preference": "default",
+                "created_at": "2025-08-06 14:23:49",
+                "updated_at": "2026-02-02 16:13:13"
+              }
+            },
+            "responseTime": 3
+          },
+          "timestamp": "2026-02-02T16:13:13.647Z"
+        },
+        {
+          "category": "Auth",
+          "name": "Register new user",
+          "passed": false,
+          "details": {
+            "response": {
+              "success": false,
+              "error": "Validation failed",
+              "errors": [
+                "phone must be a valid phone number"
+              ]
+            },
+            "responseTime": 2
+          },
+          "timestamp": "2026-02-02T16:13:13.649Z"
+        },
+        {
+          "category": "Auth",
+          "name": "Telegram bot config",
+          "passed": true,
+          "details": {
+            "response": {
+              "success": false,
+              "error": "Telegram bot not configured"
+            },
+            "responseTime": 2
+          },
+          "timestamp": "2026-02-02T16:13:13.652Z"
+        },
+        {
+          "category": "Auth",
+          "name": "Google OAuth config",
+          "passed": true,
+          "details": {
+            "response": {
+              "success": false,
+              "error": "Google OAuth not configured"
+            },
+            "responseTime": 2
+          },
+          "timestamp": "2026-02-02T16:13:13.654Z"
+        }
+      ]
+    },
+    "Admin": {
+      "total": 4,
+      "passed": 0,
+      "failed": 4,
+      "tests": [
+        {
+          "category": "Admin",
+          "name": "/admin without auth",
+          "passed": false,
+          "details": {
+            "expectedStatus": 401,
+            "actualStatus": 404,
+            "responseTime": 2
+          },
+          "timestamp": "2026-02-02T16:13:13.656Z"
+        },
+        {
+          "category": "Admin",
+          "name": "/admin/stats without auth",
+          "passed": false,
+          "details": {
+            "expectedStatus": 401,
+            "actualStatus": 200,
+            "responseTime": 3
+          },
+          "timestamp": "2026-02-02T16:13:13.659Z"
+        },
+        {
+          "category": "Admin",
+          "name": "/admin/settings without auth",
+          "passed": false,
+          "details": {
+            "expectedStatus": 401,
+            "actualStatus": 200,
+            "responseTime": 1
+          },
+          "timestamp": "2026-02-02T16:13:13.661Z"
+        },
+        {
+          "category": "Admin",
+          "name": "/admin/reset without auth",
+          "passed": false,
+          "details": {
+            "expectedStatus": 401,
+            "actualStatus": 404,
+            "responseTime": 1
+          },
+          "timestamp": "2026-02-02T16:13:13.662Z"
+        }
+      ]
+    },
+    "Business": {
+      "total": 7,
+      "passed": 4,
+      "failed": 3,
+      "tests": [
+        {
+          "category": "Business",
+          "name": "Get candidates list",
+          "passed": false,
+          "details": {
+            "status": 403,
+            "responseTime": 2
+          },
+          "timestamp": "2026-02-02T16:13:13.664Z"
+        },
+        {
+          "category": "Business",
+          "name": "Get jobs list",
+          "passed": true,
+          "details": {
+            "status": 200,
+            "responseTime": 2
+          },
+          "timestamp": "2026-02-02T16:13:13.666Z"
+        },
+        {
+          "category": "Business",
+          "name": "Get deployments list",
+          "passed": true,
+          "details": {
+            "status": 200,
+            "responseTime": 2
+          },
+          "timestamp": "2026-02-02T16:13:13.668Z"
+        },
+        {
+          "category": "Business",
+          "name": "Get payments list",
+          "passed": false,
+          "details": {
+            "status": 403,
+            "responseTime": 2
+          },
+          "timestamp": "2026-02-02T16:13:13.670Z"
+        },
+        {
+          "category": "Business",
+          "name": "Get clients list",
+          "passed": true,
+          "details": {
+            "status": 200,
+            "responseTime": 2
+          },
+          "timestamp": "2026-02-02T16:13:13.672Z"
+        },
+        {
+          "category": "Business",
+          "name": "Get tenders list",
+          "passed": true,
+          "details": {
+            "status": 200,
+            "responseTime": 2
+          },
+          "timestamp": "2026-02-02T16:13:13.674Z"
+        },
+        {
+          "category": "Business",
+          "name": "Create new job",
+          "passed": false,
+          "details": {
+            "status": 500,
+            "responseTime": 2
+          },
+          "timestamp": "2026-02-02T16:13:13.677Z"
+        }
+      ]
+    },
+    "Gamification": {
+      "total": 4,
+      "passed": 3,
+      "failed": 1,
+      "tests": [
+        {
+          "category": "Gamification",
+          "name": "Get gamification data",
+          "passed": false,
+          "details": {
+            "status": 404,
+            "responseTime": 2
+          },
+          "timestamp": "2026-02-02T16:13:13.679Z"
+        },
+        {
+          "category": "Gamification",
+          "name": "Get achievements",
+          "passed": true,
+          "details": {
+            "status": 200,
+            "responseTime": 3
+          },
+          "timestamp": "2026-02-02T16:13:13.682Z"
+        },
+        {
+          "category": "Gamification",
+          "name": "Get leaderboard",
+          "passed": true,
+          "details": {
+            "status": 200,
+            "responseTime": 1
+          },
+          "timestamp": "2026-02-02T16:13:13.684Z"
+        },
+        {
+          "category": "Gamification",
+          "name": "Get quests",
+          "passed": true,
+          "details": {
+            "status": 200,
+            "responseTime": 1
+          },
+          "timestamp": "2026-02-02T16:13:13.685Z"
+        }
+      ]
+    },
+    "AI/ML": {
+      "total": 3,
+      "passed": 2,
+      "failed": 1,
+      "tests": [
+        {
+          "category": "AI/ML",
+          "name": "AI Chat endpoint",
+          "passed": false,
+          "details": {
+            "status": 404,
+            "responseTime": 2
+          },
+          "timestamp": "2026-02-02T16:13:13.688Z"
+        },
+        {
+          "category": "AI/ML",
+          "name": "ML endpoints",
+          "passed": true,
+          "details": {
+            "status": 404,
+            "responseTime": 2
+          },
+          "timestamp": "2026-02-02T16:13:13.690Z"
+        },
+        {
+          "category": "AI/ML",
+          "name": "AI Automation endpoint",
+          "passed": true,
+          "details": {
+            "status": 404,
+            "responseTime": 2
+          },
+          "timestamp": "2026-02-02T16:13:13.692Z"
+        }
+      ]
+    },
+    "Real-time": {
+      "total": 4,
+      "passed": 2,
+      "failed": 2,
+      "tests": [
+        {
+          "category": "Real-time",
+          "name": "Chat endpoint",
+          "passed": false,
+          "details": {
+            "status": 404,
+            "responseTime": 2
+          },
+          "timestamp": "2026-02-02T16:13:13.694Z"
+        },
+        {
+          "category": "Real-time",
+          "name": "Notifications endpoint",
+          "passed": false,
+          "details": {
+            "status": 404,
+            "responseTime": 2
+          },
+          "timestamp": "2026-02-02T16:13:13.696Z"
+        },
+        {
+          "category": "Real-time",
+          "name": "Conversations endpoint",
+          "passed": true,
+          "details": {
+            "status": 200,
+            "responseTime": 3
+          },
+          "timestamp": "2026-02-02T16:13:13.699Z"
+        },
+        {
+          "category": "Real-time",
+          "name": "WebSocket connection",
+          "passed": true,
+          "details": {
+            "connected": true
+          },
+          "timestamp": "2026-02-02T16:13:13.703Z"
+        }
+      ]
+    },
+    "Advanced": {
+      "total": 5,
+      "passed": 3,
+      "failed": 2,
+      "tests": [
+        {
+          "category": "Advanced",
+          "name": "Telegram Groups endpoint",
+          "passed": true,
+          "details": {
+            "status": 200,
+            "responseTime": 3
+          },
+          "timestamp": "2026-02-02T16:13:13.706Z"
+        },
+        {
+          "category": "Advanced",
+          "name": "Tender Monitor endpoint",
+          "passed": true,
+          "details": {
+            "status": 404,
+            "responseTime": 2
+          },
+          "timestamp": "2026-02-02T16:13:13.708Z"
+        },
+        {
+          "category": "Advanced",
+          "name": "Analytics endpoint",
+          "passed": false,
+          "details": {
+            "status": 404,
+            "responseTime": 2
+          },
+          "timestamp": "2026-02-02T16:13:13.711Z"
+        },
+        {
+          "category": "Advanced",
+          "name": "Telegram webhook",
+          "passed": true,
+          "details": {
+            "status": 200,
+            "responseTime": 859
+          },
+          "timestamp": "2026-02-02T16:13:14.570Z"
+        },
+        {
+          "category": "Advanced",
+          "name": "Referrals endpoint",
+          "passed": false,
+          "details": {
+            "status": 404,
+            "responseTime": 3
+          },
+          "timestamp": "2026-02-02T16:13:14.573Z"
+        }
+      ]
+    },
+    "Security": {
+      "total": 5,
+      "passed": 4,
+      "failed": 1,
+      "tests": [
+        {
+          "category": "Security",
+          "name": "SQL Injection Protection (Login)",
+          "passed": true,
+          "details": {
+            "totalPayloads": 7,
+            "vulnerablePayloads": 0,
+            "details": []
+          },
+          "timestamp": "2026-02-02T16:13:14.583Z"
+        },
+        {
+          "category": "Security",
+          "name": "XSS Protection (Registration)",
+          "passed": true,
+          "details": {
+            "totalPayloads": 6,
+            "vulnerablePayloads": 0,
+            "details": []
+          },
+          "timestamp": "2026-02-02T16:13:14.591Z"
+        },
+        {
+          "category": "Security",
+          "name": "CORS Protection",
+          "passed": false,
+          "details": {
+            "status": 204,
+            "headers": {
+              "vary": "Origin, Access-Control-Request-Headers",
+              "access-control-allow-methods": "GET,HEAD,PUT,PATCH,POST,DELETE",
+              "content-length": "0",
+              "date": "Mon, 02 Feb 2026 16:13:14 GMT",
+              "connection": "keep-alive",
+              "keep-alive": "timeout=5"
+            }
+          },
+          "timestamp": "2026-02-02T16:13:14.592Z"
+        },
+        {
+          "category": "Security",
+          "name": "Large Payload Protection",
+          "passed": true,
+          "details": {
+            "status": 413,
+            "responseTime": 499
+          },
+          "timestamp": "2026-02-02T16:13:15.091Z"
+        },
+        {
+          "category": "Security",
+          "name": "Invalid JSON handling",
+          "passed": true,
+          "details": {
+            "status": 400
+          },
+          "timestamp": "2026-02-02T16:13:15.095Z"
+        }
+      ]
+    },
+    "Performance": {
+      "total": 3,
+      "passed": 2,
+      "failed": 1,
+      "tests": [
+        {
+          "category": "Performance",
+          "name": "Response time (average < 1000ms)",
+          "passed": true,
+          "details": {
+            "averageMs": "2.10",
+            "maxMs": 5,
+            "samples": 10
+          },
+          "timestamp": "2026-02-02T16:13:15.116Z"
+        },
+        {
+          "category": "Performance",
+          "name": "Concurrent requests handling",
+          "passed": true,
+          "details": {
+            "totalRequests": 50,
+            "successfulRequests": 50,
+            "totalTimeMs": 70,
+            "requestsPerSecond": "714.29"
+          },
+          "timestamp": "2026-02-02T16:13:15.189Z"
+        },
+        {
+          "category": "Performance",
+          "name": "Rate limiting active",
+          "passed": false,
+          "details": {
+            "totalRequests": 100,
+            "rateLimitedRequests": 0,
+            "failedRequests": 0
+          },
+          "timestamp": "2026-02-02T16:13:15.260Z"
+        }
+      ]
+    }
+  },
+  "failedTests": [
+    {
+      "category": "Auth",
+      "name": "Register new user",
+      "passed": false,
+      "details": {
+        "response": {
+          "success": false,
+          "error": "Validation failed",
+          "errors": [
+            "phone must be a valid phone number"
+          ]
+        },
+        "responseTime": 2
+      },
+      "timestamp": "2026-02-02T16:13:13.649Z"
+    },
+    {
+      "category": "Admin",
+      "name": "/admin without auth",
+      "passed": false,
+      "details": {
+        "expectedStatus": 401,
+        "actualStatus": 404,
+        "responseTime": 2
+      },
+      "timestamp": "2026-02-02T16:13:13.656Z"
+    },
+    {
+      "category": "Admin",
+      "name": "/admin/stats without auth",
+      "passed": false,
+      "details": {
+        "expectedStatus": 401,
+        "actualStatus": 200,
+        "responseTime": 3
+      },
+      "timestamp": "2026-02-02T16:13:13.659Z"
+    },
+    {
+      "category": "Admin",
+      "name": "/admin/settings without auth",
+      "passed": false,
+      "details": {
+        "expectedStatus": 401,
+        "actualStatus": 200,
+        "responseTime": 1
+      },
+      "timestamp": "2026-02-02T16:13:13.661Z"
+    },
+    {
+      "category": "Admin",
+      "name": "/admin/reset without auth",
+      "passed": false,
+      "details": {
+        "expectedStatus": 401,
+        "actualStatus": 404,
+        "responseTime": 1
+      },
+      "timestamp": "2026-02-02T16:13:13.662Z"
+    },
+    {
+      "category": "Business",
+      "name": "Get candidates list",
+      "passed": false,
+      "details": {
+        "status": 403,
+        "responseTime": 2
+      },
+      "timestamp": "2026-02-02T16:13:13.664Z"
+    },
+    {
+      "category": "Business",
+      "name": "Get payments list",
+      "passed": false,
+      "details": {
+        "status": 403,
+        "responseTime": 2
+      },
+      "timestamp": "2026-02-02T16:13:13.670Z"
+    },
+    {
+      "category": "Business",
+      "name": "Create new job",
+      "passed": false,
+      "details": {
+        "status": 500,
+        "responseTime": 2
+      },
+      "timestamp": "2026-02-02T16:13:13.677Z"
+    },
+    {
+      "category": "Gamification",
+      "name": "Get gamification data",
+      "passed": false,
+      "details": {
+        "status": 404,
+        "responseTime": 2
+      },
+      "timestamp": "2026-02-02T16:13:13.679Z"
+    },
+    {
+      "category": "AI/ML",
+      "name": "AI Chat endpoint",
+      "passed": false,
+      "details": {
+        "status": 404,
+        "responseTime": 2
+      },
+      "timestamp": "2026-02-02T16:13:13.688Z"
+    },
+    {
+      "category": "Real-time",
+      "name": "Chat endpoint",
+      "passed": false,
+      "details": {
+        "status": 404,
+        "responseTime": 2
+      },
+      "timestamp": "2026-02-02T16:13:13.694Z"
+    },
+    {
+      "category": "Real-time",
+      "name": "Notifications endpoint",
+      "passed": false,
+      "details": {
+        "status": 404,
+        "responseTime": 2
+      },
+      "timestamp": "2026-02-02T16:13:13.696Z"
+    },
+    {
+      "category": "Advanced",
+      "name": "Analytics endpoint",
+      "passed": false,
+      "details": {
+        "status": 404,
+        "responseTime": 2
+      },
+      "timestamp": "2026-02-02T16:13:13.711Z"
+    },
+    {
+      "category": "Advanced",
+      "name": "Referrals endpoint",
+      "passed": false,
+      "details": {
+        "status": 404,
+        "responseTime": 3
+      },
+      "timestamp": "2026-02-02T16:13:14.573Z"
+    },
+    {
+      "category": "Security",
+      "name": "CORS Protection",
+      "passed": false,
+      "details": {
+        "status": 204,
+        "headers": {
+          "vary": "Origin, Access-Control-Request-Headers",
+          "access-control-allow-methods": "GET,HEAD,PUT,PATCH,POST,DELETE",
+          "content-length": "0",
+          "date": "Mon, 02 Feb 2026 16:13:14 GMT",
+          "connection": "keep-alive",
+          "keep-alive": "timeout=5"
+        }
+      },
+      "timestamp": "2026-02-02T16:13:14.592Z"
+    },
+    {
+      "category": "Performance",
+      "name": "Rate limiting active",
+      "passed": false,
+      "details": {
+        "totalRequests": 100,
+        "rateLimitedRequests": 0,
+        "failedRequests": 0
+      },
+      "timestamp": "2026-02-02T16:13:15.260Z"
+    }
+  ],
+  "details": [
+    {
+      "category": "Auth",
+      "name": "API Info Endpoint",
+      "passed": true,
+      "details": {
+        "response": {
+          "name": "WorkLink API",
+          "version": "2.0.0",
+          "endpoints": {
+            "auth": "/api/v1/auth",
+            "candidates": "/api/v1/candidates",
+            "jobs": "/api/v1/jobs",
+            "deployments": "/api/v1/deployments",
+            "payments": "/api/v1/payments",
+            "clients": "/api/v1/clients",
+            "tenders": "/api/v1/tenders",
+            "training": "/api/v1/training",
+            "gamification": "/api/v1/gamification",
+            "chat": "/api/v1/chat",
+            "analytics": "/api/v1/analytics",
+            "admin": "/api/v1/admin",
+            "ai": "/api/v1/ai",
+            "referrals": "/api/v1/referrals",
+            "availability": "/api/v1/availability",
+            "notifications": "/api/v1/notifications",
+            "tenderMonitor": "/api/v1/tender-monitor",
+            "messaging": "/api/v1/messaging",
+            "webhooks": {
+              "telegram": "/api/v1/webhooks/telegram"
+            },
+            "aiChat": "/api/v1/ai-chat",
+            "ml": "/api/v1/ml",
+            "adMl": "/api/v1/ad-ml",
+            "telegramGroups": "/api/v1/telegram-groups"
+          }
+        },
+        "responseTime": 13
+      },
+      "timestamp": "2026-02-02T16:13:13.632Z"
+    },
+    {
+      "category": "Auth",
+      "name": "Login with invalid credentials",
+      "passed": true,
+      "details": {
+        "expectedStatus": 401,
+        "actualStatus": 401,
+        "responseTime": 4
+      },
+      "timestamp": "2026-02-02T16:13:13.636Z"
+    },
+    {
+      "category": "Auth",
+      "name": "Demo worker login (Sarah Tan)",
+      "passed": true,
+      "details": {
+        "response": {
+          "success": true,
+          "data": {
+            "id": "CND_DEMO_001",
+            "name": "Sarah Tan",
+            "email": "sarah.tan@email.com",
+            "phone": "+6598887777",
+            "date_of_birth": null,
+            "nric_last4": null,
+            "status": "active",
+            "source": "direct",
+            "xp": 15500,
+            "lifetime_xp": 16000,
+            "current_points": 510,
+            "current_tier": "silver",
+            "level": 14,
+            "streak_days": 5,
+            "streak_last_date": "2026-02-02",
+            "streak_protected_until": null,
+            "profile_flair": null,
+            "selected_border_id": null,
+            "total_jobs_completed": 42,
+            "certifications": [
+              "Food Safety",
+              "First Aid",
+              "Customer Service"
+            ],
+            "skills": "[\"Customer Service\", \"Cash Handling\", \"Event Support\", \"F&B Service\"]",
+            "preferred_locations": "[\"Central\", \"East\", \"West\"]",
+            "referral_code": "SARAH001",
+            "referred_by": null,
+            "referral_tier": 2,
+            "total_referral_earnings": 180,
+            "total_incentives_earned": 250,
+            "total_earnings": 661,
+            "rating": 4.8,
+            "profile_photo": "https://api.dicebear.com/7.x/avataaars/svg?seed=Sarah%20Tan",
+            "bank_name": null,
+            "bank_account": null,
+            "address": "123 Test Avenue, Singapore",
+            "availability_mode": "all",
+            "online_status": "offline",
+            "last_seen": "2026-02-02 15:30:56",
+            "push_token": null,
+            "whatsapp_opted_in": 1,
+            "telegram_chat_id": null,
+            "telegram_username": null,
+            "google_id": null,
+            "preferred_contact": "app",
+            "theme_preference": "default",
+            "created_at": "2025-08-06 14:23:49",
+            "updated_at": "2026-02-02 16:13:13"
+          },
+          "token": "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpZCI6IkNORF9ERU1PXzAwMSIsImVtYWlsIjoic2FyYWgudGFuQGVtYWlsLmNvbSIsIm5hbWUiOiJTYXJhaCBUYW4iLCJyb2xlIjoiY2FuZGlkYXRlIiwiaWF0IjoxNzcwMDQ4NzkzLCJleHAiOjE3NzAxMzUxOTN9.OXWbCnOjR4t5oKccLvvAVUxY9sZcQcYx_RFZQy4JXKQ"
+        },
+        "responseTime": 3
+      },
+      "timestamp": "2026-02-02T16:13:13.639Z"
+    },
+    {
+      "category": "Auth",
+      "name": "Admin login attempt",
+      "passed": true,
+      "details": {
+        "expectedStatus": "401 or 500",
+        "actualStatus": 401,
+        "responseTime": 3
+      },
+      "timestamp": "2026-02-02T16:13:13.642Z"
+    },
+    {
+      "category": "Auth",
+      "name": "Get current user without token",
+      "passed": true,
+      "details": {
+        "expectedStatus": 401,
+        "actualStatus": 401,
+        "responseTime": 2
+      },
+      "timestamp": "2026-02-02T16:13:13.644Z"
+    },
+    {
+      "category": "Auth",
+      "name": "Get current user with valid token",
+      "passed": true,
+      "details": {
+        "response": {
+          "success": true,
+          "data": {
+            "id": "CND_DEMO_001",
+            "name": "Sarah Tan",
+            "email": "sarah.tan@email.com",
+            "phone": "+6598887777",
+            "date_of_birth": null,
+            "nric_last4": null,
+            "status": "active",
+            "source": "direct",
+            "xp": 15500,
+            "lifetime_xp": 16000,
+            "current_points": 510,
+            "current_tier": "silver",
+            "level": 14,
+            "streak_days": 5,
+            "streak_last_date": "2026-02-02",
+            "streak_protected_until": null,
+            "profile_flair": null,
+            "selected_border_id": null,
+            "total_jobs_completed": 42,
+            "certifications": [
+              "Food Safety",
+              "First Aid",
+              "Customer Service"
+            ],
+            "skills": "[\"Customer Service\", \"Cash Handling\", \"Event Support\", \"F&B Service\"]",
+            "preferred_locations": "[\"Central\", \"East\", \"West\"]",
+            "referral_code": "SARAH001",
+            "referred_by": null,
+            "referral_tier": 2,
+            "total_referral_earnings": 180,
+            "total_incentives_earned": 250,
+            "total_earnings": 661,
+            "rating": 4.8,
+            "profile_photo": "https://api.dicebear.com/7.x/avataaars/svg?seed=Sarah%20Tan",
+            "bank_name": null,
+            "bank_account": null,
+            "address": "123 Test Avenue, Singapore",
+            "availability_mode": "all",
+            "online_status": "offline",
+            "last_seen": "2026-02-02 15:30:56",
+            "push_token": null,
+            "whatsapp_opted_in": 1,
+            "telegram_chat_id": null,
+            "telegram_username": null,
+            "google_id": null,
+            "preferred_contact": "app",
+            "theme_preference": "default",
+            "created_at": "2025-08-06 14:23:49",
+            "updated_at": "2026-02-02 16:13:13"
+          }
+        },
+        "responseTime": 3
+      },
+      "timestamp": "2026-02-02T16:13:13.647Z"
+    },
+    {
+      "category": "Auth",
+      "name": "Register new user",
+      "passed": false,
+      "details": {
+        "response": {
+          "success": false,
+          "error": "Validation failed",
+          "errors": [
+            "phone must be a valid phone number"
+          ]
+        },
+        "responseTime": 2
+      },
+      "timestamp": "2026-02-02T16:13:13.649Z"
+    },
+    {
+      "category": "Auth",
+      "name": "Telegram bot config",
+      "passed": true,
+      "details": {
+        "response": {
+          "success": false,
+          "error": "Telegram bot not configured"
+        },
+        "responseTime": 2
+      },
+      "timestamp": "2026-02-02T16:13:13.652Z"
+    },
+    {
+      "category": "Auth",
+      "name": "Google OAuth config",
+      "passed": true,
+      "details": {
+        "response": {
+          "success": false,
+          "error": "Google OAuth not configured"
+        },
+        "responseTime": 2
+      },
+      "timestamp": "2026-02-02T16:13:13.654Z"
+    },
+    {
+      "category": "Admin",
+      "name": "/admin without auth",
+      "passed": false,
+      "details": {
+        "expectedStatus": 401,
+        "actualStatus": 404,
+        "responseTime": 2
+      },
+      "timestamp": "2026-02-02T16:13:13.656Z"
+    },
+    {
+      "category": "Admin",
+      "name": "/admin/stats without auth",
+      "passed": false,
+      "details": {
+        "expectedStatus": 401,
+        "actualStatus": 200,
+        "responseTime": 3
+      },
+      "timestamp": "2026-02-02T16:13:13.659Z"
+    },
+    {
+      "category": "Admin",
+      "name": "/admin/settings without auth",
+      "passed": false,
+      "details": {
+        "expectedStatus": 401,
+        "actualStatus": 200,
+        "responseTime": 1
+      },
+      "timestamp": "2026-02-02T16:13:13.661Z"
+    },
+    {
+      "category": "Admin",
+      "name": "/admin/reset without auth",
+      "passed": false,
+      "details": {
+        "expectedStatus": 401,
+        "actualStatus": 404,
+        "responseTime": 1
+      },
+      "timestamp": "2026-02-02T16:13:13.662Z"
+    },
+    {
+      "category": "Business",
+      "name": "Get candidates list",
+      "passed": false,
+      "details": {
+        "status": 403,
+        "responseTime": 2
+      },
+      "timestamp": "2026-02-02T16:13:13.664Z"
+    },
+    {
+      "category": "Business",
+      "name": "Get jobs list",
+      "passed": true,
+      "details": {
+        "status": 200,
+        "responseTime": 2
+      },
+      "timestamp": "2026-02-02T16:13:13.666Z"
+    },
+    {
+      "category": "Business",
+      "name": "Get deployments list",
+      "passed": true,
+      "details": {
+        "status": 200,
+        "responseTime": 2
+      },
+      "timestamp": "2026-02-02T16:13:13.668Z"
+    },
+    {
+      "category": "Business",
+      "name": "Get payments list",
+      "passed": false,
+      "details": {
+        "status": 403,
+        "responseTime": 2
+      },
+      "timestamp": "2026-02-02T16:13:13.670Z"
+    },
+    {
+      "category": "Business",
+      "name": "Get clients list",
+      "passed": true,
+      "details": {
+        "status": 200,
+        "responseTime": 2
+      },
+      "timestamp": "2026-02-02T16:13:13.672Z"
+    },
+    {
+      "category": "Business",
+      "name": "Get tenders list",
+      "passed": true,
+      "details": {
+        "status": 200,
+        "responseTime": 2
+      },
+      "timestamp": "2026-02-02T16:13:13.674Z"
+    },
+    {
+      "category": "Business",
+      "name": "Create new job",
+      "passed": false,
+      "details": {
+        "status": 500,
+        "responseTime": 2
+      },
+      "timestamp": "2026-02-02T16:13:13.677Z"
+    },
+    {
+      "category": "Gamification",
+      "name": "Get gamification data",
+      "passed": false,
+      "details": {
+        "status": 404,
+        "responseTime": 2
+      },
+      "timestamp": "2026-02-02T16:13:13.679Z"
+    },
+    {
+      "category": "Gamification",
+      "name": "Get achievements",
+      "passed": true,
+      "details": {
+        "status": 200,
+        "responseTime": 3
+      },
+      "timestamp": "2026-02-02T16:13:13.682Z"
+    },
+    {
+      "category": "Gamification",
+      "name": "Get leaderboard",
+      "passed": true,
+      "details": {
+        "status": 200,
+        "responseTime": 1
+      },
+      "timestamp": "2026-02-02T16:13:13.684Z"
+    },
+    {
+      "category": "Gamification",
+      "name": "Get quests",
+      "passed": true,
+      "details": {
+        "status": 200,
+        "responseTime": 1
+      },
+      "timestamp": "2026-02-02T16:13:13.685Z"
+    },
+    {
+      "category": "AI/ML",
+      "name": "AI Chat endpoint",
+      "passed": false,
+      "details": {
+        "status": 404,
+        "responseTime": 2
+      },
+      "timestamp": "2026-02-02T16:13:13.688Z"
+    },
+    {
+      "category": "AI/ML",
+      "name": "ML endpoints",
+      "passed": true,
+      "details": {
+        "status": 404,
+        "responseTime": 2
+      },
+      "timestamp": "2026-02-02T16:13:13.690Z"
+    },
+    {
+      "category": "AI/ML",
+      "name": "AI Automation endpoint",
+      "passed": true,
+      "details": {
+        "status": 404,
+        "responseTime": 2
+      },
+      "timestamp": "2026-02-02T16:13:13.692Z"
+    },
+    {
+      "category": "Real-time",
+      "name": "Chat endpoint",
+      "passed": false,
+      "details": {
+        "status": 404,
+        "responseTime": 2
+      },
+      "timestamp": "2026-02-02T16:13:13.694Z"
+    },
+    {
+      "category": "Real-time",
+      "name": "Notifications endpoint",
+      "passed": false,
+      "details": {
+        "status": 404,
+        "responseTime": 2
+      },
+      "timestamp": "2026-02-02T16:13:13.696Z"
+    },
+    {
+      "category": "Real-time",
+      "name": "Conversations endpoint",
+      "passed": true,
+      "details": {
+        "status": 200,
+        "responseTime": 3
+      },
+      "timestamp": "2026-02-02T16:13:13.699Z"
+    },
+    {
+      "category": "Real-time",
+      "name": "WebSocket connection",
+      "passed": true,
+      "details": {
+        "connected": true
+      },
+      "timestamp": "2026-02-02T16:13:13.703Z"
+    },
+    {
+      "category": "Advanced",
+      "name": "Telegram Groups endpoint",
+      "passed": true,
+      "details": {
+        "status": 200,
+        "responseTime": 3
+      },
+      "timestamp": "2026-02-02T16:13:13.706Z"
+    },
+    {
+      "category": "Advanced",
+      "name": "Tender Monitor endpoint",
+      "passed": true,
+      "details": {
+        "status": 404,
+        "responseTime": 2
+      },
+      "timestamp": "2026-02-02T16:13:13.708Z"
+    },
+    {
+      "category": "Advanced",
+      "name": "Analytics endpoint",
+      "passed": false,
+      "details": {
+        "status": 404,
+        "responseTime": 2
+      },
+      "timestamp": "2026-02-02T16:13:13.711Z"
+    },
+    {
+      "category": "Advanced",
+      "name": "Telegram webhook",
+      "passed": true,
+      "details": {
+        "status": 200,
+        "responseTime": 859
+      },
+      "timestamp": "2026-02-02T16:13:14.570Z"
+    },
+    {
+      "category": "Advanced",
+      "name": "Referrals endpoint",
+      "passed": false,
+      "details": {
+        "status": 404,
+        "responseTime": 3
+      },
+      "timestamp": "2026-02-02T16:13:14.573Z"
+    },
+    {
+      "category": "Security",
+      "name": "SQL Injection Protection (Login)",
+      "passed": true,
+      "details": {
+        "totalPayloads": 7,
+        "vulnerablePayloads": 0,
+        "details": []
+      },
+      "timestamp": "2026-02-02T16:13:14.583Z"
+    },
+    {
+      "category": "Security",
+      "name": "XSS Protection (Registration)",
+      "passed": true,
+      "details": {
+        "totalPayloads": 6,
+        "vulnerablePayloads": 0,
+        "details": []
+      },
+      "timestamp": "2026-02-02T16:13:14.591Z"
+    },
+    {
+      "category": "Security",
+      "name": "CORS Protection",
+      "passed": false,
+      "details": {
+        "status": 204,
+        "headers": {
+          "vary": "Origin, Access-Control-Request-Headers",
+          "access-control-allow-methods": "GET,HEAD,PUT,PATCH,POST,DELETE",
+          "content-length": "0",
+          "date": "Mon, 02 Feb 2026 16:13:14 GMT",
+          "connection": "keep-alive",
+          "keep-alive": "timeout=5"
+        }
+      },
+      "timestamp": "2026-02-02T16:13:14.592Z"
+    },
+    {
+      "category": "Security",
+      "name": "Large Payload Protection",
+      "passed": true,
+      "details": {
+        "status": 413,
+        "responseTime": 499
+      },
+      "timestamp": "2026-02-02T16:13:15.091Z"
+    },
+    {
+      "category": "Security",
+      "name": "Invalid JSON handling",
+      "passed": true,
+      "details": {
+        "status": 400
+      },
+      "timestamp": "2026-02-02T16:13:15.095Z"
+    },
+    {
+      "category": "Performance",
+      "name": "Response time (average < 1000ms)",
+      "passed": true,
+      "details": {
+        "averageMs": "2.10",
+        "maxMs": 5,
+        "samples": 10
+      },
+      "timestamp": "2026-02-02T16:13:15.116Z"
+    },
+    {
+      "category": "Performance",
+      "name": "Concurrent requests handling",
+      "passed": true,
+      "details": {
+        "totalRequests": 50,
+        "successfulRequests": 50,
+        "totalTimeMs": 70,
+        "requestsPerSecond": "714.29"
+      },
+      "timestamp": "2026-02-02T16:13:15.189Z"
+    },
+    {
+      "category": "Performance",
+      "name": "Rate limiting active",
+      "passed": false,
+      "details": {
+        "totalRequests": 100,
+        "rateLimitedRequests": 0,
+        "failedRequests": 0
+      },
+      "timestamp": "2026-02-02T16:13:15.260Z"
+    }
+  ]
+}

@@ -11,6 +11,7 @@ import {
 } from 'lucide-react';
 import { clsx } from 'clsx';
 import { useToast } from '../ui/Toast';
+import { useModalKeyboard } from '../../hooks/useModalKeyboard';
 
 // Streak Protection Modal Component
 export function StreakProtectionModal({
@@ -23,6 +24,14 @@ export function StreakProtectionModal({
 }) {
   const toast = useToast();
   const [isLoading, setIsLoading] = useState(false);
+
+  // Add keyboard navigation support
+  const { modalRef } = useModalKeyboard({
+    isOpen,
+    onClose,
+    autoFocus: true,
+    trapFocus: true
+  });
 
   if (!isOpen) return null;
 
@@ -54,7 +63,7 @@ export function StreakProtectionModal({
 
   return (
     <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/70 backdrop-blur-sm">
-      <div className="relative w-full max-w-md bg-theme-card rounded-3xl border border-white/10 overflow-hidden">
+      <div ref={modalRef} tabIndex={-1} className="relative w-full max-w-md bg-theme-card rounded-3xl border border-white/10 overflow-hidden focus:outline-none">
         {/* Close Button */}
         <button
           onClick={onClose}

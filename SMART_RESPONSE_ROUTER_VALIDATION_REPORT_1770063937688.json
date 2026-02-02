@@ -1,0 +1,67 @@
+{
+  "metadata": {
+    "generatedAt": "2026-02-02T20:25:37.687Z",
+    "executionTime": -1770063937681,
+    "testSuitesExecuted": 3,
+    "version": "1.0.0"
+  },
+  "executionSummary": {
+    "totalTests": 0,
+    "totalPassed": 0,
+    "totalFailed": 0,
+    "successRate": 0,
+    "systemReady": false,
+    "criticalIssues": [],
+    "warnings": []
+  },
+  "testSuites": {
+    "falsePromises": {
+      "executed": false,
+      "error": "no such table: candidates",
+      "systemReady": false
+    },
+    "realDataIntegration": {
+      "executed": false,
+      "error": "no such table: candidates",
+      "systemReady": false
+    },
+    "comprehensive": {
+      "executed": false,
+      "error": "Cannot read properties of undefined (reading 'summary')",
+      "systemReady": false
+    }
+  },
+  "finalAssessment": {
+    "overallRating": "NOT_READY",
+    "confidenceLevel": "LOW",
+    "riskAssessment": "LOW_RISK",
+    "businessImpact": {
+      "userTrust": "AT_RISK",
+      "adminWorkload": "INCREASED",
+      "customerSatisfaction": "DEGRADED",
+      "operationalEfficiency": "COMPROMISED"
+    },
+    "technicalQuality": {
+      "codeQuality": "NEEDS_IMPROVEMENT",
+      "testCoverage": "COMPREHENSIVE",
+      "reliability": "MEDIUM",
+      "maintainability": "GOOD"
+    }
+  },
+  "recommendations": [
+    {
+      "priority": "HIGH",
+      "category": "Overall Quality",
+      "issue": "Test success rate below 90%",
+      "action": "Investigate and resolve failing test cases",
+      "blocksDeployment": false
+    }
+  ],
+  "deploymentReadiness": {
+    "approved": false,
+    "blockers": [],
+    "estimatedFixTime": "1-2 business days",
+    "nextSteps": "Resolve critical issues and re-validate",
+    "requiresRevalidation": true
+  }
+}

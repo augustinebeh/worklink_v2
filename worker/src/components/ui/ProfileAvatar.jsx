@@ -1,6 +1,6 @@
 import { useState, useEffect } from 'react';
 import { clsx } from 'clsx';
-import { getLevelTier } from '../../../../shared/utils/gamification-esm';
+import { getLevelTier } from '../../../../shared/utils/gamification-browser';
 
 /**
  * ProfileAvatar - Avatar with intricate decorative borders

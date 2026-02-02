@@ -1,0 +1,43 @@
+{
+  "timestamp": "2026-02-02T17:57:57.859Z",
+  "globalStats": {
+    "totalSessions": 1,
+    "successfulScrapes": 1,
+    "failedScrapes": 0,
+    "totalTendersScraped": 3,
+    "totalErrors": 1,
+    "averageScrapingTime": 0,
+    "lastSuccessfulScrape": "2026-02-02T17:57:57.859Z",
+    "captchasSolved": 0,
+    "rateLimitHits": 0
+  },
+  "recentErrors": [
+    {
+      "timestamp": 1770055077859,
+      "sessionId": "TEST_1770055077859",
+      "error": "Test error",
+      "context": {
+        "context": "testing"
+      }
+    }
+  ],
+  "sessionSummaries": [
+    {
+      "id": "TEST_1770055077859",
+      "startTime": 1770055077859,
+      "endTime": 1770055077859,
+      "status": "completed",
+      "duration": 0,
+      "stats": {
+        "requestsMade": 1,
+        "tendersFound": 3,
+        "errorsEncountered": 1,
+        "captchasSolved": 0,
+        "rateLimitHits": 0,
+        "retryAttempts": 0,
+        "finalTenders": 3
+      },
+      "errorCount": 1
+    }
+  ]
+}

@@ -1,0 +1,11 @@
+{
+  "issues": [
+    {
+      "issue": "Test Execution",
+      "severity": "Critical",
+      "description": "page.waitForTimeout is not a function",
+      "stack": "TypeError: page.waitForTimeout is not a function\n    at testSpecificIssues (/home/augustine/Augustine_Projects/worklink_v2/test_specific_issues.js:30:16)"
+    }
+  ],
+  "timestamp": "2026-02-02T15:52:16.254Z"
+}

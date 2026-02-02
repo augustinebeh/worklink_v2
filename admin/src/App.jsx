@@ -21,6 +21,7 @@ import FinancialDashboard from './pages/FinancialDashboard';
 import Deployments from './pages/Deployments';
 import Payments from './pages/Payments';
 import Chat from './pages/Chat';
+import EscalationQueue from './pages/EscalationQueue';
 import Training from './pages/Training';
 import Gamification from './pages/Gamification';
 import TenderMonitor from './pages/TenderMonitor';
@@ -30,6 +31,8 @@ import MLDashboard from './pages/MLDashboard';
 import TelegramGroups from './pages/TelegramGroups';
 import AdOptimization from './pages/AdOptimization';
 import RetentionAnalytics from './pages/RetentionAnalytics';
+import ConsultantPerformance from './pages/ConsultantPerformance';
+import InterviewScheduling from './pages/InterviewScheduling';
 
 // Protected Route wrapper
 function ProtectedRoute({ children }) {
@@ -90,6 +93,7 @@ function AppRoutes() {
         
         {/* Engagement */}
         <Route path="chat" element={<Chat />} />
+        <Route path="escalation-queue" element={<EscalationQueue />} />
         
         {/* Settings */}
         <Route path="settings" element={<Settings />} />
@@ -97,6 +101,8 @@ function AppRoutes() {
         {/* AI & Automation */}
         <Route path="ai-automation" element={<AIAutomation />} />
         <Route path="ai-sourcing" element={<AISourcing />} />
+        <Route path="consultant-performance" element={<ConsultantPerformance />} />
+        <Route path="interview-scheduling" element={<InterviewScheduling />} />
         <Route path="ml-dashboard" element={<MLDashboard />} />
         <Route path="telegram-groups" element={<TelegramGroups />} />
         <Route path="ad-optimization" element={<AdOptimization />} />

@@ -23,7 +23,7 @@ import { useWebSocket } from '../contexts/WebSocketContext';
 import { useToast } from '../components/ui/Toast';
 import { useStreakProtection } from '../contexts/StreakProtectionContext';
 import { clsx } from 'clsx';
-import { LEVEL_TITLES as levelTitles, calculateLevel } from '../../../shared/utils/gamification-esm';
+import { LEVEL_TITLES as levelTitles, calculateLevel } from '../../../shared/utils/gamification-browser';
 import { LoadingSkeleton, EmptyState, StatPod, SectionHeader } from '../components/common';
 import { FloatingXP, LevelUpCelebration, AchievementUnlock } from '../components/gamification/Confetti';
 import XPBar from '../components/gamification/XPBar';
