@@ -281,7 +281,8 @@ router.post('/quests/:questId/complete', (req, res) => {
 // Claim quest reward (award XP)
 router.post('/quests/:questId/claim', (req, res) => {
   try {
-    const { candidate_id } = req.body;
+    const { candidateId, candidate_id } = req.body;
+    const finalCandidateId = candidateId || candidate_id;
     const questId = req.params.questId;
 
     // Check if quest exists
@@ -290,11 +291,31 @@ router.post('/quests/:questId/claim', (req, res) => {
       return res.status(404).json({ success: false, error: 'Quest not found' });
     }
 
+    const requirement = JSON.parse(quest.requirement || '{}');
+    const target = requirement.count || 1;
+
+    // Check if this is a simple claimable quest (like daily check-in)
+    const isSimpleQuest = target === 1 && (
+      requirement.type === 'checkin' || 
+      requirement.type === 'daily_login' ||
+      quest.title?.toLowerCase().includes('check-in') ||
+      quest.title?.toLowerCase().includes('daily check')
+    );
+
     // Check candidate's quest progress
-    const candidateQuest = db.prepare(`
+    let candidateQuest = db.prepare(`
       SELECT * FROM candidate_quests
       WHERE candidate_id = ? AND quest_id = ?
-    `).get(candidate_id, questId);
+    `).get(finalCandidateId, questId);
+
+    // Auto-create quest record if doesn't exist and it's a simple quest
+    if (!candidateQuest && isSimpleQuest) {
+      db.prepare(`
+        INSERT INTO candidate_quests (candidate_id, quest_id, progress, target, completed, claimed)
+        VALUES (?, ?, 1, 1, 1, 0)
+      `).run(finalCandidateId, questId);
+      candidateQuest = { progress: 1, target: 1, completed: 1, claimed: 0 };
+    }
 
     if (!candidateQuest) {
       return res.status(400).json({ success: false, error: 'Quest not started' });
@@ -304,45 +325,50 @@ router.post('/quests/:questId/claim', (req, res) => {
       return res.status(400).json({ success: false, error: 'Quest already claimed' });
     }
 
-    const requirement = JSON.parse(quest.requirement || '{}');
-    const target = requirement.count || 1;
-
-    if (candidateQuest.progress < target) {
+    if (candidateQuest.progress < target && !isSimpleQuest) {
       return res.status(400).json({ success: false, error: 'Quest not completed yet' });
     }
 
     // Mark as claimed
     db.prepare(`
       UPDATE candidate_quests
-      SET claimed = 1, claimed_at = CURRENT_TIMESTAMP
+      SET claimed = 1, claimed_at = CURRENT_TIMESTAMP, progress = ?, completed = 1
       WHERE candidate_id = ? AND quest_id = ?
-    `).run(candidate_id, questId);
+    `).run(target, finalCandidateId, questId);
+
+    // Get current XP before update
+    const candidateBefore = db.prepare('SELECT xp, level FROM candidates WHERE id = ?').get(finalCandidateId);
+    const oldXP = candidateBefore?.xp || 0;
 
     // Award XP
-    db.prepare('UPDATE candidates SET xp = xp + ? WHERE id = ?').run(quest.xp_reward, candidate_id);
+    db.prepare('UPDATE candidates SET xp = xp + ? WHERE id = ?').run(quest.xp_reward, finalCandidateId);
     db.prepare(`
       INSERT INTO xp_transactions (candidate_id, amount, reason, reference_id)
       VALUES (?, ?, 'quest_claim', ?)
-    `).run(candidate_id, quest.xp_reward, questId);
+    `).run(finalCandidateId, quest.xp_reward, questId);
 
     // Check for level up
-    const candidate = db.prepare('SELECT xp, level FROM candidates WHERE id = ?').get(candidate_id);
+    const candidate = db.prepare('SELECT xp, level FROM candidates WHERE id = ?').get(finalCandidateId);
     const newLevel = calculateLevel(candidate.xp);
+    const leveledUp = newLevel > (candidateBefore?.level || 1);
 
-    if (newLevel > candidate.level) {
-      db.prepare('UPDATE candidates SET level = ? WHERE id = ?').run(newLevel, candidate_id);
+    if (leveledUp) {
+      db.prepare('UPDATE candidates SET level = ? WHERE id = ?').run(newLevel, finalCandidateId);
     }
 
     res.json({
       success: true,
       data: {
         xp_awarded: quest.xp_reward,
+        old_xp: oldXP,
         new_xp: candidate.xp,
+        old_level: candidateBefore?.level || 1,
         new_level: newLevel,
-        leveled_up: newLevel > candidate.level,
+        leveled_up: leveledUp,
       },
     });
   } catch (error) {
+    console.error('Quest claim error:', error);
     res.status(500).json({ success: false, error: error.message });
   }
 });
@@ -352,43 +378,57 @@ router.get('/quests/user/:candidateId', (req, res) => {
   try {
     const candidateId = req.params.candidateId;
 
-    // Query handles case where claimed column might not exist yet
+    // Get all active quests with user progress (if any)
     const quests = db.prepare(`
       SELECT q.*,
         COALESCE(cq.progress, 0) as progress,
         COALESCE(cq.completed, 0) as completed,
+        COALESCE(cq.claimed, 0) as claimed,
         cq.started_at,
-        cq.completed_at
+        cq.completed_at,
+        cq.claimed_at
       FROM quests q
       LEFT JOIN candidate_quests cq ON q.id = cq.quest_id AND cq.candidate_id = ?
       WHERE q.active = 1
       ORDER BY q.type, q.xp_reward DESC
     `).all(candidateId);
 
-    // Check if claimed column exists and get claimed status
-    let claimedQuests = new Set();
-    try {
-      const claimed = db.prepare(`
-        SELECT quest_id FROM candidate_quests
-        WHERE candidate_id = ? AND claimed = 1
-      `).all(candidateId);
-      claimedQuests = new Set(claimed.map(c => c.quest_id));
-    } catch (e) {
-      // claimed column doesn't exist yet, that's ok
-    }
-
     const parsed = quests.map(q => {
       const requirement = JSON.parse(q.requirement || '{}');
       const target = requirement.count || 1;
-      const isCompleted = q.progress >= target;
-      const isClaimed = claimedQuests.has(q.id);
+      const progress = q.progress || 0;
+      const isClaimed = q.claimed === 1;
+      const isCompleted = progress >= target;
+      
+      // Determine status - quests don't need to be "started" first
+      // If it's a simple quest (target=1) like daily check-in, it's immediately claimable
+      const isSimpleQuest = target === 1 && (
+        requirement.type === 'checkin' || 
+        requirement.type === 'daily_login' ||
+        q.title?.toLowerCase().includes('check-in') ||
+        q.title?.toLowerCase().includes('daily check')
+      );
+
+      let status;
+      if (isClaimed) {
+        status = 'claimed';
+      } else if (isCompleted) {
+        status = 'claimable';
+      } else if (isSimpleQuest) {
+        // Simple check-in quests are always claimable (once per day)
+        status = 'claimable';
+      } else if (progress > 0) {
+        status = 'in_progress';
+      } else {
+        status = 'available';
+      }
 
       return {
         ...q,
         requirement,
         target,
-        claimed: isClaimed ? 1 : 0,
-        status: isClaimed ? 'claimed' : isCompleted ? 'claimable' : q.progress > 0 ? 'in_progress' : 'available',
+        progress,
+        status,
       };
     });
 
