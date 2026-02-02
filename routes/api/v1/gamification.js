@@ -284,6 +284,7 @@ router.post('/quests/:questId/claim', (req, res) => {
     const { candidateId, candidate_id } = req.body;
     const finalCandidateId = candidateId || candidate_id;
     const questId = req.params.questId;
+    const todaySG = getSGDateString(); // Today's date in Singapore timezone
 
     // Check if quest exists
     const quest = db.prepare('SELECT * FROM quests WHERE id = ?').get(questId);
@@ -293,6 +294,9 @@ router.post('/quests/:questId/claim', (req, res) => {
 
     const requirement = JSON.parse(quest.requirement || '{}');
     const target = requirement.count || 1;
+
+    // Check if this is a daily quest (resets at midnight)
+    const isDailyQuest = quest.type === 'daily' || requirement.type === 'checkin' || requirement.type === 'daily_login';
 
     // Check if this is a simple claimable quest (like daily check-in)
     const isSimpleQuest = target === 1 && (
@@ -308,6 +312,21 @@ router.post('/quests/:questId/claim', (req, res) => {
       WHERE candidate_id = ? AND quest_id = ?
     `).get(finalCandidateId, questId);
 
+    // For daily quests, check if already claimed TODAY
+    if (isDailyQuest && candidateQuest?.claimed_at) {
+      const claimedDate = candidateQuest.claimed_at.substring(0, 10);
+      if (claimedDate === todaySG) {
+        return res.status(400).json({ success: false, error: 'Already claimed today! Come back tomorrow.' });
+      }
+      // It's a new day - reset the quest for re-claim
+      db.prepare(`
+        UPDATE candidate_quests 
+        SET progress = 0, completed = 0, claimed = 0, claimed_at = NULL
+        WHERE candidate_id = ? AND quest_id = ?
+      `).run(finalCandidateId, questId);
+      candidateQuest = { ...candidateQuest, progress: 0, completed: 0, claimed: 0, claimed_at: null };
+    }
+
     // Auto-create quest record if doesn't exist and it's a simple quest
     if (!candidateQuest && isSimpleQuest) {
       db.prepare(`
@@ -321,7 +340,7 @@ router.post('/quests/:questId/claim', (req, res) => {
       return res.status(400).json({ success: false, error: 'Quest not started' });
     }
 
-    if (candidateQuest.claimed) {
+    if (candidateQuest.claimed && !isDailyQuest) {
       return res.status(400).json({ success: false, error: 'Quest already claimed' });
     }
 
@@ -329,7 +348,7 @@ router.post('/quests/:questId/claim', (req, res) => {
       return res.status(400).json({ success: false, error: 'Quest not completed yet' });
     }
 
-    // Mark as claimed
+    // Mark as claimed with current timestamp
     db.prepare(`
       UPDATE candidate_quests
       SET claimed = 1, claimed_at = CURRENT_TIMESTAMP, progress = ?, completed = 1
@@ -347,8 +366,34 @@ router.post('/quests/:questId/claim', (req, res) => {
       VALUES (?, ?, 'quest_claim', ?)
     `).run(finalCandidateId, quest.xp_reward, questId);
 
+    // Update streak for daily check-in
+    if (isSimpleQuest) {
+      const candidate = db.prepare('SELECT streak_days, streak_last_date FROM candidates WHERE id = ?').get(finalCandidateId);
+      let newStreak = 1;
+      
+      if (candidate?.streak_last_date) {
+        const lastDate = candidate.streak_last_date;
+        // Calculate yesterday's date in SG timezone
+        const yesterday = new Date();
+        yesterday.setDate(yesterday.getDate() - 1);
+        const yesterdaySG = yesterday.toLocaleDateString('sv-SE', { timeZone: 'Asia/Singapore' });
+        
+        if (lastDate === yesterdaySG) {
+          // Consecutive day - increment streak
+          newStreak = (candidate.streak_days || 0) + 1;
+        } else if (lastDate === todaySG) {
+          // Already checked in today - keep current streak
+          newStreak = candidate.streak_days || 1;
+        }
+        // Otherwise streak resets to 1
+      }
+      
+      db.prepare('UPDATE candidates SET streak_days = ?, streak_last_date = ? WHERE id = ?')
+        .run(newStreak, todaySG, finalCandidateId);
+    }
+
     // Check for level up
-    const candidate = db.prepare('SELECT xp, level FROM candidates WHERE id = ?').get(finalCandidateId);
+    const candidate = db.prepare('SELECT xp, level, streak_days FROM candidates WHERE id = ?').get(finalCandidateId);
     const newLevel = calculateLevel(candidate.xp);
     const leveledUp = newLevel > (candidateBefore?.level || 1);
 
@@ -365,6 +410,7 @@ router.post('/quests/:questId/claim', (req, res) => {
         old_level: candidateBefore?.level || 1,
         new_level: newLevel,
         leveled_up: leveledUp,
+        streak_days: candidate.streak_days,
       },
     });
   } catch (error) {
@@ -377,6 +423,7 @@ router.post('/quests/:questId/claim', (req, res) => {
 router.get('/quests/user/:candidateId', (req, res) => {
   try {
     const candidateId = req.params.candidateId;
+    const todaySG = getSGDateString(); // Today's date in Singapore timezone (YYYY-MM-DD)
 
     // Get all active quests with user progress (if any)
     const quests = db.prepare(`
@@ -400,8 +447,10 @@ router.get('/quests/user/:candidateId', (req, res) => {
       const isClaimed = q.claimed === 1;
       const isCompleted = progress >= target;
       
-      // Determine status - quests don't need to be "started" first
-      // If it's a simple quest (target=1) like daily check-in, it's immediately claimable
+      // Check if this is a daily quest (resets at midnight)
+      const isDailyQuest = q.type === 'daily' || requirement.type === 'checkin' || requirement.type === 'daily_login';
+      
+      // Check if this is a simple quest (target=1) like daily check-in
       const isSimpleQuest = target === 1 && (
         requirement.type === 'checkin' || 
         requirement.type === 'daily_login' ||
@@ -409,26 +458,47 @@ router.get('/quests/user/:candidateId', (req, res) => {
         q.title?.toLowerCase().includes('daily check')
       );
 
+      // For daily quests, check if already claimed TODAY
+      let claimedToday = false;
+      if (isDailyQuest && q.claimed_at) {
+        const claimedDate = q.claimed_at.substring(0, 10); // Get YYYY-MM-DD from timestamp
+        claimedToday = claimedDate === todaySG;
+      }
+
       let status;
-      if (isClaimed) {
-        status = 'claimed';
-      } else if (isCompleted) {
-        status = 'claimable';
-      } else if (isSimpleQuest) {
-        // Simple check-in quests are always claimable (once per day)
-        status = 'claimable';
-      } else if (progress > 0) {
-        status = 'in_progress';
+      if (isDailyQuest) {
+        // Daily quests reset at midnight - only "claimed" if claimed today
+        if (claimedToday) {
+          status = 'claimed';
+        } else if (isSimpleQuest) {
+          status = 'claimable'; // Daily check-in is always claimable if not claimed today
+        } else if (isCompleted) {
+          status = 'claimable';
+        } else if (progress > 0) {
+          status = 'in_progress';
+        } else {
+          status = 'available';
+        }
       } else {
-        status = 'available';
+        // Non-daily quests use normal logic
+        if (isClaimed) {
+          status = 'claimed';
+        } else if (isCompleted) {
+          status = 'claimable';
+        } else if (progress > 0) {
+          status = 'in_progress';
+        } else {
+          status = 'available';
+        }
       }
 
       return {
         ...q,
         requirement,
         target,
-        progress,
+        progress: isDailyQuest && !claimedToday ? 0 : progress, // Reset progress display for new day
         status,
+        claimedToday,
       };
     });
 
