@@ -268,12 +268,55 @@ router.post('/worker/login', (req, res) => {
   }
 });
 
+// Helper function to process referral for new user
+function processReferral(newCandidateId, newCandidateName, referralCode) {
+  if (!referralCode) return null;
+
+  try {
+    // Find the referrer by their referral code
+    const referrer = db.prepare('SELECT id, name FROM candidates WHERE referral_code = ?').get(referralCode);
+    if (!referrer) {
+      logger.warn(`Invalid referral code: ${referralCode}`);
+      return null;
+    }
+
+    // Update the new candidate's referred_by field
+    db.prepare('UPDATE candidates SET referred_by = ? WHERE id = ?').run(referrer.id, newCandidateId);
+
+    // Create referral record
+    const refId = 'REF' + Date.now().toString(36).toUpperCase();
+    const tier1Bonus = db.prepare('SELECT bonus_amount FROM referral_tiers WHERE tier_level = 1').get();
+    const bonusAmount = tier1Bonus?.bonus_amount || 25;
+
+    db.prepare(`
+      INSERT INTO referrals (id, referrer_id, referred_id, status, tier, bonus_amount)
+      VALUES (?, ?, ?, 'registered', 1, ?)
+    `).run(refId, referrer.id, newCandidateId, bonusAmount);
+
+    // Notify the referrer
+    db.prepare(`
+      INSERT INTO notifications (candidate_id, type, title, message, data)
+      VALUES (?, 'referral', 'New Referral! 🎉', ?, ?)
+    `).run(
+      referrer.id,
+      `${newCandidateName} just signed up using your code! You'll earn $${bonusAmount} when they complete their first job.`,
+      JSON.stringify({ referred_id: newCandidateId, referred_name: newCandidateName })
+    );
+
+    logger.info(`✅ Referral processed: ${newCandidateName} referred by ${referrer.name}`);
+    return referrer.name;
+  } catch (error) {
+    logger.error('Referral processing error:', error);
+    return null;
+  }
+}
+
 // Telegram Login - authenticate via Telegram widget
 router.post('/telegram/login', (req, res) => {
   try {
-    const telegramData = req.body;
-    
-    logger.info('📱 Telegram login attempt:', { id: telegramData.id, username: telegramData.username });
+    const { referralCode, ...telegramData } = req.body;
+
+    logger.info('📱 Telegram login attempt:', { id: telegramData.id, username: telegramData.username, referralCode });
 
     // Verify the Telegram authentication data
     if (!verifyTelegramAuth(telegramData)) {
@@ -294,7 +337,7 @@ router.post('/telegram/login', (req, res) => {
     if (candidate) {
       // Existing user - update last login info
       db.prepare(`
-        UPDATE candidates SET 
+        UPDATE candidates SET
           telegram_username = ?,
           profile_photo = COALESCE(NULLIF(?, ''), profile_photo),
           online_status = 'online',
@@ -317,27 +360,31 @@ router.post('/telegram/login', (req, res) => {
 
     // New user - create account with pending status
     const id = 'CND' + Date.now().toString(36).toUpperCase();
-    const referralCode = fullName.split(' ')[0].toUpperCase().slice(0, 4) + Date.now().toString(36).toUpperCase().slice(-4);
+    const newReferralCode = fullName.split(' ')[0].toUpperCase().slice(0, 4) + Date.now().toString(36).toUpperCase().slice(-4);
 
     db.prepare(`
       INSERT INTO candidates (
-        id, name, telegram_chat_id, telegram_username, status, source, 
+        id, name, telegram_chat_id, telegram_username, status, source,
         referral_code, xp, level, profile_photo, online_status,
         created_at, updated_at
       )
       VALUES (?, ?, ?, ?, 'pending', 'telegram', ?, 0, 1, ?, 'online', datetime('now'), datetime('now'))
-    `).run(id, fullName, telegramId, username, referralCode, photoUrl || generateRandomAvatar(fullName));
+    `).run(id, fullName, telegramId, username, newReferralCode, photoUrl || generateRandomAvatar(fullName));
+
+    // Process referral if code provided
+    const referredBy = processReferral(id, fullName, referralCode);
 
     candidate = db.prepare('SELECT * FROM candidates WHERE id = ?').get(id);
     candidate.certifications = JSON.parse(candidate.certifications || '[]');
 
-    logger.info(`📱 New Telegram registration: ${fullName} (@${username || 'no username'})`);
+    logger.info(`📱 New Telegram registration: ${fullName} (@${username || 'no username'})${referredBy ? ` - referred by ${referredBy}` : ''}`);
 
     res.status(201).json({
       success: true,
       data: candidate,
       token: `demo-token-${candidate.id}`,
       isNewUser: true,
+      referredBy: referredBy,
       message: 'Account created! Your account is pending approval.',
     });
   } catch (error) {
@@ -363,17 +410,17 @@ router.get('/telegram/config', (req, res) => {
 // Google Login - authenticate via Google Sign-In
 router.post('/google/login', async (req, res) => {
   try {
-    const { credential } = req.body;
-    
+    const { credential, referralCode } = req.body;
+
     if (!credential) {
       return res.status(400).json({ success: false, error: 'No credential provided' });
     }
 
-    logger.info('🔵 Google login attempt');
+    logger.info('🔵 Google login attempt', { referralCode });
 
     // Verify the Google ID token
     const googleUser = await verifyGoogleToken(credential);
-    
+
     if (!googleUser) {
       logger.warn('❌ Google auth verification failed');
       return res.status(401).json({ success: false, error: 'Invalid Google authentication' });
@@ -388,7 +435,7 @@ router.post('/google/login', async (req, res) => {
     if (candidate) {
       // Existing user - update with Google info if needed
       db.prepare(`
-        UPDATE candidates SET 
+        UPDATE candidates SET
           google_id = COALESCE(google_id, ?),
           email = COALESCE(email, ?),
           profile_photo = COALESCE(NULLIF(?, ''), profile_photo),
@@ -412,27 +459,31 @@ router.post('/google/login', async (req, res) => {
 
     // New user - create account with pending status
     const id = 'CND' + Date.now().toString(36).toUpperCase();
-    const referralCode = (givenName || fullName.split(' ')[0]).toUpperCase().slice(0, 4) + Date.now().toString(36).toUpperCase().slice(-4);
+    const newReferralCode = (givenName || fullName.split(' ')[0]).toUpperCase().slice(0, 4) + Date.now().toString(36).toUpperCase().slice(-4);
 
     db.prepare(`
       INSERT INTO candidates (
-        id, name, email, google_id, status, source, 
+        id, name, email, google_id, status, source,
         referral_code, xp, level, profile_photo, online_status,
         created_at, updated_at
       )
       VALUES (?, ?, ?, ?, 'pending', 'google', ?, 0, 1, ?, 'online', datetime('now'), datetime('now'))
-    `).run(id, fullName, email, googleId, referralCode, picture || generateRandomAvatar(fullName));
+    `).run(id, fullName, email, googleId, newReferralCode, picture || generateRandomAvatar(fullName));
+
+    // Process referral if code provided
+    const referredBy = processReferral(id, fullName, referralCode);
 
     candidate = db.prepare('SELECT * FROM candidates WHERE id = ?').get(id);
     candidate.certifications = JSON.parse(candidate.certifications || '[]');
 
-    logger.info(`🔵 New Google registration: ${fullName} (${email})`);
+    logger.info(`🔵 New Google registration: ${fullName} (${email})${referredBy ? ` - referred by ${referredBy}` : ''}`);
 
     res.status(201).json({
       success: true,
       data: candidate,
       token: `demo-token-${candidate.id}`,
       isNewUser: true,
+      referredBy: referredBy,
       message: 'Account created! Your account is pending approval.',
     });
   } catch (error) {

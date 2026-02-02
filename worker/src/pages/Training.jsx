@@ -19,7 +19,15 @@ import { FilterTabs, LoadingSkeleton, EmptyState } from '../components/common';
 function TrainingModal({ module, onClose, onComplete }) {
   const [currentStep, setCurrentStep] = useState(0);
   const [completing, setCompleting] = useState(false);
-  
+
+  // Lock body scroll when modal is open
+  useEffect(() => {
+    document.body.style.overflow = 'hidden';
+    return () => {
+      document.body.style.overflow = '';
+    };
+  }, []);
+
   // Mock training content - in production this would come from the API
   const steps = module.content ? JSON.parse(module.content) : [
     { title: 'Introduction', content: module.description || 'Welcome to this training module.' },
@@ -27,7 +35,7 @@ function TrainingModal({ module, onClose, onComplete }) {
     { title: 'Practical Tips', content: 'Apply what you\'ve learned with these practical tips.' },
     { title: 'Summary', content: 'Great job! You\'ve completed this training module.' },
   ];
-  
+
   const isLastStep = currentStep === steps.length - 1;
   const progress = ((currentStep + 1) / steps.length) * 100;
 
@@ -46,12 +54,15 @@ function TrainingModal({ module, onClose, onComplete }) {
   };
 
   return (
-    <div className="fixed inset-0 z-50 flex items-end sm:items-center justify-center">
+    <div
+      className="fixed top-0 left-0 right-0 bottom-0 z-[100] flex items-center justify-center"
+      style={{ position: 'fixed', height: '100dvh', width: '100vw' }}
+    >
       {/* Backdrop */}
       <div className="absolute inset-0 bg-black/70 backdrop-blur-sm" onClick={onClose} />
-      
+
       {/* Modal */}
-      <div className="relative w-full max-w-lg bg-[#0a1628] rounded-t-3xl sm:rounded-3xl border border-white/[0.08] max-h-[85vh] overflow-hidden">
+      <div className="absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 w-[calc(100%-2rem)] max-w-lg bg-[#0a1628] rounded-3xl border border-white/[0.08] max-h-[85vh] overflow-hidden shadow-2xl">
         {/* Header */}
         <div className="sticky top-0 bg-[#0a1628] px-4 py-4 border-b border-white/[0.05]">
           <div className="flex items-center justify-between mb-3">

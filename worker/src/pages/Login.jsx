@@ -9,6 +9,7 @@ import {
   ShieldCheckIcon,
   ZapIcon,
   ChevronDownIcon,
+  GiftIcon,
 } from 'lucide-react';
 import { useAuth } from '../contexts/AuthContext';
 import Logo from '../components/ui/Logo';
@@ -96,7 +97,27 @@ export default function Login() {
   const [botUsername, setBotUsername] = useState('');
   const [googleClientId, setGoogleClientId] = useState('');
   const [showEmailLogin, setShowEmailLogin] = useState(false);
+  const [referralCode, setReferralCode] = useState('');
+  const [referrerInfo, setReferrerInfo] = useState(null);
   const isLocalhost = window.location.hostname === 'localhost' || window.location.hostname === '127.0.0.1';
+
+  // Extract referral code from URL on mount
+  useEffect(() => {
+    const params = new URLSearchParams(location.search);
+    const refCode = params.get('ref');
+    if (refCode) {
+      setReferralCode(refCode);
+      // Validate the referral code
+      fetch(`/api/v1/referrals/validate/${refCode}`)
+        .then(r => r.json())
+        .then(data => {
+          if (data.success && data.valid) {
+            setReferrerInfo(data.data);
+          }
+        })
+        .catch(e => console.error('Referral validation error:', e));
+    }
+  }, [location.search]);
 
   const handleTelegramAuth = useCallback(async (telegramUser) => {
     console.log('handleTelegramAuth:', telegramUser);
@@ -104,7 +125,7 @@ export default function Login() {
     try {
       const res = await fetch('/api/v1/auth/telegram/login', {
         method: 'POST', headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify(telegramUser),
+        body: JSON.stringify({ ...telegramUser, referralCode }),
       });
       const data = await res.json();
       console.log('Telegram response:', data);
@@ -112,7 +133,10 @@ export default function Login() {
         localStorage.setItem('token', data.token);
         localStorage.setItem('worker_user', JSON.stringify(data.data));
         if (data.isNewUser) {
-          setSuccess('Welcome! Your account is pending approval.');
+          const welcomeMsg = data.referredBy
+            ? `Welcome! You were referred by ${data.referredBy}. Your account is pending approval.`
+            : 'Welcome! Your account is pending approval.';
+          setSuccess(welcomeMsg);
           setTimeout(() => { window.location.href = '/'; }, 1500);
         } else {
           window.location.href = '/';
@@ -126,7 +150,7 @@ export default function Login() {
       setError('Network error. Please try again.');
       setLoading(false);
     }
-  }, []);
+  }, [referralCode]);
 
   const handleGoogleAuth = useCallback(async (credential) => {
     console.log('handleGoogleAuth');
@@ -134,7 +158,7 @@ export default function Login() {
     try {
       const res = await fetch('/api/v1/auth/google/login', {
         method: 'POST', headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ credential }),
+        body: JSON.stringify({ credential, referralCode }),
       });
       const data = await res.json();
       console.log('Google response:', data);
@@ -142,7 +166,10 @@ export default function Login() {
         localStorage.setItem('token', data.token);
         localStorage.setItem('worker_user', JSON.stringify(data.data));
         if (data.isNewUser) {
-          setSuccess('Welcome! Your account is pending approval.');
+          const welcomeMsg = data.referredBy
+            ? `Welcome! You were referred by ${data.referredBy}. Your account is pending approval.`
+            : 'Welcome! Your account is pending approval.';
+          setSuccess(welcomeMsg);
           setTimeout(() => { window.location.href = '/'; }, 1500);
         } else {
           window.location.href = '/';
@@ -156,7 +183,7 @@ export default function Login() {
       setError('Network error. Please try again.');
       setLoading(false);
     }
-  }, []);
+  }, [referralCode]);
 
   useEffect(() => {
     if (isAuthenticated) navigate(from, { replace: true });
@@ -222,9 +249,32 @@ export default function Login() {
           <div className="mb-4">
             <Logo size="lg" />
           </div>
-          <h1 className="text-2xl font-bold text-white mb-2">Welcome Back</h1>
-          <p className="text-white/50">Sign in to continue to WorkLink</p>
+          <h1 className="text-2xl font-bold text-white mb-2">
+            {referrerInfo ? 'You\'ve Been Invited!' : 'Welcome Back'}
+          </h1>
+          <p className="text-white/50">
+            {referrerInfo ? 'Sign up to claim your bonus' : 'Sign in to continue to WorkLink'}
+          </p>
         </div>
+
+        {/* Referral Banner */}
+        {referrerInfo && (
+          <div className="w-full max-w-sm mb-6 p-4 rounded-2xl bg-gradient-to-r from-emerald-500/20 to-cyan-500/10 border border-emerald-500/30">
+            <div className="flex items-center gap-3">
+              <div className="w-12 h-12 rounded-xl bg-emerald-500/20 flex items-center justify-center">
+                <GiftIcon className="h-6 w-6 text-emerald-400" />
+              </div>
+              <div className="flex-1">
+                <p className="text-white font-semibold">
+                  {referrerInfo.referrerName} invited you!
+                </p>
+                <p className="text-emerald-400 text-sm">
+                  You'll both get ${referrerInfo.bonusAmount || 25} when you complete your first job
+                </p>
+              </div>
+            </div>
+          </div>
+        )}
 
         {/* Alerts */}
         {success && (

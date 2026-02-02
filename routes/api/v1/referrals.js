@@ -19,6 +19,24 @@ function generateRandomAvatar(name) {
   return `https://api.dicebear.com/7.x/${style}/svg?seed=${encodeURIComponent(seed)}`;
 }
 
+// Get referral settings (bonus amounts, etc.)
+router.get('/settings', (req, res) => {
+  try {
+    const tier1 = db.prepare('SELECT bonus_amount FROM referral_tiers WHERE tier_level = 1').get();
+    const allTiers = db.prepare('SELECT * FROM referral_tiers ORDER BY tier_level').all();
+
+    res.json({
+      success: true,
+      data: {
+        bonusAmount: tier1?.bonus_amount || 25,
+        tiers: allTiers,
+      },
+    });
+  } catch (error) {
+    res.status(500).json({ success: false, error: error.message });
+  }
+});
+
 // Get referral dashboard for a candidate
 router.get('/dashboard/:candidateId', (req, res) => {
   try {
@@ -56,11 +74,12 @@ router.get('/dashboard/:candidateId', (req, res) => {
 
     // Generate share links
     const baseUrl = process.env.APP_URL || 'https://worklinkv2-production.up.railway.app';
+    const bonusAmount = getBonusAmount();
     const shareLinks = {
       web: `${baseUrl}/join?ref=${candidate.referral_code}`,
-      whatsapp: generateWhatsAppLink(candidate.name, candidate.referral_code, baseUrl),
-      telegram: generateTelegramLink(candidate.name, candidate.referral_code, baseUrl),
-      sms: generateSMSLink(candidate.name, candidate.referral_code, baseUrl),
+      whatsapp: generateWhatsAppLink(candidate.name, candidate.referral_code, baseUrl, bonusAmount),
+      telegram: generateTelegramLink(candidate.name, candidate.referral_code, baseUrl, bonusAmount),
+      sms: generateSMSLink(candidate.name, candidate.referral_code, baseUrl, bonusAmount),
     };
 
     res.json({
@@ -80,24 +99,30 @@ router.get('/dashboard/:candidateId', (req, res) => {
   }
 });
 
+// Get bonus amount from database
+function getBonusAmount() {
+  const tier1 = db.prepare('SELECT bonus_amount FROM referral_tiers WHERE tier_level = 1').get();
+  return tier1?.bonus_amount || 25;
+}
+
 // Generate WhatsApp share link
-function generateWhatsAppLink(referrerName, code, baseUrl) {
+function generateWhatsAppLink(referrerName, code, baseUrl, bonusAmount) {
   const message = `🎉 Hey! I've been earning extra cash with WorkLink - flexible gig jobs in Singapore!\n\n` +
-    `Use my code *${code}* when you sign up and we BOTH get $30 bonus! 💰\n\n` +
-    `Join here: ${baseUrl}/join?ref=${code}\n\n` +
+    `Use my code *${code}* when you sign up and we BOTH get $${bonusAmount} bonus! 💰\n\n` +
+    `Join here: ${baseUrl}/login?ref=${code}\n\n` +
     `It's super easy - just sign up, complete 1 job, and get paid!`;
   return `https://wa.me/?text=${encodeURIComponent(message)}`;
 }
 
-// Generate Telegram share link  
-function generateTelegramLink(referrerName, code, baseUrl) {
-  const message = `🎉 Earn with WorkLink! Use my code ${code} for $30 bonus.\n${baseUrl}/join?ref=${code}`;
-  return `https://t.me/share/url?url=${encodeURIComponent(baseUrl + '/join?ref=' + code)}&text=${encodeURIComponent(message)}`;
+// Generate Telegram share link
+function generateTelegramLink(referrerName, code, baseUrl, bonusAmount) {
+  const message = `🎉 Earn with WorkLink! Use my code ${code} for $${bonusAmount} bonus.\n${baseUrl}/login?ref=${code}`;
+  return `https://t.me/share/url?url=${encodeURIComponent(baseUrl + '/login?ref=' + code)}&text=${encodeURIComponent(message)}`;
 }
 
 // Generate SMS link
-function generateSMSLink(referrerName, code, baseUrl) {
-  const message = `Join WorkLink with my code ${code} - we both get $30! ${baseUrl}/join?ref=${code}`;
+function generateSMSLink(referrerName, code, baseUrl, bonusAmount) {
+  const message = `Join WorkLink with my code ${code} - we both get $${bonusAmount}! ${baseUrl}/login?ref=${code}`;
   return `sms:?body=${encodeURIComponent(message)}`;
 }
 
@@ -136,7 +161,7 @@ router.post('/register', validate(schemas.referralRegistration), (req, res) => {
     db.prepare(`
       INSERT INTO referrals (id, referrer_id, referred_id, status, tier, bonus_amount)
       VALUES (?, ?, ?, 'registered', 1, ?)
-    `).run(refId, referrer.id, id, tier1Bonus?.bonus_amount || 30);
+    `).run(refId, referrer.id, id, tier1Bonus?.bonus_amount || 25);
 
     // Notify referrer
     db.prepare(`
@@ -144,7 +169,7 @@ router.post('/register', validate(schemas.referralRegistration), (req, res) => {
       VALUES (?, 'referral', 'New Referral! 🎉', ?, ?)
     `).run(
       referrer.id,
-      `${name} just signed up using your code! You'll earn $${tier1Bonus?.bonus_amount || 30} when they complete their first job.`,
+      `${name} just signed up using your code! You'll earn $${tier1Bonus?.bonus_amount || 25} when they complete their first job.`,
       JSON.stringify({ referred_id: id, referred_name: name })
     );
 
@@ -154,7 +179,7 @@ router.post('/register', validate(schemas.referralRegistration), (req, res) => {
         candidateId: id,
         referralCode: newReferralCode,
         referredBy: referrer.name,
-        bonusAmount: tier1Bonus?.bonus_amount || 30,
+        bonusAmount: tier1Bonus?.bonus_amount || 25,
       },
     });
   } catch (error) {
@@ -284,7 +309,7 @@ router.get('/validate/:code', (req, res) => {
       data: {
         referrerName: referrer.name,
         referrerPhoto: referrer.profile_photo,
-        bonusAmount: tier1Bonus?.bonus_amount || 30,
+        bonusAmount: tier1Bonus?.bonus_amount || 25,
       },
     });
   } catch (error) {

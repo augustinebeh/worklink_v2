@@ -31,6 +31,7 @@ import {
 import { useToast } from '../components/ui/Toast';
 import { useAuth } from '../contexts/AuthContext';
 import { useTheme } from '../contexts/ThemeContext';
+import { useAppSettings } from '../contexts/AppSettingsContext';
 import { usePushNotifications } from '../hooks/usePushNotifications';
 import { clsx } from 'clsx';
 import { calculateLevel, getLevelTier, LEVEL_TITLES as levelTitles } from '../utils/gamification';
@@ -114,11 +115,22 @@ function BorderSelectionModal({ isOpen, onClose, borders, selectedBorderId, onSe
 
   const tierOrder = ['bronze', 'silver', 'gold', 'platinum', 'diamond', 'mythic', 'special'];
 
+  // Lock body scroll when modal is open
+  useEffect(() => {
+    document.body.style.overflow = 'hidden';
+    return () => {
+      document.body.style.overflow = '';
+    };
+  }, []);
+
   return (
-    <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/70 backdrop-blur-sm">
-      <div className="w-full max-w-lg max-h-[80vh] rounded-2xl bg-[#0a1628] border border-white/10 overflow-hidden flex flex-col">
+    <div
+      className="fixed top-0 left-0 right-0 bottom-0 z-[100] bg-black/70 backdrop-blur-sm"
+      style={{ position: 'fixed', height: '100dvh', width: '100vw' }}
+    >
+      <div className="absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 w-[calc(100%-2rem)] max-w-lg max-h-[80vh] rounded-2xl bg-[#0a1628] border border-white/10 overflow-hidden flex flex-col shadow-2xl">
         {/* Header */}
-        <div className="p-4 border-b border-white/10 flex items-center justify-between">
+        <div className="p-4 border-b border-white/10 flex items-center justify-between flex-shrink-0">
           <h3 className="text-lg font-bold text-white">Select Profile Border</h3>
           <button onClick={onClose} className="p-2 rounded-lg hover:bg-white/5">
             <XIcon className="h-5 w-5 text-white/50" />
@@ -126,7 +138,7 @@ function BorderSelectionModal({ isOpen, onClose, borders, selectedBorderId, onSe
         </div>
 
         {/* Borders List */}
-        <div className="flex-1 overflow-y-auto p-4 space-y-6">
+        <div className="flex-1 overflow-y-auto p-4 space-y-6 overscroll-contain">
           {/* Default option */}
           <div>
             <h4 className="text-sm font-semibold text-white/50 mb-3 uppercase tracking-wider">Default</h4>
@@ -162,64 +174,96 @@ function BorderSelectionModal({ isOpen, onClose, borders, selectedBorderId, onSe
                   {tier.charAt(0).toUpperCase() + tier.slice(1)}
                 </h4>
                 <div className="grid grid-cols-1 gap-2">
-                  {tierBorders.map(border => (
-                    <button
-                      key={border.id}
-                      onClick={() => handleSelect(border)}
-                      disabled={!border.unlocked || selecting === border.id}
-                      className={clsx(
-                        'w-full flex items-center gap-4 p-3 rounded-xl border transition-all',
-                        border.isSelected
-                          ? 'bg-emerald-500/20 border-emerald-500/50'
-                          : border.unlocked
-                            ? 'bg-white/5 border-white/10 hover:border-white/20'
-                            : 'bg-white/[0.02] border-white/5 opacity-60'
-                      )}
-                    >
-                      {/* Border Preview */}
-                      <div className={clsx(
-                        'w-12 h-12 rounded-full p-[3px] bg-gradient-to-br',
-                        border.gradient ? `from-${border.gradient.split(' ')[0]} to-${border.gradient.split(' ').pop()}` : TIER_COLORS[border.tier],
-                        border.glow,
-                        border.animation
-                      )}>
-                        <div className="w-full h-full rounded-full bg-[#0a1628] flex items-center justify-center">
-                          {border.unlocked ? (
-                            <span className="text-white/50 text-lg font-bold">A</span>
-                          ) : (
-                            <LockIcon className="h-4 w-4 text-white/30" />
+                  {tierBorders.map(border => {
+                    // Build border preview styles based on tier
+                    const tierStyles = {
+                      bronze: { gradient: 'from-amber-600 to-amber-700', glow: '', ring: '' },
+                      silver: { gradient: 'from-slate-300 via-slate-400 to-slate-300', glow: '', ring: 'ring-2 ring-slate-400/50' },
+                      gold: { gradient: 'from-yellow-300 via-yellow-500 to-amber-600', glow: 'shadow-lg shadow-yellow-500/30', ring: 'ring-2 ring-yellow-400/50' },
+                      platinum: { gradient: 'from-cyan-300 via-cyan-500 to-teal-500', glow: 'shadow-lg shadow-cyan-500/40', ring: 'ring-2 ring-cyan-400/50' },
+                      diamond: { gradient: 'from-violet-400 via-purple-500 to-fuchsia-500', glow: 'shadow-xl shadow-violet-500/50', ring: 'ring-2 ring-violet-400/60' },
+                      mythic: { gradient: 'from-rose-400 via-pink-500 to-rose-400', glow: 'shadow-2xl shadow-rose-500/60', ring: 'ring-4 ring-rose-400/60' },
+                      special: { gradient: 'from-emerald-400 via-cyan-500 to-emerald-400', glow: 'shadow-lg shadow-emerald-500/40', ring: 'ring-2 ring-emerald-400/50' },
+                    };
+                    const style = tierStyles[border.tier] || tierStyles.bronze;
+
+                    return (
+                      <button
+                        key={border.id}
+                        onClick={() => handleSelect(border)}
+                        disabled={!border.unlocked || selecting === border.id}
+                        className={clsx(
+                          'w-full flex items-center gap-4 p-3 rounded-xl border transition-all',
+                          border.isSelected
+                            ? 'bg-emerald-500/20 border-emerald-500/50'
+                            : border.unlocked
+                              ? 'bg-white/5 border-white/10 hover:border-white/20'
+                              : 'bg-white/[0.02] border-white/10'
+                        )}
+                      >
+                        {/* Border Preview - Shows actual border style */}
+                        <div className="relative">
+                          {/* Outer glow for premium tiers */}
+                          {['diamond', 'mythic', 'platinum'].includes(border.tier) && (
+                            <div className={clsx(
+                              'absolute inset-0 rounded-full blur-md -z-10 opacity-60',
+                              `bg-gradient-to-br ${style.gradient}`
+                            )} />
+                          )}
+                          <div className={clsx(
+                            'w-14 h-14 rounded-full p-[3px]',
+                            `bg-gradient-to-br ${style.gradient}`,
+                            style.glow,
+                            border.animation
+                          )}>
+                            <div className={clsx(
+                              'w-full h-full rounded-full bg-[#0a1628] flex items-center justify-center overflow-hidden',
+                              style.ring
+                            )}>
+                              <img
+                                src="https://api.dicebear.com/7.x/avataaars/svg?seed=preview"
+                                alt="Preview"
+                                className={clsx('w-full h-full object-cover', !border.unlocked && 'opacity-50')}
+                              />
+                            </div>
+                          </div>
+                          {/* Lock overlay for locked borders */}
+                          {!border.unlocked && (
+                            <div className="absolute inset-0 flex items-center justify-center bg-black/40 rounded-full">
+                              <LockIcon className="h-5 w-5 text-white/70" />
+                            </div>
                           )}
                         </div>
-                      </div>
 
-                      {/* Border Info */}
-                      <div className="flex-1 text-left">
-                        <div className="flex items-center gap-2">
-                          <p className={clsx('font-medium', border.unlocked ? 'text-white' : 'text-white/50')}>
-                            {border.name}
+                        {/* Border Info */}
+                        <div className="flex-1 text-left">
+                          <div className="flex items-center gap-2">
+                            <p className={clsx('font-medium', border.unlocked ? 'text-white' : 'text-white/50')}>
+                              {border.name}
+                            </p>
+                            <span className={clsx(
+                              'px-1.5 py-0.5 rounded text-[10px] font-bold uppercase border',
+                              RARITY_COLORS[border.rarity]
+                            )}>
+                              {border.rarity}
+                            </span>
+                          </div>
+                          <p className="text-white/40 text-sm">
+                            {border.unlocked ? border.description : border.unlockReason}
                           </p>
-                          <span className={clsx(
-                            'px-1.5 py-0.5 rounded text-[10px] font-bold uppercase border',
-                            RARITY_COLORS[border.rarity]
-                          )}>
-                            {border.rarity}
-                          </span>
                         </div>
-                        <p className="text-white/40 text-sm">
-                          {border.unlocked ? border.description : border.unlockReason}
-                        </p>
-                      </div>
 
-                      {/* Status */}
-                      {selecting === border.id ? (
-                        <div className="animate-spin h-5 w-5 border-2 border-emerald-500 border-t-transparent rounded-full" />
-                      ) : border.isSelected ? (
-                        <CheckIcon className="h-5 w-5 text-emerald-400" />
-                      ) : !border.unlocked ? (
-                        <LockIcon className="h-5 w-5 text-white/20" />
-                      ) : null}
-                    </button>
-                  ))}
+                        {/* Status */}
+                        {selecting === border.id ? (
+                          <div className="animate-spin h-5 w-5 border-2 border-emerald-500 border-t-transparent rounded-full" />
+                        ) : border.isSelected ? (
+                          <CheckIcon className="h-5 w-5 text-emerald-400" />
+                        ) : !border.unlocked ? (
+                          <LockIcon className="h-5 w-5 text-white/30" />
+                        ) : null}
+                      </button>
+                    );
+                  })}
                 </div>
               </div>
             );
@@ -341,6 +385,7 @@ export default function Profile() {
   const { isDark, toggleTheme } = useTheme();
   const toast = useToast();
   const pushNotifications = usePushNotifications();
+  const { referralBonus } = useAppSettings();
   const [copied, setCopied] = useState(false);
   const [achievements, setAchievements] = useState([]);
   const [uploadingPhoto, setUploadingPhoto] = useState(false);
@@ -504,7 +549,9 @@ export default function Profile() {
   const referralCode = user.referral_code || 'N/A';
   const jobsCompleted = user.total_jobs_completed || 0;
   const streakDays = user.streak_days || 0;
-  const tier = getLevelTier(userLevel);
+  const rawTier = getLevelTier(userLevel);
+  // Format tier: "bronzeElite" -> "Bronze+", "bronze" -> "Bronze"
+  const tier = rawTier.replace('Elite', '+').replace(/^([a-z])/, (m) => m.toUpperCase());
 
   // Hidden file input for photo upload
   const fileInputRef = useState(null);
@@ -613,11 +660,10 @@ export default function Profile() {
       <AvailabilitySelector user={user} onUpdate={refreshUser} />
 
       <div className="px-4 mt-6">
-        <div className="grid grid-cols-2 gap-3">
+        <div className="grid grid-cols-3 gap-3">
           <StatCard icon={BriefcaseIcon} label="Jobs Completed" value={jobsCompleted} color="emerald" />
-          <StatCard icon={ZapIcon} label="Total XP" value={userXP.toLocaleString()} color="violet" />
           <StatCard icon={TrophyIcon} label="Achievements" value={achievements.length} color="amber" />
-          <StatCard icon={SparklesIcon} label="Tier" value={tier.replace('Elite', '+')} color="cyan" />
+          <StatCard icon={SparklesIcon} label="Tier" value={tier} color="cyan" />
         </div>
       </div>
 
@@ -632,7 +678,7 @@ export default function Profile() {
                 <ShareIcon className="h-5 w-5 text-emerald-400" />
                 <span className="text-white font-semibold">Referral Code</span>
               </div>
-              <span className="px-2 py-1 rounded-lg bg-emerald-500/20 text-emerald-400 text-xs font-medium">Earn $30</span>
+              <span className="px-2 py-1 rounded-lg bg-emerald-500/20 text-emerald-400 text-xs font-medium">Earn ${referralBonus}</span>
             </div>
             <div className="flex items-center gap-3">
               <div className="flex-1 px-4 py-3 rounded-xl bg-[#0a1628] border border-white/[0.05]">
@@ -641,6 +687,28 @@ export default function Profile() {
               <button onClick={handleCopyReferral} className="p-3 rounded-xl bg-emerald-500 text-white shadow-lg shadow-emerald-500/25">
                 {copied ? <CheckIcon className="h-5 w-5" /> : <CopyIcon className="h-5 w-5" />}
               </button>
+              <button
+                onClick={async () => {
+                  const inviteMessage = `Hey! I've been using WorkLink to find flexible jobs and earn extra income.\n\nJoin me and we'll BOTH get $${referralBonus} when you complete your first job!\n\nUse my referral code: ${referralCode}\n\nSign up now: https://worklinkv2-production.up.railway.app/login?ref=${referralCode}`;
+                  try {
+                    if (navigator.share) {
+                      await navigator.share({ title: `Join WorkLink - Earn $${referralBonus}!`, text: inviteMessage });
+                      toast.success('Shared!', 'Invitation sent');
+                    } else {
+                      navigator.clipboard.writeText(inviteMessage);
+                      toast.success('Copied!', 'Invitation message copied');
+                    }
+                  } catch (error) {
+                    if (error.name !== 'AbortError') {
+                      navigator.clipboard.writeText(inviteMessage);
+                      toast.success('Copied!', 'Invitation message copied');
+                    }
+                  }
+                }}
+                className="p-3 rounded-xl bg-cyan-500/20 border border-cyan-500/30 text-cyan-400 hover:bg-cyan-500/30 transition-colors"
+              >
+                <ShareIcon className="h-5 w-5" />
+              </button>
             </div>
           </div>
         </div>
@@ -648,7 +716,15 @@ export default function Profile() {
 
       {/* Contact Info */}
       <div className="px-4 mt-6">
-        <h2 className="text-white font-semibold mb-3 flex items-center gap-2">Contact Info <MailIcon className="h-5 w-5 text-emerald-400" /></h2>
+        <div className="flex items-center justify-between mb-3">
+          <h2 className="text-white font-semibold flex items-center gap-2">Contact Info <MailIcon className="h-5 w-5 text-emerald-400" /></h2>
+          <button
+            onClick={() => navigate('/complete-profile')}
+            className="px-3 py-1.5 rounded-lg bg-white/5 border border-white/10 text-white/70 text-sm font-medium hover:bg-white/10 hover:text-white transition-colors"
+          >
+            Edit
+          </button>
+        </div>
         <div className="space-y-3">
           <div className="flex items-center gap-4 p-4 rounded-2xl bg-[#0a1628]/80 border border-white/[0.05]">
             <div className="w-10 h-10 rounded-xl bg-white/5 flex items-center justify-center">
@@ -667,8 +743,7 @@ export default function Profile() {
 
       {/* Menu Items */}
       <div className="px-4 mt-6 space-y-2">
-        <MenuLink icon={UserIcon} label="Edit Profile" sublabel="Update your information" onClick={() => navigate('/complete-profile')} />
-        <MenuLink icon={ShareIcon} label="Refer & Earn" sublabel="Invite friends, get $30" onClick={() => navigate('/referrals')} />
+        <MenuLink icon={ShareIcon} label="Refer & Earn" sublabel={`Invite friends, get $${referralBonus}`} onClick={() => navigate('/referrals')} />
         <MenuLink icon={AwardIcon} label="Achievements" onClick={() => navigate('/achievements')} />
         <MenuLink icon={TrophyIcon} label="Leaderboard" onClick={() => navigate('/leaderboard')} />
         <MenuLink

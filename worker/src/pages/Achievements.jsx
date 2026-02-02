@@ -237,17 +237,20 @@ export default function Achievements() {
 
   useEffect(() => {
     if (user) {
-      checkAchievements();
-      fetchAchievements();
+      initAchievements();
     }
   }, [user]);
 
-  // Check for auto-unlock achievements (first login, profile complete, verified)
-  const checkAchievements = async () => {
+  // Initialize: check for auto-unlock first, then fetch
+  const initAchievements = async () => {
     try {
+      // First check and unlock any auto-achievements (first login, profile, verified)
       await fetch(`/api/v1/gamification/achievements/check/${user.id}`, { method: 'POST' });
+      // Then fetch achievements (after unlocks are saved)
+      await fetchAchievements();
     } catch (error) {
-      console.error('Failed to check achievements:', error);
+      console.error('Failed to initialize achievements:', error);
+      setLoading(false);
     }
   };
 

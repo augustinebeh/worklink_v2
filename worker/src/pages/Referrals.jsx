@@ -10,6 +10,7 @@ import {
 } from 'lucide-react';
 import { useAuth } from '../contexts/AuthContext';
 import { useToast } from '../components/ui/Toast';
+import { useAppSettings } from '../contexts/AppSettingsContext';
 import { clsx } from 'clsx';
 import { EmptyState, LoadingSkeleton, StatusBadge } from '../components/common';
 
@@ -36,6 +37,7 @@ function ReferralItem({ referral }) {
 export default function Referrals() {
   const { user } = useAuth();
   const toast = useToast();
+  const { referralBonus } = useAppSettings();
   const [referrals, setReferrals] = useState([]);
   const [stats, setStats] = useState({ total: 0, pending: 0, earned: 0 });
   const [loading, setLoading] = useState(true);
@@ -68,11 +70,11 @@ export default function Referrals() {
     const code = user?.referral_code || '';
     return `Hey! I've been using WorkLink to find flexible jobs and earn extra income. 💼
 
-Join me and we'll BOTH get $25 when you complete your first job!
+Join me and we'll BOTH get $${referralBonus} when you complete your first job!
 
 Use my referral code: ${code}
 
-Download WorkLink now: https://worklink.app/join?ref=${code}`;
+Sign up now: https://worklinkv2-production.up.railway.app/login?ref=${code}`;
   };
 
   const handleCopy = () => {
@@ -93,7 +95,7 @@ Download WorkLink now: https://worklink.app/join?ref=${code}`;
     const inviteMessage = getInviteMessage();
 
     const shareData = {
-      title: 'Join WorkLink - Earn $25!',
+      title: `Join WorkLink - Earn $${referralBonus}!`,
       text: inviteMessage,
     };
 
@@ -132,7 +134,7 @@ Download WorkLink now: https://worklink.app/join?ref=${code}`;
               </div>
               <div>
                 <h1 className="text-2xl font-bold text-white">Refer & Earn</h1>
-                <p className="text-white/50">Invite friends, get $25 each</p>
+                <p className="text-white/50">Invite friends, get ${referralBonus} each</p>
               </div>
             </div>
 
@@ -188,7 +190,7 @@ Download WorkLink now: https://worklink.app/join?ref=${code}`;
           {[
             { step: '1', title: 'Share your code', desc: 'Send your unique code to friends' },
             { step: '2', title: 'Friend signs up', desc: 'They register using your code' },
-            { step: '3', title: 'Both get $25', desc: 'You both earn once they complete their first job' },
+            { step: '3', title: `Both get $${referralBonus}`, desc: 'You both earn once they complete their first job' },
           ].map((item, i) => (
             <div key={i} className="flex items-center gap-4 p-4 rounded-2xl bg-[#0a1628]/80 border border-white/[0.05]">
               <div className="w-10 h-10 rounded-xl bg-emerald-500/20 flex items-center justify-center">
