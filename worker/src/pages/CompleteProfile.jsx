@@ -152,7 +152,11 @@ export default function CompleteProfile() {
       const data = await res.json();
 
       if (data.success) {
-        toast.success('Profile saved', 'Your profile has been updated');
+        if (data.questUnlocked) {
+          toast.success('Profile Complete! 🎉', 'You unlocked +100 XP reward - claim it in Quests!');
+        } else {
+          toast.success('Profile saved', 'Your profile has been updated');
+        }
         await refreshUser?.();
         navigate('/profile');
       } else {

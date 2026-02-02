@@ -128,13 +128,47 @@ router.post('/', (req, res) => {
   }
 });
 
-// Update candidate
-router.put('/:id', (req, res) => {
+// Helper to check profile completion and trigger quest
+function checkProfileCompletion(candidateId) {
+  try {
+    const candidate = db.prepare('SELECT name, phone, profile_photo, address FROM candidates WHERE id = ?').get(candidateId);
+    if (!candidate) return;
+
+    // Check if all required fields are filled
+    const isComplete = !!(candidate.name && candidate.phone && candidate.profile_photo && candidate.address);
+
+    if (isComplete) {
+      // Check if quest already completed/claimed
+      const questProgress = db.prepare(`
+        SELECT * FROM candidate_quests WHERE candidate_id = ? AND quest_id = 'QST008'
+      `).get(candidateId);
+
+      if (!questProgress || (!questProgress.completed && !questProgress.claimed)) {
+        // Mark profile quest as complete (ready to claim)
+        db.prepare(`
+          INSERT INTO candidate_quests (candidate_id, quest_id, progress, target, completed, claimed)
+          VALUES (?, 'QST008', 1, 1, 1, 0)
+          ON CONFLICT(candidate_id, quest_id) DO UPDATE SET progress = 1, completed = 1, completed_at = CURRENT_TIMESTAMP
+        `).run(candidateId);
+        return true; // Quest is now claimable
+      }
+    }
+  } catch (e) {
+    console.error('Profile completion check error:', e);
+  }
+  return false;
+}
+
+// Update candidate (supports both PUT and PATCH)
+router.put('/:id', updateCandidate);
+router.patch('/:id', updateCandidate);
+
+function updateCandidate(req, res) {
   try {
     const allowedFields = [
       'name', 'email', 'phone', 'date_of_birth', 'status', 'source',
       'profile_photo', 'certifications', 'skills', 'availability',
-      'preferred_locations', 'bank_name', 'bank_account'
+      'preferred_locations', 'bank_name', 'bank_account', 'address'
     ];
 
     const updates = [];
@@ -156,15 +190,18 @@ router.put('/:id', (req, res) => {
     values.push(req.params.id);
 
     db.prepare(`UPDATE candidates SET ${updates.join(', ')} WHERE id = ?`).run(...values);
-    
+
     const candidate = db.prepare('SELECT * FROM candidates WHERE id = ?').get(req.params.id);
     candidate.certifications = JSON.parse(candidate.certifications || '[]');
-    
-    res.json({ success: true, data: candidate });
+
+    // Check if profile is now complete and trigger quest
+    const questUnlocked = checkProfileCompletion(req.params.id);
+
+    res.json({ success: true, data: candidate, questUnlocked });
   } catch (error) {
     res.status(500).json({ success: false, error: error.message });
   }
-});
+}
 
 // Get candidate stats (for pipeline)
 // Simplified to: pending, active, inactive
