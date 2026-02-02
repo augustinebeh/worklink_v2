@@ -37,44 +37,53 @@ function PendingAccountOverlay() {
   }, []);
 
   return (
-    <div
-      className="fixed inset-0 z-[100] bg-[#020817]/80 backdrop-blur-md"
-      style={{ position: 'fixed', height: '100dvh', width: '100vw' }}
-    >
-      {/* Centered Frame - does not scroll */}
-      <div className="absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 w-[calc(100%-2rem)] max-w-sm p-5 sm:p-6 rounded-3xl bg-[#0a1628] border border-amber-500/30 shadow-2xl">
-        <div className="flex items-start gap-3 sm:gap-4">
-          <div className="w-12 h-12 sm:w-14 sm:h-14 rounded-2xl bg-amber-500/20 flex items-center justify-center flex-shrink-0">
-            <PendingIcon className="h-6 w-6 sm:h-7 sm:w-7 text-amber-400" />
-          </div>
-          <div className="flex-1 min-w-0">
-            <h2 className="text-lg sm:text-xl font-bold text-white mb-1">Account Pending Approval</h2>
-            <p className="text-white/60 text-xs sm:text-sm mb-3 sm:mb-4">
-              Your account is being reviewed. Once approved, you'll be able to browse and apply for jobs.
-            </p>
-            <div className="space-y-2">
-              <div className="flex items-center gap-2 text-xs sm:text-sm">
-                <CheckCircleIcon className="h-4 w-4 text-emerald-400 flex-shrink-0" />
-                <span className="text-white/70">Account created successfully</span>
-              </div>
-              <div className="flex items-center gap-2 text-xs sm:text-sm">
-                <div className="w-4 h-4 rounded-full border-2 border-amber-400 border-t-transparent animate-spin flex-shrink-0" />
-                <span className="text-amber-400">Awaiting admin approval</span>
-              </div>
-              <div className="flex items-center gap-2 text-xs sm:text-sm">
-                <div className="w-4 h-4 rounded-full border border-white/20 flex-shrink-0" />
-                <span className="text-white/40">Browse & apply for jobs</span>
+    <>
+      {/* Frosted Background Overlay */}
+      <div
+        className="fixed inset-0 z-[100] bg-[#020817]/80 backdrop-blur-md"
+        style={{ position: 'fixed', height: '100dvh', width: '100vw' }}
+        aria-hidden="true"
+      />
+
+      {/* Fixed Frame - separate from background, cannot be scrolled */}
+      <div
+        className="fixed inset-0 z-[101] flex items-center justify-center p-4 pointer-events-none"
+        style={{ position: 'fixed', height: '100dvh', width: '100vw' }}
+      >
+        <div className="w-full max-w-sm p-5 sm:p-6 rounded-3xl bg-[#0a1628] border border-amber-500/30 shadow-2xl pointer-events-auto">
+          <div className="flex items-start gap-3 sm:gap-4">
+            <div className="w-12 h-12 sm:w-14 sm:h-14 rounded-2xl bg-amber-500/20 flex items-center justify-center flex-shrink-0">
+              <PendingIcon className="h-6 w-6 sm:h-7 sm:w-7 text-amber-400" />
+            </div>
+            <div className="flex-1 min-w-0">
+              <h2 className="text-lg sm:text-xl font-bold text-white mb-1">Account Pending Approval</h2>
+              <p className="text-white/60 text-xs sm:text-sm mb-3 sm:mb-4">
+                Your account is being reviewed. Once approved, you'll be able to browse and apply for jobs.
+              </p>
+              <div className="space-y-2">
+                <div className="flex items-center gap-2 text-xs sm:text-sm">
+                  <CheckCircleIcon className="h-4 w-4 text-emerald-400 flex-shrink-0" />
+                  <span className="text-white/70">Account created successfully</span>
+                </div>
+                <div className="flex items-center gap-2 text-xs sm:text-sm">
+                  <div className="w-4 h-4 rounded-full border-2 border-amber-400 border-t-transparent animate-spin flex-shrink-0" />
+                  <span className="text-amber-400">Awaiting admin approval</span>
+                </div>
+                <div className="flex items-center gap-2 text-xs sm:text-sm">
+                  <div className="w-4 h-4 rounded-full border border-white/20 flex-shrink-0" />
+                  <span className="text-white/40">Browse & apply for jobs</span>
+                </div>
               </div>
             </div>
           </div>
-        </div>
-        <div className="mt-3 sm:mt-4 pt-3 sm:pt-4 border-t border-white/10">
-          <p className="text-[10px] sm:text-xs text-white/40">
-            This usually takes 1-2 business days. You'll receive a notification when your account is approved.
-          </p>
+          <div className="mt-3 sm:mt-4 pt-3 sm:pt-4 border-t border-white/10">
+            <p className="text-[10px] sm:text-xs text-white/40">
+              This usually takes 1-2 business days. You'll receive a notification when your account is approved.
+            </p>
+          </div>
         </div>
       </div>
-    </div>
+    </>
   );
 }
 
