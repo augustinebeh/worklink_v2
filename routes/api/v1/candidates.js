@@ -365,4 +365,46 @@ router.delete('/:id/photo', (req, res) => {
   }
 });
 
+// Get availability mode
+router.get('/:id/availability-mode', (req, res) => {
+  try {
+    const candidate = db.prepare('SELECT availability_mode FROM candidates WHERE id = ?').get(req.params.id);
+
+    if (!candidate) {
+      return res.status(404).json({ success: false, error: 'Candidate not found' });
+    }
+
+    res.json({
+      success: true,
+      data: {
+        mode: candidate.availability_mode || 'weekdays',
+        customDays: [], // Could be extended to store custom days
+      },
+    });
+  } catch (error) {
+    res.status(500).json({ success: false, error: error.message });
+  }
+});
+
+// Update availability mode
+router.post('/:id/availability-mode', (req, res) => {
+  try {
+    const { mode } = req.body;
+
+    if (!['weekdays', 'weekends', 'all', 'custom'].includes(mode)) {
+      return res.status(400).json({ success: false, error: 'Invalid availability mode' });
+    }
+
+    db.prepare(`
+      UPDATE candidates
+      SET availability_mode = ?, updated_at = CURRENT_TIMESTAMP
+      WHERE id = ?
+    `).run(mode, req.params.id);
+
+    res.json({ success: true, data: { mode } });
+  } catch (error) {
+    res.status(500).json({ success: false, error: error.message });
+  }
+});
+
 module.exports = router;

@@ -23,15 +23,37 @@ function formatDateSG(date, options = { day: 'numeric', month: 'short' }) {
 
 // Re-export gamification constants for backward compatibility
 const {
+  // XP Economy
+  XP_VALUES,
+
+  // Leveling
   XP_THRESHOLDS,
-  LEVEL_TITLES,
-  LEVEL_TIERS,
+  getXPForLevel,
   calculateLevel,
   calculateLevelProgress,
-  getLevelTitle,
-  getLevelTier,
-  formatXP,
+  getXPToNextLevel,
   getXPForNextLevel,
+
+  // Tiers
+  TIERS,
+  LEVEL_TIERS,
+  getLevelTier,
+  getTierInfo,
+  getTierBenefits,
+
+  // Titles
+  LEVEL_TITLES,
+  getLevelTitle,
+
+  // Categories
+  ACHIEVEMENT_CATEGORIES,
+  QUEST_TYPES,
+
+  // Utilities
+  formatXP,
+  calculateJobXP,
+  hasTierBenefit,
+  getJobVisibilityDelay,
 } = gamification;
 
 // CommonJS export for Node.js backend
@@ -43,13 +65,35 @@ module.exports = {
   formatDateSG,
 
   // Gamification (re-exported from utils/gamification.js)
+  // XP Economy
+  XP_VALUES,
+
+  // Leveling
   XP_THRESHOLDS,
-  LEVEL_TITLES,
-  LEVEL_TIERS,
+  getXPForLevel,
   calculateLevel,
   calculateLevelProgress,
-  getLevelTitle,
-  getLevelTier,
-  formatXP,
+  getXPToNextLevel,
   getXPForNextLevel,
+
+  // Tiers
+  TIERS,
+  LEVEL_TIERS,
+  getLevelTier,
+  getTierInfo,
+  getTierBenefits,
+
+  // Titles
+  LEVEL_TITLES,
+  getLevelTitle,
+
+  // Categories
+  ACHIEVEMENT_CATEGORIES,
+  QUEST_TYPES,
+
+  // Utilities
+  formatXP,
+  calculateJobXP,
+  hasTierBenefit,
+  getJobVisibilityDelay,
 };

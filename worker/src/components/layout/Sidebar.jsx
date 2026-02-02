@@ -1,4 +1,4 @@
-import { useEffect } from 'react';
+import { useState, useEffect } from 'react';
 import { useNavigate, useLocation } from 'react-router-dom';
 import {
   XIcon,
@@ -56,6 +56,12 @@ export default function Sidebar({ isOpen, onClose }) {
   const navigate = useNavigate();
   const location = useLocation();
   const { user } = useAuth();
+  const [imageLoaded, setImageLoaded] = useState(false);
+
+  // Reset imageLoaded when profile photo changes
+  useEffect(() => {
+    setImageLoaded(false);
+  }, [user?.profile_photo]);
 
   // Close sidebar on route change
   useEffect(() => {
@@ -133,13 +139,12 @@ export default function Sidebar({ isOpen, onClose }) {
                     src={user.profile_photo}
                     alt=""
                     className="w-full h-full object-cover"
-                    onError={(e) => {
-                      e.target.style.display = 'none';
-                      e.target.nextSibling.style.display = 'flex';
-                    }}
+                    style={{ display: imageLoaded ? 'block' : 'none' }}
+                    onLoad={() => setImageLoaded(true)}
+                    onError={() => setImageLoaded(false)}
                   />
                 ) : null}
-                <span style={{ display: user.profile_photo ? 'none' : 'flex' }}>
+                <span style={{ display: imageLoaded ? 'none' : 'flex' }}>
                   {user.name?.charAt(0) || 'U'}
                 </span>
               </div>

@@ -1,7 +1,14 @@
 const express = require('express');
 const router = express.Router();
 const { db } = require('../../../db/database');
-const { XP_THRESHOLDS, calculateLevel, getSGDateString } = require('../../../shared/constants');
+const {
+  XP_THRESHOLDS,
+  XP_VALUES,
+  calculateLevel,
+  calculateJobXP,
+  getLevelTier,
+  getSGDateString
+} = require('../../../shared/constants');
 
 // Get candidate gamification profile
 router.get('/profile/:candidateId', (req, res) => {
@@ -78,23 +85,28 @@ router.get('/profile/:candidateId', (req, res) => {
 // Award XP
 router.post('/xp/award', (req, res) => {
   try {
-    const { candidate_id, amount, reason, reference_id } = req.body;
+    const { candidate_id, amount, reason, reference_id, action_type } = req.body;
 
-    // Add XP transaction
+    // Add XP transaction with action_type
     db.prepare(`
-      INSERT INTO xp_transactions (candidate_id, amount, reason, reference_id)
-      VALUES (?, ?, ?, ?)
-    `).run(candidate_id, amount, reason, reference_id);
+      INSERT INTO xp_transactions (candidate_id, action_type, amount, reason, reference_id)
+      VALUES (?, ?, ?, ?, ?)
+    `).run(candidate_id, action_type || 'manual', amount, reason, reference_id);
 
-    // Update candidate XP
-    db.prepare('UPDATE candidates SET xp = xp + ? WHERE id = ?').run(amount, candidate_id);
+    // Update candidate XP and lifetime_xp
+    if (amount > 0) {
+      db.prepare('UPDATE candidates SET xp = xp + ?, lifetime_xp = lifetime_xp + ? WHERE id = ?').run(amount, amount, candidate_id);
+    } else {
+      db.prepare('UPDATE candidates SET xp = MAX(0, xp + ?) WHERE id = ?').run(amount, candidate_id);
+    }
 
     // Check for level up
     const candidate = db.prepare('SELECT xp, level FROM candidates WHERE id = ?').get(candidate_id);
     const newLevel = calculateLevel(candidate.xp);
+    const newTier = getLevelTier(newLevel);
 
-    if (newLevel > candidate.level) {
-      db.prepare('UPDATE candidates SET level = ? WHERE id = ?').run(newLevel, candidate_id);
+    if (newLevel !== candidate.level) {
+      db.prepare('UPDATE candidates SET level = ?, current_tier = ? WHERE id = ?').run(newLevel, newTier, candidate_id);
     }
 
     res.json({
@@ -102,7 +114,117 @@ router.post('/xp/award', (req, res) => {
       data: {
         xp: candidate.xp,
         level: newLevel,
+        tier: newTier,
         leveledUp: newLevel > candidate.level,
+      },
+    });
+  } catch (error) {
+    res.status(500).json({ success: false, error: error.message });
+  }
+});
+
+// Award XP for job completion (Career Ladder Strategy)
+router.post('/xp/job-complete', (req, res) => {
+  try {
+    const { candidate_id, hours_worked, is_urgent, was_on_time, rating, job_id } = req.body;
+
+    // Calculate XP using the strategy formula
+    const xpAmount = calculateJobXP(hours_worked, is_urgent, was_on_time, rating);
+
+    // Add XP transaction
+    db.prepare(`
+      INSERT INTO xp_transactions (candidate_id, action_type, amount, reason, reference_id)
+      VALUES (?, 'shift', ?, ?, ?)
+    `).run(candidate_id, xpAmount, `Shift completion: ${hours_worked}hrs`, job_id);
+
+    // Update candidate XP, lifetime_xp, and total_jobs_completed
+    db.prepare(`
+      UPDATE candidates
+      SET xp = xp + ?,
+          lifetime_xp = lifetime_xp + ?,
+          total_jobs_completed = total_jobs_completed + 1
+      WHERE id = ?
+    `).run(xpAmount, xpAmount, candidate_id);
+
+    // Check for level up
+    const candidate = db.prepare('SELECT xp, level FROM candidates WHERE id = ?').get(candidate_id);
+    const newLevel = calculateLevel(candidate.xp);
+    const newTier = getLevelTier(newLevel);
+
+    if (newLevel !== candidate.level) {
+      db.prepare('UPDATE candidates SET level = ?, current_tier = ? WHERE id = ?').run(newLevel, newTier, candidate_id);
+    }
+
+    res.json({
+      success: true,
+      data: {
+        xp_awarded: xpAmount,
+        breakdown: {
+          base: hours_worked * XP_VALUES.PER_HOUR_WORKED,
+          urgent_bonus: is_urgent ? (hours_worked * XP_VALUES.PER_HOUR_WORKED * 0.5) : 0,
+          on_time_bonus: was_on_time ? XP_VALUES.ON_TIME_ARRIVAL : 0,
+          rating_bonus: rating === 5 ? XP_VALUES.FIVE_STAR_RATING : 0,
+        },
+        new_xp: candidate.xp,
+        new_level: newLevel,
+        new_tier: newTier,
+        leveled_up: newLevel > candidate.level,
+      },
+    });
+  } catch (error) {
+    res.status(500).json({ success: false, error: error.message });
+  }
+});
+
+// Apply penalty (no-show or late cancellation)
+router.post('/xp/penalty', (req, res) => {
+  try {
+    const { candidate_id, penalty_type, reference_id } = req.body;
+
+    let amount;
+    let reason;
+    let action_type;
+
+    switch (penalty_type) {
+      case 'no_show':
+        amount = XP_VALUES.NO_SHOW_PENALTY;
+        reason = 'No-show penalty';
+        action_type = 'penalty';
+        break;
+      case 'late_cancel':
+        amount = XP_VALUES.LATE_CANCEL_PENALTY;
+        reason = 'Late cancellation penalty';
+        action_type = 'penalty';
+        break;
+      default:
+        return res.status(400).json({ success: false, error: 'Invalid penalty type' });
+    }
+
+    // Add XP transaction (negative amount)
+    db.prepare(`
+      INSERT INTO xp_transactions (candidate_id, action_type, amount, reason, reference_id)
+      VALUES (?, ?, ?, ?, ?)
+    `).run(candidate_id, action_type, amount, reason, reference_id);
+
+    // Update candidate XP (prevent going below 0)
+    db.prepare('UPDATE candidates SET xp = MAX(0, xp + ?) WHERE id = ?').run(amount, candidate_id);
+
+    // Check for level change
+    const candidate = db.prepare('SELECT xp, level FROM candidates WHERE id = ?').get(candidate_id);
+    const newLevel = calculateLevel(candidate.xp);
+    const newTier = getLevelTier(newLevel);
+
+    if (newLevel !== candidate.level) {
+      db.prepare('UPDATE candidates SET level = ?, current_tier = ? WHERE id = ?').run(newLevel, newTier, candidate_id);
+    }
+
+    res.json({
+      success: true,
+      data: {
+        penalty_applied: Math.abs(amount),
+        new_xp: candidate.xp,
+        new_level: newLevel,
+        new_tier: newTier,
       },
     });
   } catch (error) {
@@ -246,21 +368,58 @@ router.post('/achievements/:achievementId/claim', (req, res) => {
   }
 });
 
-// Check and unlock automatic achievements (first login, profile complete, verified)
+// Check and unlock automatic achievements (Career Ladder Strategy)
+// Categories: Reliable, Skilled, Social
 router.post('/achievements/check/:candidateId', (req, res) => {
   try {
     const candidateId = req.params.candidateId;
     const unlockedAchievements = [];
 
-    // Get candidate info
+    // Get candidate info with stats
     const candidate = db.prepare(`
-      SELECT id, name, phone, profile_photo, address, status, created_at
-      FROM candidates WHERE id = ?
+      SELECT c.*,
+        (SELECT COUNT(*) FROM deployments WHERE candidate_id = c.id AND status = 'completed') as completed_shifts,
+        (SELECT COUNT(DISTINCT strftime('%Y-%m-%d', created_at))
+         FROM deployments
+         WHERE candidate_id = c.id
+         AND status = 'completed'
+         AND strftime('%w', created_at) IN ('0', '6')) as weekend_shifts,
+        (SELECT COUNT(DISTINCT json_extract(j.required_skills, '$[0]'))
+         FROM deployments d
+         JOIN jobs j ON d.job_id = j.id
+         WHERE d.candidate_id = c.id AND d.status = 'completed') as job_categories
+      FROM candidates c WHERE c.id = ?
     `).get(candidateId);
 
     if (!candidate) {
       return res.status(404).json({ success: false, error: 'Candidate not found' });
     }
+
+    // Get referral count
+    const referralCount = db.prepare(`
+      SELECT COUNT(*) as count FROM referrals
+      WHERE referrer_id = ? AND status = 'completed'
+    `).get(candidateId)?.count || 0;
+
+    // Get consecutive 5-star ratings
+    const fiveStarStreak = db.prepare(`
+      SELECT COUNT(*) as count FROM deployments
+      WHERE candidate_id = ? AND rating = 5 AND status = 'completed'
+    `).get(candidateId)?.count || 0;
+
+    // Get training modules completed
+    const trainingCount = db.prepare(`
+      SELECT COUNT(*) as count FROM training
+    `).get()?.count || 0;
+
+    const completedTraining = db.prepare(`
+      SELECT COUNT(DISTINCT t.id) as count
+      FROM training t
+      WHERE t.id IN (
+        SELECT json_each.value FROM candidates c, json_each(c.certifications)
+        WHERE c.id = ?
+      )
+    `).get(candidateId)?.count || 0;
 
     // Helper to unlock achievement if not already unlocked
     const tryUnlock = (achievementId) => {
@@ -280,18 +439,42 @@ router.post('/achievements/check/:candidateId', (req, res) => {
       }
     };
 
-    // ACH012: First login (always unlocked when this check runs)
-    tryUnlock('ACH012');
-
-    // ACH013: Profile complete (100%)
-    const isProfileComplete = !!(candidate.name && candidate.phone && candidate.profile_photo && candidate.address);
-    if (isProfileComplete) {
-      tryUnlock('ACH013');
+    // THE RELIABLE - Attendance Focused
+    // Ironclad I: 10 shifts without cancellation
+    if (candidate.completed_shifts >= 10) {
+      tryUnlock('ACH_IRONCLAD_1');
+    }
+    // Ironclad II: 50 shifts without cancellation
+    if (candidate.completed_shifts >= 50) {
+      tryUnlock('ACH_IRONCLAD_2');
+    }
+    // Ironclad III: 100 shifts without cancellation
+    if (candidate.completed_shifts >= 100) {
+      tryUnlock('ACH_IRONCLAD_3');
+    }
+    // The Closer: 10 shifts on holidays/weekends
+    if (candidate.weekend_shifts >= 10) {
+      tryUnlock('ACH_CLOSER');
     }
 
-    // ACH014: Account verified (status is active)
-    if (candidate.status === 'active') {
-      tryUnlock('ACH014');
+    // THE SKILLED - Performance Focused
+    // Five-Star General: 5.0 rating for 20 consecutive shifts
+    if (fiveStarStreak >= 20) {
+      tryUnlock('ACH_FIVE_STAR');
+    }
+    // Jack of All Trades: Jobs in 3 different categories
+    if (candidate.job_categories >= 3) {
+      tryUnlock('ACH_JACK');
+    }
+    // Certified Pro: Complete all training modules
+    if (trainingCount > 0 && completedTraining >= trainingCount) {
+      tryUnlock('ACH_CERTIFIED');
+    }
+
+    // THE SOCIAL - Community Focused
+    // Headhunter: Refer 5 workers
+    if (referralCount >= 5) {
+      tryUnlock('ACH_HEADHUNTER');
     }
 
     res.json({
@@ -299,6 +482,15 @@ router.post('/achievements/check/:candidateId', (req, res) => {
       data: {
         unlocked: unlockedAchievements,
         count: unlockedAchievements.length,
+        stats: {
+          completed_shifts: candidate.completed_shifts,
+          weekend_shifts: candidate.weekend_shifts,
+          job_categories: candidate.job_categories,
+          five_star_streak: fiveStarStreak,
+          referral_count: referralCount,
+          training_completed: completedTraining,
+          training_total: trainingCount,
+        },
       },
     });
   } catch (error) {
@@ -651,7 +843,7 @@ router.get('/quests/user/:candidateId', (req, res) => {
   }
 });
 
-// Update streak
+// Update streak (Career Ladder Strategy - work streak for weekly quest)
 router.post('/streak/update', (req, res) => {
   try {
     const { candidate_id } = req.body;
@@ -679,25 +871,26 @@ router.post('/streak/update', (req, res) => {
       UPDATE candidates SET streak_days = ?, streak_last_date = ? WHERE id = ?
     `).run(newStreak, today, candidate_id);
 
-    // Check for streak achievements
-    const streakAchievements = [
-      { days: 7, id: 'ACH005' },
-      { days: 30, id: 'ACH006' },
-    ];
+    // Check for "Streak Keeper" weekly quest progress (3 days in a row)
+    if (newStreak >= 3) {
+      // Update quest progress for Streak Keeper
+      const streakQuest = db.prepare('SELECT * FROM quests WHERE id = ?').get('QST_STREAK');
+      if (streakQuest) {
+        const candidateQuest = db.prepare(`
+          SELECT * FROM candidate_quests WHERE candidate_id = ? AND quest_id = ?
+        `).get(candidate_id, 'QST_STREAK');
 
-    let unlockedAchievement = null;
-    for (const sa of streakAchievements) {
-      if (newStreak >= sa.days) {
-        const existing = db.prepare(
-          'SELECT * FROM candidate_achievements WHERE candidate_id = ? AND achievement_id = ?'
-        ).get(candidate_id, sa.id);
-
-        if (!existing) {
+        if (!candidateQuest) {
           db.prepare(`
-            INSERT INTO candidate_achievements (candidate_id, achievement_id)
-            VALUES (?, ?)
-          `).run(candidate_id, sa.id);
-          unlockedAchievement = db.prepare('SELECT * FROM achievements WHERE id = ?').get(sa.id);
+            INSERT INTO candidate_quests (candidate_id, quest_id, progress, target, completed, claimed)
+            VALUES (?, 'QST_STREAK', 3, 3, 1, 0)
+          `).run(candidate_id);
+        } else if (!candidateQuest.claimed) {
+          db.prepare(`
+            UPDATE candidate_quests
+            SET progress = 3, completed = 1, completed_at = CURRENT_TIMESTAMP
+            WHERE candidate_id = ? AND quest_id = 'QST_STREAK'
+          `).run(candidate_id);
         }
       }
     }
@@ -706,7 +899,7 @@ router.post('/streak/update', (req, res) => {
       success: true,
       data: {
         streak: newStreak,
-        unlockedAchievement,
+        streak_keeper_complete: newStreak >= 3,
       },
     });
   } catch (error) {

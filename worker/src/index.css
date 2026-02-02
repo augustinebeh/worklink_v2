@@ -377,6 +377,12 @@
     box-shadow: 0 25px 60px rgba(0, 0, 0, 0.15), 0 10px 20px rgba(0, 0, 0, 0.08);
   }
 
+  /* Stop scrolling when modal is open */
+  .stop-scrolling {
+    height: 100vh;
+    overflow: hidden;
+  }
+
   /* ===== FORM ELEMENTS ===== */
   .input {
     @apply w-full px-4 py-3 rounded-xl focus:outline-none transition-all duration-200;

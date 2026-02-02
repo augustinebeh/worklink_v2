@@ -44,6 +44,9 @@ function createSchema() {
       status TEXT DEFAULT 'lead',
       source TEXT DEFAULT 'direct',
       xp INTEGER DEFAULT 0,
+      lifetime_xp INTEGER DEFAULT 0,
+      current_points INTEGER DEFAULT 0,
+      current_tier TEXT DEFAULT 'bronze',
       level INTEGER DEFAULT 1,
       streak_days INTEGER DEFAULT 0,
       streak_last_date DATE,
@@ -61,6 +64,8 @@ function createSchema() {
       profile_photo TEXT,
       bank_name TEXT,
       bank_account TEXT,
+      address TEXT,
+      availability_mode TEXT DEFAULT 'weekdays',
       online_status TEXT DEFAULT 'offline',
       last_seen DATETIME,
       push_token TEXT,
@@ -300,6 +305,7 @@ function createSchema() {
     CREATE TABLE IF NOT EXISTS xp_transactions (
       id INTEGER PRIMARY KEY AUTOINCREMENT,
       candidate_id TEXT NOT NULL,
+      action_type TEXT,
       amount INTEGER NOT NULL,
       reason TEXT,
       reference_id TEXT,
@@ -777,6 +783,22 @@ function createSchema() {
     db.exec(`ALTER TABLE candidate_achievements ADD COLUMN claimed_at DATETIME`);
   } catch (e) {}
 
+  // Add new gamification columns to candidates if not exists
+  try {
+    db.exec(`ALTER TABLE candidates ADD COLUMN lifetime_xp INTEGER DEFAULT 0`);
+  } catch (e) {}
+  try {
+    db.exec(`ALTER TABLE candidates ADD COLUMN current_points INTEGER DEFAULT 0`);
+  } catch (e) {}
+  try {
+    db.exec(`ALTER TABLE candidates ADD COLUMN current_tier TEXT DEFAULT 'bronze'`);
+  } catch (e) {}
+
+  // Add action_type column to xp_transactions if not exists
+  try {
+    db.exec(`ALTER TABLE xp_transactions ADD COLUMN action_type TEXT`);
+  } catch (e) {}
+
   console.log('✅ Schema created successfully');
 }
 
@@ -791,12 +813,14 @@ function ensureDemoAccount() {
   console.log('🎭 Creating demo account: Sarah Tan');
 
   // Create Sarah Tan demo candidate
-  // XP 15500 = Level 14 (Specialist) in new 50-level system
+  // Career Ladder System: XP 16000 = Level 10 (Silver Member)
+  // Formula: 500 × Level^1.5 → Level 10 = 15,811 XP
   // Total earnings = sum of payments: 120+128+160+125+128 = 661
   db.prepare(`
     INSERT INTO candidates (
       id, name, email, phone, status, source,
-      xp, level, streak_days, total_jobs_completed,
+      xp, lifetime_xp, current_points, current_tier,
+      level, streak_days, total_jobs_completed,
       certifications, skills, preferred_locations,
       referral_code, referral_tier, total_referral_earnings,
       total_incentives_earned, total_earnings, rating,
@@ -808,8 +832,11 @@ function ensureDemoAccount() {
       '+6591234567',
       'active',
       'direct',
-      15500,
-      14,
+      16000,
+      16000,
+      500,
+      'silver',
+      10,
       5,
       42,
       '["Food Safety", "First Aid", "Customer Service"]',
@@ -844,11 +871,11 @@ function ensureDemoAccount() {
     `).run(p[0], p[1], p[2], p[3], p[4], p[5], p[6], p[7], p[8]);
   });
 
-  // Add XP transactions
-  db.prepare(`INSERT INTO xp_transactions (candidate_id, amount, reason, created_at) VALUES ('CND_DEMO_001', 100, 'Job Completed', datetime('now', '-7 days'))`).run();
-  db.prepare(`INSERT INTO xp_transactions (candidate_id, amount, reason, created_at) VALUES ('CND_DEMO_001', 150, 'Job Completed + Bonus', datetime('now', '-14 days'))`).run();
-  db.prepare(`INSERT INTO xp_transactions (candidate_id, amount, reason, created_at) VALUES ('CND_DEMO_001', 50, 'Daily Login Streak', datetime('now', '-1 days'))`).run();
-  db.prepare(`INSERT INTO xp_transactions (candidate_id, amount, reason, created_at) VALUES ('CND_DEMO_001', 200, 'Referral Bonus', datetime('now', '-10 days'))`).run();
+  // Add XP transactions (Career Ladder Strategy action_types: shift, referral, penalty, quest_claim, achievement_claim)
+  db.prepare(`INSERT INTO xp_transactions (candidate_id, action_type, amount, reason, created_at) VALUES ('CND_DEMO_001', 'shift', 850, 'Shift completion: 8hrs + on-time', datetime('now', '-7 days'))`).run();
+  db.prepare(`INSERT INTO xp_transactions (candidate_id, action_type, amount, reason, created_at) VALUES ('CND_DEMO_001', 'shift', 1050, 'Shift completion: 6hrs + urgent + 5-star', datetime('now', '-14 days'))`).run();
+  db.prepare(`INSERT INTO xp_transactions (candidate_id, action_type, amount, reason, created_at) VALUES ('CND_DEMO_001', 'quest_claim', 10, 'Daily Check-in quest', datetime('now', '-1 days'))`).run();
+  db.prepare(`INSERT INTO xp_transactions (candidate_id, action_type, amount, reason, created_at) VALUES ('CND_DEMO_001', 'referral', 1000, 'Referral bonus: friend completed first job', datetime('now', '-10 days'))`).run();
 
   console.log('✅ Demo account created: sarah.tan@email.com');
 }
@@ -873,67 +900,49 @@ function seedEssentialData() {
     });
   }
 
-  // Achievements
+  // Achievements - Career Ladder Gamification Strategy
+  // Clear old achievements and insert new ones based on GamificationStrategy.md
   if (achievementCount === 0) {
     const achievements = [
-      // Welcome & Onboarding achievements (special category)
-      ['ACH012', 'Welcome!', 'Log in for the first time', 'wave', 'special', 'first_login', 1, 50, 'common'],
-      ['ACH013', 'Profile Pro', 'Complete your profile 100%', 'user-check', 'special', 'profile_complete', 1, 100, 'common'],
-      ['ACH014', 'Verified!', 'Get your account approved', 'badge-check', 'special', 'account_verified', 1, 75, 'common'],
-      // Jobs achievements
-      ['ACH001', 'First Steps', 'Complete your first job', 'target', 'milestones', 'jobs_completed', 1, 100, 'common'],
-      ['ACH002', 'Getting Started', 'Complete 5 jobs', 'star', 'milestones', 'jobs_completed', 5, 250, 'common'],
-      ['ACH003', 'Dedicated Worker', 'Complete 25 jobs', 'trophy', 'milestones', 'jobs_completed', 25, 500, 'rare'],
-      ['ACH004', 'Job Master', 'Complete 100 jobs', 'crown', 'milestones', 'jobs_completed', 100, 1500, 'epic'],
-      // Streak achievements
-      ['ACH005', 'Week Warrior', '7-day streak', 'flame', 'streaks', 'streak', 7, 200, 'rare'],
-      ['ACH011', 'Fort Knight!', '14-day streak', 'sword', 'streaks', 'streak', 14, 500, 'epic'],
-      ['ACH006', 'MONTH-STER!', '30-day streak', 'crown', 'streaks', 'streak', 30, 1000, 'legendary'],
-      // Training achievements
-      ['ACH007', 'First Cert', 'Complete first training', 'book-open', 'performance', 'training', 1, 150, 'common'],
-      // Referral achievements (social category)
-      ['ACH008', 'Recruiter', 'Refer your first friend', 'users', 'social', 'referrals', 1, 200, 'common'],
-      ['ACH009', 'Super Recruiter', 'Refer 5 friends', 'users-plus', 'social', 'referrals', 5, 500, 'rare'],
-      // Performance achievements
-      ['ACH010', 'Perfect Score', 'Get 5-star rating 10 times', 'star', 'performance', 'five_star', 10, 300, 'rare'],
+      // THE RELIABLE - Attendance Focused
+      ['ACH_IRONCLAD_1', 'Ironclad I', 'Complete 10 shifts without a single cancellation', 'shield', 'reliable', 'no_cancel_streak', 10, 300, 'common'],
+      ['ACH_IRONCLAD_2', 'Ironclad II', 'Complete 50 shifts without a single cancellation', 'shield-check', 'reliable', 'no_cancel_streak', 50, 750, 'rare'],
+      ['ACH_IRONCLAD_3', 'Ironclad III', 'Complete 100 shifts without a single cancellation', 'shield-star', 'reliable', 'no_cancel_streak', 100, 2000, 'legendary'],
+      ['ACH_EARLY_BIRD', 'Early Bird', 'Clock in 10 minutes early for 5 consecutive shifts', 'sunrise', 'reliable', 'early_checkin_streak', 5, 250, 'rare'],
+      ['ACH_CLOSER', 'The Closer', 'Complete 10 shifts during holidays or weekends', 'calendar-check', 'reliable', 'weekend_holiday_shifts', 10, 400, 'rare'],
+
+      // THE SKILLED - Performance Focused
+      ['ACH_FIVE_STAR', 'Five-Star General', 'Maintain a 5.0 rating for 20 consecutive shifts', 'medal', 'skilled', 'five_star_streak', 20, 500, 'epic'],
+      ['ACH_JACK', 'Jack of All Trades', 'Complete jobs in 3 different categories', 'briefcase', 'skilled', 'job_categories', 3, 350, 'rare'],
+      ['ACH_CERTIFIED', 'Certified Pro', 'Complete all available training modules', 'award', 'skilled', 'all_training', 1, 1000, 'epic'],
+
+      // THE SOCIAL - Community Focused
+      ['ACH_HEADHUNTER', 'Headhunter', 'Successfully refer 5 workers', 'users', 'social', 'referrals', 5, 500, 'rare'],
     ];
     achievements.forEach(a => {
       db.prepare('INSERT OR IGNORE INTO achievements VALUES (?,?,?,?,?,?,?,?,?)').run(...a);
     });
   }
 
-  // Insert new achievements if they don't exist (for existing databases)
-  const newAchievements = [
-    ['ACH012', 'Welcome!', 'Log in for the first time', 'wave', 'special', 'first_login', 1, 50, 'common'],
-    ['ACH013', 'Profile Pro', 'Complete your profile 100%', 'user-check', 'special', 'profile_complete', 1, 100, 'common'],
-    ['ACH014', 'Verified!', 'Get your account approved', 'badge-check', 'special', 'account_verified', 1, 75, 'common'],
-  ];
-  newAchievements.forEach(a => {
-    db.prepare('INSERT OR IGNORE INTO achievements VALUES (?,?,?,?,?,?,?,?,?)').run(...a);
-  });
-
-  // Quests - seed independently
+  // Quests - Career Ladder Gamification Strategy
+  // Based on GamificationStrategy.md Quest Configuration
   const questCount = db.prepare('SELECT COUNT(*) as c FROM quests').get().c;
   if (questCount === 0) {
     const quests = [
-      // Daily quests
-      ['QST001', 'Daily Check-in', 'Open the app today to earn XP', 'daily', '{"type":"streak","count":1}', 10, 0, 1],
-      ['QST002', 'Apply for a Job', 'Submit an application for any available job', 'daily', '{"type":"accept_job","count":1}', 25, 0, 1],
-      // Weekly quests
-      ['QST003', 'Complete a Job', 'Successfully finish any job this week', 'weekly', '{"type":"jobs_completed","count":1}', 150, 0, 1],
-      ['QST004', 'Perfect Week', 'Complete 5 jobs in a single week', 'weekly', '{"type":"jobs_completed","count":5}', 500, 25, 1],
-      ['QST005', 'Apply to 3 Jobs', 'Apply to 3 different jobs this week', 'weekly', '{"type":"accept_job","count":3}', 100, 0, 1],
-      // Special quests
-      ['QST006', 'Refer a Friend', 'Invite someone to join WorkLink', 'special', '{"type":"referral","count":1}', 300, 30, 1],
-      ['QST007', 'Complete Training', 'Finish any training course', 'special', '{"type":"training_completed","count":1}', 200, 0, 1],
-      ['QST008', 'Complete Your Profile', 'Fill in all your profile details', 'special', '{"type":"profile_complete","count":1}', 100, 0, 1],
-      // Repeatable quests
-      ['QST009', 'Five Star Service', 'Receive a 5-star rating from a client', 'repeatable', '{"type":"rating","value":5}', 50, 5, 1],
+      // Daily Quests (Reset 00:00) - Objective: Daily Active Users (DAU)
+      ['QST_CHECKIN', 'Check-in', 'Open the app today', 'daily', '{"type":"app_open","count":1}', 10, 0, 1],
+      ['QST_READY', 'Ready to Work', 'Update availability calendar for the next 3 days', 'daily', '{"type":"update_availability","days":3}', 50, 0, 1],
+      ['QST_FAST', 'Fast Finger', 'Apply for a job within 30 mins of posting', 'daily', '{"type":"quick_apply","minutes":30}', 20, 0, 1],
+
+      // Weekly Quests (Reset Monday) - Objective: Weekly consistency and fulfillment
+      ['QST_WEEKENDER', 'The Weekender', 'Complete a shift on Saturday or Sunday', 'weekly', '{"type":"weekend_shift","count":1}', 300, 0, 1],
+      ['QST_STREAK', 'Streak Keeper', 'Work 3 days in a row', 'weekly', '{"type":"work_streak","days":3}', 500, 0, 1],
+      ['QST_EARNINGS', 'Earnings Goal', 'Earn $500 this week', 'weekly', '{"type":"weekly_earnings","amount":500}', 250, 25, 1],
     ];
     quests.forEach(q => {
       db.prepare('INSERT OR IGNORE INTO quests VALUES (?,?,?,?,?,?,?,?)').run(...q);
     });
-    console.log('  ✅ Seeded quests');
+    console.log('  ✅ Seeded quests (Career Ladder Strategy)');
   }
 
   // Training
