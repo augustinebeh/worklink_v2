@@ -54,7 +54,7 @@ function PendingAccountOverlay() {
 
   return (
     <div
-      className="fixed inset-0 z-[100] bg-[#020817]/80 backdrop-blur-md"
+      className="fixed inset-0 z-[100] bg-theme-primary/80 backdrop-blur-md"
       style={{ position: 'fixed', height: '100dvh', width: '100vw' }}
     >
       {/* Centered Frame - does not scroll */}
@@ -271,12 +271,12 @@ export default function Calendar() {
   const monthlyEarnings = monthlyDeployments.reduce((sum, d) => sum + (d.total_pay || 0), 0);
 
   return (
-    <div className="min-h-screen bg-[#020817] pb-24">
+    <div className="min-h-screen bg-theme-primary pb-24">
       {/* Pending Account Overlay */}
       {isPending && <PendingAccountOverlay />}
 
       {/* Header */}
-      <div className="sticky top-0 z-10 bg-[#020817]/95 backdrop-blur-xl px-4 pt-4 pb-4 border-b border-white/[0.05]">
+      <div className="sticky top-0 z-10 bg-theme-primary/95 backdrop-blur-xl px-4 pt-4 pb-4 border-b border-white/[0.05]">
         <div className="flex items-center justify-between mb-4">
           <h1 className="text-2xl font-bold text-white flex items-center gap-2">
             <CalendarIcon className="h-6 w-6 text-emerald-400" />

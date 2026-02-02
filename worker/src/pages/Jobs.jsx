@@ -39,7 +39,7 @@ function PendingAccountOverlay() {
     <>
       {/* Frosted Background Overlay */}
       <div
-        className="fixed inset-0 z-[100] bg-[#020817]/80 backdrop-blur-md"
+        className="fixed inset-0 z-[100] bg-theme-primary/80 backdrop-blur-md"
         aria-hidden="true"
       />
 
@@ -325,7 +325,7 @@ export default function Jobs() {
   }, [filter, search]);
 
   return (
-    <div className="min-h-screen bg-[#020817] pb-24">
+    <div className="min-h-screen bg-theme-primary pb-24">
       {/* Pending Account Overlay */}
       {isPending && <PendingAccountOverlay />}
 

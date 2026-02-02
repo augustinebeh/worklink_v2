@@ -309,7 +309,7 @@ export default function Training() {
   });
 
   return (
-    <div className="min-h-screen bg-[#020817] pb-24">
+    <div className="min-h-screen bg-theme-primary pb-24">
       {/* Header Card */}
       <div className="px-4 pt-4">
         <div className="relative rounded-3xl overflow-hidden">

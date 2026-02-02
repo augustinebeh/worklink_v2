@@ -10,6 +10,7 @@ import {
   TargetIcon,
   AwardIcon,
   GiftIcon,
+  ShoppingBagIcon,
   CalendarIcon,
   GraduationCapIcon,
   BellIcon,
@@ -37,6 +38,7 @@ const menuSections = [
     items: [
       { path: '/quests', icon: TargetIcon, label: 'Quests' },
       { path: '/achievements', icon: AwardIcon, label: 'Achievements' },
+      { path: '/rewards', icon: ShoppingBagIcon, label: 'Rewards Shop' },
       { path: '/leaderboard', icon: TrophyIcon, label: 'Leaderboard' },
       { path: '/referrals', icon: GiftIcon, label: 'Refer & Earn' },
     ],
@@ -111,9 +113,9 @@ export default function Sidebar({ isOpen, onClose }) {
         className={clsx(
           'fixed top-0 left-0 bottom-0 w-72 z-[100] transform transition-transform duration-300 ease-out',
           isOpen ? 'translate-x-0' : '-translate-x-full',
-          'bg-[#0a1628] border-r border-white/[0.05]'
+          'border-r border-white/[0.05]'
         )}
-        style={{ paddingTop: 'env(safe-area-inset-top, 0px)' }}
+        style={{ paddingTop: 'env(safe-area-inset-top, 0px)', backgroundColor: 'var(--bg-card)' }}
       >
         {/* Header */}
         <div className="flex items-center justify-between px-4 h-14 border-b border-white/[0.05]">
@@ -149,7 +151,10 @@ export default function Sidebar({ isOpen, onClose }) {
                 </span>
               </div>
               <div className="flex-1">
-                <p className="font-semibold text-white">{user.name || 'User'}</p>
+                <p className="font-semibold text-white">
+                  {user.name || 'User'}
+                  {user.profile_flair && <span className="ml-1">{user.profile_flair}</span>}
+                </p>
                 <p className="text-sm text-emerald-400">{levelTitle}</p>
               </div>
             </div>

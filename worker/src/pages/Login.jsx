@@ -236,7 +236,7 @@ export default function Login() {
   const hasSocialLogin = botUsername || googleClientId;
 
   return (
-    <div className="min-h-screen bg-[#020817] flex flex-col">
+    <div className="min-h-screen bg-theme-primary flex flex-col">
       {/* Background effects */}
       <div className="fixed inset-0 pointer-events-none overflow-hidden">
         <div className="absolute top-0 right-0 w-96 h-96 bg-emerald-500/10 rounded-full blur-[120px] -translate-y-1/2 translate-x-1/3" />

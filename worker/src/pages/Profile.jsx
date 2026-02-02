@@ -70,7 +70,7 @@ function ProfileActionDropdown({ isOpen, onClose, onSelectPhoto, onSelectBorder,
 
       {/* Dropdown Menu */}
       <div
-        className="absolute left-0 top-full mt-2 z-[70] w-56 rounded-xl bg-[#0a1628] border border-white/10 shadow-xl shadow-black/50 overflow-hidden animate-dropdown"
+        className="absolute left-0 top-full mt-2 z-[70] w-56 rounded-xl bg-theme-card border border-white/10 shadow-xl shadow-black/50 overflow-hidden animate-dropdown"
         onClick={e => e.stopPropagation()}
       >
         <button
@@ -130,7 +130,7 @@ function BorderSelectionModal({ isOpen, onClose, borders, selectedBorderId, onSe
       className="fixed top-0 left-0 right-0 bottom-0 z-[100] bg-black/70 backdrop-blur-sm"
       style={{ position: 'fixed', height: '100dvh', width: '100vw' }}
     >
-      <div className="absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 w-[calc(100%-2rem)] max-w-lg max-h-[80vh] rounded-2xl bg-[#0a1628] border border-white/10 overflow-hidden flex flex-col shadow-2xl">
+      <div className="absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 w-[calc(100%-2rem)] max-w-lg max-h-[80vh] rounded-2xl bg-theme-card border border-white/10 overflow-hidden flex flex-col shadow-2xl">
         {/* Header */}
         <div className="p-4 border-b border-white/10 flex items-center justify-between flex-shrink-0">
           <h3 className="text-lg font-bold text-white">Select Profile Border</h3>
@@ -219,7 +219,7 @@ function BorderSelectionModal({ isOpen, onClose, borders, selectedBorderId, onSe
                             border.animation
                           )}>
                             <div className={clsx(
-                              'w-full h-full rounded-full bg-[#0a1628] flex items-center justify-center overflow-hidden',
+                              'w-full h-full rounded-full bg-theme-card flex items-center justify-center overflow-hidden',
                               style.ring
                             )}>
                               <img
@@ -336,7 +336,7 @@ function AvailabilitySelector({ user, onUpdate }) {
               'p-3 rounded-2xl border transition-all text-center',
               selected === opt.id
                 ? 'bg-emerald-500/20 border-emerald-500/40 ring-2 ring-emerald-500/30'
-                : 'bg-[#0a1628]/80 border-white/[0.05] hover:border-white/10'
+                : 'bg-theme-card/80 border-white/[0.05] hover:border-white/10'
             )}
           >
             <div className={clsx('text-sm font-semibold', selected === opt.id ? 'text-emerald-400' : 'text-white')}>
@@ -360,7 +360,7 @@ function MenuLink({ icon: Icon, label, sublabel, onClick, danger, badge }) {
         'w-full flex items-center gap-4 p-4 rounded-2xl transition-all',
         danger
           ? 'bg-red-500/10 hover:bg-red-500/20 border border-red-500/20'
-          : 'bg-[#0a1628]/80 border border-white/[0.05] hover:border-white/10'
+          : 'bg-theme-card/80 border border-white/[0.05] hover:border-white/10'
       )}
     >
       <div className={clsx('w-10 h-10 rounded-xl flex items-center justify-center', danger ? 'bg-red-500/20' : 'bg-white/5')}>
@@ -530,7 +530,7 @@ export default function Profile() {
 
   if (!user) {
     return (
-      <div className="min-h-screen bg-[#020817] flex items-center justify-center pb-24">
+      <div className="min-h-screen bg-theme-primary flex items-center justify-center pb-24">
         <div className="text-center">
           <UserIcon className="h-16 w-16 mx-auto mb-4 text-white/10" />
           <p className="text-white/40 mb-4">Please log in to view your profile</p>
@@ -557,7 +557,7 @@ export default function Profile() {
   const fileInputRef = useState(null);
 
   return (
-    <div className="min-h-screen bg-[#020817] pb-24">
+    <div className="min-h-screen bg-theme-primary pb-24">
       {/* Hidden file input */}
       <input
         type="file"
@@ -623,7 +623,10 @@ export default function Profile() {
                 </div>
 
                 <div>
-                  <h1 className="text-xl font-bold text-white">{userName}</h1>
+                  <h1 className="text-xl font-bold text-white">
+                    {userName}
+                    {user.profile_flair && <span className="ml-1">{user.profile_flair}</span>}
+                  </h1>
                   <p className="text-emerald-400 text-sm">{levelTitles[userLevel] || 'Newcomer'}</p>
                   <div className="flex items-center gap-2 mt-1">
                     <StarIcon className="h-4 w-4 text-amber-400 fill-amber-400" />
@@ -681,7 +684,7 @@ export default function Profile() {
               <span className="px-2 py-1 rounded-lg bg-emerald-500/20 text-emerald-400 text-xs font-medium">Earn ${referralBonus}</span>
             </div>
             <div className="flex items-center gap-3">
-              <div className="flex-1 px-4 py-3 rounded-xl bg-[#0a1628] border border-white/[0.05]">
+              <div className="flex-1 px-4 py-3 rounded-xl bg-theme-card border border-white/[0.05]">
                 <p className="font-mono text-xl text-white tracking-widest text-center">{referralCode}</p>
               </div>
               <button onClick={handleCopyReferral} className="p-3 rounded-xl bg-emerald-500 text-white shadow-lg shadow-emerald-500/25">
@@ -724,13 +727,13 @@ export default function Profile() {
           actionVariant="button"
         />
         <div className="space-y-3">
-          <div className="flex items-center gap-4 p-4 rounded-2xl bg-[#0a1628]/80 border border-white/[0.05]">
+          <div className="flex items-center gap-4 p-4 rounded-2xl bg-theme-card/80 border border-white/[0.05]">
             <div className="w-10 h-10 rounded-xl bg-white/5 flex items-center justify-center">
               <MailIcon className="h-5 w-5 text-white/50" />
             </div>
             <span className="text-white">{user.email}</span>
           </div>
-          <div className="flex items-center gap-4 p-4 rounded-2xl bg-[#0a1628]/80 border border-white/[0.05]">
+          <div className="flex items-center gap-4 p-4 rounded-2xl bg-theme-card/80 border border-white/[0.05]">
             <div className="w-10 h-10 rounded-xl bg-white/5 flex items-center justify-center">
               <PhoneIcon className="h-5 w-5 text-white/50" />
             </div>
@@ -790,7 +793,7 @@ export default function Profile() {
       {/* Telegram Modal */}
       {showTelegramModal && (
         <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/70 backdrop-blur-sm">
-          <div className="w-full max-w-sm rounded-2xl bg-[#0a1628] border border-white/10 p-6">
+          <div className="w-full max-w-sm rounded-2xl bg-theme-card border border-white/10 p-6">
             <div className="flex items-center justify-between mb-4">
               <h3 className="text-lg font-bold text-white">Connect Telegram</h3>
               <button onClick={() => setShowTelegramModal(false)} className="p-2 rounded-lg hover:bg-white/5">

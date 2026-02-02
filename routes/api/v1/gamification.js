@@ -913,8 +913,8 @@ router.get('/leaderboard', (req, res) => {
     const { period = 'all', limit = 20 } = req.query;
 
     const leaderboard = db.prepare(`
-      SELECT id, name, xp, level, total_jobs_completed, rating, profile_photo, streak_days
-      FROM candidates 
+      SELECT id, name, xp, level, total_jobs_completed, rating, profile_photo, streak_days, profile_flair
+      FROM candidates
       WHERE status = 'active'
       ORDER BY xp DESC
       LIMIT ?
@@ -1034,14 +1034,14 @@ router.post('/borders/:candidateId/select', (req, res) => {
     // Check if candidate has unlocked this border
     const candidate = db.prepare('SELECT level FROM candidates WHERE id = ?').get(candidateId);
     const requirement = JSON.parse(border.unlock_requirement || '{}');
-    
+
     let unlocked = false;
-    
+
     // Check manually unlocked
     const manualUnlock = db.prepare(`
       SELECT * FROM candidate_borders WHERE candidate_id = ? AND border_id = ?
     `).get(candidateId, borderId);
-    
+
     if (manualUnlock) {
       unlocked = true;
     } else if (border.unlock_type === 'level' && requirement.level) {
@@ -1073,6 +1073,331 @@ router.post('/borders/:candidateId/select', (req, res) => {
     res.json({ success: true, data: { selectedBorderId: borderId } });
   } catch (error) {
     console.error('Select border error:', error);
+    res.status(500).json({ success: false, error: error.message });
+  }
+});
+
+// =====================================================
+// REWARDS SHOP (The Sink) - Career Ladder Strategy
+// =====================================================
+
+// Get all active rewards
+router.get('/rewards', (req, res) => {
+  try {
+    const rewards = db.prepare(`
+      SELECT * FROM rewards WHERE active = 1 ORDER BY category, points_cost
+    `).all();
+    res.json({ success: true, data: rewards });
+  } catch (error) {
+    res.status(500).json({ success: false, error: error.message });
+  }
+});
+
+// Get user's available and purchased rewards
+router.get('/rewards/user/:candidateId', (req, res) => {
+  try {
+    const candidateId = req.params.candidateId;
+
+    // Get candidate info for tier check
+    const candidate = db.prepare(`
+      SELECT current_points, current_tier, level FROM candidates WHERE id = ?
+    `).get(candidateId);
+
+    if (!candidate) {
+      return res.status(404).json({ success: false, error: 'Candidate not found' });
+    }
+
+    // Get all active rewards
+    const rewards = db.prepare(`
+      SELECT * FROM rewards WHERE active = 1 ORDER BY category, points_cost
+    `).all();
+
+    // Get user's purchases
+    const purchases = db.prepare(`
+      SELECT rp.*, r.name as reward_name
+      FROM reward_purchases rp
+      JOIN rewards r ON rp.reward_id = r.id
+      WHERE rp.candidate_id = ?
+      ORDER BY rp.created_at DESC
+    `).all(candidateId);
+
+    // Create a map of purchased reward counts
+    const purchaseCounts = {};
+    purchases.forEach(p => {
+      purchaseCounts[p.reward_id] = (purchaseCounts[p.reward_id] || 0) + 1;
+    });
+
+    // Tier hierarchy for comparison
+    const tierOrder = { bronze: 0, silver: 1, gold: 2, platinum: 3, diamond: 4, mythic: 5 };
+    const userTierLevel = tierOrder[candidate.current_tier] || 0;
+
+    // Annotate rewards with availability info
+    const annotatedRewards = rewards.map(reward => {
+      const requiredTierLevel = tierOrder[reward.tier_required] || 0;
+      const meetsRequirement = userTierLevel >= requiredTierLevel;
+      const canAfford = candidate.current_points >= reward.points_cost;
+      const inStock = reward.stock === null || reward.stock > 0;
+      const purchaseCount = purchaseCounts[reward.id] || 0;
+
+      return {
+        ...reward,
+        meetsRequirement,
+        canAfford,
+        inStock,
+        purchaseCount,
+        canPurchase: meetsRequirement && canAfford && inStock,
+      };
+    });
+
+    res.json({
+      success: true,
+      data: {
+        rewards: annotatedRewards,
+        purchases,
+        userPoints: candidate.current_points,
+        userTier: candidate.current_tier,
+        userLevel: candidate.level,
+      },
+    });
+  } catch (error) {
+    console.error('Get user rewards error:', error);
+    res.status(500).json({ success: false, error: error.message });
+  }
+});
+
+// Purchase a reward
+router.post('/rewards/:rewardId/purchase', (req, res) => {
+  try {
+    const rewardId = req.params.rewardId;
+    const { candidateId } = req.body;
+
+    if (!candidateId) {
+      return res.status(400).json({ success: false, error: 'candidateId is required' });
+    }
+
+    // Get reward
+    const reward = db.prepare('SELECT * FROM rewards WHERE id = ? AND active = 1').get(rewardId);
+    if (!reward) {
+      return res.status(404).json({ success: false, error: 'Reward not found' });
+    }
+
+    // Get candidate
+    const candidate = db.prepare(`
+      SELECT id, current_points, current_tier, level FROM candidates WHERE id = ?
+    `).get(candidateId);
+    if (!candidate) {
+      return res.status(404).json({ success: false, error: 'Candidate not found' });
+    }
+
+    // Check tier requirement
+    const tierOrder = { bronze: 0, silver: 1, gold: 2, platinum: 3, diamond: 4, mythic: 5 };
+    const userTierLevel = tierOrder[candidate.current_tier] || 0;
+    const requiredTierLevel = tierOrder[reward.tier_required] || 0;
+
+    if (userTierLevel < requiredTierLevel) {
+      return res.status(403).json({
+        success: false,
+        error: `You need ${reward.tier_required} tier or higher to purchase this reward`,
+      });
+    }
+
+    // Check points
+    if (candidate.current_points < reward.points_cost) {
+      return res.status(400).json({
+        success: false,
+        error: `Not enough points. Need ${reward.points_cost}, have ${candidate.current_points}`,
+      });
+    }
+
+    // Check stock
+    if (reward.stock !== null && reward.stock <= 0) {
+      return res.status(400).json({ success: false, error: 'This reward is out of stock' });
+    }
+
+    // Create purchase record
+    const purchaseId = `PUR_${Date.now()}_${Math.random().toString(36).substring(2, 8).toUpperCase()}`;
+
+    // Feature unlocks are auto-fulfilled
+    const status = reward.category === 'feature' ? 'fulfilled' : 'pending';
+    const fulfilledAt = reward.category === 'feature' ? new Date().toISOString() : null;
+
+    db.prepare(`
+      INSERT INTO reward_purchases (id, candidate_id, reward_id, points_spent, status, fulfilled_at)
+      VALUES (?, ?, ?, ?, ?, ?)
+    `).run(purchaseId, candidateId, rewardId, reward.points_cost, status, fulfilledAt);
+
+    // Deduct points
+    db.prepare('UPDATE candidates SET current_points = current_points - ? WHERE id = ?')
+      .run(reward.points_cost, candidateId);
+
+    // Decrement stock if limited
+    if (reward.stock !== null) {
+      db.prepare('UPDATE rewards SET stock = stock - 1 WHERE id = ?').run(rewardId);
+    }
+
+    // Get updated points
+    const updatedCandidate = db.prepare('SELECT current_points FROM candidates WHERE id = ?').get(candidateId);
+
+    res.json({
+      success: true,
+      data: {
+        purchaseId,
+        reward: reward.name,
+        pointsSpent: reward.points_cost,
+        newBalance: updatedCandidate.current_points,
+        status,
+      },
+    });
+  } catch (error) {
+    console.error('Purchase reward error:', error);
+    res.status(500).json({ success: false, error: error.message });
+  }
+});
+
+// =====================================================
+// PROFILE FLAIR - Requires RWD_PROFILE_FLAIR reward
+// =====================================================
+
+// Get user's flair and check if they own the reward
+router.get('/flair/:candidateId', (req, res) => {
+  try {
+    const candidateId = req.params.candidateId;
+
+    const candidate = db.prepare(`
+      SELECT profile_flair FROM candidates WHERE id = ?
+    `).get(candidateId);
+
+    if (!candidate) {
+      return res.status(404).json({ success: false, error: 'Candidate not found' });
+    }
+
+    // Check if user owns Profile Flair reward
+    const ownsReward = db.prepare(`
+      SELECT COUNT(*) as count FROM reward_purchases
+      WHERE candidate_id = ? AND reward_id = 'RWD_PROFILE_FLAIR' AND status = 'fulfilled'
+    `).get(candidateId).count > 0;
+
+    res.json({
+      success: true,
+      data: {
+        flair: candidate.profile_flair,
+        ownsReward,
+      },
+    });
+  } catch (error) {
+    res.status(500).json({ success: false, error: error.message });
+  }
+});
+
+// Set user's flair (requires owning Profile Flair reward)
+router.post('/flair/:candidateId', (req, res) => {
+  try {
+    const candidateId = req.params.candidateId;
+    const { flair } = req.body;
+
+    // Check if user owns Profile Flair reward
+    const ownsReward = db.prepare(`
+      SELECT COUNT(*) as count FROM reward_purchases
+      WHERE candidate_id = ? AND reward_id = 'RWD_PROFILE_FLAIR' AND status = 'fulfilled'
+    `).get(candidateId).count > 0;
+
+    if (!ownsReward) {
+      return res.status(403).json({
+        success: false,
+        error: 'You need to purchase the Profile Flair reward first',
+      });
+    }
+
+    // Validate flair (should be a single emoji or short text)
+    if (flair && flair.length > 10) {
+      return res.status(400).json({ success: false, error: 'Flair must be 10 characters or less' });
+    }
+
+    // Update flair
+    db.prepare('UPDATE candidates SET profile_flair = ? WHERE id = ?').run(flair || null, candidateId);
+
+    res.json({
+      success: true,
+      data: { flair: flair || null },
+    });
+  } catch (error) {
+    res.status(500).json({ success: false, error: error.message });
+  }
+});
+
+// =====================================================
+// THEME PREFERENCE - Requires RWD_DARK_MODE reward
+// =====================================================
+
+// Available themes
+const THEMES = ['default', 'midnight', 'ocean', 'forest', 'sunset', 'purple'];
+
+// Get user's theme and check if they own the reward
+router.get('/theme/:candidateId', (req, res) => {
+  try {
+    const candidateId = req.params.candidateId;
+
+    const candidate = db.prepare(`
+      SELECT theme_preference FROM candidates WHERE id = ?
+    `).get(candidateId);
+
+    if (!candidate) {
+      return res.status(404).json({ success: false, error: 'Candidate not found' });
+    }
+
+    // Check if user owns Dark Mode Pro reward
+    const ownsReward = db.prepare(`
+      SELECT COUNT(*) as count FROM reward_purchases
+      WHERE candidate_id = ? AND reward_id = 'RWD_DARK_MODE' AND status = 'fulfilled'
+    `).get(candidateId).count > 0;
+
+    res.json({
+      success: true,
+      data: {
+        theme: candidate.theme_preference || 'default',
+        ownsReward,
+        availableThemes: ownsReward ? THEMES : ['default'],
+      },
+    });
+  } catch (error) {
+    res.status(500).json({ success: false, error: error.message });
+  }
+});
+
+// Set user's theme (requires owning Dark Mode Pro reward for non-default themes)
+router.post('/theme/:candidateId', (req, res) => {
+  try {
+    const candidateId = req.params.candidateId;
+    const { theme } = req.body;
+
+    // Validate theme
+    if (!THEMES.includes(theme)) {
+      return res.status(400).json({ success: false, error: 'Invalid theme' });
+    }
+
+    // Check if user owns Dark Mode Pro reward (required for non-default themes)
+    if (theme !== 'default') {
+      const ownsReward = db.prepare(`
+        SELECT COUNT(*) as count FROM reward_purchases
+        WHERE candidate_id = ? AND reward_id = 'RWD_DARK_MODE' AND status = 'fulfilled'
+      `).get(candidateId).count > 0;
+
+      if (!ownsReward) {
+        return res.status(403).json({
+          success: false,
+          error: 'You need to purchase the Dark Mode Pro reward first',
+        });
+      }
+    }
+
+    // Update theme
+    db.prepare('UPDATE candidates SET theme_preference = ? WHERE id = ?').run(theme, candidateId);
+
+    res.json({
+      success: true,
+      data: { theme },
+    });
+  } catch (error) {
     res.status(500).json({ success: false, error: error.message });
   }
 });

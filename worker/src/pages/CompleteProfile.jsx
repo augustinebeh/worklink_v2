@@ -247,16 +247,16 @@ export default function CompleteProfile() {
 
   if (!user) {
     return (
-      <div className="min-h-screen bg-[#020817] flex items-center justify-center">
+      <div className="min-h-screen bg-theme-primary flex items-center justify-center">
         <p className="text-white/40">Please log in to edit your profile</p>
       </div>
     );
   }
 
   return (
-    <div className="min-h-screen bg-[#020817] pb-24">
+    <div className="min-h-screen bg-theme-primary pb-24">
       {/* Header */}
-      <div className="sticky top-0 z-10 bg-[#020817]/95 backdrop-blur-xl px-4 pt-4 pb-4 border-b border-white/[0.05]">
+      <div className="sticky top-0 z-10 bg-theme-primary/95 backdrop-blur-xl px-4 pt-4 pb-4 border-b border-white/[0.05]">
         <div className="flex items-center gap-3">
           <button
             onClick={() => navigate(-1)}

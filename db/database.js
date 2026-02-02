@@ -322,6 +322,32 @@ function createSchema() {
       xp_reward INTEGER DEFAULT 0
     );
 
+    -- Rewards Shop (The Sink)
+    CREATE TABLE IF NOT EXISTS rewards (
+      id TEXT PRIMARY KEY,
+      name TEXT NOT NULL,
+      description TEXT,
+      icon TEXT,
+      category TEXT,  -- 'feature' | 'operational' | 'physical'
+      points_cost INTEGER NOT NULL,
+      tier_required TEXT DEFAULT 'bronze',
+      stock INTEGER,  -- NULL = unlimited
+      active INTEGER DEFAULT 1,
+      created_at DATETIME DEFAULT CURRENT_TIMESTAMP
+    );
+
+    CREATE TABLE IF NOT EXISTS reward_purchases (
+      id TEXT PRIMARY KEY,
+      candidate_id TEXT NOT NULL,
+      reward_id TEXT NOT NULL,
+      points_spent INTEGER NOT NULL,
+      status TEXT DEFAULT 'pending',  -- 'pending' | 'fulfilled' | 'cancelled'
+      fulfilled_at DATETIME,
+      created_at DATETIME DEFAULT CURRENT_TIMESTAMP,
+      FOREIGN KEY (candidate_id) REFERENCES candidates(id),
+      FOREIGN KEY (reward_id) REFERENCES rewards(id)
+    );
+
     -- Financial
     CREATE TABLE IF NOT EXISTS financial_projections (
       id INTEGER PRIMARY KEY AUTOINCREMENT,
@@ -794,6 +820,16 @@ function createSchema() {
     db.exec(`ALTER TABLE candidates ADD COLUMN current_tier TEXT DEFAULT 'bronze'`);
   } catch (e) {}
 
+  // Add profile_flair column for Profile Flair reward
+  try {
+    db.exec(`ALTER TABLE candidates ADD COLUMN profile_flair TEXT`);
+  } catch (e) {}
+
+  // Add theme_preference column for Dark Mode Pro reward
+  try {
+    db.exec(`ALTER TABLE candidates ADD COLUMN theme_preference TEXT DEFAULT 'default'`);
+  } catch (e) {}
+
   // Add action_type column to xp_transactions if not exists
   try {
     db.exec(`ALTER TABLE xp_transactions ADD COLUMN action_type TEXT`);
@@ -956,6 +992,30 @@ function seedEssentialData() {
   training.forEach(t => {
     db.prepare('INSERT OR IGNORE INTO training VALUES (?,?,?,?,?,?)').run(...t);
   });
+
+  // Rewards Shop - The Sink (Career Ladder Strategy)
+  const rewardCount = db.prepare('SELECT COUNT(*) as c FROM rewards').get().c;
+  if (rewardCount === 0) {
+    const rewards = [
+      // Feature Unlocks (Zero Cost to Business)
+      ['RWD_DARK_MODE', 'Dark Mode Pro', 'Unlock custom color themes for the app', 'palette', 'feature', 200, 'bronze', null, 1],
+      ['RWD_PROFILE_FLAIR', 'Profile Flair', 'Add an emoji or tag next to your name', 'sparkles', 'feature', 150, 'bronze', null, 1],
+      ['RWD_SHIFT_SWAP', 'Shift Swap', 'Trade shifts with other workers without penalty', 'refresh-cw', 'feature', 500, 'gold', null, 1],
+
+      // Operational Advantages
+      ['RWD_INSTANT_PAY', 'Instant Pay Token', 'One-time immediate payout for completed shifts', 'zap', 'operational', 300, 'silver', null, 1],
+      ['RWD_FORGIVENESS', 'Forgiveness Voucher', 'Remove one late cancellation penalty from your record', 'shield', 'operational', 1000, 'platinum', null, 1],
+
+      // Physical/Monetary Rewards
+      ['RWD_CAP', 'WorkLink Cap', 'Branded WorkLink cap delivered to you', 'hard-hat', 'physical', 500, 'silver', 50, 1],
+      ['RWD_TSHIRT', 'WorkLink T-Shirt', 'Branded WorkLink t-shirt delivered to you', 'shirt', 'physical', 800, 'gold', 30, 1],
+      ['RWD_CERT_VOUCHER', 'Cert Exam Voucher', 'Voucher to pay for a certification exam of your choice', 'award', 'physical', 1500, 'platinum', 10, 1],
+    ];
+    rewards.forEach(r => {
+      db.prepare('INSERT OR IGNORE INTO rewards (id, name, description, icon, category, points_cost, tier_required, stock, active) VALUES (?,?,?,?,?,?,?,?,?)').run(...r);
+    });
+    console.log('  ✅ Seeded rewards shop (Career Ladder Strategy)');
+  }
 
   // Incentive schemes
   const schemes = [
@@ -1766,6 +1826,7 @@ function resetToSampleData() {
   const tables = [
     'push_queue', 'job_match_scores', 'notifications', 'messages', 'tender_matches',
     'xp_transactions', 'candidate_quests', 'candidate_achievements', 'candidate_availability',
+    'reward_purchases', 'rewards',
     'payments', 'deployments', 'jobs', 'referrals', 'candidates', 'clients',
     'tenders', 'financial_projections', 'tender_alerts', 'referral_tiers',
     'message_templates', 'incentive_schemes', 'training', 'quests', 'achievements',

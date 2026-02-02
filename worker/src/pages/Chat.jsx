@@ -406,14 +406,14 @@ export default function Chat() {
 
   if (!user) {
     return (
-      <div className="h-screen bg-[#020817] flex items-center justify-center">
+      <div className="h-screen bg-theme-primary flex items-center justify-center">
         <p className="text-white/40">Please log in to chat</p>
       </div>
     );
   }
 
   return (
-    <div className="h-screen bg-[#020817] flex flex-col">
+    <div className="h-screen bg-theme-primary flex flex-col">
       {/* Fixed Header */}
       <div className="flex-shrink-0 bg-[#0a1628]/95 backdrop-blur-xl px-4 pt-4 pb-3 border-b border-white/[0.05] z-10" style={{ paddingTop: 'calc(env(safe-area-inset-top, 0px) + 16px)' }}>
         <div className="flex items-center gap-3">
@@ -470,7 +470,7 @@ export default function Chat() {
 
       {/* Quick Replies */}
       {quickReplies.length > 0 && !newMessage && !selectedFile && !showEmoji && (
-        <div className="flex-shrink-0 px-3 py-2 border-t border-white/[0.05] bg-[#020817]">
+        <div className="flex-shrink-0 px-3 py-2 border-t border-white/[0.05] bg-theme-primary">
           <div className="flex gap-2 overflow-x-auto scrollbar-hide">
             {quickReplies.map((reply, idx) => (
               <QuickReplyChip key={idx} text={reply} onClick={handleQuickReply} />

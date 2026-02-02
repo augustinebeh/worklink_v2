@@ -22,6 +22,7 @@ const Chat = lazy(() => import('./pages/Chat'));
 const Login = lazy(() => import('./pages/Login'));
 const Quests = lazy(() => import('./pages/Quests'));
 const Achievements = lazy(() => import('./pages/Achievements'));
+const Rewards = lazy(() => import('./pages/Rewards'));
 const Leaderboard = lazy(() => import('./pages/Leaderboard'));
 const Training = lazy(() => import('./pages/Training'));
 const Notifications = lazy(() => import('./pages/Notifications'));
@@ -169,6 +170,14 @@ function AppRoutes() {
         element={
           <ProtectedRoute>
             <AppLayout><Achievements /></AppLayout>
+          </ProtectedRoute>
+        }
+      />
+      <Route
+        path="/rewards"
+        element={
+          <ProtectedRoute>
+            <AppLayout><Rewards /></AppLayout>
           </ProtectedRoute>
         }
       />

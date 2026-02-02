@@ -487,7 +487,7 @@ export default function Home() {
   const paginatedJobs = jobs.slice((currentPage - 1) * jobsPerPage, currentPage * jobsPerPage);
 
   return (
-    <div className="min-h-screen bg-[#020817] pb-24">
+    <div className="min-h-screen bg-theme-primary pb-24">
       <div>
         <LeagueCard
           user={user}
@@ -532,7 +532,7 @@ export default function Home() {
             )}
           </div>
 
-          <div className="rounded-2xl border border-white/5 bg-[#0a1628]/50 overflow-hidden">
+          <div className="rounded-2xl border border-white/5 bg-theme-card/50 overflow-hidden">
             {loading ? (
               <div className="p-4">
                 <LoadingSkeleton count={3} height="h-16" />

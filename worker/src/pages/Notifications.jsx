@@ -106,7 +106,7 @@ export default function Notifications() {
   ];
 
   return (
-    <div className="min-h-screen bg-[#020817] pb-24">
+    <div className="min-h-screen bg-theme-primary pb-24">
       <div className="px-4 pt-4 pb-4">
         <PageHeader
           title="Notifications"

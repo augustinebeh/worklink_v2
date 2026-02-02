@@ -28,11 +28,11 @@ function ComingSoonOverlay() {
 
   return (
     <div
-      className="fixed inset-0 z-[100] bg-[#020817]/80 backdrop-blur-md"
+      className="fixed inset-0 z-[100] bg-theme-primary/80 backdrop-blur-md"
       style={{ position: 'fixed', height: '100dvh', width: '100vw' }}
     >
       {/* Centered Frame - does not scroll */}
-      <div className="absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 w-[calc(100%-2rem)] max-w-md max-h-[85vh] overflow-y-auto overscroll-contain rounded-3xl bg-[#0a1628] border border-white/10 p-6 shadow-2xl">
+      <div className="absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 w-[calc(100%-2rem)] max-w-md max-h-[85vh] overflow-y-auto overscroll-contain rounded-3xl bg-theme-card border border-white/10 p-6 shadow-2xl">
         <div className="text-center">
           {/* Animated icon */}
           <div className="relative mb-8 mx-auto w-32 h-32">
@@ -133,7 +133,7 @@ function LeaderboardItem({ player, rank, isCurrentUser }) {
         ? 'bg-gradient-to-r from-emerald-500/10 to-cyan-500/10 border-2 border-emerald-500/30'
         : rank <= 3
           ? 'bg-gradient-to-r from-amber-500/5 to-orange-500/5 border border-amber-500/20'
-          : 'bg-[#0a1628]/50 border border-white/[0.05]'
+          : 'bg-theme-card/50 border border-white/[0.05]'
     )}>
       <RankBadge rank={rank} />
 
@@ -148,6 +148,7 @@ function LeaderboardItem({ player, rank, isCurrentUser }) {
       <div className="flex-1 min-w-0">
         <h3 className={clsx('font-semibold truncate', isCurrentUser ? 'text-emerald-400' : 'text-white')}>
           {player.name}
+          {player.profile_flair && <span className="ml-1">{player.profile_flair}</span>}
           {isCurrentUser && <span className="text-xs ml-1 text-emerald-400/70">(You)</span>}
         </h3>
         <div className="flex items-center gap-2 mt-0.5">
@@ -213,7 +214,7 @@ export default function Leaderboard() {
   const currentUserData = user ? players.find(p => p.id === user.id) : null;
 
   return (
-    <div className="min-h-screen bg-[#020817] pb-24">
+    <div className="min-h-screen bg-theme-primary pb-24">
       {/* Coming Soon Overlay */}
       {isComingSoon && <ComingSoonOverlay />}
 
@@ -290,7 +291,10 @@ export default function Leaderboard() {
                 className="mx-auto mb-2"
               />
               <div className="p-3 rounded-2xl bg-gradient-to-b from-slate-400/20 to-slate-600/10 border border-slate-400/30">
-                <p className="text-white font-semibold text-sm truncate">{players[1]?.name}</p>
+                <p className="text-white font-semibold text-sm truncate">
+                  {players[1]?.name}
+                  {players[1]?.profile_flair && <span className="ml-1">{players[1].profile_flair}</span>}
+                </p>
                 <p className="text-slate-400 text-xs">{(players[1]?.xp || 0).toLocaleString()} XP</p>
                 <div className="mt-2 text-2xl font-bold text-slate-300">2nd</div>
               </div>
@@ -309,7 +313,10 @@ export default function Leaderboard() {
                 />
               </div>
               <div className="p-4 rounded-2xl bg-gradient-to-b from-amber-400/20 to-yellow-600/10 border border-amber-400/30">
-                <p className="text-white font-bold truncate">{players[0]?.name}</p>
+                <p className="text-white font-bold truncate">
+                  {players[0]?.name}
+                  {players[0]?.profile_flair && <span className="ml-1">{players[0].profile_flair}</span>}
+                </p>
                 <p className="text-amber-400 text-sm">{(players[0]?.xp || 0).toLocaleString()} XP</p>
                 <div className="mt-2 text-3xl font-bold text-amber-400">1st</div>
               </div>
@@ -325,7 +332,10 @@ export default function Leaderboard() {
                 className="mx-auto mb-2"
               />
               <div className="p-3 rounded-2xl bg-gradient-to-b from-amber-600/20 to-amber-800/10 border border-amber-600/30">
-                <p className="text-white font-semibold text-sm truncate">{players[2]?.name}</p>
+                <p className="text-white font-semibold text-sm truncate">
+                  {players[2]?.name}
+                  {players[2]?.profile_flair && <span className="ml-1">{players[2].profile_flair}</span>}
+                </p>
                 <p className="text-amber-600 text-xs">{(players[2]?.xp || 0).toLocaleString()} XP</p>
                 <div className="mt-2 text-2xl font-bold text-amber-600">3rd</div>
               </div>

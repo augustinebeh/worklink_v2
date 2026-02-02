@@ -113,7 +113,7 @@ export default function JobDetail() {
 
   if (loading) {
     return (
-      <div className="min-h-screen bg-[#020817] flex items-center justify-center">
+      <div className="min-h-screen bg-theme-primary flex items-center justify-center">
         <div className="animate-spin h-8 w-8 border-2 border-emerald-500 border-t-transparent rounded-full" />
       </div>
     );
@@ -121,7 +121,7 @@ export default function JobDetail() {
 
   if (!job) {
     return (
-      <div className="min-h-screen bg-[#020817] flex flex-col items-center justify-center p-4">
+      <div className="min-h-screen bg-theme-primary flex flex-col items-center justify-center p-4">
         <AlertCircleIcon className="h-16 w-16 text-red-500/50 mb-4" />
         <p className="text-white text-lg font-semibold">Job not found</p>
         <button onClick={() => navigate('/jobs')} className="mt-4 text-emerald-400">Back to Jobs</button>
@@ -137,9 +137,9 @@ export default function JobDetail() {
   const slotsLeft = job.total_slots - job.filled_slots;
 
   return (
-    <div className="min-h-screen bg-[#020817] pb-32">
+    <div className="min-h-screen bg-theme-primary pb-32">
       {/* Header */}
-      <div className="sticky top-0 z-10 bg-[#020817]/95 backdrop-blur-xl px-4 pt-4 pb-4 border-b border-white/[0.05]">
+      <div className="sticky top-0 z-10 bg-theme-primary/95 backdrop-blur-xl px-4 pt-4 pb-4 border-b border-white/[0.05]">
         <div className="flex items-center justify-between">
           <button
             onClick={() => navigate(-1)}
@@ -275,7 +275,7 @@ export default function JobDetail() {
       </div>
 
       {/* Fixed Apply Button */}
-      <div className="fixed bottom-0 left-0 right-0 p-4 bg-[#020817]/95 backdrop-blur-xl border-t border-white/[0.05]" style={{ paddingBottom: 'calc(env(safe-area-inset-bottom, 0px) + 16px)' }}>
+      <div className="fixed bottom-0 left-0 right-0 p-4 bg-theme-primary/95 backdrop-blur-xl border-t border-white/[0.05]" style={{ paddingBottom: 'calc(env(safe-area-inset-bottom, 0px) + 16px)' }}>
         <div className="flex items-center gap-4">
           <div className="flex-1">
             <p className="text-white/50 text-sm">Total Pay</p>
