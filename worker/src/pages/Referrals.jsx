@@ -63,6 +63,18 @@ export default function Referrals() {
     }
   };
 
+  // Build the invitation message
+  const getInviteMessage = () => {
+    const code = user?.referral_code || '';
+    return `Hey! I've been using WorkLink to find flexible jobs and earn extra income. 💼
+
+Join me and we'll BOTH get $25 when you complete your first job!
+
+Use my referral code: ${code}
+
+Download WorkLink now: https://worklink.app/join?ref=${code}`;
+  };
+
   const handleCopy = () => {
     if (user?.referral_code) {
       navigator.clipboard.writeText(user.referral_code);
@@ -72,20 +84,34 @@ export default function Referrals() {
     }
   };
 
+  const handleCopyInvite = () => {
+    navigator.clipboard.writeText(getInviteMessage());
+    toast.success('Copied!', 'Invitation message copied to clipboard');
+  };
+
   const handleShare = async () => {
+    const inviteMessage = getInviteMessage();
+
     const shareData = {
-      title: 'Join WorkLink',
-      text: `Use my referral code ${user?.referral_code} to join WorkLink and we both get $30!`,
-      url: `https://worklink.app/join?ref=${user?.referral_code}`,
+      title: 'Join WorkLink - Earn $25!',
+      text: inviteMessage,
     };
+
     try {
       if (navigator.share) {
         await navigator.share(shareData);
+        toast.success('Shared!', 'Invitation sent');
       } else {
-        handleCopy();
+        // Fallback: copy the full invite message
+        handleCopyInvite();
       }
     } catch (error) {
-      console.error('Share failed:', error);
+      // User cancelled or share failed - only show error if it's not a cancel
+      if (error.name !== 'AbortError') {
+        console.error('Share failed:', error);
+        // Fallback to copying
+        handleCopyInvite();
+      }
     }
   };
 
@@ -106,7 +132,7 @@ export default function Referrals() {
               </div>
               <div>
                 <h1 className="text-2xl font-bold text-white">Refer & Earn</h1>
-                <p className="text-white/50">Invite friends, get $30 each</p>
+                <p className="text-white/50">Invite friends, get $25 each</p>
               </div>
             </div>
 
@@ -162,7 +188,7 @@ export default function Referrals() {
           {[
             { step: '1', title: 'Share your code', desc: 'Send your unique code to friends' },
             { step: '2', title: 'Friend signs up', desc: 'They register using your code' },
-            { step: '3', title: 'Both get $30', desc: "You both earn once they're approved" },
+            { step: '3', title: 'Both get $25', desc: 'You both earn once they complete their first job' },
           ].map((item, i) => (
             <div key={i} className="flex items-center gap-4 p-4 rounded-2xl bg-[#0a1628]/80 border border-white/[0.05]">
               <div className="w-10 h-10 rounded-xl bg-emerald-500/20 flex items-center justify-center">
