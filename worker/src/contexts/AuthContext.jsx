@@ -52,8 +52,14 @@ export function AuthProvider({ children }) {
       const res = await fetch(`/api/v1/candidates/${user.id}`);
       const data = await res.json();
       if (data.success) {
-        setUser(data.data);
-        localStorage.setItem('worker_user', JSON.stringify(data.data));
+        // Force a re-render by ensuring the user object reference changes
+        const updatedUser = {
+          ...data.data,
+          // Add a timestamp to force re-renders when profile_photo changes
+          _lastUpdated: Date.now()
+        };
+        setUser(updatedUser);
+        localStorage.setItem('worker_user', JSON.stringify(updatedUser));
       }
     } catch (error) {
       console.error('Failed to refresh user:', error);

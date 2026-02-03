@@ -63,6 +63,8 @@ export function getOptimizedProfileImage(profilePhoto, name, options = {}) {
 
   // If it's already a base64 image (uploaded/cropped), use it directly
   if (profilePhoto.startsWith('data:image/')) {
+    // Clear any cached version of this user's profile to ensure fresh display
+    clearUserProfileCache(name);
     return profilePhoto;
   }
 
@@ -73,6 +75,21 @@ export function getOptimizedProfileImage(profilePhoto, name, options = {}) {
 
   // Fallback for any other cases
   return generateFallbackAvatar(name, fallbackStyle);
+}
+
+/**
+ * Clear cached images for a specific user (useful when profile photo changes)
+ * @param {string} userName - User's name to clear cache for
+ */
+export function clearUserProfileCache(userName) {
+  // Clear any existing cached images for this user
+  const keysToDelete = [];
+  for (const [key] of imageCache.entries()) {
+    if (key.includes(encodeURIComponent(userName)) || key.startsWith('data:image/')) {
+      keysToDelete.push(key);
+    }
+  }
+  keysToDelete.forEach(key => imageCache.delete(key));
 }
 
 /**

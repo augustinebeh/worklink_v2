@@ -454,13 +454,23 @@ export default function ProfileAvatar({
   // Optimize and preload image when photoUrl changes
   useEffect(() => {
     setImageLoaded(false);
-    const optimized = getOptimizedProfileImage(photoUrl, name);
-    setOptimizedPhotoUrl(optimized);
+    setOptimizedPhotoUrl(null);
 
-    if (optimized) {
-      preloadImage(optimized).then((success) => {
-        setImageLoaded(success);
-      });
+    const optimized = getOptimizedProfileImage(photoUrl, name);
+
+    // If this is a base64 image (newly uploaded), force cache invalidation
+    if (photoUrl && photoUrl.startsWith('data:image/')) {
+      // Add timestamp to ensure cache bust for base64 images
+      const timestampedUrl = `${photoUrl}#t=${Date.now()}`;
+      setOptimizedPhotoUrl(timestampedUrl);
+      setImageLoaded(true); // Base64 images are immediately available
+    } else {
+      setOptimizedPhotoUrl(optimized);
+      if (optimized) {
+        preloadImage(optimized).then((success) => {
+          setImageLoaded(success);
+        });
+      }
     }
   }, [photoUrl, name]);
 

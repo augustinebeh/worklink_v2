@@ -517,7 +517,20 @@ export default function Profile() {
         } else {
           toast.success('Updated!', 'Profile picture changed');
         }
-        refreshUser();
+
+        // Immediately update the user's profile photo in the context
+        // This ensures instant display across all components
+        const updatedUser = {
+          ...user,
+          profile_photo: croppedImage,
+          _lastUpdated: Date.now() // Force re-render
+        };
+
+        // Update localStorage immediately for persistence
+        localStorage.setItem('worker_user', JSON.stringify(updatedUser));
+
+        // Refresh user data from server (this will update the context)
+        await refreshUser();
       } else {
         toast.error('Upload failed', data.error || 'Please try again');
       }

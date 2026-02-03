@@ -63,7 +63,14 @@ export default function Sidebar({ isOpen, onClose }) {
   // Reset imageLoaded when profile photo changes
   useEffect(() => {
     setImageLoaded(false);
-  }, [user?.profile_photo]);
+    // Force re-evaluation of image when profile photo changes
+    if (user?.profile_photo) {
+      // For base64 images, they load immediately
+      if (user.profile_photo.startsWith('data:image/')) {
+        setImageLoaded(true);
+      }
+    }
+  }, [user?.profile_photo, user?._lastUpdated]);
 
   // Close sidebar on route change
   useEffect(() => {
