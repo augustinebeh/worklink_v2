@@ -42,18 +42,34 @@ function generateRandomAvatar(name) {
 
 // Verify Telegram Login data
 function verifyTelegramAuth(authData) {
+  logger.info('🔍 Starting Telegram auth verification');
+
   if (!TELEGRAM_BOT_TOKEN) {
     logger.error('TELEGRAM_BOT_TOKEN not configured');
     return false;
   }
 
   const { hash, ...data } = authData;
-  
+  logger.info('📊 Auth data analysis:', {
+    providedHash: hash,
+    fields: Object.keys(data),
+    authData: data
+  });
+
   // Check auth_date is not too old (within 1 day)
   const authDate = parseInt(data.auth_date);
   const now = Math.floor(Date.now() / 1000);
+  const ageDays = (now - authDate) / 86400;
+
+  logger.info('⏰ Timestamp validation:', {
+    authDate,
+    currentTime: now,
+    ageDays: ageDays.toFixed(2),
+    isValid: now - authDate <= 86400
+  });
+
   if (now - authDate > 86400) {
-    logger.warn('Telegram auth data expired');
+    logger.warn('❌ Telegram auth data expired (older than 24 hours)');
     return false;
   }
 
@@ -62,6 +78,11 @@ function verifyTelegramAuth(authData) {
     .sort()
     .map(key => `${key}=${data[key]}`)
     .join('\n');
+
+  logger.info('🔑 Hash calculation:', {
+    checkString,
+    tokenPrefix: TELEGRAM_BOT_TOKEN.substring(0, 10) + '...'
+  });
 
   // Create secret key from bot token
   const secretKey = crypto
@@ -75,7 +96,15 @@ function verifyTelegramAuth(authData) {
     .update(checkString)
     .digest('hex');
 
-  return calculatedHash === hash;
+  const isValid = calculatedHash === hash;
+
+  logger.info('🎯 Hash verification result:', {
+    calculatedHash,
+    providedHash: hash,
+    match: isValid
+  });
+
+  return isValid;
 }
 
 // Verify Google ID token
@@ -319,11 +348,23 @@ router.post('/telegram/login', (req, res) => {
   try {
     const { referralCode, ...telegramData } = req.body;
 
-    logger.info('📱 Telegram login attempt:', { id: telegramData.id, username: telegramData.username, referralCode });
+    logger.info('📱 Telegram login attempt:', {
+      id: telegramData.id,
+      username: telegramData.username,
+      referralCode,
+      requestBody: req.body,
+      hasHash: !!telegramData.hash,
+      authDate: telegramData.auth_date,
+      fields: Object.keys(telegramData)
+    });
 
     // Verify the Telegram authentication data
     if (!verifyTelegramAuth(telegramData)) {
-      logger.warn('❌ Telegram auth verification failed');
+      logger.error('❌ Telegram auth verification failed', {
+        telegramData,
+        botTokenExists: !!TELEGRAM_BOT_TOKEN,
+        tokenPrefix: TELEGRAM_BOT_TOKEN ? TELEGRAM_BOT_TOKEN.substring(0, 10) + '...' : 'missing'
+      });
       return res.status(401).json({ success: false, error: 'Invalid Telegram authentication' });
     }
 
@@ -399,7 +440,7 @@ router.post('/telegram/login', (req, res) => {
 // Get Telegram bot username for the widget
 router.get('/telegram/config', (req, res) => {
   const botUsername = process.env.TELEGRAM_BOT_USERNAME;
-  
+
   if (!botUsername) {
     return res.status(500).json({ success: false, error: 'Telegram bot not configured' });
   }
@@ -408,6 +449,39 @@ router.get('/telegram/config', (req, res) => {
     success: true,
     botUsername: botUsername,
   });
+});
+
+// Telegram Debug - test auth verification (for debugging only)
+router.post('/telegram/debug', (req, res) => {
+  try {
+    const telegramData = req.body;
+
+    logger.info('🔧 Telegram debug request:', {
+      body: req.body,
+      headers: req.headers,
+      ip: req.ip,
+      userAgent: req.get('User-Agent')
+    });
+
+    const verificationResult = verifyTelegramAuth(telegramData);
+
+    res.json({
+      success: true,
+      debug: {
+        receivedData: telegramData,
+        verificationPassed: verificationResult,
+        botTokenConfigured: !!TELEGRAM_BOT_TOKEN,
+        currentTimestamp: Math.floor(Date.now() / 1000)
+      }
+    });
+  } catch (error) {
+    logger.error('Debug endpoint error:', error);
+    res.status(500).json({
+      success: false,
+      error: error.message,
+      stack: error.stack
+    });
+  }
 });
 
 // Google Login - authenticate via Google Sign-In
