@@ -298,14 +298,17 @@ function createInputValidationMiddleware(schemaName, options = {}) {
  */
 function sanitizeInput(req, res, next) {
   try {
-    const sanitizeValue = (value) => {
+    const sanitizeValue = (value, key) => {
       if (typeof value === 'string') {
-        return sanitizeString(value);
+        // OAuth credentials and tokens need larger limits
+        const isOAuthField = key && ['credential', 'token', 'access_token', 'id_token', 'refresh_token'].includes(key.toLowerCase());
+        const maxLength = isOAuthField ? 5000 : 1000;
+        return sanitizeString(value, maxLength);
       }
       if (typeof value === 'object' && value !== null) {
         const sanitized = {};
         for (const [key, val] of Object.entries(value)) {
-          sanitized[key] = sanitizeValue(val);
+          sanitized[key] = sanitizeValue(val, key);
         }
         return sanitized;
       }

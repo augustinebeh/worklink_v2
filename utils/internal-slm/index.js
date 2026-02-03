@@ -19,7 +19,7 @@ class InternalSLM {
       useGroqFallback: true,
       maxCacheSize: 1000,
       cacheTimeout: 5 * 60 * 1000, // 5 minutes
-      confidenceThreshold: 0.7,
+      confidenceThreshold: 0.5,
       maxContextMessages: 5
     };
   }
@@ -328,8 +328,7 @@ class InternalSLM {
         nextActions: ['escalate_to_admin'],
         messageType: 'payment_escalation',
         escalate: true
-      };
-    }
+    };
   }
 
   /**

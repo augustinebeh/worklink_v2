@@ -51,9 +51,9 @@ class IntentAnalyzer {
       greeting: {
         keywords: ['hi', 'hello', 'hey', 'good morning', 'good afternoon', 'good evening', 'greetings'],
         patterns: [
-          /^(hi|hello|hey)\b/,
-          /good (morning|afternoon|evening)/,
-          /\b(hi there|hey there)\b/
+          /^(hi|hello|hey)\b/i,
+          /good (morning|afternoon|evening)/i,
+          /\b(hi there|hey there)\b/i
         ],
         weight: 0.95
       },

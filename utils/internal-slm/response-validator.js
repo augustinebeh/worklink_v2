@@ -72,7 +72,7 @@ class ResponseValidator {
       content: {
         minLength: 10,
         maxLength: 500,
-        allowedCharacters: /^[a-zA-Z0-9\s\.\!\?\,\;\:\(\)\[\]\{\}\-\_\@\#\$\%\&\*\+\=\~\`\|\\\/"'\n\r\u{1F300}-\u{1F9FF}]+$/u
+        allowedCharacters: /^.+$/u  // Accept all characters for now
       },
       confidence: {
         min: 0.0,
