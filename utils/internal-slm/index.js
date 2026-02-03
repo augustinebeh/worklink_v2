@@ -30,9 +30,10 @@ class InternalSLM {
    * @param {string} message - User message
    * @param {Object} context - Conversation context
    * @param {Object} candidateData - Candidate information
+   * @param {string} channel - Message channel ('app' or 'telegram')
    * @returns {Object} SLM response
    */
-  async processMessage(candidateId, message, context = {}, candidateData = {}) {
+  async processMessage(candidateId, message, context = {}, candidateData = {}, channel = 'app') {
     try {
       // Check cache first
       const cacheKey = this.generateCacheKey(message, context);
@@ -51,7 +52,8 @@ class InternalSLM {
           candidateId,
           message,
           context,
-          candidateData
+          candidateData,
+          channel
         );
 
         if (internalResponse && validateResponse(internalResponse)) {
@@ -88,13 +90,13 @@ class InternalSLM {
   /**
    * Handle message internally using rule-based logic
    */
-  async handleInternally(intentAnalysis, candidateId, message, context, candidateData) {
+  async handleInternally(intentAnalysis, candidateId, message, context, candidateData, channel = 'app') {
     const { intent, entities, confidence, sentiment } = intentAnalysis;
 
     // Route to appropriate handler based on intent
     switch (intent) {
       case 'greeting':
-        return this.handleGreeting(candidateData, sentiment);
+        return this.handleGreeting(candidateData, sentiment, channel);
 
       case 'interview_scheduling':
         return await this.handleInterviewScheduling(candidateId, message, context, candidateData);
@@ -128,35 +130,18 @@ class InternalSLM {
   /**
    * Handle greeting messages
    */
-  handleGreeting(candidateData, sentiment) {
-    const { name, status } = candidateData;
-    const firstName = name ? name.split(' ')[0] : '';
+  async handleGreeting(candidateData, sentiment, channel = 'app') {
+    const { status } = candidateData;
+    const context = { sentiment };
 
+    let intent = 'greeting';
     if (status === 'pending') {
-      return {
-        content: `Hi ${firstName}! 👋 Welcome to WorkLink!\n\nYour account is currently under review. While you wait, I can help speed up the process by scheduling a quick verification interview.\n\n📅 Would you like to schedule a verification call?`,
-        intent: 'interview_scheduling',
-        confidence: 0.95,
-        nextActions: ['schedule_interview'],
-        messageType: 'greeting_with_offer'
-      };
+      intent = 'greeting_pending';
     } else if (status === 'active') {
-      return {
-        content: `Hi ${firstName}! 👋 Great to see you!\n\nI'm here to help with jobs, payments, or any questions you have. What can I assist you with today?`,
-        intent: 'greeting',
-        confidence: 0.95,
-        nextActions: ['job_support', 'payment_support', 'general_help'],
-        messageType: 'active_greeting'
-      };
-    } else {
-      return {
-        content: `Hi ${firstName}! 👋 Welcome back!\n\nHow can I help you today?`,
-        intent: 'greeting',
-        confidence: 0.9,
-        nextActions: ['general_help'],
-        messageType: 'standard_greeting'
-      };
+      intent = 'greeting_active';
     }
+
+    return await generateResponse(intent, context, candidateData, [], channel);
   }
 
   /**

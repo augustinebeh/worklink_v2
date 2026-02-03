@@ -35,11 +35,13 @@ class InternalSLMIntegration {
       const candidateData = await this.getCandidateData(candidateId, options);
 
       // Use internal SLM to process the message
+      const channel = options.channel || context.channel || 'app';
       const response = await this.internalSLM.processMessage(
         candidateId,
         message,
         context,
-        candidateData
+        candidateData,
+        channel
       );
 
       // Track metrics

@@ -11,17 +11,17 @@ class ResponseGenerator {
   }
 
   /**
-   * Generate response based on intent and context
+   * Generate response based on intent, context, and channel
    */
-  async generateResponse(intent, context, candidateData, entities = []) {
-    const template = this.selectTemplate(intent, context, candidateData);
+  async generateResponse(intent, context, candidateData, entities = [], channel = 'app') {
+    const template = this.selectTemplate(intent, context, candidateData, channel);
 
     if (!template) {
-      return this.generateFallbackResponse(candidateData);
+      return this.generateFallbackResponse(candidateData, channel);
     }
 
     const personalizedContent = this.personalizeTemplate(template, candidateData, entities);
-    const finalResponse = this.addPersonalityTouches(personalizedContent, intent);
+    const finalResponse = this.addPersonalityTouches(personalizedContent, intent, channel);
 
     return {
       content: finalResponse,
@@ -29,7 +29,8 @@ class ResponseGenerator {
       confidence: template.confidence || 0.85,
       messageType: template.messageType,
       nextActions: template.nextActions || [],
-      conversationFlow: template.conversationFlow
+      conversationFlow: template.conversationFlow,
+      channel: channel
     };
   }
 
@@ -39,15 +40,28 @@ class ResponseGenerator {
   buildResponseTemplates() {
     return {
       greeting_pending: {
-        templates: [
-          "Hi {firstName}! 👋 Welcome to WorkLink!\n\nYour account is currently under review. While you wait, I can help speed up the process by scheduling a quick verification interview.\n\n📅 Would you like to schedule a verification call?",
-          "Hello {firstName}! 👋 Great to have you with WorkLink!\n\nI see your account is being reviewed. I can help expedite this by setting up a brief verification interview with our consultant.\n\n📅 Shall we schedule a quick call?",
-          "Hi {firstName}! 👋 Welcome aboard!\n\nYour profile is under review right now. To help speed things up, I can arrange a quick 30-minute verification interview.\n\n📅 Would that be helpful?"
-        ],
-        confidence: 0.95,
-        messageType: 'greeting_with_offer',
-        nextActions: ['schedule_interview'],
-        conversationFlow: 'initial_engagement'
+        telegram: {
+          templates: [
+            "Hi {firstName}! 👋 Welcome to WorkLink!\n\nYour account is currently under review. While you wait, I can help speed up the process by scheduling a quick verification interview.\n\n📅 **Would you like to schedule a verification call?**",
+            "Hello {firstName}! 👋 Great to have you with WorkLink!\n\nI see your account is being reviewed. I can help expedite this by setting up a brief verification interview with our consultant.\n\n📅 **Shall we schedule a quick call?**",
+            "Hi {firstName}! 👋 Welcome aboard!\n\nYour profile is under review right now. To help speed things up, I can arrange a quick 30-minute verification interview.\n\n📅 **Would that be helpful?**"
+          ],
+          confidence: 0.95,
+          messageType: 'greeting_with_offer',
+          nextActions: ['schedule_interview'],
+          conversationFlow: 'initial_engagement'
+        },
+        app: {
+          templates: [
+            "Hey {firstName}! Welcome to WorkLink. Your account is being reviewed by our team right now. While you wait, I can actually help speed things up by scheduling a quick verification call with one of our consultants. Want me to find you a time?",
+            "Hi {firstName}! Great to have you here. I can see your account is under review. To help move things along faster, I could set up a brief verification interview for you. Would that work?",
+            "Hello {firstName}! Your account is currently being reviewed by our team. I can help expedite the process by arranging a quick verification call. Interested?"
+          ],
+          confidence: 0.95,
+          messageType: 'greeting_with_offer',
+          nextActions: ['schedule_interview'],
+          conversationFlow: 'initial_engagement'
+        }
       },
 
       greeting_active: {
@@ -62,15 +76,28 @@ class ResponseGenerator {
       },
 
       interview_offer: {
-        templates: [
-          "Perfect, {firstName}! I'd be happy to help schedule your verification interview.\n\n📋 This will be a quick 30-minute call to:\n• Verify your identity\n• Complete your profile\n• Answer any questions\n\n📅 When are you generally available? (e.g., \"weekday mornings\" or \"tomorrow afternoon\")",
-          "Excellent choice, {firstName}! Let's get your verification interview scheduled.\n\n📋 The interview covers:\n• Identity verification\n• Profile completion\n• Q&A session\n\n📅 What times work best for you? Just let me know your general availability!",
-          "Great, {firstName}! I'll help you schedule that verification interview.\n\n📋 It's a friendly 30-minute conversation to:\n• Verify your details\n• Complete onboarding\n• Address any questions\n\n📅 When would be convenient for you?"
-        ],
-        confidence: 0.95,
-        messageType: 'interview_offer',
-        nextActions: ['collect_availability'],
-        conversationFlow: 'scheduling_started'
+        telegram: {
+          templates: [
+            "Perfect, {firstName}! I'd be happy to help schedule your verification interview.\n\n📋 **This will be a quick 30-minute call to:**\n• Verify your identity\n• Complete your profile\n• Answer any questions\n\n📅 **When are you generally available?** (e.g., \"weekday mornings\" or \"tomorrow afternoon\")",
+            "Excellent choice, {firstName}! Let's get your verification interview scheduled.\n\n📋 **The interview covers:**\n• Identity verification\n• Profile completion\n• Q&A session\n\n📅 **What times work best for you?** Just let me know your general availability!",
+            "Great, {firstName}! I'll help you schedule that verification interview.\n\n📋 **It's a friendly 30-minute conversation to:**\n• Verify your details\n• Complete onboarding\n• Address any questions\n\n📅 **When would be convenient for you?**"
+          ],
+          confidence: 0.95,
+          messageType: 'interview_offer',
+          nextActions: ['collect_availability'],
+          conversationFlow: 'scheduling_started'
+        },
+        app: {
+          templates: [
+            "Perfect! I can help you schedule a verification call. It's just a quick 30-minute chat to verify your identity, complete your profile, and answer any questions you might have. When are you usually free? Just let me know like \"weekday mornings\" or \"tomorrow afternoon\" and I'll find something that works.",
+            "Great! Let's get you scheduled for a verification interview. It'll be about 30 minutes to go through identity verification, complete your profile setup, and handle any questions. What times generally work for you?",
+            "Awesome! I'll set up a verification call for you. It's a friendly 30-minute conversation to verify your details, finish your onboarding, and answer anything you're curious about. When would be convenient for you?"
+          ],
+          confidence: 0.95,
+          messageType: 'interview_offer',
+          nextActions: ['collect_availability'],
+          conversationFlow: 'scheduling_started'
+        }
       },
 
       slot_options: {
@@ -240,9 +267,9 @@ class ResponseGenerator {
   }
 
   /**
-   * Select appropriate template based on context
+   * Select appropriate template based on context and channel
    */
-  selectTemplate(intent, context, candidateData) {
+  selectTemplate(intent, context, candidateData, channel = 'app') {
     const { status } = candidateData;
     const { conversationFlow } = context;
 
@@ -276,7 +303,16 @@ class ResponseGenerator {
       templateKey = 'general_escalation';
     }
 
-    return this.templates[templateKey] || this.templates['general_escalation'];
+    // Get the base template
+    const baseTemplate = this.templates[templateKey] || this.templates['general_escalation'];
+
+    // Return channel-specific version if available
+    if (baseTemplate && baseTemplate[channel]) {
+      return baseTemplate[channel];
+    }
+
+    // Fallback to base template for backwards compatibility
+    return baseTemplate;
   }
 
   /**
@@ -302,15 +338,20 @@ class ResponseGenerator {
   /**
    * Add personality touches to make responses more natural
    */
-  addPersonalityTouches(content, intent) {
+  addPersonalityTouches(content, intent, channel = 'app') {
     // Add random variations for some common phrases
-    content = this.addRandomVariations(content);
+    content = this.addRandomVariations(content, channel);
 
-    // Ensure appropriate emoji usage
-    content = this.optimizeEmojis(content);
+    // For in-app chat, remove formatting and make more conversational
+    if (channel === 'app') {
+      content = this.makeConversational(content);
+    } else {
+      // For Telegram, ensure appropriate emoji usage
+      content = this.optimizeEmojis(content);
+    }
 
-    // Add natural language particles occasionally
-    if (Math.random() < 0.3) {
+    // Add natural language particles occasionally for in-app chat
+    if (channel === 'app' && Math.random() < 0.3) {
       content = this.addLanguageParticles(content);
     }
 
@@ -320,19 +361,74 @@ class ResponseGenerator {
   /**
    * Add random variations to common phrases
    */
-  addRandomVariations(content) {
-    // Replace some common phrases with variations
-    const replacements = {
-      'Great!': this.getRandomItem(this.variations.enthusiasm),
-      'Perfect!': this.getRandomItem(this.variations.enthusiasm),
-      'Excellent!': this.getRandomItem(this.variations.enthusiasm)
-    };
+  addRandomVariations(content, channel = 'app') {
+    if (channel === 'telegram') {
+      // Keep existing behavior for Telegram
+      const replacements = {
+        'Great!': this.getRandomItem(this.variations.enthusiasm),
+        'Perfect!': this.getRandomItem(this.variations.enthusiasm),
+        'Excellent!': this.getRandomItem(this.variations.enthusiasm)
+      };
 
-    Object.entries(replacements).forEach(([original, replacement]) => {
-      if (content.includes(original) && Math.random() < 0.4) {
-        content = content.replace(original, replacement);
-      }
-    });
+      Object.entries(replacements).forEach(([original, replacement]) => {
+        if (content.includes(original) && Math.random() < 0.4) {
+          content = content.replace(original, replacement);
+        }
+      });
+    } else {
+      // For in-app chat, use more casual variations
+      const appReplacements = {
+        'Great!': this.getRandomItem(['Nice!', 'Awesome!', 'Sounds good!', 'Perfect!']),
+        'Perfect!': this.getRandomItem(['Great!', 'Excellent!', 'That works!', 'Sounds perfect!']),
+        'Excellent!': this.getRandomItem(['Great!', 'Perfect!', 'Awesome!', 'Nice!']),
+        'Hi ': this.getRandomItem(['Hey ', 'Hi ', 'Hello ']),
+        'Hello ': this.getRandomItem(['Hi ', 'Hey ', 'Hello '])
+      };
+
+      Object.entries(appReplacements).forEach(([original, replacement]) => {
+        if (content.includes(original) && Math.random() < 0.4) {
+          content = content.replace(original, replacement);
+        }
+      });
+    }
+
+    return content;
+  }
+
+  /**
+   * Make content more conversational for in-app chat
+   */
+  makeConversational(content) {
+    // Remove Telegram-style formatting and make more human-like
+    content = content
+      // Remove structured formatting
+      .replace(/\n\n📅\s*/g, '\n\n')
+      .replace(/\n\n📋\s*/g, '\n\n')
+      .replace(/\n\n🎉\s*/g, '\n\n')
+      // Remove bullet points and make flowing
+      .replace(/\n•\s*/g, ', ')
+      .replace(/\n-\s*/g, ', ')
+      // Remove excessive emojis but keep some
+      .replace(/📅\s*/g, '')
+      .replace(/📋\s*/g, '')
+      .replace(/⏰\s*/g, '')
+      .replace(/🔗\s*/g, '')
+      // Keep friendly emojis but reduce frequency
+      .replace(/👋/g, Math.random() < 0.3 ? '👋' : '')
+      .replace(/😊/g, Math.random() < 0.5 ? '😊' : '')
+      .replace(/🎉/g, Math.random() < 0.6 ? '🎉' : '')
+      // Make more conversational
+      .replace(/Would you like to/g, 'Want to')
+      .replace(/I would be happy to/g, "I'd be happy to")
+      .replace(/I will/g, "I'll")
+      .replace(/You will/g, "You'll")
+      // Remove overly formal language
+      .replace(/verification interview/g, 'quick verification call')
+      .replace(/verification call/g, 'verification call')
+      // Clean up extra whitespace
+      .replace(/\n\s*\n\s*\n/g, '\n\n')
+      .replace(/\s+/g, ' ')
+      .trim();
 
     return content;
   }
@@ -376,15 +472,23 @@ class ResponseGenerator {
   /**
    * Generate fallback response
    */
-  generateFallbackResponse(candidateData) {
+  generateFallbackResponse(candidateData, channel = 'app') {
     const { name } = candidateData;
     const firstName = name ? name.split(' ')[0] : 'there';
 
-    const fallbacks = [
+    const telegramFallbacks = [
       `Hi ${firstName}! I want to make sure I give you the best help possible. Let me connect you with our admin team who can assist with your specific question.\n\nThey're online and ready to help! 😊`,
       `Thanks for reaching out, ${firstName}! To ensure you get exactly the help you need, I'll connect you with our admin team.\n\nThey'll take great care of you! 😊`,
       `Hi ${firstName}! I'd love to help you get the perfect assistance. Our admin team is best positioned to handle your specific needs.\n\nConnecting you now! 😊`
     ];
+
+    const appFallbacks = [
+      `Hey ${firstName}, let me get someone from our admin team to help you with that. They'll know exactly how to assist you.`,
+      `Hi ${firstName}! I want to make sure you get the right help, so I'm connecting you with our admin team. They should be able to sort this out for you.`,
+      `${firstName}, let me pass this along to our admin team - they'll be able to give you a proper answer on this.`
+    ];
+
+    const fallbacks = channel === 'telegram' ? telegramFallbacks : appFallbacks;
 
     return {
       content: this.getRandomItem(fallbacks),
@@ -392,7 +496,8 @@ class ResponseGenerator {
       confidence: 0.8,
       messageType: 'general_fallback',
       nextActions: ['escalate_to_admin'],
-      escalate: true
+      escalate: true,
+      channel: channel
     };
   }
 
