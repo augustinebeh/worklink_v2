@@ -36,7 +36,12 @@ const TRIGGER_TYPES = {
   CONTEXT_BASED: 'context_based',
   AI_CONFIDENCE: 'ai_confidence',
   SENTIMENT_NEGATIVE: 'sentiment_negative',
-  NO_RESPONSE: 'no_response'
+  NO_RESPONSE: 'no_response',
+  // Scheduling-specific triggers
+  RESCHEDULE_WITHIN_24H: 'reschedule_within_24h',
+  CHAT_RESCHEDULE_REQUEST: 'chat_reschedule_request',
+  REPEATED_RESCHEDULE: 'repeated_reschedule',
+  NO_CALENDAR_AVAILABILITY: 'no_calendar_availability'
 };
 
 // Admin notification channels
@@ -1011,29 +1016,49 @@ function checkSLABreaches() {
 // Set up periodic SLA monitoring
 setInterval(checkSLABreaches, 5 * 60 * 1000); // Check every 5 minutes
 
-module.exports = {
+// Export as a class for easier instantiation
+class AdminEscalationSystem {
+  constructor() {
+    this.PRIORITY_LEVELS = PRIORITY_LEVELS;
+    this.TRIGGER_TYPES = TRIGGER_TYPES;
+    this.NOTIFICATION_CHANNELS = NOTIFICATION_CHANNELS;
+  }
+
   // Core functions
-  analyzeEscalationTriggers,
-  createEscalation,
-  requestManualEscalation,
+  analyzeEscalationTriggers = analyzeEscalationTriggers;
+  createEscalation = createEscalation;
+  requestManualEscalation = requestManualEscalation;
 
   // Queue management
-  getEscalationQueue,
-  assignEscalation,
-  updateEscalationStatus,
+  getEscalationQueue = getEscalationQueue;
+  assignEscalation = assignEscalation;
+  updateEscalationStatus = updateEscalationStatus;
 
   // Feedback and satisfaction
-  recordSatisfactionFeedback,
+  recordSatisfactionFeedback = recordSatisfactionFeedback;
 
   // Analytics and metrics
-  getEscalationAnalytics,
-  updateAdminMetrics,
+  getEscalationAnalytics = getEscalationAnalytics;
+  updateAdminMetrics = updateAdminMetrics;
 
   // Monitoring
-  checkSLABreaches,
+  checkSLABreaches = checkSLABreaches;
+}
 
-  // Constants
-  PRIORITY_LEVELS,
-  TRIGGER_TYPES,
-  NOTIFICATION_CHANNELS
-};
+// Export both the class and the functions for backward compatibility
+module.exports = AdminEscalationSystem;
+
+// Also export the functions directly for existing code
+module.exports.analyzeEscalationTriggers = analyzeEscalationTriggers;
+module.exports.createEscalation = createEscalation;
+module.exports.requestManualEscalation = requestManualEscalation;
+module.exports.getEscalationQueue = getEscalationQueue;
+module.exports.assignEscalation = assignEscalation;
+module.exports.updateEscalationStatus = updateEscalationStatus;
+module.exports.recordSatisfactionFeedback = recordSatisfactionFeedback;
+module.exports.getEscalationAnalytics = getEscalationAnalytics;
+module.exports.updateAdminMetrics = updateAdminMetrics;
+module.exports.checkSLABreaches = checkSLABreaches;
+module.exports.PRIORITY_LEVELS = PRIORITY_LEVELS;
+module.exports.TRIGGER_TYPES = TRIGGER_TYPES;
+module.exports.NOTIFICATION_CHANNELS = NOTIFICATION_CHANNELS;

@@ -193,6 +193,7 @@ export default function Chat() {
   const [pendingInterviewOffer, setPendingInterviewOffer] = useState(null);
   const [availableSlots, setAvailableSlots] = useState([]);
   const [slotsLoading, setSlotsLoading] = useState(false);
+  const [selectedSlot, setSelectedSlot] = useState(null);
 
   // Use interview scheduling hook
   const {
@@ -416,14 +417,17 @@ export default function Chat() {
   // Interview scheduling handlers
   const handleInterviewOfferAccept = async (offer) => {
     try {
-      if (offer?.suggestedSlot) {
-        // Book the suggested slot directly
+      const slotToBook = selectedSlot || offer?.suggestedSlot;
+
+      if (slotToBook) {
+        // Book the selected/suggested slot directly
         await scheduleInterview(
-          offer.suggestedSlot.date,
-          offer.suggestedSlot.time,
-          'Accepted suggested slot from SLM'
+          slotToBook.date,
+          slotToBook.time,
+          selectedSlot ? 'Selected from availability picker' : 'Accepted suggested slot from SLM'
         );
         setPendingInterviewOffer(null);
+        setSelectedSlot(null); // Clear selected slot after booking
       } else {
         // Show availability selector
         setSlotsLoading(true);
@@ -467,11 +471,17 @@ export default function Chat() {
 
   const handleAvailabilitySlotSelect = async (slot) => {
     try {
-      await scheduleInterview(slot.date, slot.time, 'Selected from availability picker');
+      // Set selected slot first to show the confirmation modal
+      setSelectedSlot(slot);
       setShowAvailabilitySelector(false);
-      setAvailableSlots([]);
+
+      // Show the interview offer card with selected slot for confirmation
+      setPendingInterviewOffer({
+        type: 'slot_confirmation',
+        suggestedSlot: slot
+      });
     } catch (error) {
-      console.error('Failed to schedule interview:', error);
+      console.error('Failed to handle slot selection:', error);
       // Could show an error message here
     }
   };
@@ -627,12 +637,14 @@ export default function Chat() {
             {isTyping && <TypingIndicator />}
 
             {/* Interview Scheduling Components */}
-            {pendingInterviewOffer && (
+            {selectedSlot && pendingInterviewOffer && (
               <InterviewOfferCard
                 offer={pendingInterviewOffer}
+                selectedSlot={selectedSlot}
                 onAccept={handleInterviewOfferAccept}
                 onDecline={handleInterviewOfferDecline}
                 onViewAvailability={handleInterviewOfferViewAvailability}
+                showOnlyAfterSlotSelection={true}
               />
             )}
 

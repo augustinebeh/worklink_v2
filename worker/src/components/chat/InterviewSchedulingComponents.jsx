@@ -18,11 +18,17 @@ import { clsx } from 'clsx';
  */
 export function InterviewOfferCard({
   offer,
+  selectedSlot,
   onAccept,
   onDecline,
   onViewAvailability,
+  showOnlyAfterSlotSelection = false,
   className = ''
 }) {
+  // Only render if showOnlyAfterSlotSelection is false OR selectedSlot exists
+  if (showOnlyAfterSlotSelection && !selectedSlot) {
+    return null;
+  }
   const [isExpanded, setIsExpanded] = useState(false);
 
   return (
@@ -64,11 +70,14 @@ export function InterviewOfferCard({
           </span>
         </div>
 
-        {offer?.suggestedSlot && (
+        {(selectedSlot || offer?.suggestedSlot) && (
           <div className="flex items-center gap-2 mb-2">
             <CalendarDaysIcon className="h-4 w-4 text-slate-500" />
             <span className="text-sm text-slate-600 dark:text-slate-300">
-              Available: {offer.suggestedSlot.displayTime?.full || offer.suggestedSlot.time}
+              {selectedSlot ?
+                `Selected: ${selectedSlot.displayTime?.full || `${selectedSlot.date} at ${selectedSlot.time}`}` :
+                `Available: ${offer.suggestedSlot.displayTime?.full || offer.suggestedSlot.time}`
+              }
             </span>
           </div>
         )}
@@ -327,6 +336,36 @@ export function InterviewConfirmation({
 }) {
   const [showDetails, setShowDetails] = useState(false);
 
+  /**
+   * Check if reschedule is allowed (24-hour restriction)
+   */
+  const canRescheduleInterview = (scheduledDate, scheduledTime) => {
+    if (!scheduledDate || !scheduledTime) return false;
+
+    const now = new Date();
+    const interviewDateTime = new Date(`${scheduledDate}T${scheduledTime}`);
+    const hoursUntilInterview = (interviewDateTime - now) / (1000 * 60 * 60);
+    return hoursUntilInterview > 24;
+  };
+
+  /**
+   * Get countdown until 24-hour cutoff
+   */
+  const getHoursUntilCutoff = (scheduledDate, scheduledTime) => {
+    if (!scheduledDate || !scheduledTime) return 0;
+
+    const now = new Date();
+    const interviewDateTime = new Date(`${scheduledDate}T${scheduledTime}`);
+    const cutoffTime = new Date(interviewDateTime);
+    cutoffTime.setHours(cutoffTime.getHours() - 24);
+
+    const hoursUntilCutoff = Math.max(0, (cutoffTime - now) / (1000 * 60 * 60));
+    return Math.ceil(hoursUntilCutoff);
+  };
+
+  const canReschedule = canRescheduleInterview(interview.scheduled_date, interview.scheduled_time);
+  const hoursUntilCutoff = getHoursUntilCutoff(interview.scheduled_date, interview.scheduled_time);
+
   const getStatusColor = (status) => {
     switch (status) {
       case 'confirmed': return 'text-emerald-600 bg-emerald-50 border-emerald-200 dark:text-emerald-400 dark:bg-emerald-900/30 dark:border-emerald-800';
@@ -454,13 +493,30 @@ export function InterviewConfirmation({
           {showDetails ? 'Less' : 'Details'}
         </button>
 
-        {interview.status === 'scheduled' && onReschedule && (
-          <button
-            onClick={onReschedule}
-            className="px-4 py-2 text-slate-600 dark:text-slate-300 hover:text-slate-800 dark:hover:text-slate-100 rounded-lg hover:bg-slate-100 dark:hover:bg-slate-700 transition-colors duration-200 text-sm font-medium"
-          >
-            Reschedule
-          </button>
+        {interview.status === 'scheduled' && (
+          canReschedule && onReschedule ? (
+            <button
+              onClick={onReschedule}
+              className="px-4 py-2 text-slate-600 dark:text-slate-300 hover:text-slate-800 dark:hover:text-slate-100 rounded-lg hover:bg-slate-100 dark:hover:bg-slate-700 transition-colors duration-200 text-sm font-medium"
+            >
+              Reschedule
+            </button>
+          ) : (
+            <div className="px-4 py-2">
+              {!canReschedule ? (
+                <div className="text-xs text-slate-500">
+                  <div className="mb-1">🚫 Reschedule not available within 24 hours</div>
+                  {hoursUntilCutoff > 0 && (
+                    <div>Reschedule window closes in {hoursUntilCutoff} hours</div>
+                  )}
+                </div>
+              ) : (
+                <div className="text-xs text-slate-500">
+                  Reschedule available until 24 hours before interview
+                </div>
+              )}
+            </div>
+          )
         )}
       </div>
     </div>

@@ -1,12 +1,10 @@
 /**
  * Improved AI Chat Engine
  * Replaces problematic seed data with fact-based responses
- * Integrates NEW interview scheduling V2 for pending candidates
- * 
- * UPDATED: Now uses InterviewSchedulerV2 with proper state machine
+ * Integrates interview scheduling for pending candidates
  */
 
-const GroqInterviewScheduler = require('../../utils/groq-interview-scheduler');
+const SLMSchedulingBridge = require('../../utils/slm-scheduling-bridge');
 const Database = require('better-sqlite3');
 const path = require('path');
 
@@ -14,9 +12,7 @@ class ImprovedChatEngine {
   constructor() {
     const dbPath = path.resolve(__dirname, '../../db/database.db');
     this.db = new Database(dbPath);
-    
-    // Use Groq-powered interview scheduler with LLM intelligence
-    this.interviewScheduler = new GroqInterviewScheduler();
+    this.slmBridge = new SLMSchedulingBridge();
 
     // Consultant reference variations for natural conversation
     this.consultantReferences = [
@@ -116,9 +112,9 @@ class ImprovedChatEngine {
         return this.generateErrorResponse('candidate_not_found');
       }
 
-      // PRIORITY 1: Handle pending candidates with NEW interview scheduling V2
+      // PRIORITY 1: Handle pending candidates with interview scheduling
       if (candidate.status === 'pending') {
-        console.log(`🎯 Pending candidate detected - routing to NEW interview scheduler V2`);
+        console.log(`🎯 Pending candidate detected - routing to interview scheduling`);
         return await this.handlePendingCandidateWithScheduling(candidateId, message, candidate);
       }
 
@@ -148,43 +144,40 @@ class ImprovedChatEngine {
   }
 
   /**
-   * Handle pending candidates with Groq-powered interview scheduling
-   * USES: Groq LLM for natural language understanding + State machine for flow
+   * Handle pending candidates with interview scheduling integration
    */
   async handlePendingCandidateWithScheduling(candidateId, message, candidate) {
     try {
-      console.log(`✨ Using Groq Interview Scheduler (with LLM) for pending candidate`);
-      
-      // Use Groq-powered scheduler with natural language understanding
-      const schedulingResponse = await this.interviewScheduler.handleSchedulingConversation(
+      // Use SLM scheduling bridge for intelligent interview booking
+      const schedulingResponse = await this.slmBridge.handlePendingCandidateMessage(
         candidateId,
         message,
         { platform: 'admin_chat' }
       );
 
-      if (schedulingResponse && schedulingResponse.content) {
+      if (schedulingResponse) {
         return {
           content: schedulingResponse.content,
-          source: 'groq_interview_scheduler',
+          source: 'interview_scheduling',
           confidence: 0.95,
-          quickReplies: schedulingResponse.quickReplies,
-          metadata: schedulingResponse.stateUpdate,
+          intent: schedulingResponse.type,
+          metadata: schedulingResponse.metadata,
           isPendingUser: true,
           canScheduleInterview: true
         };
       }
 
-      // Fallback to enhanced pending response (should rarely happen)
+      // Fallback to enhanced pending response
       return this.generateEnhancedPendingResponse(candidate, message);
 
     } catch (error) {
-      console.error('❌ Groq scheduler error:', error);
+      console.error('❌ Interview scheduling error:', error);
       return this.generateEnhancedPendingResponse(candidate, message);
     }
   }
 
   /**
-   * Generate enhanced pending response (fallback only)
+   * Generate enhanced pending response (fallback)
    */
   generateEnhancedPendingResponse(candidate, message) {
     const firstName = candidate.name.split(' ')[0];

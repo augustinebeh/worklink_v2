@@ -22,7 +22,7 @@ export function AuthProvider({ children }) {
     setTimeout(() => {
       setUser(mockUser);
       sessionStorage.setItem('admin_user', JSON.stringify(mockUser));
-      sessionStorage.setItem('admin_token', 'mock-token-123');
+      sessionStorage.setItem('admin_token', 'demo-admin-token');
       setLoading(false);
       console.log('Frontend-only auth: Auto-logged in as admin');
     }, 500);
@@ -44,7 +44,7 @@ export function AuthProvider({ children }) {
 
         setUser(mockUser);
         sessionStorage.setItem('admin_user', JSON.stringify(mockUser));
-        sessionStorage.setItem('admin_token', 'mock-token-123');
+        sessionStorage.setItem('admin_token', 'demo-admin-token');
         console.log('Frontend-only login successful:', email);
         return { success: true };
       }

@@ -7,6 +7,7 @@
 
 const WorkerStatusClassifier = require('./worker-status-classifier');
 const SLMSchedulingBridge = require('./slm-scheduling-bridge');
+const GroqInterviewScheduler = require('./groq-interview-scheduler');
 const { createLogger } = require('./structured-logger');
 
 const logger = createLogger('smart-slm-router');
@@ -15,6 +16,7 @@ class SmartSLMRouter {
   constructor() {
     this.statusClassifier = new WorkerStatusClassifier();
     this.schedulingBridge = new SLMSchedulingBridge();
+    this.groqScheduler = new GroqInterviewScheduler();
 
     // SLM response flows for different worker types
     this.responseFlows = {
@@ -134,8 +136,10 @@ class SmartSLMRouter {
 
       // For pending workers, always prioritize interview scheduling
       if (routingInfo.requiresInterview) {
-        // Use existing SLM scheduling bridge for interview coordination
-        const schedulingResponse = await this.schedulingBridge.handlePendingCandidateMessage(
+        // Use Groq LLM for intelligent interview scheduling
+        logger.info('Using Groq Interview Scheduler for pending worker', { candidateId });
+
+        const groqResponse = await this.groqScheduler.handleSchedulingConversation(
           candidateId,
           message,
           {
@@ -148,12 +152,17 @@ class SmartSLMRouter {
 
         return {
           type: 'pending_worker_response',
-          flow: 'interview_scheduling',
-          content: schedulingResponse.content,
-          metadata: schedulingResponse.metadata,
-          schedulingContext: schedulingResponse.schedulingContext,
+          flow: 'interview_scheduling_groq',
+          content: groqResponse.content,
+          metadata: {
+            candidateId,
+            groqPowered: true,
+            stateUpdate: groqResponse.stateUpdate
+          },
+          schedulingContext: groqResponse.schedulingContext || groqResponse.stateUpdate,
           schedulingTriggered: true,
-          workerStatus: 'pending'
+          workerStatus: 'pending',
+          quickReplies: groqResponse.quickReplies || []
         };
       } else {
         // Pending worker who already has interview scheduled/completed
@@ -627,6 +636,7 @@ Please try again in a moment, or contact our support team if you need immediate 
       const checks = {
         statusClassifier: false,
         schedulingBridge: false,
+        groqScheduler: false,
         database: false
       };
 
@@ -644,6 +654,14 @@ Please try again in a moment, or contact our support team if you need immediate 
         checks.schedulingBridge = true;
       } catch (e) {
         logger.error('Scheduling bridge health check failed', { error: e.message });
+      }
+
+      // Test Groq scheduler
+      try {
+        await this.groqScheduler.healthCheck();
+        checks.groqScheduler = true;
+      } catch (e) {
+        logger.error('Groq scheduler health check failed', { error: e.message });
       }
 
       // Test database connectivity

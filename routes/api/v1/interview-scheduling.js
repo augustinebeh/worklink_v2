@@ -92,7 +92,7 @@ router.get('/candidate/:candidateId/status', async (req, res) => {
  */
 router.get('/slots/available', async (req, res) => {
   try {
-    const { days = 7, candidateId } = req.query;
+    const { days = 7, candidateId, timePeriod } = req.query;
     const daysCount = parseInt(days);
 
     // Get available slots for the next N days
@@ -138,13 +138,26 @@ router.get('/slots/available', async (req, res) => {
         `).get(availability.date, slotTime).count;
 
         if (isBooked === 0) {
-          slots.push({
-            date: availability.date,
-            time: slotTime,
-            consultantId: availability.consultant_id,
-            datetime: `${availability.date}T${slotTime}:00`,
-            displayTime: formatDisplayTime(availability.date, slotTime)
-          });
+          const slotHour = currentTime.getHours();
+
+          // Apply time period filtering if specified
+          let includeSlot = true;
+          if (timePeriod === 'morning' && (slotHour < 9 || slotHour >= 13)) {
+            includeSlot = false; // Morning: 9AM-1PM
+          } else if (timePeriod === 'afternoon' && (slotHour < 14 || slotHour >= 18)) {
+            includeSlot = false; // Afternoon: 2PM-6PM
+          }
+
+          if (includeSlot) {
+            slots.push({
+              date: availability.date,
+              time: slotTime,
+              consultantId: availability.consultant_id,
+              datetime: `${availability.date}T${slotTime}:00`,
+              displayTime: formatDisplayTime(availability.date, slotTime),
+              timePeriod: slotHour >= 9 && slotHour < 13 ? 'morning' : 'afternoon'
+            });
+          }
         }
 
         // Move to next 30-minute slot
@@ -371,6 +384,22 @@ router.patch('/interview/:interviewId/reschedule', async (req, res) => {
       return res.status(404).json({
         success: false,
         message: 'Interview not found'
+      });
+    }
+
+    // Check 24-hour reschedule restriction
+    const now = new Date();
+    const interviewDateTime = new Date(`${currentInterview.scheduled_date}T${currentInterview.scheduled_time}`);
+    const hoursUntilInterview = (interviewDateTime - now) / (1000 * 60 * 60);
+
+    if (hoursUntilInterview <= 24) {
+      return res.status(403).json({
+        success: false,
+        message: 'Interviews cannot be rescheduled within 24 hours of the scheduled time',
+        data: {
+          hoursUntilInterview: Math.ceil(hoursUntilInterview),
+          scheduledTime: currentInterview.scheduled_date + ' ' + currentInterview.scheduled_time
+        }
       });
     }
 

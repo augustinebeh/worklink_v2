@@ -8,7 +8,8 @@
     "npm": ">=10.0.0"
   },
   "scripts": {
-    "start": "npm run start:build && npm run start:server",
+    "start": "npm run build:all && npm run start:server",
+    "build:all": "echo '🔨 Building admin and worker...' && npm run build:admin && npm run build:worker && echo '✅ All builds complete!'",
     "start:build": "npm run clean > /dev/null 2>&1 && npm run build:admin > /dev/null 2>&1 && npm run build:worker > /dev/null 2>&1 && echo '✅ Build complete'",
     "start:server": "PORT=8080 NODE_ENV=production node server.js",
     "start:dev": "node unified-server.js",
@@ -19,8 +20,8 @@
     "dev:admin": "cd admin && npm run dev",
     "dev:worker": "cd worker && npm start",
     "build": "npm run clean && npm run build:admin && npm run build:worker && echo '🎉 All builds completed successfully!'",
-    "build:admin": "cd admin && echo '📦 Installing admin dependencies...' && npm install && echo '🔨 Building admin portal...' && npm run build && echo '✅ Admin portal built successfully!'",
-    "build:worker": "cd worker && echo '📱 Installing worker dependencies...' && npm install && echo '🔨 Building worker PWA...' && npm run build && echo '✅ Worker PWA built successfully!'",
+    "build:admin": "cd admin && echo '📦 Installing admin dependencies...' && npm install --prefer-offline --no-audit --legacy-peer-deps && echo '🔨 Building admin portal...' && npm run build && echo '✅ Admin portal built!'",
+    "build:worker": "cd worker && echo '📱 Installing worker dependencies...' && npm install --prefer-offline --no-audit --legacy-peer-deps && echo '🔨 Building worker PWA...' && npm run build && echo '✅ Worker PWA built!'",
     "clean": "echo '🧹 Cleaning build cache and dist folders...' && rm -rf admin/node_modules/.vite worker/node_modules/.vite admin/dist worker/dist admin/node_modules/.cache worker/node_modules/.cache 2>/dev/null && echo '✅ Cleaned: Vite cache, dist folders, and node cache'",
     "postinstall": "echo 'Main dependencies installed'",
     "install:all": "npm install && cd admin && npm install && cd ../worker && npm install",
@@ -29,7 +30,9 @@
     "email:test": "node test-email-system.js",
     "email:send-test": "node -e \"const emailService = require('./services/email'); emailService.initialize().then(() => emailService.sendTestEmail({to: process.env.ADMIN_EMAIL || 'admin@worklink.sg', subject: 'WorkLink Test Email', text: 'Email system is working!'})).then(r => console.log('Test email sent:', r)).catch(console.error)\"",
     "test-admin-ws": "node test-admin-websocket.js",
-    "debug-admin-ws": "node debug-admin-ws.js"
+    "debug-admin-ws": "node debug-admin-ws.js",
+    "test:agents": "node test-chat-agents.js",
+    "test:agents:watch": "nodemon --watch services --watch utils test-chat-agents.js"
   },
   "keywords": [
     "recruitment",

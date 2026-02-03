@@ -14,8 +14,8 @@ class GroqService {
       model: 'llama-3.1-8b-instant', // Fast and cost-effective
       maxTokens: 500,
       temperature: 0.7,
-      timeout: 10000, // 10 second timeout
-      retries: 2
+      timeout: 8000, // 8 second timeout (reasonable with working network)
+      retries: 2 // 2 retries for reliability
     };
 
     this.systemPrompts = this.buildSystemPrompts();

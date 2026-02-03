@@ -174,15 +174,17 @@ app.use((req, res, next) => {
     res.header('Strict-Transport-Security', 'max-age=31536000; includeSubDomains');
   }
 
-  // Content Security Policy (updated for external resources)
+  // Content Security Policy (updated for external resources + OAuth providers)
   res.header(
     'Content-Security-Policy',
     "default-src 'self'; " +
-    "script-src 'self' 'unsafe-inline' 'unsafe-eval' https://telegram.org https://accounts.google.com; " +
-    "style-src 'self' 'unsafe-inline' https://fonts.googleapis.com; " +
+    "script-src 'self' 'unsafe-inline' 'unsafe-eval' https://telegram.org https://accounts.google.com https://www.gstatic.com; " +
+    "style-src 'self' 'unsafe-inline' https://fonts.googleapis.com https://accounts.google.com; " +
+    "style-src-elem 'self' 'unsafe-inline' https://fonts.googleapis.com https://accounts.google.com; " +
     "img-src 'self' data: https:; " +
     "connect-src 'self' https:; " +
-    "font-src 'self' data: https://fonts.gstatic.com;"
+    "font-src 'self' data: https://fonts.gstatic.com; " +
+    "frame-src 'self' https://accounts.google.com https://oauth.telegram.org https://www.gstatic.com;"
   );
 
   next();

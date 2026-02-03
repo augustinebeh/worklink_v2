@@ -1,0 +1,173 @@
+{
+  "timestamp": "2026-02-03T20:10:54.671Z",
+  "summary": {
+    "totalTests": 10,
+    "passed": 8,
+    "failed": 2,
+    "passRate": "80.0"
+  },
+  "agents": [
+    {
+      "agentId": "AGENT_001",
+      "agentName": "Agent Perfect",
+      "behavior": "ideal",
+      "duration": 16.006,
+      "messagesSent": 4,
+      "responsesReceived": 3,
+      "errorsCount": 0,
+      "errors": [],
+      "success": true
+    },
+    {
+      "agentId": "AGENT_002",
+      "agentName": "Agent Typo",
+      "behavior": "typos",
+      "duration": 16.006,
+      "messagesSent": 4,
+      "responsesReceived": 3,
+      "errorsCount": 0,
+      "errors": [],
+      "success": true
+    },
+    {
+      "agentId": "AGENT_003",
+      "agentName": "Agent Natural",
+      "behavior": "natural_language",
+      "duration": 16.007,
+      "messagesSent": 4,
+      "responsesReceived": 3,
+      "errorsCount": 0,
+      "errors": [],
+      "success": true
+    },
+    {
+      "agentId": "AGENT_004",
+      "agentName": "Agent Confused",
+      "behavior": "confused",
+      "duration": 22.011,
+      "messagesSent": 6,
+      "responsesReceived": 3,
+      "errorsCount": 0,
+      "errors": [],
+      "success": true
+    },
+    {
+      "agentId": "AGENT_005",
+      "agentName": "Agent Rapid",
+      "behavior": "rapid_fire",
+      "duration": 8.406,
+      "messagesSent": 4,
+      "responsesReceived": 3,
+      "errorsCount": 0,
+      "errors": [],
+      "success": true
+    },
+    {
+      "agentId": "AGENT_006",
+      "agentName": "Agent Slow",
+      "behavior": "slow",
+      "duration": 48.032,
+      "messagesSent": 4,
+      "responsesReceived": 3,
+      "errorsCount": 0,
+      "errors": [],
+      "success": true
+    },
+    {
+      "agentId": "AGENT_007",
+      "agentName": "Agent Mixed",
+      "behavior": "mixed_language",
+      "duration": 16.007,
+      "messagesSent": 4,
+      "responsesReceived": 3,
+      "errorsCount": 0,
+      "errors": [],
+      "success": true
+    },
+    {
+      "agentId": "AGENT_008",
+      "agentName": "Agent Special",
+      "behavior": "special_chars",
+      "duration": 16.007,
+      "messagesSent": 4,
+      "responsesReceived": 3,
+      "errorsCount": 0,
+      "errors": [],
+      "success": true
+    },
+    {
+      "agentId": "AGENT_009",
+      "agentName": "Agent Verbose",
+      "behavior": "verbose",
+      "duration": 16.007,
+      "messagesSent": 0,
+      "responsesReceived": 0,
+      "errorsCount": 4,
+      "errors": [
+        {
+          "stage": "send_message",
+          "error": "WebSocket not connected",
+          "message": "Hello! I am very interested in scheduling an interview with your team."
+        },
+        {
+          "stage": "send_message",
+          "error": "WebSocket not connected",
+          "message": "I would prefer morning slots if possible, as I have other commitments in the afternoon."
+        },
+        {
+          "stage": "send_message",
+          "error": "WebSocket not connected",
+          "message": "The first option looks perfect for my schedule, can I book that one?"
+        },
+        {
+          "stage": "send_message",
+          "error": "WebSocket not connected",
+          "message": "Yes, I would like to confirm this booking, thank you very much!"
+        }
+      ],
+      "success": false
+    },
+    {
+      "agentId": "AGENT_010",
+      "agentName": "Agent Edge",
+      "behavior": "edge_cases",
+      "duration": 22.011,
+      "messagesSent": 0,
+      "responsesReceived": 0,
+      "errorsCount": 6,
+      "errors": [
+        {
+          "stage": "send_message",
+          "error": "WebSocket not connected",
+          "message": "hi"
+        },
+        {
+          "stage": "send_message",
+          "error": "WebSocket not connected",
+          "message": ""
+        },
+        {
+          "stage": "send_message",
+          "error": "WebSocket not connected",
+          "message": "morning afternoon both"
+        },
+        {
+          "stage": "send_message",
+          "error": "WebSocket not connected",
+          "message": "99"
+        },
+        {
+          "stage": "send_message",
+          "error": "WebSocket not connected",
+          "message": "no wait yes"
+        },
+        {
+          "stage": "send_message",
+          "error": "WebSocket not connected",
+          "message": "1"
+        }
+      ],
+      "success": false
+    }
+  ]
+}

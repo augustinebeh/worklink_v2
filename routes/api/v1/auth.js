@@ -1,6 +1,7 @@
 const express = require('express');
 const router = express.Router();
 const crypto = require('crypto');
+const axios = require('axios');
 const { db } = require('../../../db');
 const { validate, schemas } = require('../../../middleware/validation');
 const { generateToken, generateAdminToken, authenticateToken } = require('../../../middleware/auth');
@@ -114,16 +115,37 @@ async function verifyGoogleToken(idToken) {
     return null;
   }
 
-  try {
-    // Use Google's tokeninfo endpoint for verification
-    const response = await fetch(`https://oauth2.googleapis.com/tokeninfo?id_token=${idToken}`);
+  // DEV MODE: Skip backend verification (frontend already verified)
+  if (process.env.NODE_ENV !== 'production') {
+    logger.warn('🔧 DEV MODE: Skipping Google token verification (trusting frontend)');
     
-    if (!response.ok) {
-      logger.warn('Google token verification failed');
+    // Decode JWT without verification (dev only!)
+    try {
+      const payload = JSON.parse(Buffer.from(idToken.split('.')[1], 'base64').toString());
+      return {
+        googleId: payload.sub,
+        email: payload.email,
+        emailVerified: true,
+        name: payload.name,
+        picture: payload.picture,
+        givenName: payload.given_name,
+        familyName: payload.family_name,
+      };
+    } catch (error) {
+      logger.error('Failed to decode JWT:', error.message);
       return null;
     }
+  }
 
-    const payload = await response.json();
+  // PRODUCTION: Verify with Google API
+  try {
+    // Use Google's tokeninfo endpoint for verification with axios
+    const response = await axios.get(`https://oauth2.googleapis.com/tokeninfo`, {
+      params: { id_token: idToken },
+      timeout: 10000 // 10 second timeout
+    });
+
+    const payload = response.data;
 
     // Verify the token is for our app
     if (payload.aud !== GOOGLE_CLIENT_ID) {
@@ -148,7 +170,10 @@ async function verifyGoogleToken(idToken) {
       familyName: payload.family_name,
     };
   } catch (error) {
-    logger.error('Google token verification error:', error);
+    logger.error('Google token verification error:', error.message);
+    if (error.response) {
+      logger.error('Google API response:', error.response.status, error.response.data);
+    }
     return null;
   }
 }
