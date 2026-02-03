@@ -197,7 +197,7 @@ const InterviewPipelineTracker = ({
   }
 
   return (
-    <div className={`bg-white dark:bg-gray-900 rounded-lg border border-gray-200 dark:border-gray-700 ${className}`}>
+    <div className={`bg-white dark:bg-gray-900 rounded-lg border border-gray-200 dark:border-gray-700 flex flex-col h-full ${className}`}>
       {/* Header */}
       <div className="flex items-center justify-between p-6 border-b border-gray-200 dark:border-gray-700">
         <div className="flex items-center gap-2">
@@ -259,7 +259,7 @@ const InterviewPipelineTracker = ({
       </div>
 
       {/* Pipeline List */}
-      <div className="divide-y divide-gray-200 dark:divide-gray-700 max-h-96 overflow-y-auto">
+      <div className="divide-y divide-gray-200 dark:divide-gray-700 flex-1 overflow-y-auto min-h-0">
         {filteredAndSortedData.length > 0 ? (
           filteredAndSortedData.map(candidate => {
             const stageConfig = getStageConfig(candidate.stage);

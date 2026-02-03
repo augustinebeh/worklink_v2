@@ -3,7 +3,7 @@
  * Professional calendar interface for admin portal
  */
 
-import React, { useState } from 'react';
+import React, { useState, useMemo } from 'react';
 import { Calendar, Settings, Plus, Bell, Users, BarChart3 } from 'lucide-react';
 import WeeklyCalendar from '../components/calendar/WeeklyCalendar';
 import CalendarSidebar from '../components/calendar/CalendarSidebar';
@@ -33,8 +33,8 @@ const InterviewScheduling = () => {
   const [showPipeline, setShowPipeline] = useState(true);
   const [successMessage, setSuccessMessage] = useState(null);
 
-  const weekStart = startOfWeek(selectedDate);
-  const weekEnd = endOfWeek(selectedDate);
+  const weekStart = useMemo(() => startOfWeek(selectedDate), [selectedDate]);
+  const weekEnd = useMemo(() => endOfWeek(selectedDate), [selectedDate]);
 
   const {
     availability,
@@ -138,7 +138,7 @@ const InterviewScheduling = () => {
 
   return (
     <CalendarDndProvider>
-      <div className="flex flex-col h-screen bg-gray-50 dark:bg-gray-900">
+      <div className="flex flex-col h-[95vh] bg-gray-50 dark:bg-gray-900">
         {/* Header */}
         <div className="flex-shrink-0 bg-white dark:bg-gray-900 border-b border-gray-200 dark:border-gray-700 px-4 lg:px-6 py-4">
           <div className="flex items-center justify-between">
@@ -296,13 +296,14 @@ const InterviewScheduling = () => {
           </div>
 
           {/* Sidebar - Desktop */}
-          <div className="hidden lg:flex flex-shrink-0 w-80 p-4 overflow-y-auto space-y-4">
+          <div className="hidden lg:flex flex-col flex-shrink-0 w-96 p-4 h-full overflow-y-auto space-y-4">
             <CalendarSidebar
               selectedDate={selectedDate}
               onDateChange={setSelectedDate}
               upcomingInterviews={upcomingInterviews}
               filters={{}}
               onFiltersChange={() => {}}
+              className="flex-shrink-0"
             />
 
             {showPipeline && (
@@ -311,6 +312,7 @@ const InterviewScheduling = () => {
                   console.log('Selected candidate:', candidate);
                   // Could open candidate modal or navigate to candidate detail
                 }}
+                className="flex-1 min-h-0"
               />
             )}
           </div>

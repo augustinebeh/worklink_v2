@@ -7,8 +7,8 @@ const generateMockAvailability = (startDate, endDate) => {
   let currentDate = new Date(startDate);
 
   while (currentDate <= endDate) {
-    // Generate availability for each day (9 AM to 6 PM)
-    for (let hour = 9; hour < 18; hour++) {
+    // Generate availability for each day (10 AM to 8 PM only)
+    for (let hour = 10; hour < 20; hour++) {
       const slotDate = setMinutes(setHours(new Date(currentDate), hour), 0);
       availability.push({
         id: `avail-${format(slotDate, 'yyyy-MM-dd-HH-mm')}`,
@@ -36,26 +36,30 @@ const generateMockInterviews = (startDate, endDate) => {
     'DevOps Engineer', 'Product Manager', 'UX Designer'
   ];
 
-  // Generate some random interviews
-  for (let i = 0; i < 8; i++) {
-    const randomDays = Math.floor(Math.random() * 7) - 2; // -2 to +5 days from startDate
-    const randomHour = 9 + Math.floor(Math.random() * 8); // 9 AM to 5 PM
-    const interviewDate = addHours(addDays(startDate, randomDays), randomHour - 9);
+  // First generate availability data to ensure interviews align with available slots
+  const availabilityData = generateMockAvailability(startDate, endDate);
+  const availableSlots = availabilityData.filter(slot => slot.is_available);
 
-    if (interviewDate >= startDate && interviewDate <= endDate) {
-      interviews.push({
-        id: `interview-${i + 1}`,
-        candidate_name: candidates[Math.floor(Math.random() * candidates.length)],
-        role: roles[Math.floor(Math.random() * roles.length)],
-        scheduled_datetime: interviewDate.toISOString(),
-        duration_minutes: 60,
-        status: Math.random() > 0.8 ? 'rescheduled' : 'scheduled',
-        interview_type: Math.random() > 0.5 ? 'technical' : 'behavioral',
-        interviewer: 'Admin User',
-        notes: Math.random() > 0.7 ? 'Follow-up interview' : null,
-        candidate_email: `${candidates[Math.floor(Math.random() * candidates.length)].toLowerCase().replace(' ', '.')}@email.com`
-      });
-    }
+  // Generate interviews only in available slots
+  const numInterviews = Math.min(8, availableSlots.length);
+  const shuffledSlots = availableSlots.sort(() => Math.random() - 0.5);
+
+  for (let i = 0; i < numInterviews; i++) {
+    const slot = shuffledSlots[i];
+    const interviewDate = new Date(slot.datetime);
+
+    interviews.push({
+      id: `interview-${i + 1}`,
+      candidate_name: candidates[Math.floor(Math.random() * candidates.length)],
+      role: roles[Math.floor(Math.random() * roles.length)],
+      scheduled_datetime: interviewDate.toISOString(),
+      duration_minutes: 60,
+      status: Math.random() > 0.8 ? 'rescheduled' : 'scheduled',
+      interview_type: Math.random() > 0.5 ? 'technical' : 'behavioral',
+      interviewer: 'Admin User',
+      notes: Math.random() > 0.7 ? 'Follow-up interview' : null,
+      candidate_email: `${candidates[Math.floor(Math.random() * candidates.length)].toLowerCase().replace(' ', '.')}@email.com`
+    });
   }
 
   return interviews;
