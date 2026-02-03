@@ -18,34 +18,52 @@ import { clsx } from 'clsx';
 const EMAIL_REGEX = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
 
 function TelegramLoginButton({ onAuth, botUsername }) {
-  const handleTelegramLogin = () => {
-    // Open Telegram bot in new tab for authentication
-    window.open(`https://t.me/${botUsername}?start=login`, '_blank');
-    // For demo purposes, simulate successful login after 2 seconds
-    setTimeout(() => {
-      onAuth({
-        id: 'demo_telegram_id',
-        first_name: 'Demo',
-        last_name: 'User',
-        username: 'demo_user',
-        auth_date: Math.floor(Date.now() / 1000),
-        hash: 'demo_hash'
-      });
-    }, 2000);
-  };
+  const telegramContainerRef = useRef(null);
+  const initializedRef = useRef(false);
+
+  useEffect(() => {
+    if (!botUsername || initializedRef.current) return;
+
+    // Create global callback function
+    window.onTelegramAuth = (user) => {
+      console.log('Telegram auth success:', user);
+      onAuth(user);
+    };
+
+    // Load Telegram Login Widget script
+    const script = document.createElement('script');
+    script.async = true;
+    script.src = 'https://telegram.org/js/telegram-widget.js?22';
+    script.setAttribute('data-telegram-login', botUsername);
+    script.setAttribute('data-size', 'large');
+    script.setAttribute('data-radius', '8');
+    script.setAttribute('data-request-access', 'write');
+    script.setAttribute('data-userpic', 'false');
+    script.setAttribute('data-onauth', 'onTelegramAuth(user)');
+
+    if (telegramContainerRef.current) {
+      // Clear any existing widget
+      telegramContainerRef.current.innerHTML = '';
+      telegramContainerRef.current.appendChild(script);
+      initializedRef.current = true;
+    }
+
+    return () => {
+      // Cleanup global callback
+      if (window.onTelegramAuth) {
+        delete window.onTelegramAuth;
+      }
+    };
+  }, [botUsername, onAuth]);
 
   if (!botUsername) return null;
 
   return (
-    <button
-      onClick={handleTelegramLogin}
-      className="w-12 h-12 bg-[#0088cc] hover:bg-[#0077bb] rounded-full flex items-center justify-center transition-colors duration-200"
+    <div
+      ref={telegramContainerRef}
+      className="flex justify-center items-center min-h-[48px]"
       title="Login with Telegram"
-    >
-      <svg className="w-6 h-6 text-white" viewBox="0 0 24 24" fill="currentColor">
-        <path d="M12 0C5.376 0 0 5.376 0 12s5.376 12 12 12 12-5.376 12-12S18.624 0 12 0zm5.568 8.16c-.18 1.896-.96 6.504-1.356 8.628-.168.9-.504 1.2-.816 1.236-.696.06-1.224-.456-1.896-.9-1.056-.696-1.656-1.128-2.676-1.8-1.188-.78-.42-1.212.264-1.908.18-.18 3.252-2.976 3.312-3.228a.24.24 0 00-.06-.216c-.072-.06-.168-.036-.252-.024-.12.024-1.992 1.26-5.628 3.696-.528.36-.996.54-1.416.528-.456-.012-1.344-.264-2.004-.48-.804-.264-1.44-.396-1.392-.84.024-.228.336-.456.936-.696 3.612-1.584 6.024-2.625 7.236-3.114 3.456-1.44 4.176-1.692 4.644-1.692.096 0 .324.024.468.144.12.096.156.228.168.324-.012.072-.012.132-.024.204z"/>
-      </svg>
-    </button>
+    />
   );
 }
 
@@ -190,15 +208,31 @@ export default function Login() {
   }, [isAuthenticated, navigate, from]);
 
   useEffect(() => {
+    // Check for URL hash auth data (PWA compatibility)
     const hash = window.location.hash;
     if (hash && hash.includes('tgAuthResult=')) {
       try {
         const authResult = hash.split('tgAuthResult=')[1];
         const telegramUser = JSON.parse(decodeURIComponent(authResult));
-        console.log('Telegram from URL:', telegramUser);
+        console.log('Telegram auth from URL hash:', telegramUser);
+
+        // Clear hash from URL
         window.history.replaceState(null, '', window.location.pathname);
-        handleTelegramAuth(telegramUser);
-      } catch (e) { console.error('Parse error:', e); }
+
+        // Validate auth data has required fields
+        const requiredFields = ['id', 'auth_date', 'hash'];
+        const hasRequiredFields = requiredFields.every(field => field in telegramUser);
+
+        if (hasRequiredFields) {
+          handleTelegramAuth(telegramUser);
+        } else {
+          console.error('Invalid Telegram auth data - missing required fields:', requiredFields.filter(field => !(field in telegramUser)));
+          setError('Invalid authentication data received from Telegram');
+        }
+      } catch (e) {
+        console.error('Failed to parse Telegram auth data from URL:', e);
+        setError('Failed to process authentication data from Telegram');
+      }
     }
   }, [handleTelegramAuth]);
 
