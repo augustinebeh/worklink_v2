@@ -9,6 +9,7 @@ import AdminLayout from './components/layout/AdminLayout';
 import ProtectedRoute from './components/auth/ProtectedRoute';
 import ErrorBoundary, { AsyncErrorBoundary } from './shared/components/ErrorBoundary';
 import { setupGlobalErrorHandling } from './shared/hooks/useErrorHandler';
+import QueryProvider from './shared/providers/QueryProvider';
 
 // Pages
 import Login from './pages/Login';
@@ -194,15 +195,17 @@ export default function App() {
       <AsyncErrorBoundary>
         <BrowserRouter basename="/admin">
           <ThemeProvider>
-            <AuthProvider>
-              <WebSocketProvider>
-                <DataProvider>
-                  <ToastProvider>
-                    <AppRoutes />
-                  </ToastProvider>
-                </DataProvider>
-              </WebSocketProvider>
-            </AuthProvider>
+            <QueryProvider>
+              <AuthProvider>
+                <WebSocketProvider>
+                  <DataProvider>
+                    <ToastProvider>
+                      <AppRoutes />
+                    </ToastProvider>
+                  </DataProvider>
+                </WebSocketProvider>
+              </AuthProvider>
+            </QueryProvider>
           </ThemeProvider>
         </BrowserRouter>
       </AsyncErrorBoundary>
