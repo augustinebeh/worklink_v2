@@ -18,52 +18,50 @@ import { clsx } from 'clsx';
 const EMAIL_REGEX = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
 
 function TelegramLoginButton({ onAuth, botUsername }) {
-  const telegramContainerRef = useRef(null);
-  const initializedRef = useRef(false);
+  const handleTelegramLogin = () => {
+    if (!botUsername) return;
+    
+    // Open Telegram login in popup
+    const width = 550;
+    const height = 650;
+    const left = (window.screen.width - width) / 2;
+    const top = (window.screen.height - height) / 2;
+    
+    const authUrl = `https://oauth.telegram.org/auth?bot_id=${botUsername.replace('@', '')}&origin=${encodeURIComponent(window.location.origin)}&request_access=write&return_to=${encodeURIComponent(window.location.href)}`;
+    
+    const popup = window.open(
+      authUrl,
+      'telegram_oauth',
+      `width=${width},height=${height},left=${left},top=${top},resizable=yes,scrollbars=yes`
+    );
 
-  useEffect(() => {
-    if (!botUsername || initializedRef.current) return;
-
-    // Create global callback function
-    window.onTelegramAuth = (user) => {
-      console.log('Telegram auth success:', user);
-      onAuth(user);
-    };
-
-    // Load Telegram Login Widget script
-    const script = document.createElement('script');
-    script.async = true;
-    script.src = 'https://telegram.org/js/telegram-widget.js?22';
-    script.setAttribute('data-telegram-login', botUsername);
-    script.setAttribute('data-size', 'large');
-    script.setAttribute('data-radius', '8');
-    script.setAttribute('data-request-access', 'write');
-    script.setAttribute('data-userpic', 'false');
-    script.setAttribute('data-onauth', 'onTelegramAuth(user)');
-
-    if (telegramContainerRef.current) {
-      // Clear any existing widget
-      telegramContainerRef.current.innerHTML = '';
-      telegramContainerRef.current.appendChild(script);
-      initializedRef.current = true;
-    }
-
-    return () => {
-      // Cleanup global callback
-      if (window.onTelegramAuth) {
-        delete window.onTelegramAuth;
+    // Listen for auth callback
+    window.addEventListener('message', (event) => {
+      if (event.origin === 'https://oauth.telegram.org') {
+        if (event.data && event.data.auth_date) {
+          popup?.close();
+          onAuth(event.data);
+        }
       }
-    };
-  }, [botUsername, onAuth]);
+    });
+  };
 
   if (!botUsername) return null;
 
   return (
-    <div
-      ref={telegramContainerRef}
-      className="flex justify-center items-center min-h-[48px]"
-      title="Login with Telegram"
-    />
+    <button
+      onClick={handleTelegramLogin}
+      className="w-14 h-14 rounded-full bg-[#0088cc] hover:bg-[#0077b3] active:scale-95 transition-all flex items-center justify-center shadow-lg"
+      title="Sign in with Telegram"
+    >
+      <svg
+        viewBox="0 0 24 24"
+        className="w-7 h-7 text-white"
+        fill="currentColor"
+      >
+        <path d="M12 0C5.373 0 0 5.373 0 12s5.373 12 12 12 12-5.373 12-12S18.627 0 12 0zm5.894 8.221l-1.97 9.28c-.145.658-.537.818-1.084.508l-3-2.21-1.446 1.394c-.14.18-.357.295-.6.295-.002 0-.003 0-.005 0l.213-3.054 5.56-5.022c.24-.213-.054-.334-.373-.121l-6.869 4.326-2.96-.924c-.64-.203-.658-.64.135-.954l11.566-4.458c.538-.196 1.006.128.832.941z" />
+      </svg>
+    </button>
   );
 }
 
@@ -87,7 +85,7 @@ function GoogleLoginButton({ onAuth, clientId }) {
         });
         window.google.accounts.id.renderButton(buttonRef.current, {
           type: 'icon',
-          theme: 'outline',
+          theme: 'filled_blue',
           size: 'large',
           shape: 'circle',
         });
@@ -285,10 +283,10 @@ export default function Login() {
             <Logo size="lg" />
           </div>
           <h1 className="text-2xl font-bold text-white mb-2">
-            {referrerInfo ? 'You\'ve Been Invited!' : 'Welcome Back'}
+            {referrerInfo ? 'You\'ve Been Invited!' : 'Sign In to WorkLink'}
           </h1>
           <p className="text-white/50">
-            {referrerInfo ? 'Sign up to claim your bonus' : 'Sign in to continue to WorkLink'}
+            {referrerInfo ? 'Sign up to claim your bonus' : 'Access your account and start working'}
           </p>
         </div>
 
@@ -348,10 +346,10 @@ export default function Login() {
                   </div>
 
                   <h2 className="text-center text-white font-semibold mb-1">
-                    Continue with your account
+                    Sign in with Google or Telegram
                   </h2>
                   <p className="text-center text-white/40 text-sm mb-5">
-                    No sign up required - just log in
+                    Quick access - no sign up needed
                   </p>
 
                   {loading ? (
@@ -360,18 +358,30 @@ export default function Login() {
                       <span className="text-white/60">Authenticating...</span>
                     </div>
                   ) : (
-                    <div className="bg-white/[0.02] rounded-2xl p-4 border border-white/[0.05]">
-                      <div className="flex items-center justify-center gap-4">
+                    <div className="bg-white/[0.02] rounded-2xl p-6 border border-white/[0.05]">
+                      <div className="flex items-center justify-center gap-8">
                         {/* Google Login */}
                         {googleClientId && (
-                          <GoogleLoginButton clientId={googleClientId} onAuth={handleGoogleAuth} />
+                          <div className="flex flex-col items-center gap-2">
+                            <GoogleLoginButton clientId={googleClientId} onAuth={handleGoogleAuth} />
+                            <span className="text-xs text-white/40">Google</span>
+                          </div>
                         )}
 
                         {/* Telegram Login */}
                         {botUsername && (
-                          <TelegramLoginButton botUsername={botUsername} onAuth={handleTelegramAuth} />
+                          <div className="flex flex-col items-center gap-2">
+                            <TelegramLoginButton botUsername={botUsername} onAuth={handleTelegramAuth} />
+                            <span className="text-xs text-white/40">Telegram</span>
+                          </div>
                         )}
                       </div>
+                      
+                      {!googleClientId && !botUsername && (
+                        <p className="text-center text-white/40 text-sm">
+                          Loading sign-in options...
+                        </p>
+                      )}
                     </div>
                   )}
 

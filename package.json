@@ -32,7 +32,8 @@
     "test-admin-ws": "node test-admin-websocket.js",
     "debug-admin-ws": "node debug-admin-ws.js",
     "test:agents": "node test-chat-agents.js",
-    "test:agents:watch": "nodemon --watch services --watch utils test-chat-agents.js"
+    "test:agents:watch": "nodemon --watch services --watch utils test-chat-agents.js",
+    "test:scheduler": "node test-new-scheduler.js"
   },
   "keywords": [
     "recruitment",
