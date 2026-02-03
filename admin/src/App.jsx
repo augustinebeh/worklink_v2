@@ -1,10 +1,14 @@
+import React from 'react';
 import { BrowserRouter, Routes, Route, Navigate } from 'react-router-dom';
 import { ThemeProvider } from './contexts/ThemeContext';
-import { AuthProvider, useAuth } from './contexts/AuthContext';
+import { AuthProvider } from './contexts/AuthContext';
 import { DataProvider } from './contexts/DataContext';
 import { WebSocketProvider } from './contexts/WebSocketContext';
 import { ToastProvider } from './components/ui/Toast';
 import AdminLayout from './components/layout/AdminLayout';
+import ProtectedRoute from './components/auth/ProtectedRoute';
+import ErrorBoundary, { AsyncErrorBoundary } from './shared/components/ErrorBoundary';
+import { setupGlobalErrorHandling } from './shared/hooks/useErrorHandler';
 
 // Pages
 import Login from './pages/Login';
@@ -34,50 +38,91 @@ import RetentionAnalytics from './pages/RetentionAnalytics';
 import ConsultantPerformance from './pages/ConsultantPerformance';
 import InterviewScheduling from './pages/InterviewScheduling';
 
-// Protected Route wrapper
-function ProtectedRoute({ children }) {
-  const { isAuthenticated, loading } = useAuth();
-
-  if (loading) {
-    return (
-      <div className="min-h-screen flex items-center justify-center bg-slate-50 dark:bg-slate-950">
-        <div className="animate-spin h-8 w-8 border-4 border-primary-500 border-t-transparent rounded-full" />
-      </div>
-    );
-  }
-
-  if (!isAuthenticated) {
-    return <Navigate to="login" replace />;
-  }
-
-  return children;
-}
+// The ProtectedRoute is now imported from components/auth/ProtectedRoute
 
 function AppRoutes() {
   return (
     <Routes>
       {/* Public routes */}
-      <Route path="login" element={<Login />} />
+      <Route
+        path="login"
+        element={
+          <ErrorBoundary level="page">
+            <Login />
+          </ErrorBoundary>
+        }
+      />
 
       {/* Protected routes */}
       <Route
         path="/"
         element={
           <ProtectedRoute>
-            <AdminLayout />
+            <ErrorBoundary level="app">
+              <AdminLayout />
+            </ErrorBoundary>
           </ProtectedRoute>
         }
       >
         {/* Dashboard - main entry point with guides */}
-        <Route index element={<Dashboard />} />
-        
+        <Route
+          index
+          element={
+            <ErrorBoundary level="page">
+              <Dashboard />
+            </ErrorBoundary>
+          }
+        />
+
         {/* Operations */}
-        <Route path="candidates" element={<Candidates />} />
-        <Route path="candidates/:id" element={<CandidateProfile />} />
-        <Route path="jobs" element={<Jobs />} />
-        <Route path="jobs/:id" element={<JobDetail />} />
-        <Route path="deployments" element={<Deployments />} />
-        <Route path="payments" element={<Payments />} />
+        <Route
+          path="candidates"
+          element={
+            <ErrorBoundary level="page">
+              <Candidates />
+            </ErrorBoundary>
+          }
+        />
+        <Route
+          path="candidates/:id"
+          element={
+            <ErrorBoundary level="page">
+              <CandidateProfile />
+            </ErrorBoundary>
+          }
+        />
+        <Route
+          path="jobs"
+          element={
+            <ErrorBoundary level="page">
+              <Jobs />
+            </ErrorBoundary>
+          }
+        />
+        <Route
+          path="jobs/:id"
+          element={
+            <ErrorBoundary level="page">
+              <JobDetail />
+            </ErrorBoundary>
+          }
+        />
+        <Route
+          path="deployments"
+          element={
+            <ErrorBoundary level="page">
+              <Deployments />
+            </ErrorBoundary>
+          }
+        />
+        <Route
+          path="payments"
+          element={
+            <ErrorBoundary level="page">
+              <Payments />
+            </ErrorBoundary>
+          }
+        />
         
         {/* Sales & Tenders */}
         <Route path="bpo" element={<BPODashboard />} />
@@ -95,17 +140,38 @@ function AppRoutes() {
         <Route path="chat" element={<Chat />} />
         <Route path="escalation-queue" element={<EscalationQueue />} />
         
-        {/* Settings */}
-        <Route path="settings" element={<Settings />} />
-        
-        {/* AI & Automation */}
+        {/* Settings - Admin only */}
+        <Route
+          path="settings"
+          element={
+            <ProtectedRoute requireRole="admin">
+              <Settings />
+            </ProtectedRoute>
+          }
+        />
+
+        {/* AI & Automation - Admin or Manager */}
         <Route path="ai-automation" element={<AIAutomation />} />
         <Route path="ai-sourcing" element={<AISourcing />} />
         <Route path="consultant-performance" element={<ConsultantPerformance />} />
         <Route path="interview-scheduling" element={<InterviewScheduling />} />
         <Route path="ml-dashboard" element={<MLDashboard />} />
-        <Route path="telegram-groups" element={<TelegramGroups />} />
-        <Route path="ad-optimization" element={<AdOptimization />} />
+        <Route
+          path="telegram-groups"
+          element={
+            <ProtectedRoute requirePermission="telegram:manage">
+              <TelegramGroups />
+            </ProtectedRoute>
+          }
+        />
+        <Route
+          path="ad-optimization"
+          element={
+            <ProtectedRoute requirePermission="ads:manage">
+              <AdOptimization />
+            </ProtectedRoute>
+          }
+        />
 
         {/* Redirects for removed/consolidated pages */}
         <Route path="analytics" element={<Navigate to="financials" replace />} />
@@ -118,19 +184,28 @@ function AppRoutes() {
 }
 
 export default function App() {
+  // Setup global error handling
+  React.useEffect(() => {
+    setupGlobalErrorHandling();
+  }, []);
+
   return (
-    <BrowserRouter basename="/admin">
-      <ThemeProvider>
-        <AuthProvider>
-          <WebSocketProvider>
-            <DataProvider>
-              <ToastProvider>
-                <AppRoutes />
-              </ToastProvider>
-            </DataProvider>
-          </WebSocketProvider>
-        </AuthProvider>
-      </ThemeProvider>
-    </BrowserRouter>
+    <ErrorBoundary level="app">
+      <AsyncErrorBoundary>
+        <BrowserRouter basename="/admin">
+          <ThemeProvider>
+            <AuthProvider>
+              <WebSocketProvider>
+                <DataProvider>
+                  <ToastProvider>
+                    <AppRoutes />
+                  </ToastProvider>
+                </DataProvider>
+              </WebSocketProvider>
+            </AuthProvider>
+          </ThemeProvider>
+        </BrowserRouter>
+      </AsyncErrorBoundary>
+    </ErrorBoundary>
   );
 }
