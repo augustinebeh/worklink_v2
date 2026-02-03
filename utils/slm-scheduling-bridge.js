@@ -173,9 +173,9 @@ class SLMSchedulingBridge {
 
     if (inQueue) {
       return {
-        type: 'in_queue',
-        schedulingAction: 'update_queue_priority',
-        template: 'queue_status_update'
+        type: 'in_progress_scheduling',
+        schedulingAction: 'offer_real_time_slots',
+        template: 'real_time_scheduling'
       };
     }
 
@@ -221,7 +221,7 @@ class SLMSchedulingBridge {
       availability_collection: () => this.collectAvailabilityPreferences(candidate, message),
       booking_confirmation: () => this.confirmInterviewBooking(candidate, context),
       existing_interview_reminder: () => this.generateExistingInterviewReminder(candidate),
-      queue_status_update: () => this.generateQueueStatusUpdate(candidate)
+      real_time_scheduling: () => this.generateRealTimeSchedulingOffer(candidate)
     };
 
     const templateFunction = templates[flow.template];
@@ -751,53 +751,154 @@ Looking forward to meeting you! 🚀`,
   }
 
   /**
-   * Generate queue status update
+   * Check real calendar availability and offer scheduling
    */
-  async generateQueueStatusUpdate(candidate) {
+  async generateRealTimeSchedulingOffer(candidate) {
     const firstName = candidate.name.split(' ')[0];
 
-    // Get queue information
-    const queueInfo = this.schedulingEngine.db.prepare(`
-      SELECT * FROM interview_queue WHERE candidate_id = ?
+    // Check if already has scheduled interview
+    const existingInterview = this.schedulingEngine.db.prepare(`
+      SELECT * FROM interview_slots
+      WHERE candidate_id = ? AND status IN ('scheduled', 'confirmed')
     `).get(candidate.id);
 
-    if (queueInfo) {
-      const queuePosition = this.schedulingEngine.db.prepare(`
-        SELECT COUNT(*) + 1 as position
-        FROM interview_queue
-        WHERE priority_score > ? AND queue_status = 'waiting'
-      `).get(queueInfo.priority_score).position;
+    if (existingInterview) {
+      const interviewDate = new Date(existingInterview.scheduled_date + 'T' + existingInterview.scheduled_time);
+      const formattedDate = this.formatInterviewDateTime(interviewDate);
 
       return {
-        type: 'queue_status_update',
-        content: `Hi ${firstName}! 📋 Here's your interview queue status:
+        type: 'existing_interview',
+        content: `Hi ${firstName}! You already have a verification interview scheduled:
 
-🎯 **Current Status**: In Interview Queue
-📊 **Priority Level**: ${queueInfo.urgency_level.toUpperCase()}
-📍 **Queue Position**: ${queuePosition}
+📅 **${formattedDate}**
+⏰ **30 minutes**
+🔗 **Meeting link**: ${existingInterview.meeting_link}
 
-⏱️ **What's Happening:**
-• We're matching you with the best available interviewer
-• Higher priority candidates are scheduled first
-• You'll receive confirmation once a slot is booked
-
-💪 **Want to boost your priority?**
-• Complete your profile (if not done)
-• Reply "**URGENT**" if you have timing constraints
-• Ask any questions about the process
-
-Stay tuned - we'll have you scheduled soon! 🚀`,
+You'll receive a reminder 24 hours before. Need to reschedule? Just let me know!`,
         metadata: {
           candidateId: candidate.id,
-          queuePosition,
-          priorityScore: queueInfo.priority_score,
-          urgencyLevel: queueInfo.urgency_level
+          interviewId: existingInterview.id,
+          scheduledDateTime: formattedDate
+        }
+      };
+    }
+
+    // Get real available slots from calendar
+    const availableSlots = await this.getAvailableCalendarSlots();
+
+    if (availableSlots.length > 0) {
+      const topSlots = availableSlots.slice(0, 3);
+      const slotsList = topSlots.map((slot, index) =>
+        `${index + 1}. **${this.formatInterviewDateTime(slot.datetime)}**`
+      ).join('\n');
+
+      return {
+        type: 'real_time_scheduling',
+        content: `Perfect! I can schedule your verification interview right now. Here are the next available slots:
+
+📅 **Available Times:**
+${slotsList}
+
+Simply reply with the number of your preferred time (1, 2, or 3) and I'll book it immediately!
+
+Need different times? Just ask and I'll check our calendar for more options.`,
+        metadata: {
+          candidateId: candidate.id,
+          availableSlots: topSlots.map((slot, index) => ({
+            id: index + 1,
+            datetime: slot.datetime,
+            consultant_id: slot.consultant_id || 'primary'
+          }))
         }
       };
     } else {
-      // Not in queue - add them and provide initial response
-      return this.generateWelcomeWithScheduling(candidate);
+      return {
+        type: 'no_availability',
+        content: `Hi ${firstName}! I'd love to schedule your verification interview, but our calendar is currently full for the next few days.
+
+Let me connect you with our admin team who can:
+• Check for any last-minute openings
+• Schedule you for next available slot
+• Provide updates on availability
+
+They'll reach out to you shortly!`,
+        metadata: {
+          candidateId: candidate.id,
+          escalateReason: 'no_calendar_availability'
+        }
+      };
     }
+  }
+
+  /**
+   * Get real available slots from admin calendar
+   */
+  async getAvailableCalendarSlots(daysAhead = 14) {
+    const startDate = new Date();
+    const endDate = new Date();
+    endDate.setDate(startDate.getDate() + daysAhead);
+
+    // Get consultant availability from calendar
+    const availabilitySlots = this.schedulingEngine.db.prepare(`
+      SELECT date, start_time, end_time, consultant_id, slot_type
+      FROM consultant_availability
+      WHERE date >= ? AND date <= ?
+        AND is_available = 1
+        AND slot_type = 'interview'
+      ORDER BY date ASC, start_time ASC
+    `).all(
+      startDate.toISOString().split('T')[0],
+      endDate.toISOString().split('T')[0]
+    );
+
+    // Get already booked slots to exclude them
+    const bookedSlots = this.schedulingEngine.db.prepare(`
+      SELECT scheduled_date, scheduled_time, duration_minutes
+      FROM interview_slots
+      WHERE scheduled_date >= ? AND scheduled_date <= ?
+        AND status IN ('scheduled', 'confirmed')
+    `).all(
+      startDate.toISOString().split('T')[0],
+      endDate.toISOString().split('T')[0]
+    );
+
+    // Convert to Set for faster lookup
+    const bookedTimes = new Set(
+      bookedSlots.map(slot => `${slot.scheduled_date}T${slot.scheduled_time}`)
+    );
+
+    // Filter available slots that aren't booked
+    const realAvailableSlots = [];
+
+    for (const slot of availabilitySlots) {
+      const slotDateTime = `${slot.date}T${slot.start_time}`;
+
+      // Skip if already booked
+      if (bookedTimes.has(slotDateTime)) {
+        continue;
+      }
+
+      // Skip if slot is in the past
+      const slotTime = new Date(`${slot.date}T${slot.start_time}`);
+      if (slotTime <= new Date()) {
+        continue;
+      }
+
+      realAvailableSlots.push({
+        datetime: slotTime,
+        date: slot.date,
+        time: slot.start_time,
+        consultant_id: slot.consultant_id || 'primary',
+        slot_type: slot.slot_type
+      });
+
+      // Limit to reasonable number of slots
+      if (realAvailableSlots.length >= 10) {
+        break;
+      }
+    }
+
+    return realAvailableSlots;
   }
 
   /**
