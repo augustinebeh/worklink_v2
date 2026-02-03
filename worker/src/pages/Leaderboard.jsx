@@ -28,11 +28,11 @@ function ComingSoonOverlay() {
 
   return (
     <div
-      className="fixed inset-0 z-[100] bg-theme-primary/80 backdrop-blur-md"
+      className="fixed inset-0 z-[100] bg-theme-primary/95 backdrop-blur-md"
       style={{ position: 'fixed', height: '100dvh', width: '100vw' }}
     >
       {/* Centered Frame - does not scroll */}
-      <div className="absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 w-[calc(100%-2rem)] max-w-md max-h-[85vh] overflow-y-auto overscroll-contain rounded-3xl bg-theme-card border border-white/10 p-6 shadow-2xl">
+      <div className="absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 w-[calc(100%-2rem)] max-w-md max-h-[75vh] overflow-y-auto overscroll-contain rounded-3xl bg-theme-card border border-white/10 p-6 shadow-2xl">
         <div className="text-center">
           {/* Animated icon */}
           <div className="relative mb-8 mx-auto w-32 h-32">
