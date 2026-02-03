@@ -202,9 +202,13 @@ export default function Candidates() {
 
     setAddingCandidate(true);
     try {
+      const token = sessionStorage.getItem('admin_token');
       const res = await fetch('/api/v1/candidates', {
         method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
+        headers: {
+          'Content-Type': 'application/json',
+          'Authorization': `Bearer ${token}`
+        },
         body: JSON.stringify(newCandidate),
       });
       const data = await res.json();
@@ -251,14 +255,24 @@ export default function Candidates() {
       if (statusFilter !== 'all') params.append('status', statusFilter);
       if (searchQuery) params.append('search', searchQuery);
 
-      const res = await fetch(`/api/v1/candidates?${params}`);
+      // Get the authentication token
+      const token = sessionStorage.getItem('admin_token');
+
+      const res = await fetch(`/api/v1/candidates?${params}`, {
+        headers: {
+          'Authorization': `Bearer ${token}`,
+          'Content-Type': 'application/json',
+        },
+      });
       const data = await res.json();
-      
+
       if (data.success) {
         setCandidates(data.data.map(c => ({
           ...c,
           certifications: typeof c.certifications === 'string' ? JSON.parse(c.certifications || '[]') : (c.certifications || []),
         })));
+      } else {
+        console.error('API Error:', data.error);
       }
     } catch (error) {
       console.error('Failed to fetch candidates:', error);
@@ -269,7 +283,13 @@ export default function Candidates() {
 
   const fetchPipelineStats = async () => {
     try {
-      const res = await fetch('/api/v1/candidates/stats/pipeline');
+      const token = sessionStorage.getItem('admin_token');
+      const res = await fetch('/api/v1/candidates/stats/pipeline', {
+        headers: {
+          'Authorization': `Bearer ${token}`,
+          'Content-Type': 'application/json',
+        },
+      });
       const data = await res.json();
       if (data.success) {
         setPipelineStats(data.data);

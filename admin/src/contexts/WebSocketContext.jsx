@@ -29,18 +29,26 @@ export function WebSocketProvider({ children }) {
       wsRef.current = new WebSocket(wsUrl);
 
       wsRef.current.onopen = () => {
-        logger.log('Admin WebSocket connected');
+        logger.log('🔌 [ADMIN WS] Admin WebSocket connected successfully');
         setIsConnected(true);
-        
+
         if (reconnectTimeoutRef.current) {
           clearTimeout(reconnectTimeoutRef.current);
           reconnectTimeoutRef.current = null;
         }
+
+        // Debug: Log connection success
+        console.log('🔌 [ADMIN WS] WebSocket connection established, ready to receive messages');
       };
 
       wsRef.current.onmessage = (event) => {
         try {
           const data = JSON.parse(event.data);
+          console.log('📥 [ADMIN WS] Received message:', {
+            type: data.type,
+            candidateId: data.candidateId,
+            timestamp: new Date().toISOString()
+          });
           setLastMessage(data);
           handleMessage(data);
         } catch (error) {
@@ -89,6 +97,12 @@ export function WebSocketProvider({ children }) {
         break;
 
       case 'new_message':
+        console.log('🔔 [ADMIN WS] Processing new_message from candidate:', {
+          candidateId: data.candidateId,
+          messageId: data.message?.id,
+          content: data.message?.content?.substring(0, 50) + '...',
+          isUrgent: data.isUrgent
+        });
         setUnreadTotal(prev => prev + 1);
         notifyListeners('new_message', data);
         break;

@@ -7,10 +7,53 @@
 @layer base {
   html {
     @apply antialiased;
+    font-family: 'Inter', system-ui, -apple-system, sans-serif;
   }
-  
+
   body {
     @apply bg-slate-50 text-slate-900 dark:bg-slate-950 dark:text-slate-100;
+  }
+
+  /* Calendar specific styles */
+  .calendar-grid {
+    display: grid;
+    grid-template-columns: repeat(7, 1fr);
+    gap: 1px;
+  }
+
+  .time-slot {
+    @apply transition-all duration-200 ease-in-out;
+  }
+
+  .time-slot:hover {
+    @apply transform scale-105 z-10;
+  }
+
+  .time-slot.available {
+    @apply bg-green-50 dark:bg-green-900/20 border-l-2 border-green-400;
+  }
+
+  .time-slot.scheduled {
+    @apply bg-blue-50 dark:bg-blue-900/20 border-l-4 border-blue-500;
+  }
+
+  .time-slot.blocked {
+    @apply bg-red-50 dark:bg-red-900/20 border-l-2 border-red-400 cursor-not-allowed;
+  }
+
+  /* Mobile responsiveness improvements */
+  @media (max-width: 640px) {
+    .calendar-header {
+      @apply text-xs;
+    }
+
+    .time-label {
+      @apply text-xs;
+    }
+
+    .interview-info {
+      @apply text-xs;
+    }
   }
 
   /* Custom scrollbar */

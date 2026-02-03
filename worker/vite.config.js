@@ -8,7 +8,8 @@ export default defineConfig({
     VitePWA({
       registerType: 'autoUpdate',
       workbox: {
-        globPatterns: ['**/*.{js,css,html,ico,png,svg}']
+        globPatterns: ['**/*.{js,css,html,ico,png,svg}'],
+        navigateFallbackDenylist: [/^\/admin/, /^\/api/, /^\/ws/, /^\/health/]
       },
       includeAssets: ['favicon.ico', 'apple-touch-icon.png'],
       manifest: {

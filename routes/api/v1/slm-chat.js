@@ -7,7 +7,7 @@
 
 const express = require('express');
 const router = express.Router();
-const { db } = require('../../../db/database');
+const { db } = require('../../../db');
 
 // =====================================================
 // SLM SETTINGS
@@ -222,27 +222,165 @@ router.post('/generate', async (req, res) => {
 });
 
 // =====================================================
-// SLM STATUS AND MONITORING
+// SMART SLM ROUTING WITH STATUS CLASSIFICATION
+// =====================================================
+
+/**
+ * POST /api/v1/slm-chat/smart-route
+ * Route SLM response based on worker status classification
+ */
+router.post('/smart-route', async (req, res) => {
+  try {
+    const { candidateId, message, conversationContext } = req.body;
+
+    if (!candidateId || !message) {
+      return res.status(400).json({
+        success: false,
+        error: 'candidateId and message are required',
+      });
+    }
+
+    // Load Smart SLM Router
+    const SmartSLMRouter = require('../../../utils/smart-slm-router');
+    const router = new SmartSLMRouter();
+
+    const response = await router.routeSLMResponse(
+      candidateId,
+      message,
+      conversationContext || {}
+    );
+
+    res.json({
+      success: true,
+      data: response,
+      message: 'SLM routing completed successfully',
+    });
+  } catch (error) {
+    res.status(500).json({ success: false, error: error.message });
+  }
+});
+
+/**
+ * GET /api/v1/slm-chat/worker-status/:candidateId
+ * Get worker status classification and routing info
+ */
+router.get('/worker-status/:candidateId', async (req, res) => {
+  try {
+    const { candidateId } = req.params;
+
+    const WorkerStatusClassifier = require('../../../utils/worker-status-classifier');
+    const classifier = new WorkerStatusClassifier();
+
+    const routingInfo = await classifier.getSLMRoutingInfo(candidateId);
+
+    res.json({
+      success: true,
+      data: routingInfo,
+    });
+  } catch (error) {
+    res.status(500).json({ success: false, error: error.message });
+  }
+});
+
+/**
+ * PUT /api/v1/slm-chat/worker-status/:candidateId
+ * Manually override worker status (admin only)
+ */
+router.put('/worker-status/:candidateId', async (req, res) => {
+  try {
+    const { candidateId } = req.params;
+    const { newStatus, reason, adminId } = req.body;
+
+    if (!newStatus) {
+      return res.status(400).json({
+        success: false,
+        error: 'newStatus is required',
+      });
+    }
+
+    const WorkerStatusClassifier = require('../../../utils/worker-status-classifier');
+    const classifier = new WorkerStatusClassifier();
+
+    const result = await classifier.manualStatusOverride(
+      candidateId,
+      newStatus,
+      adminId || 'api_admin',
+      reason || 'Manual override via API'
+    );
+
+    res.json({
+      success: true,
+      data: result,
+      message: 'Worker status updated successfully',
+    });
+  } catch (error) {
+    res.status(500).json({ success: false, error: error.message });
+  }
+});
+
+/**
+ * GET /api/v1/slm-chat/batch-classify
+ * Batch classify worker statuses
+ */
+router.get('/batch-classify', async (req, res) => {
+  try {
+    const { candidateIds } = req.query;
+    const ids = candidateIds ? candidateIds.split(',') : [];
+
+    const WorkerStatusClassifier = require('../../../utils/worker-status-classifier');
+    const classifier = new WorkerStatusClassifier();
+
+    const results = await classifier.batchClassifyWorkers(ids);
+
+    res.json({
+      success: true,
+      data: results,
+      message: 'Batch classification completed',
+    });
+  } catch (error) {
+    res.status(500).json({ success: false, error: error.message });
+  }
+});
+
+// =====================================================
+// SLM STATUS AND MONITORING (ENHANCED)
 // =====================================================
 
 /**
  * GET /api/v1/slm-chat/status
- * Get SLM system status and statistics
+ * Get SLM system status and statistics (enhanced with worker status)
  */
-router.get('/status', (req, res) => {
+router.get('/status', async (req, res) => {
   try {
     const stats = {
-      // Count pending candidates
+      // Legacy counts
       pendingCandidates: db.prepare(`
         SELECT COUNT(*) as count FROM candidates WHERE status = 'pending'
       `).get().count,
 
-      // Count scheduled interviews (if interview_slots table exists)
-      scheduledInterviews: 0,
+      // Enhanced worker status counts
+      workerStatus: {
+        pending: 0,
+        active: 0,
+        inactive: 0,
+        suspended: 0
+      },
 
-      // Count candidates in interview queue (if interview_queue table exists)
+      // Interview scheduling stats
+      scheduledInterviews: 0,
       inQueue: 0,
     };
+
+    try {
+      // Get worker status distribution
+      const WorkerStatusClassifier = require('../../../utils/worker-status-classifier');
+      const classifier = new WorkerStatusClassifier();
+      const statusStats = await classifier.getStatusStatistics();
+      stats.workerStatus = statusStats.summary;
+      stats.totalWorkers = statusStats.total;
+    } catch (e) {
+      console.log('Worker status stats unavailable:', e.message);
+    }
 
     try {
       stats.scheduledInterviews = db.prepare(`
@@ -260,6 +398,16 @@ router.get('/status', (req, res) => {
       `).get().count;
     } catch (e) {
       // Table doesn't exist yet
+    }
+
+    // Add system health check
+    try {
+      const SmartSLMRouter = require('../../../utils/smart-slm-router');
+      const router = new SmartSLMRouter();
+      const health = await router.performHealthCheck();
+      stats.systemHealth = health;
+    } catch (e) {
+      stats.systemHealth = { status: 'unavailable', error: e.message };
     }
 
     res.json({ success: true, data: stats });

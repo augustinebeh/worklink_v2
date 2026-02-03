@@ -19,6 +19,9 @@ const CandidateSourcingEngine = require('../../../utils/candidate-sourcing-engin
 const InterviewSchedulingEngine = require('../../../utils/interview-scheduling-engine');
 const SLMSchedulingBridge = require('../../../utils/slm-scheduling-bridge');
 
+// Import new consultant analytics engine
+const { ConsultantAnalyticsEngine } = require('../../../utils/consultant-analytics-engine');
+
 // Initialize systems
 const capacityManager = new CapacityManagementSystem();
 const prequalificationEngine = new CandidatePrequalificationEngine();
@@ -27,6 +30,7 @@ const reliabilitySystem = new ReliabilityScoringSystem();
 const sourcingEngine = new CandidateSourcingEngine();
 const schedulingEngine = new InterviewSchedulingEngine();
 const slmBridge = new SLMSchedulingBridge();
+const analyticsEngine = new ConsultantAnalyticsEngine();
 
 // ===== CAPACITY MANAGEMENT ENDPOINTS =====
 
@@ -1184,6 +1188,697 @@ router.post('/slm/test-flow', async (req, res) => {
     res.status(500).json({ success: false, error: error.message });
   }
 });
+
+// =====================================================
+// CONSULTANT ANALYTICS ENDPOINTS
+// =====================================================
+
+/**
+ * POST /api/v1/consultant-performance/analytics/calculate-daily
+ * Calculate daily performance analytics for consultants
+ */
+router.post('/analytics/calculate-daily', async (req, res) => {
+  try {
+    const { consultantIds, date } = req.body;
+    const result = await analyticsEngine.runDailyAnalytics(consultantIds, date);
+
+    res.json({
+      success: true,
+      data: result
+    });
+  } catch (error) {
+    res.status(500).json({ success: false, error: error.message });
+  }
+});
+
+/**
+ * POST /api/v1/consultant-performance/analytics/calculate-kpis
+ * Calculate KPI scores and rankings for team
+ */
+router.post('/analytics/calculate-kpis', async (req, res) => {
+  try {
+    const { period = 'weekly', startDate } = req.body;
+    const result = await analyticsEngine.runWeeklyKPICalculation();
+
+    res.json({
+      success: true,
+      data: result
+    });
+  } catch (error) {
+    res.status(500).json({ success: false, error: error.message });
+  }
+});
+
+/**
+ * GET /api/v1/consultant-performance/analytics/dashboard/:consultantId
+ * Get individual consultant dashboard with comprehensive analytics
+ */
+router.get('/analytics/dashboard/:consultantId', async (req, res) => {
+  try {
+    const { consultantId } = req.params;
+    const { period = 'weekly' } = req.query;
+
+    const dashboard = await analyticsEngine.getConsultantDashboard(consultantId, period);
+
+    res.json({
+      success: true,
+      data: dashboard
+    });
+  } catch (error) {
+    res.status(500).json({ success: false, error: error.message });
+  }
+});
+
+/**
+ * GET /api/v1/consultant-performance/analytics/leaderboard
+ * Get team leaderboard and rankings
+ */
+router.get('/analytics/leaderboard', async (req, res) => {
+  try {
+    const { period = 'weekly', metric = 'overall' } = req.query;
+
+    const leaderboard = await analyticsEngine.getTeamLeaderboard(period, metric);
+
+    res.json({
+      success: true,
+      data: leaderboard
+    });
+  } catch (error) {
+    res.status(500).json({ success: false, error: error.message });
+  }
+});
+
+/**
+ * GET /api/v1/consultant-performance/analytics/alerts
+ * Get performance alerts for all consultants or specific consultant
+ */
+router.get('/analytics/alerts', async (req, res) => {
+  try {
+    const { consultantId, severity, status = 'active', limit = 50 } = req.query;
+
+    let query = `
+      SELECT ca.*, c.name as consultant_name
+      FROM consultant_alerts ca
+      LEFT JOIN candidates c ON ca.consultant_id = c.id
+      WHERE ca.status = ?
+    `;
+    const params = [status];
+
+    if (consultantId) {
+      query += ' AND ca.consultant_id = ?';
+      params.push(consultantId);
+    }
+
+    if (severity) {
+      query += ' AND ca.severity = ?';
+      params.push(severity);
+    }
+
+    query += ' ORDER BY ca.priority_score DESC, ca.created_at DESC LIMIT ?';
+    params.push(parseInt(limit));
+
+    const alerts = db.prepare(query).all(...params);
+
+    // Get alert summary
+    const summary = db.prepare(`
+      SELECT
+        severity,
+        COUNT(*) as count
+      FROM consultant_alerts
+      WHERE status = ?
+      GROUP BY severity
+    `).all(status);
+
+    res.json({
+      success: true,
+      data: {
+        alerts,
+        summary,
+        totalActive: alerts.length
+      }
+    });
+  } catch (error) {
+    res.status(500).json({ success: false, error: error.message });
+  }
+});
+
+/**
+ * PUT /api/v1/consultant-performance/analytics/alerts/:alertId/acknowledge
+ * Acknowledge or resolve an alert
+ */
+router.put('/analytics/alerts/:alertId/acknowledge', async (req, res) => {
+  try {
+    const { alertId } = req.params;
+    const { status = 'acknowledged', notes } = req.body;
+
+    const stmt = db.prepare(`
+      UPDATE consultant_alerts
+      SET status = ?, acknowledged_at = ?, resolution_notes = ?
+      WHERE id = ?
+    `);
+
+    const result = stmt.run(status, new Date().toISOString(), notes || null, alertId);
+
+    if (result.changes === 0) {
+      return res.status(404).json({ success: false, error: 'Alert not found' });
+    }
+
+    res.json({
+      success: true,
+      data: { alertId, status, acknowledgedAt: new Date().toISOString() }
+    });
+  } catch (error) {
+    res.status(500).json({ success: false, error: error.message });
+  }
+});
+
+/**
+ * GET /api/v1/consultant-performance/analytics/coaching-recommendations
+ * Get coaching recommendations for consultants
+ */
+router.get('/analytics/coaching-recommendations', async (req, res) => {
+  try {
+    const { consultantId, status = 'pending', category, limit = 50 } = req.query;
+
+    let query = `
+      SELECT cr.*, c.name as consultant_name
+      FROM coaching_recommendations cr
+      LEFT JOIN candidates c ON cr.consultant_id = c.id
+      WHERE cr.status = ?
+    `;
+    const params = [status];
+
+    if (consultantId) {
+      query += ' AND cr.consultant_id = ?';
+      params.push(consultantId);
+    }
+
+    if (category) {
+      query += ' AND cr.category = ?';
+      params.push(category);
+    }
+
+    query += ' ORDER BY cr.priority DESC, cr.created_at DESC LIMIT ?';
+    params.push(parseInt(limit));
+
+    const recommendations = db.prepare(query).all(...params);
+
+    // Parse JSON fields
+    const parsedRecommendations = recommendations.map(rec => ({
+      ...rec,
+      action_steps: JSON.parse(rec.action_steps || '[]'),
+      resources_needed: JSON.parse(rec.resources_needed || '[]')
+    }));
+
+    res.json({
+      success: true,
+      data: parsedRecommendations
+    });
+  } catch (error) {
+    res.status(500).json({ success: false, error: error.message });
+  }
+});
+
+/**
+ * PUT /api/v1/consultant-performance/analytics/coaching-recommendations/:recId/update
+ * Update coaching recommendation status and progress
+ */
+router.put('/analytics/coaching-recommendations/:recId/update', async (req, res) => {
+  try {
+    const { recId } = req.params;
+    const { status, progress_measurements, consultant_feedback, coach_notes } = req.body;
+
+    const updates = [];
+    const params = [];
+
+    if (status) {
+      updates.push('status = ?');
+      params.push(status);
+    }
+
+    if (progress_measurements) {
+      updates.push('progress_measurements = ?');
+      params.push(JSON.stringify(progress_measurements));
+    }
+
+    if (consultant_feedback) {
+      updates.push('consultant_feedback = ?');
+      params.push(consultant_feedback);
+    }
+
+    if (coach_notes) {
+      updates.push('coach_notes = ?');
+      params.push(coach_notes);
+    }
+
+    if (status === 'completed') {
+      updates.push('completed_at = ?');
+      params.push(new Date().toISOString());
+    } else if (status === 'in_progress' && !updates.includes('started_at = ?')) {
+      updates.push('started_at = ?');
+      params.push(new Date().toISOString());
+    }
+
+    if (updates.length === 0) {
+      return res.status(400).json({ success: false, error: 'No updates provided' });
+    }
+
+    params.push(recId);
+
+    const stmt = db.prepare(`
+      UPDATE coaching_recommendations
+      SET ${updates.join(', ')}
+      WHERE id = ?
+    `);
+
+    const result = stmt.run(...params);
+
+    if (result.changes === 0) {
+      return res.status(404).json({ success: false, error: 'Recommendation not found' });
+    }
+
+    res.json({
+      success: true,
+      data: { recId, updatedAt: new Date().toISOString() }
+    });
+  } catch (error) {
+    res.status(500).json({ success: false, error: error.message });
+  }
+});
+
+/**
+ * GET /api/v1/consultant-performance/analytics/team-analytics
+ * Get comprehensive team analytics and insights
+ */
+router.get('/analytics/team-analytics', async (req, res) => {
+  try {
+    const { period = 'weekly', date } = req.query;
+
+    const teamAnalytics = await analyticsEngine.calculateTeamAnalytics(period, date);
+
+    res.json({
+      success: true,
+      data: teamAnalytics
+    });
+  } catch (error) {
+    res.status(500).json({ success: false, error: error.message });
+  }
+});
+
+/**
+ * GET /api/v1/consultant-performance/analytics/performance-trends
+ * Get performance trends for individual consultant or team
+ */
+router.get('/analytics/performance-trends', async (req, res) => {
+  try {
+    const { consultantId, days = 30, metric = 'overall_performance_score' } = req.query;
+    const since = new Date(Date.now() - days * 24 * 60 * 60 * 1000).toISOString().split('T')[0];
+
+    let query = `
+      SELECT
+        date,
+        consultant_id,
+        ${metric} as value,
+        efficiency_score,
+        quality_score,
+        growth_score,
+        overall_performance_score
+      FROM consultant_performance_daily
+      WHERE date >= ?
+    `;
+    const params = [since];
+
+    if (consultantId) {
+      query += ' AND consultant_id = ?';
+      params.push(consultantId);
+    }
+
+    query += ' ORDER BY date ASC';
+
+    const trends = db.prepare(query).all(...params);
+
+    // Calculate trend analysis
+    const trendAnalysis = calculateTrendAnalysis(trends, metric);
+
+    res.json({
+      success: true,
+      data: {
+        trends,
+        analysis: trendAnalysis,
+        period: `${days} days`,
+        metric
+      }
+    });
+  } catch (error) {
+    res.status(500).json({ success: false, error: error.message });
+  }
+});
+
+/**
+ * GET /api/v1/consultant-performance/analytics/kpi-comparison
+ * Compare KPIs across consultants or time periods
+ */
+router.get('/analytics/kpi-comparison', async (req, res) => {
+  try {
+    const { period = 'weekly', consultantIds, metrics } = req.query;
+
+    let query = `
+      SELECT
+        consultant_id,
+        calculation_period,
+        period_start,
+        period_end,
+        weighted_efficiency_score,
+        weighted_quality_score,
+        weighted_growth_score,
+        overall_kpi_score,
+        overall_rank,
+        percentile_rank
+      FROM consultant_kpi_scores
+      WHERE calculation_period = ?
+    `;
+    const params = [period];
+
+    if (consultantIds) {
+      const ids = consultantIds.split(',');
+      query += ` AND consultant_id IN (${ids.map(() => '?').join(',')})`;
+      params.push(...ids);
+    }
+
+    query += ' ORDER BY period_start DESC, overall_rank ASC';
+
+    const comparisons = db.prepare(query).all(...params);
+
+    // Group by consultant for easier comparison
+    const byConsultant = {};
+    comparisons.forEach(comp => {
+      if (!byConsultant[comp.consultant_id]) {
+        byConsultant[comp.consultant_id] = [];
+      }
+      byConsultant[comp.consultant_id].push(comp);
+    });
+
+    res.json({
+      success: true,
+      data: {
+        comparisons,
+        byConsultant,
+        period
+      }
+    });
+  } catch (error) {
+    res.status(500).json({ success: false, error: error.message });
+  }
+});
+
+/**
+ * GET /api/v1/consultant-performance/analytics/achievements
+ * Get consultant achievements and recognition
+ */
+router.get('/analytics/achievements', async (req, res) => {
+  try {
+    const { consultantId, type, limit = 50 } = req.query;
+
+    let query = `
+      SELECT ca.*, c.name as consultant_name
+      FROM consultant_achievements ca
+      LEFT JOIN candidates c ON ca.consultant_id = c.id
+      WHERE 1=1
+    `;
+    const params = [];
+
+    if (consultantId) {
+      query += ' AND ca.consultant_id = ?';
+      params.push(consultantId);
+    }
+
+    if (type) {
+      query += ' AND ca.achievement_type = ?';
+      params.push(type);
+    }
+
+    query += ' ORDER BY ca.earned_at DESC LIMIT ?';
+    params.push(parseInt(limit));
+
+    const achievements = db.prepare(query).all(...params);
+
+    // Parse JSON fields
+    const parsedAchievements = achievements.map(ach => ({
+      ...ach,
+      criteria_met: JSON.parse(ach.criteria_met || '{}')
+    }));
+
+    res.json({
+      success: true,
+      data: parsedAchievements
+    });
+  } catch (error) {
+    res.status(500).json({ success: false, error: error.message });
+  }
+});
+
+/**
+ * POST /api/v1/consultant-performance/analytics/goals
+ * Create performance goals for consultants
+ */
+router.post('/analytics/goals', async (req, res) => {
+  try {
+    const {
+      consultantId,
+      goalType,
+      title,
+      description,
+      targetKPI,
+      targetValue,
+      targetDate,
+      coachingPlanId
+    } = req.body;
+
+    // Get current value for the KPI
+    const currentPerformance = db.prepare(`
+      SELECT AVG(${targetKPI}) as current_value
+      FROM consultant_performance_daily
+      WHERE consultant_id = ?
+        AND date >= DATE('now', '-7 days')
+    `).get(consultantId);
+
+    const stmt = db.prepare(`
+      INSERT INTO consultant_goals
+      (consultant_id, goal_type, title, description, target_kpi,
+       current_value, target_value, target_date, coaching_plan_id)
+      VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)
+    `);
+
+    const result = stmt.run(
+      consultantId, goalType, title, description, targetKPI,
+      currentPerformance?.current_value || 0, targetValue, targetDate,
+      coachingPlanId || null
+    );
+
+    res.json({
+      success: true,
+      data: {
+        goalId: result.lastInsertRowid,
+        consultantId,
+        currentValue: currentPerformance?.current_value || 0,
+        targetValue,
+        createdAt: new Date().toISOString()
+      }
+    });
+  } catch (error) {
+    res.status(500).json({ success: false, error: error.message });
+  }
+});
+
+/**
+ * GET /api/v1/consultant-performance/analytics/goals/:consultantId
+ * Get consultant goals and progress
+ */
+router.get('/analytics/goals/:consultantId', async (req, res) => {
+  try {
+    const { consultantId } = req.params;
+    const { status } = req.query;
+
+    let query = `
+      SELECT cg.*, cr.title as coaching_plan_title
+      FROM consultant_goals cg
+      LEFT JOIN coaching_recommendations cr ON cg.coaching_plan_id = cr.id
+      WHERE cg.consultant_id = ?
+    `;
+    const params = [consultantId];
+
+    if (status) {
+      query += ' AND cg.status = ?';
+      params.push(status);
+    }
+
+    query += ' ORDER BY cg.created_at DESC';
+
+    const goals = db.prepare(query).all(...params);
+
+    // Calculate progress for active goals
+    for (const goal of goals) {
+      if (goal.status === 'active' && goal.target_kpi) {
+        const currentPerformance = db.prepare(`
+          SELECT AVG(${goal.target_kpi}) as current_value
+          FROM consultant_performance_daily
+          WHERE consultant_id = ?
+            AND date >= DATE('now', '-7 days')
+        `).get(consultantId);
+
+        if (currentPerformance && currentPerformance.current_value !== null) {
+          const progress = Math.min(100, Math.max(0,
+            ((currentPerformance.current_value - goal.current_value) /
+             (goal.target_value - goal.current_value)) * 100
+          ));
+
+          goal.current_progress_value = currentPerformance.current_value;
+          goal.progress_percentage = Math.round(progress);
+        }
+      }
+
+      // Parse milestones
+      goal.milestones = JSON.parse(goal.milestones || '[]');
+    }
+
+    res.json({
+      success: true,
+      data: goals
+    });
+  } catch (error) {
+    res.status(500).json({ success: false, error: error.message });
+  }
+});
+
+/**
+ * GET /api/v1/consultant-performance/analytics/real-time-metrics
+ * Get real-time performance metrics for dashboard widgets
+ */
+router.get('/analytics/real-time-metrics', async (req, res) => {
+  try {
+    const today = new Date().toISOString().split('T')[0];
+
+    // Today's performance summary
+    const todayMetrics = db.prepare(`
+      SELECT
+        COUNT(DISTINCT consultant_id) as active_consultants,
+        AVG(overall_performance_score) as avg_performance,
+        AVG(efficiency_score) as avg_efficiency,
+        AVG(quality_score) as avg_quality,
+        SUM(candidates_scheduled) as total_scheduled,
+        SUM(candidates_converted) as total_converted
+      FROM consultant_performance_daily
+      WHERE date = ?
+    `).get(today);
+
+    // Active alerts count
+    const alertCounts = db.prepare(`
+      SELECT
+        severity,
+        COUNT(*) as count
+      FROM consultant_alerts
+      WHERE status = 'active'
+      GROUP BY severity
+    `).all();
+
+    // Pending coaching recommendations
+    const pendingRecommendations = db.prepare(`
+      SELECT COUNT(*) as count
+      FROM coaching_recommendations
+      WHERE status IN ('pending', 'in_progress')
+    `).get();
+
+    // Top performers today
+    const topPerformers = db.prepare(`
+      SELECT consultant_id, overall_performance_score
+      FROM consultant_performance_daily
+      WHERE date = ?
+      ORDER BY overall_performance_score DESC
+      LIMIT 5
+    `).all(today);
+
+    // Performance distribution
+    const performanceDistribution = db.prepare(`
+      SELECT
+        CASE
+          WHEN overall_performance_score >= 90 THEN 'Excellent'
+          WHEN overall_performance_score >= 75 THEN 'Good'
+          WHEN overall_performance_score >= 60 THEN 'Average'
+          WHEN overall_performance_score >= 40 THEN 'Needs Improvement'
+          ELSE 'Critical'
+        END as performance_tier,
+        COUNT(*) as count
+      FROM consultant_performance_daily
+      WHERE date = ?
+      GROUP BY performance_tier
+    `).all(today);
+
+    res.json({
+      success: true,
+      data: {
+        summary: {
+          ...todayMetrics,
+          conversionRate: todayMetrics.total_scheduled > 0 ?
+            Math.round((todayMetrics.total_converted / todayMetrics.total_scheduled) * 100) : 0
+        },
+        alerts: {
+          bySevertiy: alertCounts,
+          total: alertCounts.reduce((sum, alert) => sum + alert.count, 0)
+        },
+        coaching: {
+          pendingRecommendations: pendingRecommendations.count
+        },
+        topPerformers,
+        performanceDistribution,
+        lastUpdated: new Date().toISOString()
+      }
+    });
+  } catch (error) {
+    res.status(500).json({ success: false, error: error.message });
+  }
+});
+
+// Helper function to calculate trend analysis
+function calculateTrendAnalysis(trends, metric) {
+  if (trends.length < 2) {
+    return { trend: 'insufficient_data', change: 0, analysis: 'Need more data points' };
+  }
+
+  const values = trends.map(t => t.value || 0);
+  const firstValue = values[0];
+  const lastValue = values[values.length - 1];
+  const change = lastValue - firstValue;
+  const percentChange = firstValue > 0 ? (change / firstValue) * 100 : 0;
+
+  let trend = 'stable';
+  if (Math.abs(percentChange) > 5) {
+    trend = percentChange > 0 ? 'improving' : 'declining';
+  }
+
+  // Calculate average and volatility
+  const average = values.reduce((sum, val) => sum + val, 0) / values.length;
+  const variance = values.reduce((sum, val) => sum + Math.pow(val - average, 2), 0) / values.length;
+  const volatility = Math.sqrt(variance);
+
+  return {
+    trend,
+    change,
+    percentChange: Math.round(percentChange * 100) / 100,
+    average: Math.round(average * 100) / 100,
+    volatility: Math.round(volatility * 100) / 100,
+    analysis: generateTrendAnalysis(trend, percentChange, volatility)
+  };
+}
+
+function generateTrendAnalysis(trend, percentChange, volatility) {
+  if (trend === 'improving') {
+    return `Performance improving by ${Math.abs(percentChange)}%. ${volatility > 10 ? 'Some volatility observed.' : 'Steady improvement.'}`;
+  } else if (trend === 'declining') {
+    return `Performance declining by ${Math.abs(percentChange)}%. ${volatility > 10 ? 'High volatility - needs attention.' : 'Consistent decline - intervention needed.'}`;
+  } else {
+    return `Performance stable with ${volatility > 10 ? 'high' : 'low'} volatility.`;
+  }
+}
 
 // Helper function to calculate performance multiplier
 function calculatePerformanceMultiplier(prequalStats, retentionAnalytics, reliabilityAnalytics) {

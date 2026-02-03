@@ -10,6 +10,19 @@ const { createLogger } = require('./utils/structured-logger');
 
 const logger = createLogger('websocket');
 
+// Lazy-loaded FOMO engine
+let fomoEngine = null;
+function getFOMOEngine() {
+  if (!fomoEngine) {
+    try {
+      fomoEngine = require('./services/fomo-engine');
+    } catch (e) {
+      console.log('FOMO engine not loaded:', e.message);
+    }
+  }
+  return fomoEngine;
+}
+
 // Lazy-loaded messaging service to avoid circular dependency
 let messagingService = null;
 function getMessaging() {
@@ -77,33 +90,42 @@ const EventTypes = {
   CHAT_MESSAGE: 'chat_message',
   CHAT_TYPING: 'typing',
   CHAT_READ: 'messages_read',
-  
+
   // Status
   STATUS_CHANGE: 'status_change',
-  
+
   // Jobs
   JOB_CREATED: 'job_created',
   JOB_UPDATED: 'job_updated',
   JOB_DELETED: 'job_deleted',
-  
+
   // Deployments
   DEPLOYMENT_CREATED: 'deployment_created',
   DEPLOYMENT_UPDATED: 'deployment_updated',
   DEPLOYMENT_STATUS_CHANGED: 'deployment_status_changed',
-  
+
   // Payments
   PAYMENT_CREATED: 'payment_created',
   PAYMENT_STATUS_CHANGED: 'payment_status_changed',
-  
+
   // Notifications
   NOTIFICATION: 'notification',
-  
+
   // Gamification
   XP_EARNED: 'xp_earned',
   LEVEL_UP: 'level_up',
   ACHIEVEMENT_UNLOCKED: 'achievement_unlocked',
   QUEST_COMPLETED: 'quest_completed',
-  
+
+  // FOMO Events
+  FOMO_TRIGGER: 'fomo_trigger',
+  FOMO_URGENCY: 'fomo_urgency',
+  FOMO_SOCIAL_PROOF: 'fomo_social_proof',
+  FOMO_SCARCITY: 'fomo_scarcity',
+  FOMO_STREAK_RISK: 'fomo_streak_risk',
+  FOMO_PEER_ACTIVITY: 'fomo_peer_activity',
+  FOMO_COMPETITIVE_PRESSURE: 'fomo_competitive_pressure',
+
   // Candidate updates
   CANDIDATE_UPDATED: 'candidate_updated',
 };
@@ -178,7 +200,7 @@ const RATE_LIMIT_WINDOW = 60000; // 1 minute
 
 // Message rate limiting
 const messageTracker = new Map();
-const MAX_MESSAGES_PER_CONNECTION = 50; // 50 messages per minute
+const MAX_MESSAGES_PER_CONNECTION = 100; // 100 messages per minute (increased for testing)
 const MESSAGE_RATE_WINDOW = 60000; // 1 minute
 
 function setupWebSocket(server) {
@@ -277,11 +299,21 @@ function setupWebSocket(server) {
         if (msgTracker.count >= MAX_MESSAGES_PER_CONNECTION) {
           logger.warn('🔌 [WS] Message rate limit exceeded', {
             key: connectionKey,
-            count: msgTracker.count
+            count: msgTracker.count,
+            limit: MAX_MESSAGES_PER_CONNECTION,
+            timeWindow: MESSAGE_RATE_WINDOW,
+            candidateId: candidateId,
+            isAdmin: isAdmin,
+            timeSinceReset: now - msgTracker.lastReset
           });
           ws.send(JSON.stringify({
             type: 'error',
-            message: 'Message rate limit exceeded. Please slow down.'
+            message: 'Message rate limit exceeded. Please slow down.',
+            details: {
+              current: msgTracker.count,
+              limit: MAX_MESSAGES_PER_CONNECTION,
+              resetIn: MESSAGE_RATE_WINDOW - (now - msgTracker.lastReset)
+            }
           }));
           return;
         }
@@ -289,6 +321,17 @@ function setupWebSocket(server) {
         msgTracker.count++;
 
         const message = JSON.parse(data);
+
+        // Enhanced logging for message processing
+        logger.info('🔌 [WS] Processing message', {
+          type: message.type,
+          candidateId: candidateId,
+          isAdmin: isAdmin,
+          messageCount: msgTracker.count,
+          limit: MAX_MESSAGES_PER_CONNECTION,
+          ip: clientIp
+        });
+
         handleMessage(ws, message, candidateId, isAdmin);
       } catch (error) {
         logger.error('WebSocket message error:', error.message);
@@ -326,15 +369,33 @@ function setupWebSocket(server) {
 
 function handleAdminConnection(ws) {
   adminClients.add(ws);
-  logger.ws(`Admin connected (total: ${adminClients.size})`);
+  logger.info(`👤 [ADMIN] Admin connected successfully`, {
+    totalAdminClients: adminClients.size,
+    connectionId: ws._socket?.remoteAddress || 'unknown'
+  });
 
   // Send list of online candidates
   const onlineCandidates = Array.from(candidateClients.keys());
-  ws.send(JSON.stringify({ type: 'online_candidates', candidates: onlineCandidates }));
+  const initialMessage = { type: 'online_candidates', candidates: onlineCandidates };
 
-  ws.on('close', () => {
+  try {
+    ws.send(JSON.stringify(initialMessage));
+    logger.debug(`👤 [ADMIN] Sent initial online_candidates list: ${onlineCandidates.length} candidates`);
+  } catch (error) {
+    logger.error(`👤 [ADMIN] Failed to send initial message to admin`, error);
+  }
+
+  ws.on('close', (code, reason) => {
     adminClients.delete(ws);
-    logger.ws(`Admin disconnected (total: ${adminClients.size})`);
+    logger.info(`👤 [ADMIN] Admin disconnected`, {
+      code,
+      reason: reason?.toString(),
+      remainingAdminClients: adminClients.size
+    });
+  });
+
+  ws.on('error', (error) => {
+    logger.error(`👤 [ADMIN] Admin WebSocket error`, error);
   });
 }
 
@@ -490,6 +551,37 @@ function handleMessage(ws, message, candidateId, isAdmin) {
       }
       break;
 
+    // FOMO Events
+    case 'get_fomo_triggers':
+      if (candidateId) {
+        handleGetFOMOTriggers(candidateId, ws);
+      }
+      break;
+
+    case 'track_activity':
+      if (candidateId && message.activityType) {
+        handleActivityTracking(candidateId, message.activityType, message.metadata || {});
+      }
+      break;
+
+    case 'view_job':
+      if (candidateId && message.jobId) {
+        handleJobView(candidateId, message.jobId);
+      }
+      break;
+
+    case 'dismiss_fomo':
+      if (candidateId && message.fomoId) {
+        handleDismissFOMO(candidateId, message.fomoId);
+      }
+      break;
+
+    case 'accept_streak_protection':
+      if (candidateId && message.protectionId) {
+        handleAcceptStreakProtection(candidateId, message.protectionId, ws);
+      }
+      break;
+
     default:
       console.log('Unknown message type:', message.type);
   }
@@ -612,6 +704,14 @@ async function sendMessageFromCandidate(candidateId, content, channel = 'app') {
   }
 
   // Notify all admins (regular notification)
+  logger.info(`🔔 [MESSAGE] Notifying admins of new message from candidate ${candidateId}`, {
+    candidateId,
+    adminClientsConnected: adminClients.size,
+    messageId: message.id,
+    content: content.substring(0, 50) + '...',
+    channel,
+    isUrgent
+  });
   broadcastToAdmins({ type: 'new_message', message, candidateId, channel, isUrgent });
 
   // Confirm to candidate (only for app channel)
@@ -632,22 +732,226 @@ async function sendMessageFromCandidate(candidateId, content, channel = 'app') {
     // ML service not loaded, skip
   }
 
-  // Enhanced AI processing with reliability mechanisms
-  processAIMessageWithReliability(candidateId, content, channel);
+  // Enhanced AI processing with Smart SLM Routing and reliability mechanisms
+  console.log(`🤖 [WS] Triggering Smart SLM routing for candidate ${candidateId}: "${content.substring(0, 50)}..."`);
+  processSmartSLMWithReliability(candidateId, content, channel).catch(error => {
+    console.error(`🤖 [WS] Smart SLM processing failed for candidate ${candidateId}:`, error.message);
+  });
 }
 
 /**
- * Enhanced AI Processing with Reliability Mechanisms
+ * Enhanced Smart SLM Processing with Worker Status Classification
  *
  * Implements:
+ * - Worker status-aware routing (pending/active/inactive)
+ * - Automatic interview scheduling for pending workers
+ * - Job-focused support for active workers
  * - Timeout handling (10-second max)
  * - Retry logic (3 attempts)
- * - AI processing status tracking
- * - Admin notifications when AI processes messages
- * - Proper SLM response routing through messaging service
+ * - Admin notifications when SLM processes messages
+ * - Proper response routing through messaging service
  * - Error logging and fallback handling
  */
+async function processSmartSLMWithReliability(candidateId, content, channel = 'app') {
+  const SLM_TIMEOUT = 10000; // 10 seconds
+  const MAX_RETRIES = 3;
+  let attempts = 0;
+
+  const processingId = `slm_${candidateId}_${Date.now()}`;
+
+  logger.info('🤖 [SMART SLM] Starting Smart SLM processing with worker status routing', {
+    candidateId,
+    processingId,
+    messageLength: content.length,
+    channel,
+    timeout: SLM_TIMEOUT,
+    maxRetries: MAX_RETRIES
+  });
+
+  // Track SLM processing status
+  const slmProcessingStatus = {
+    candidateId,
+    processingId,
+    startTime: Date.now(),
+    status: 'processing',
+    attempts: 0,
+    lastError: null,
+    channel,
+    routingType: 'smart_slm'
+  };
+
+  // Notify admins that Smart SLM processing has started
+  try {
+    broadcastToAdmins({
+      type: 'slm_processing_started',
+      candidateId,
+      processingId,
+      messageLength: content.length,
+      channel,
+      routingType: 'smart_slm_with_status',
+      timestamp: new Date().toISOString()
+    });
+  } catch (adminNotifyError) {
+    logger.warn('Failed to notify admins of Smart SLM processing start', {
+      error: adminNotifyError.message,
+      processingId
+    });
+  }
+
+  // Retry logic with timeout handling
+  while (attempts < MAX_RETRIES) {
+    attempts++;
+    slmProcessingStatus.attempts = attempts;
+
+    try {
+      logger.info(`🤖 [SMART SLM] Processing attempt ${attempts}/${MAX_RETRIES}`, {
+        candidateId,
+        processingId,
+        attempt: attempts
+      });
+
+      // Load Smart SLM Router
+      let smartRouter;
+      try {
+        const SmartSLMRouter = require('./utils/smart-slm-router');
+        smartRouter = new SmartSLMRouter();
+      } catch (serviceError) {
+        throw new Error(`Failed to load Smart SLM Router: ${serviceError.message}`);
+      }
+
+      // Process with timeout wrapper using Smart SLM Router
+      const result = await Promise.race([
+        smartRouter.routeSLMResponse(candidateId, content, { channel }),
+        new Promise((_, reject) =>
+          setTimeout(() => reject(new Error('Smart SLM processing timeout')), SLM_TIMEOUT)
+        )
+      ]);
+
+      // Success! Update status and notify admins
+      slmProcessingStatus.status = 'completed';
+      slmProcessingStatus.completedAt = Date.now();
+      slmProcessingStatus.processingTime = slmProcessingStatus.completedAt - slmProcessingStatus.startTime;
+
+      logger.info('🤖 [SMART SLM] Smart SLM processing completed successfully', {
+        candidateId,
+        processingId,
+        attempts,
+        processingTime: `${slmProcessingStatus.processingTime}ms`,
+        workerStatus: result.workerStatus,
+        responseType: result.type,
+        flow: result.flow
+      });
+
+      // Notify admins of successful completion with results
+      try {
+        broadcastToAdmins({
+          type: 'slm_processing_completed',
+          candidateId,
+          processingId,
+          attempts,
+          processingTime: slmProcessingStatus.processingTime,
+          workerStatus: result.workerStatus,
+          responseType: result.type,
+          flow: result.flow,
+          success: true,
+          schedulingTriggered: result.schedulingTriggered || false,
+          channel,
+          timestamp: new Date().toISOString()
+        });
+      } catch (adminNotifyError) {
+        logger.warn('Failed to notify admins of Smart SLM processing completion', {
+          error: adminNotifyError.message,
+          processingId
+        });
+      }
+
+      // Handle Smart SLM response routing
+      if (result) {
+        await handleSmartSLMResponseWithReliability(candidateId, result, channel, processingId);
+      } else {
+        logger.info(`🤖 [SMART SLM] No response generated for candidate ${candidateId}`);
+      }
+
+      return result;
+
+    } catch (error) {
+      slmProcessingStatus.lastError = error.message;
+
+      logger.warn(`🤖 [SMART SLM] Smart SLM processing attempt ${attempts} failed`, {
+        candidateId,
+        processingId,
+        attempt: attempts,
+        error: error.message,
+        willRetry: attempts < MAX_RETRIES
+      });
+
+      // If this is the last attempt, handle final failure
+      if (attempts >= MAX_RETRIES) {
+        slmProcessingStatus.status = 'failed';
+        slmProcessingStatus.failedAt = Date.now();
+
+        logger.error('🤖 [SMART SLM] Smart SLM processing failed after all retry attempts', {
+          candidateId,
+          processingId,
+          totalAttempts: attempts,
+          totalTime: `${slmProcessingStatus.failedAt - slmProcessingStatus.startTime}ms`,
+          finalError: error.message
+        });
+
+        // Notify admins of final failure
+        try {
+          broadcastToAdmins({
+            type: 'slm_processing_failed',
+            candidateId,
+            processingId,
+            attempts,
+            totalTime: slmProcessingStatus.failedAt - slmProcessingStatus.startTime,
+            error: error.message,
+            requiresManualReview: true,
+            routingType: 'smart_slm',
+            channel,
+            timestamp: new Date().toISOString()
+          });
+        } catch (adminNotifyError) {
+          logger.error('Failed to notify admins of Smart SLM processing failure', {
+            error: adminNotifyError.message,
+            processingId
+          });
+        }
+
+        // Execute fallback handling
+        await handleSmartSLMProcessingFallback(candidateId, content, channel, processingId, error);
+
+        return null;
+      }
+
+      // Wait before retry (exponential backoff)
+      const delayMs = Math.min(1000 * Math.pow(2, attempts - 1), 5000);
+      logger.info(`🤖 [SMART SLM] Waiting ${delayMs}ms before retry`, {
+        candidateId,
+        processingId,
+        attempt: attempts,
+        nextAttempt: attempts + 1
+      });
+
+      await new Promise(resolve => setTimeout(resolve, delayMs));
+    }
+  }
+}
+
+/**
+ * Legacy AI Processing (kept for backward compatibility)
+ * This function now routes to the new Smart SLM system
+ */
 async function processAIMessageWithReliability(candidateId, content, channel = 'app') {
+  logger.info('🤖 [LEGACY] Routing legacy AI call to Smart SLM system', {
+    candidateId,
+    messageLength: content.length,
+    channel
+  });
+
+  // Route to Smart SLM system
+  return await processSmartSLMWithReliability(candidateId, content, channel);
   const AI_TIMEOUT = 10000; // 10 seconds
   const MAX_RETRIES = 3;
   let attempts = 0;
@@ -831,7 +1135,113 @@ async function processAIMessageWithReliability(candidateId, content, channel = '
 }
 
 /**
- * Handle AI response with proper routing and reliability
+ * Handle Smart SLM response with proper routing and reliability
+ */
+async function handleSmartSLMResponseWithReliability(candidateId, slmResult, channel, processingId) {
+  try {
+    logger.info('🤖 [SMART SLM] Handling Smart SLM response routing', {
+      candidateId,
+      processingId,
+      responseType: slmResult.type,
+      flow: slmResult.flow,
+      workerStatus: slmResult.workerStatus,
+      channel
+    });
+
+    // Route Smart SLM responses through messaging service
+    if (slmResult.content && !slmResult.error) {
+      logger.info('🤖 [SMART SLM] Routing Smart SLM response through messaging service', {
+        candidateId,
+        processingId,
+        responseType: slmResult.type,
+        workerStatus: slmResult.workerStatus,
+        schedulingTriggered: slmResult.schedulingTriggered || false
+      });
+
+      // Send response through messaging service
+      const messaging = getMessaging();
+      if (messaging) {
+        try {
+          await messaging.sendToCandidate(candidateId, slmResult.content, {
+            channel: channel,
+            aiGenerated: true,
+            slmGenerated: true,
+            workerStatus: slmResult.workerStatus,
+            responseFlow: slmResult.flow,
+            processingId,
+            metadata: slmResult.metadata || {}
+          });
+
+          logger.info('🤖 [SMART SLM] Smart SLM response sent via messaging service', {
+            candidateId,
+            processingId,
+            channel,
+            responseType: slmResult.type,
+            workerStatus: slmResult.workerStatus
+          });
+        } catch (messagingError) {
+          logger.error('🤖 [SMART SLM] Failed to send Smart SLM response via messaging service', {
+            candidateId,
+            processingId,
+            error: messagingError.message
+          });
+
+          // Fallback to direct WebSocket
+          await sendDirectSmartSLMMessage(candidateId, slmResult, channel, processingId);
+        }
+      } else {
+        // Direct WebSocket fallback
+        await sendDirectSmartSLMMessage(candidateId, slmResult, channel, processingId);
+      }
+
+      // Verify the message was properly routed
+      await verifySmartSLMMessageRouting(candidateId, slmResult, channel, processingId);
+
+    } else if (slmResult.error) {
+      logger.warn('🤖 [SMART SLM] Smart SLM response contains error - routing to error handler', {
+        candidateId,
+        processingId,
+        error: slmResult.errorMessage || 'Unknown error'
+      });
+
+      // Handle error response through fallback system
+      await handleSmartSLMProcessingFallback(candidateId, '', channel, processingId, new Error(slmResult.errorMessage || 'Smart SLM error'));
+
+    } else {
+      logger.info('🤖 [SMART SLM] No content to route - Smart SLM response handled internally', {
+        candidateId,
+        processingId,
+        responseType: slmResult.type
+      });
+    }
+
+  } catch (error) {
+    logger.error('🤖 [SMART SLM] Failed to handle Smart SLM response routing', {
+      candidateId,
+      processingId,
+      error: error.message
+    });
+
+    // Notify admins of routing failure
+    try {
+      broadcastToAdmins({
+        type: 'slm_response_routing_failed',
+        candidateId,
+        processingId,
+        error: error.message,
+        requiresManualReview: true,
+        timestamp: new Date().toISOString()
+      });
+    } catch (adminNotifyError) {
+      logger.error('Failed to notify admins of Smart SLM routing failure', {
+        error: adminNotifyError.message
+      });
+    }
+  }
+}
+
+/**
+ * Handle AI response with proper routing and reliability (Legacy)
  */
 async function handleAIResponseWithReliability(candidateId, aiResult, channel, processingId) {
   try {
@@ -901,7 +1311,260 @@ async function handleAIResponseWithReliability(candidateId, aiResult, channel, p
 }
 
 /**
- * Verify that AI/SLM responses are properly routed through messaging service
+ * Send Smart SLM message directly via WebSocket
+ */
+async function sendDirectSmartSLMMessage(candidateId, slmResult, channel, processingId) {
+  try {
+    if (channel === 'app') {
+      const clientWs = candidateClients.get(candidateId);
+      if (clientWs?.readyState === WebSocket.OPEN) {
+        const slmMessage = {
+          id: Date.now(),
+          candidate_id: candidateId,
+          sender: 'admin',
+          content: slmResult.content,
+          channel: channel,
+          read: 0,
+          created_at: new Date().toISOString(),
+          slm_generated: true,
+          worker_status: slmResult.workerStatus,
+          response_type: slmResult.type,
+          flow: slmResult.flow,
+          processing_id: processingId
+        };
+
+        clientWs.send(JSON.stringify({
+          type: EventTypes.CHAT_MESSAGE,
+          message: slmMessage,
+          slm_context: {
+            workerStatus: slmResult.workerStatus,
+            responseType: slmResult.type,
+            flow: slmResult.flow,
+            schedulingTriggered: slmResult.schedulingTriggered || false
+          }
+        }));
+
+        logger.info('🤖 [SMART SLM] Direct Smart SLM message sent via WebSocket', {
+          candidateId,
+          processingId,
+          channel,
+          workerStatus: slmResult.workerStatus,
+          responseType: slmResult.type
+        });
+      } else {
+        logger.warn('🤖 [SMART SLM] Candidate not connected for direct Smart SLM message', {
+          candidateId,
+          processingId,
+          isConnected: candidateClients.has(candidateId)
+        });
+      }
+    }
+  } catch (error) {
+    logger.error('🤖 [SMART SLM] Direct Smart SLM message failed', {
+      candidateId,
+      processingId,
+      error: error.message
+    });
+  }
+}
+
+/**
+ * Verify that Smart SLM responses are properly routed
+ */
+async function verifySmartSLMMessageRouting(candidateId, slmResult, channel, processingId) {
+  try {
+    // Check if response contains special SLM routing context
+    if (slmResult.schedulingTriggered || slmResult.workerStatus === 'pending') {
+      logger.info('🤖 [SMART SLM] Verifying Smart SLM response routing for pending worker', {
+        candidateId,
+        processingId,
+        workerStatus: slmResult.workerStatus,
+        schedulingTriggered: slmResult.schedulingTriggered,
+        channel
+      });
+
+      // Ensure interview scheduling responses are properly handled
+      const messaging = getMessaging();
+      if (messaging && slmResult.schedulingTriggered) {
+        logger.info('🤖 [SMART SLM] Smart SLM scheduling response routing verified', {
+          candidateId,
+          processingId,
+          workerStatus: slmResult.workerStatus,
+          messagingServiceAvailable: true
+        });
+      } else if (slmResult.schedulingTriggered) {
+        logger.warn('🤖 [SMART SLM] Messaging service unavailable for Smart SLM scheduling routing', {
+          candidateId,
+          processingId,
+          workerStatus: slmResult.workerStatus
+        });
+      }
+    }
+
+  } catch (error) {
+    logger.error('🤖 [SMART SLM] Smart SLM message routing verification failed', {
+      candidateId,
+      processingId,
+      error: error.message
+    });
+  }
+}
+
+/**
+ * Handle Smart SLM processing fallback when all retries fail
+ */
+async function handleSmartSLMProcessingFallback(candidateId, content, channel, processingId, lastError) {
+  try {
+    logger.info('🤖 [SMART SLM] Executing Smart SLM processing fallback', {
+      candidateId,
+      processingId,
+      channel,
+      lastError: lastError.message
+    });
+
+    // Get candidate's worker status to provide appropriate fallback
+    let workerStatus = 'unknown';
+    try {
+      const WorkerStatusClassifier = require('./utils/worker-status-classifier');
+      const classifier = new WorkerStatusClassifier();
+      const routingInfo = await classifier.getSLMRoutingInfo(candidateId);
+      workerStatus = routingInfo.workerStatus;
+    } catch (e) {
+      logger.warn('Could not determine worker status for fallback', {
+        candidateId,
+        error: e.message
+      });
+    }
+
+    // Create status-appropriate fallback response
+    let fallbackResponse;
+    switch (workerStatus) {
+      case 'pending':
+        fallbackResponse = "I'm experiencing technical difficulties, but I'm here to help with your WorkLink onboarding! " +
+                          "Our team will contact you shortly about your verification interview. 📅";
+        break;
+      case 'active':
+        fallbackResponse = "I'm having technical issues right now, but don't worry! " +
+                          "You can still browse jobs, check your earnings, or contact our support team directly. 💪";
+        break;
+      case 'inactive':
+        fallbackResponse = "Technical difficulties on my end, but great to hear from you! " +
+                          "Our team will help you get back to active status shortly. 🎉";
+        break;
+      default:
+        fallbackResponse = "I'm experiencing technical difficulties processing your message right now. " +
+                          "Our admin team has been notified and will get back to you shortly! 🙏";
+    }
+
+    // Send fallback through messaging service if available
+    const messaging = getMessaging();
+    if (messaging) {
+      try {
+        await messaging.sendToCandidate(candidateId, fallbackResponse, {
+          channel: channel,
+          aiGenerated: false,
+          slmGenerated: true,
+          fallback: true,
+          workerStatus,
+          processingId
+        });
+
+        logger.info('🤖 [SMART SLM] Smart SLM fallback response sent via messaging service', {
+          candidateId,
+          processingId,
+          channel,
+          workerStatus
+        });
+      } catch (messagingError) {
+        logger.error('🤖 [SMART SLM] Failed to send Smart SLM fallback via messaging service', {
+          candidateId,
+          processingId,
+          error: messagingError.message
+        });
+
+        // Fallback to direct WebSocket
+        await sendDirectSmartSLMFallbackMessage(candidateId, fallbackResponse, channel, processingId, workerStatus);
+      }
+    } else {
+      // Direct WebSocket fallback
+      await sendDirectSmartSLMFallbackMessage(candidateId, fallbackResponse, channel, processingId, workerStatus);
+    }
+
+    // Log the fallback action for monitoring
+    logger.warn('🤖 [SMART SLM] Smart SLM processing fallback completed', {
+      candidateId,
+      processingId,
+      fallbackType: 'status_aware_response',
+      workerStatus,
+      channel
+    });
+
+  } catch (fallbackError) {
+    logger.error('🤖 [SMART SLM] Smart SLM fallback handling failed', {
+      candidateId,
+      processingId,
+      error: fallbackError.message
+    });
+  }
+}
+
+/**
+ * Send Smart SLM fallback message directly via WebSocket
+ */
+async function sendDirectSmartSLMFallbackMessage(candidateId, content, channel, processingId, workerStatus) {
+  try {
+    if (channel === 'app') {
+      const clientWs = candidateClients.get(candidateId);
+      if (clientWs?.readyState === WebSocket.OPEN) {
+        const fallbackMessage = {
+          id: Date.now(),
+          candidate_id: candidateId,
+          sender: 'admin',
+          content: content,
+          channel: channel,
+          read: 0,
+          created_at: new Date().toISOString(),
+          slm_generated: true,
+          fallback: true,
+          worker_status: workerStatus,
+          processing_id: processingId
+        };
+
+        clientWs.send(JSON.stringify({
+          type: EventTypes.CHAT_MESSAGE,
+          message: fallbackMessage,
+          slm_context: {
+            workerStatus: workerStatus,
+            fallback: true,
+            processingId
+          }
+        }));
+
+        logger.info('🤖 [SMART SLM] Direct Smart SLM fallback message sent via WebSocket', {
+          candidateId,
+          processingId,
+          channel,
+          workerStatus
+        });
+      } else {
+        logger.warn('🤖 [SMART SLM] Candidate not connected for direct Smart SLM fallback', {
+          candidateId,
+          processingId,
+          isConnected: candidateClients.has(candidateId)
+        });
+      }
+    }
+  } catch (error) {
+    logger.error('🤖 [SMART SLM] Direct Smart SLM fallback message failed', {
+      candidateId,
+      processingId,
+      error: error.message
+    });
+  }
+}
+
+/**
+ * Verify that AI/SLM responses are properly routed through messaging service (Legacy)
  */
 async function verifyMessageRouting(candidateId, response, channel, processingId) {
   try {
@@ -1501,16 +2164,38 @@ async function handleGetQuickReplies(candidateId, ws) {
 // ==================== BROADCAST FUNCTIONS ====================
 
 function broadcastToAdmins(data) {
-  console.log(`📤 Broadcasting to ${adminClients.size} admins:`, data.type);
+  logger.info(`📤 [BROADCAST] Broadcasting to ${adminClients.size} admin clients`, {
+    eventType: data.type,
+    candidateId: data.candidateId,
+    totalAdminClients: adminClients.size
+  });
+
   const message = JSON.stringify(data);
   let sent = 0;
-  adminClients.forEach((client) => {
-    if (client.readyState === WebSocket.OPEN) {
-      client.send(message);
-      sent++;
+  let failed = 0;
+
+  adminClients.forEach((client, index) => {
+    try {
+      if (client.readyState === WebSocket.OPEN) {
+        client.send(message);
+        sent++;
+        logger.debug(`   ✅ Admin client ${index + 1}: Message sent successfully`);
+      } else {
+        failed++;
+        logger.warn(`   ❌ Admin client ${index + 1}: Connection not open (readyState: ${client.readyState})`);
+      }
+    } catch (error) {
+      failed++;
+      logger.error(`   ❌ Admin client ${index + 1}: Failed to send message`, error);
     }
   });
-  console.log(`   ✅ Sent to ${sent} admin clients`);
+
+  logger.info(`📤 [BROADCAST] Broadcast complete: ${sent} sent, ${failed} failed`, {
+    eventType: data.type,
+    sent,
+    failed,
+    totalClients: adminClients.size
+  });
 }
 
 function broadcastToCandidate(candidateId, data) {
@@ -1671,19 +2356,352 @@ function getConnectionStats() {
   };
 }
 
-module.exports = { 
+// ==================== FOMO EVENT HANDLERS ====================
+
+async function handleGetFOMOTriggers(candidateId, ws) {
+  try {
+    const fomo = getFOMOEngine();
+    if (!fomo) {
+      ws.send(JSON.stringify({
+        type: 'fomo_triggers',
+        triggers: [],
+        error: 'FOMO engine not available'
+      }));
+      return;
+    }
+
+    const triggers = await fomo.getFOMOTriggers(candidateId, 5);
+
+    ws.send(JSON.stringify({
+      type: 'fomo_triggers',
+      triggers: triggers,
+      timestamp: new Date().toISOString()
+    }));
+
+    logger.debug('Sent FOMO triggers', {
+      candidateId,
+      triggerCount: triggers.length
+    });
+  } catch (error) {
+    logger.error('Failed to get FOMO triggers:', error);
+    ws.send(JSON.stringify({
+      type: 'fomo_triggers',
+      triggers: [],
+      error: error.message
+    }));
+  }
+}
+
+function handleActivityTracking(candidateId, activityType, metadata) {
+  try {
+    const fomo = getFOMOEngine();
+    if (!fomo) return;
+
+    // Enhance metadata with candidate info
+    const candidate = db.prepare(`
+      SELECT location_area, level,
+             CASE
+               WHEN level >= 100 THEN 'mythic'
+               WHEN level >= 75 THEN 'diamond'
+               WHEN level >= 50 THEN 'platinum'
+               WHEN level >= 25 THEN 'gold'
+               WHEN level >= 10 THEN 'silver'
+               ELSE 'bronze'
+             END as tier
+      FROM candidates
+      WHERE id = ?
+    `).get(candidateId);
+
+    if (candidate) {
+      metadata.locationArea = candidate.location_area;
+      metadata.tier = candidate.tier;
+      metadata.level = candidate.level;
+    }
+
+    // Record activity for FOMO processing
+    fomo.recordActivity(candidateId, activityType, metadata);
+
+    // Broadcast real-time social proof to relevant candidates
+    broadcastSocialProofActivity(candidateId, activityType, metadata);
+
+    logger.debug('Tracked FOMO activity', {
+      candidateId,
+      activityType,
+      metadata
+    });
+  } catch (error) {
+    logger.error('Failed to track activity:', error);
+  }
+}
+
+function handleJobView(candidateId, jobId) {
+  try {
+    // Track job view activity
+    handleActivityTracking(candidateId, 'job_view', { jobId });
+
+    // Create immediate competitive pressure
+    const fomo = getFOMOEngine();
+    if (fomo) {
+      // Get recent viewers count (anonymized)
+      const recentViewers = getRecentJobViewers(jobId, 30); // last 30 minutes
+
+      if (recentViewers.count > 1) {
+        // Send social proof about others viewing this job
+        const clientWs = candidateClients.get(candidateId);
+        if (clientWs?.readyState === WebSocket.OPEN) {
+          clientWs.send(JSON.stringify({
+            type: EventTypes.FOMO_SOCIAL_PROOF,
+            message: `${recentViewers.count} other workers are viewing this job`,
+            jobId: jobId,
+            socialProofType: 'concurrent_viewers',
+            urgency: recentViewers.count > 3 ? 'high' : 'medium'
+          }));
+        }
+      }
+    }
+
+    logger.debug('Job view tracked', { candidateId, jobId });
+  } catch (error) {
+    logger.error('Failed to handle job view:', error);
+  }
+}
+
+function getRecentJobViewers(jobId, minutesAgo) {
+  try {
+    const result = db.prepare(`
+      SELECT COUNT(DISTINCT candidate_id) as count
+      FROM fomo_social_proof
+      WHERE job_id = ?
+        AND activity_type = 'job_view'
+        AND time_window_end > datetime('now', '-' || ? || ' minutes')
+    `).get(jobId, minutesAgo);
+
+    return { count: result.count || 0 };
+  } catch (error) {
+    logger.error('Failed to get recent job viewers:', error);
+    return { count: 0 };
+  }
+}
+
+function handleDismissFOMO(candidateId, fomoId) {
+  try {
+    // Mark FOMO event as dismissed
+    db.prepare(`
+      UPDATE fomo_events
+      SET trigger_sent = TRUE, expires_at = datetime('now')
+      WHERE id = ? AND candidate_id = ?
+    `).run(fomoId, candidateId);
+
+    logger.debug('FOMO event dismissed', { candidateId, fomoId });
+  } catch (error) {
+    logger.error('Failed to dismiss FOMO event:', error);
+  }
+}
+
+async function handleAcceptStreakProtection(candidateId, protectionId, ws) {
+  try {
+    // Mark protection as accepted
+    db.prepare(`
+      UPDATE fomo_streak_protection
+      SET protection_accepted = TRUE
+      WHERE id = ? AND candidate_id = ?
+    `).run(protectionId, candidateId);
+
+    // Add streak freeze token or similar protection logic
+    // This would integrate with the gamification system
+
+    ws.send(JSON.stringify({
+      type: 'streak_protection_activated',
+      protectionId: protectionId,
+      message: 'Streak protection activated! Your streak is safe for 24 hours.',
+      success: true
+    }));
+
+    logger.debug('Streak protection accepted', { candidateId, protectionId });
+  } catch (error) {
+    logger.error('Failed to accept streak protection:', error);
+    ws.send(JSON.stringify({
+      type: 'streak_protection_activated',
+      success: false,
+      error: error.message
+    }));
+  }
+}
+
+function broadcastSocialProofActivity(candidateId, activityType, metadata) {
+  try {
+    // Don't broadcast low-impact activities
+    const impactfulActivities = ['job_application', 'level_up', 'achievement_unlocked'];
+    if (!impactfulActivities.includes(activityType)) return;
+
+    // Get candidates in similar context for targeted social proof
+    const relevantCandidates = getRelevantCandidatesForSocialProof(metadata);
+
+    relevantCandidates.forEach(targetCandidate => {
+      if (targetCandidate.id === candidateId) return; // Don't notify self
+
+      const clientWs = candidateClients.get(targetCandidate.id);
+      if (clientWs?.readyState === WebSocket.OPEN) {
+        const socialProofMessage = generateAnonymizedSocialProof(activityType, metadata);
+
+        clientWs.send(JSON.stringify({
+          type: EventTypes.FOMO_PEER_ACTIVITY,
+          message: socialProofMessage,
+          activityType: activityType,
+          locationMatch: targetCandidate.location_area === metadata.locationArea,
+          tierMatch: targetCandidate.tier === metadata.tier,
+          urgency: calculateSocialProofUrgency(activityType, metadata)
+        }));
+      }
+    });
+
+    logger.debug('Broadcasted social proof activity', {
+      candidateId,
+      activityType,
+      targetCount: relevantCandidates.length
+    });
+  } catch (error) {
+    logger.error('Failed to broadcast social proof activity:', error);
+  }
+}
+
+function getRelevantCandidatesForSocialProof(metadata) {
+  try {
+    // Get candidates in same area and similar tier
+    const candidates = db.prepare(`
+      SELECT id, location_area,
+             CASE
+               WHEN level >= 100 THEN 'mythic'
+               WHEN level >= 75 THEN 'diamond'
+               WHEN level >= 50 THEN 'platinum'
+               WHEN level >= 25 THEN 'gold'
+               WHEN level >= 10 THEN 'silver'
+               ELSE 'bronze'
+             END as tier
+      FROM candidates
+      WHERE status = 'active'
+        AND (
+          location_area = ? OR
+          (CASE
+             WHEN level >= 100 THEN 'mythic'
+             WHEN level >= 75 THEN 'diamond'
+             WHEN level >= 50 THEN 'platinum'
+             WHEN level >= 25 THEN 'gold'
+             WHEN level >= 10 THEN 'silver'
+             ELSE 'bronze'
+           END) = ?
+        )
+      LIMIT 20
+    `).all(metadata.locationArea || '', metadata.tier || '');
+
+    // Only return online candidates for real-time impact
+    return candidates.filter(candidate => candidateClients.has(candidate.id));
+  } catch (error) {
+    logger.error('Failed to get relevant candidates for social proof:', error);
+    return [];
+  }
+}
+
+function generateAnonymizedSocialProof(activityType, metadata) {
+  const messages = {
+    job_application: [
+      `Someone in your area just applied to a job!`,
+      `A worker at your level just grabbed an opportunity`,
+      `Another ${metadata.tier} worker just applied nearby`
+    ],
+    level_up: [
+      `A peer just leveled up! Don't get left behind`,
+      `Someone in ${metadata.locationArea} just achieved a new level`,
+      `Another ${metadata.tier} worker just advanced their career`
+    ],
+    achievement_unlocked: [
+      `A worker near you just unlocked an achievement`,
+      `Someone just earned a new badge! Your turn?`,
+      `Achievement unlocked nearby - keep pushing!`
+    ]
+  };
+
+  const messageOptions = messages[activityType] || [`Activity: ${activityType}`];
+  return messageOptions[Math.floor(Math.random() * messageOptions.length)];
+}
+
+function calculateSocialProofUrgency(activityType, metadata) {
+  const urgencyMap = {
+    job_application: 'high',
+    level_up: 'medium',
+    achievement_unlocked: 'medium'
+  };
+
+  return urgencyMap[activityType] || 'low';
+}
+
+// ==================== FOMO NOTIFICATION HELPERS ====================
+
+function notifyFOMOEvent(candidateId, fomoEvent) {
+  broadcastToCandidate(candidateId, {
+    type: EventTypes.FOMO_TRIGGER,
+    event: fomoEvent,
+    timestamp: new Date().toISOString()
+  });
+}
+
+function notifyUrgencyAlert(candidateId, urgencyData) {
+  broadcastToCandidate(candidateId, {
+    type: EventTypes.FOMO_URGENCY,
+    alert: urgencyData,
+    timestamp: new Date().toISOString()
+  });
+}
+
+function notifyScarcityAlert(candidateId, scarcityData) {
+  broadcastToCandidate(candidateId, {
+    type: EventTypes.FOMO_SCARCITY,
+    alert: scarcityData,
+    timestamp: new Date().toISOString()
+  });
+}
+
+function notifyStreakRisk(candidateId, streakData) {
+  broadcastToCandidate(candidateId, {
+    type: EventTypes.FOMO_STREAK_RISK,
+    risk: streakData,
+    timestamp: new Date().toISOString()
+  });
+
+  // Also create a persistent notification
+  createNotification(
+    candidateId,
+    'streak_risk',
+    '🔥 Streak Alert!',
+    `Don't lose your ${streakData.streakDays}-day streak!`,
+    {
+      streakDays: streakData.streakDays,
+      hoursRemaining: streakData.hoursRemaining
+    }
+  );
+}
+
+function notifyCompetitivePressure(candidateId, competitionData) {
+  broadcastToCandidate(candidateId, {
+    type: EventTypes.FOMO_COMPETITIVE_PRESSURE,
+    competition: competitionData,
+    timestamp: new Date().toISOString()
+  });
+}
+
+module.exports = {
   setupWebSocket,
   EventTypes,
-  
+
   // Notification creators
   createNotification,
-  
+
   // Broadcast functions for API routes
   broadcastToAdmins,
   broadcastToCandidate,
   broadcastToCandidates,
   broadcastToAll,
-  
+
   // Specific notifiers
   notifyJobCreated,
   notifyJobUpdated,
@@ -1694,7 +2712,14 @@ module.exports = {
   notifyLevelUp,
   notifyAchievementUnlocked,
   notifyCandidateUpdated,
-  
+
+  // FOMO notifiers
+  notifyFOMOEvent,
+  notifyUrgencyAlert,
+  notifyScarcityAlert,
+  notifyStreakRisk,
+  notifyCompetitivePressure,
+
   // Helpers
   isCandidateOnline,
   getOnlineCandidates,

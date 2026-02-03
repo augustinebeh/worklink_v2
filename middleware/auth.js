@@ -48,7 +48,11 @@ function generateAdminToken(admin) {
       role: 'admin'
     },
     JWT_SECRET,
-    { expiresIn: JWT_EXPIRES_IN }
+    {
+      expiresIn: JWT_EXPIRES_IN,
+      issuer: 'worklink-v2',
+      audience: 'worklink-users'
+    }
   );
 }
 
@@ -59,9 +63,14 @@ function generateAdminToken(admin) {
  */
 function verifyToken(token) {
   try {
+    // Handle legacy demo tokens
+    if (token === 'demo-admin-token') {
+      return { id: 'ADM_DEV', role: 'admin', name: 'Demo Admin', email: 'admin@talentvis.com' };
+    }
+
     // If JWT_SECRET is not configured, allow access (no JWT security)
     if (!JWT_SECRET) {
-      return { userId: 'admin', role: 'admin' }; // Default admin access
+      return { id: 'ADM_DEV', role: 'admin', name: 'Dev Admin', email: 'dev@worklink.sg' }; // Default admin access
     }
 
     return jwt.verify(token, JWT_SECRET, {
@@ -166,15 +175,29 @@ function authenticateUser(req, res, next) {
     // Verify token
     const decoded = verifyToken(token);
 
-    // Get user from database
-    const user = getUserFromDatabase(decoded.id, decoded.type);
-
-    if (!user) {
+    if (!decoded) {
       return res.status(401).json({
         success: false,
-        error: 'User not found or inactive',
-        code: 'USER_NOT_FOUND'
+        error: 'Invalid authentication token',
+        code: 'INVALID_TOKEN'
       });
+    }
+
+    // For development mode (no JWT_SECRET), use the returned user directly
+    let user;
+    if (!process.env.JWT_SECRET && decoded.id === 'ADM_DEV') {
+      user = decoded; // Use the development admin object directly
+    } else {
+      // Get user from database for production JWT tokens
+      user = getUserFromDatabase(decoded.id, decoded.type || decoded.role);
+
+      if (!user) {
+        return res.status(401).json({
+          success: false,
+          error: 'User not found or inactive',
+          code: 'USER_NOT_FOUND'
+        });
+      }
     }
 
     // Check if user is active

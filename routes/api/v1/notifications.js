@@ -730,4 +730,69 @@ async function recoverStreak(candidateId) {
   return transaction();
 }
 
+// ===== PWA COMPATIBILITY ROUTES =====
+// These routes match what the PWA expects for notifications
+
+// Get candidate notifications (PWA compatibility)
+router.get('/', (req, res) => {
+  try {
+    const { candidate_id, limit = 50 } = req.query;
+
+    if (!candidate_id) {
+      return res.status(400).json({
+        success: false,
+        error: 'candidate_id query parameter is required'
+      });
+    }
+
+    const notifications = db.prepare(`
+      SELECT * FROM notifications
+      WHERE candidate_id = ?
+      ORDER BY created_at DESC
+      LIMIT ?
+    `).all(candidate_id, parseInt(limit));
+
+    res.json({ success: true, data: notifications });
+  } catch (error) {
+    res.status(500).json({ success: false, error: error.message });
+  }
+});
+
+// Mark notification as read (PWA compatibility)
+router.post('/:id/read', (req, res) => {
+  try {
+    db.prepare(`
+      UPDATE notifications SET read = 1
+      WHERE id = ?
+    `).run(req.params.id);
+
+    res.json({ success: true });
+  } catch (error) {
+    res.status(500).json({ success: false, error: error.message });
+  }
+});
+
+// Mark all notifications as read (PWA compatibility)
+router.post('/read-all', (req, res) => {
+  try {
+    const { candidate_id } = req.query;
+
+    if (!candidate_id) {
+      return res.status(400).json({
+        success: false,
+        error: 'candidate_id query parameter is required'
+      });
+    }
+
+    db.prepare(`
+      UPDATE notifications SET read = 1
+      WHERE candidate_id = ? AND read = 0
+    `).run(candidate_id);
+
+    res.json({ success: true });
+  } catch (error) {
+    res.status(500).json({ success: false, error: error.message });
+  }
+});
+
 module.exports = router;

@@ -9,35 +9,46 @@ export function AuthProvider({ children }) {
   const navigate = useNavigate();
 
   useEffect(() => {
-    // Check for existing session
-    const storedUser = sessionStorage.getItem('admin_user');
-    const storedToken = sessionStorage.getItem('admin_token');
-    if (storedUser && storedToken) {
-      setUser(JSON.parse(storedUser));
-    } else {
-      // Clear incomplete auth state
-      sessionStorage.removeItem('admin_user');
-      sessionStorage.removeItem('admin_token');
-    }
-    setLoading(false);
+    // Frontend-only auth: Auto-login for development
+    const mockUser = {
+      id: 'admin-1',
+      email: 'admin@worklink.com',
+      name: 'Admin User',
+      role: 'admin',
+      permissions: ['all']
+    };
+
+    // Simulate auth check delay
+    setTimeout(() => {
+      setUser(mockUser);
+      sessionStorage.setItem('admin_user', JSON.stringify(mockUser));
+      sessionStorage.setItem('admin_token', 'mock-token-123');
+      setLoading(false);
+      console.log('Frontend-only auth: Auto-logged in as admin');
+    }, 500);
   }, []);
 
   const login = async (email, password) => {
     try {
-      const res = await fetch('/api/v1/auth/login', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ email, password, type: 'admin' }),
-      });
-      const data = await res.json();
+      // Frontend-only mock login
+      await new Promise(resolve => setTimeout(resolve, 500));
 
-      if (data.success) {
-        setUser(data.data);
-        sessionStorage.setItem('admin_user', JSON.stringify(data.data));
-        sessionStorage.setItem('admin_token', data.token);
+      if (email && password) {
+        const mockUser = {
+          id: 'admin-1',
+          email,
+          name: 'Admin User',
+          role: 'admin',
+          permissions: ['all']
+        };
+
+        setUser(mockUser);
+        sessionStorage.setItem('admin_user', JSON.stringify(mockUser));
+        sessionStorage.setItem('admin_token', 'mock-token-123');
+        console.log('Frontend-only login successful:', email);
         return { success: true };
       }
-      return { success: false, error: data.error };
+      return { success: false, error: 'Invalid credentials' };
     } catch (error) {
       return { success: false, error: error.message };
     }

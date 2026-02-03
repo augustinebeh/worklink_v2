@@ -125,7 +125,6 @@ class RealDataAccessLayer {
           online_status,
           level,
           xp,
-          profile_completion_percentage,
           preferred_contact,
           telegram_chat_id
         FROM candidates
@@ -216,7 +215,7 @@ class RealDataAccessLayer {
 
       // Recent payment history
       const recentPayments = db.prepare(`
-        SELECT id, amount, total_amount, status, payment_date, created_at
+        SELECT id, base_amount, incentive_amount, total_amount, status, paid_at, created_at
         FROM payments
         WHERE candidate_id = ?
         ORDER BY created_at DESC
@@ -432,10 +431,10 @@ class RealDataAccessLayer {
    */
   async getActivityData(candidateId) {
     try {
-      // Recent activity log
+      // Recent activity log (using notifications as activity proxy)
       const recentActivity = db.prepare(`
-        SELECT activity_type, description, created_at
-        FROM candidate_activity_log
+        SELECT type as activity_type, title as description, created_at
+        FROM notifications
         WHERE candidate_id = ?
         ORDER BY created_at DESC
         LIMIT 10
@@ -512,8 +511,8 @@ class RealDataAccessLayer {
   async getRecentActivity(candidateId) {
     try {
       return db.prepare(`
-        SELECT activity_type, description, created_at
-        FROM candidate_activity_log
+        SELECT type as activity_type, title as description, created_at
+        FROM notifications
         WHERE candidate_id = ?
         ORDER BY created_at DESC
         LIMIT 5

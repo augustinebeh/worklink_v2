@@ -1080,18 +1080,51 @@ export default function AdminChat() {
     if (!subscribe) return;
 
     const unsubNewMessage = subscribe('new_message', (data) => {
-      console.log('New message received:', data);
+      console.log('🔔 [ADMIN CHAT] New message event received:', {
+        candidateId: data.candidateId,
+        messageId: data.message?.id,
+        content: data.message?.content?.substring(0, 50) + '...',
+        currentConversation: selectedConversationRef.current?.candidate_id,
+        willAddToChat: selectedConversationRef.current?.candidate_id === data.candidateId
+      });
+
       if (soundEnabledRef.current) {
         playNotificationSound();
       }
+
       setMessages(prev => {
         const currentConv = selectedConversationRef.current;
+
+        console.log('🔔 [ADMIN CHAT] Processing new_message:', {
+          hasSelectedConv: !!currentConv,
+          selectedCandidateId: currentConv?.candidate_id,
+          incomingCandidateId: data.candidateId,
+          isMatch: currentConv?.candidate_id === data.candidateId,
+          messageId: data.message?.id,
+          currentMessagesCount: prev.length
+        });
+
         if (currentConv?.candidate_id === data.candidateId) {
-          if (prev.some(m => m.id === data.message.id)) return prev;
+          const messageExists = prev.some(m => m.id === data.message.id);
+          console.log('🔔 [ADMIN CHAT] Message for active conversation:', {
+            messageExists,
+            messageId: data.message.id,
+            existingIds: prev.map(m => m.id)
+          });
+
+          if (messageExists) {
+            console.log('🔔 [ADMIN CHAT] Message already exists in chat, skipping');
+            return prev;
+          }
+
+          console.log('🔔 [ADMIN CHAT] ✅ Adding message to active chat');
           return [...prev, data.message];
         }
+
+        console.log('🔔 [ADMIN CHAT] ❌ Message for different conversation, updating conversations list only');
         return prev;
       });
+
       fetchConversations();
     });
 

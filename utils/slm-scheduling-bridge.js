@@ -7,6 +7,7 @@
  */
 
 const InterviewSchedulingEngine = require('./interview-scheduling-engine');
+const { db } = require('../db'); // Import database connection at module level
 
 class SLMSchedulingBridge {
   constructor() {
@@ -530,10 +531,12 @@ What works better for you?`,
    */
 
   async getCandidateInfo(candidateId) {
-    const Database = require('better-sqlite3');
-    const db = new Database(require('path').resolve(__dirname, '../db/database.db'));
-
-    return db.prepare('SELECT * FROM candidates WHERE id = ?').get(candidateId);
+    try {
+      return db.prepare('SELECT * FROM candidates WHERE id = ?').get(candidateId);
+    } catch (error) {
+      console.error('Database error in getCandidateInfo:', error);
+      return null;
+    }
   }
 
   async getAvailableSlots(days = 7) {
@@ -700,13 +703,110 @@ Just let me know how I can assist you! 😊`
   }
 
   /**
+   * Generate existing interview reminder
+   */
+  async generateExistingInterviewReminder(candidate) {
+    const firstName = candidate.name.split(' ')[0];
+
+    // Get existing interview details
+    const existingInterview = this.schedulingEngine.db.prepare(`
+      SELECT * FROM interview_slots
+      WHERE candidate_id = ? AND status IN ('scheduled', 'confirmed')
+      ORDER BY scheduled_date, scheduled_time
+      LIMIT 1
+    `).get(candidate.id);
+
+    if (existingInterview) {
+      return {
+        type: 'existing_interview_reminder',
+        content: `Hi ${firstName}! 👋 You already have an interview scheduled.
+
+📅 **Your Interview Details:**
+• **Date & Time**: ${this.formatSlotDateTime({
+          date: existingInterview.scheduled_date,
+          time: existingInterview.scheduled_time
+        })}
+• **Duration**: 15 minutes
+• **Meeting Link**: ${existingInterview.meeting_link || 'Will be provided 24 hours before'}
+
+📱 **Need to make changes?**
+• Reply "**RESCHEDULE**" to change the time
+• Reply "**CONFIRM**" to confirm attendance
+• Reply "**QUESTIONS**" if you need more info
+
+Looking forward to meeting you! 🚀`,
+        metadata: {
+          candidateId: candidate.id,
+          interviewId: existingInterview.id,
+          scheduledTime: {
+            date: existingInterview.scheduled_date,
+            time: existingInterview.scheduled_time
+          }
+        }
+      };
+    } else {
+      // No existing interview - redirect to scheduling
+      return this.generateInterviewOffer(candidate);
+    }
+  }
+
+  /**
+   * Generate queue status update
+   */
+  async generateQueueStatusUpdate(candidate) {
+    const firstName = candidate.name.split(' ')[0];
+
+    // Get queue information
+    const queueInfo = this.schedulingEngine.db.prepare(`
+      SELECT * FROM interview_queue WHERE candidate_id = ?
+    `).get(candidate.id);
+
+    if (queueInfo) {
+      const queuePosition = this.schedulingEngine.db.prepare(`
+        SELECT COUNT(*) + 1 as position
+        FROM interview_queue
+        WHERE priority_score > ? AND queue_status = 'waiting'
+      `).get(queueInfo.priority_score).position;
+
+      return {
+        type: 'queue_status_update',
+        content: `Hi ${firstName}! 📋 Here's your interview queue status:
+
+🎯 **Current Status**: In Interview Queue
+📊 **Priority Level**: ${queueInfo.urgency_level.toUpperCase()}
+📍 **Queue Position**: ${queuePosition}
+
+⏱️ **What's Happening:**
+• We're matching you with the best available interviewer
+• Higher priority candidates are scheduled first
+• You'll receive confirmation once a slot is booked
+
+💪 **Want to boost your priority?**
+• Complete your profile (if not done)
+• Reply "**URGENT**" if you have timing constraints
+• Ask any questions about the process
+
+Stay tuned - we'll have you scheduled soon! 🚀`,
+        metadata: {
+          candidateId: candidate.id,
+          queuePosition,
+          priorityScore: queueInfo.priority_score,
+          urgencyLevel: queueInfo.urgency_level
+        }
+      };
+    } else {
+      // Not in queue - add them and provide initial response
+      return this.generateWelcomeWithScheduling(candidate);
+    }
+  }
+
+  /**
    * Health check method for Smart Router verification
    */
   async performHealthCheck() {
     try {
       // Check database connectivity
-      const Database = require('better-sqlite3');
-      const db = new Database(require('path').resolve(__dirname, '../db/database.db'));
+      const { db } = require('../db');
 
       // Test basic database query
       const testQuery = db.prepare('SELECT COUNT(*) as count FROM candidates LIMIT 1').get();
@@ -716,8 +816,6 @@ Just let me know how I can assist you! 😊`
 
       // Test slot availability functionality
       const testSlots = await this.getAvailableSlots(1);
-
-      db.close();
 
       const healthStatus = {
         status: 'healthy',

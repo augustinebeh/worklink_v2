@@ -208,7 +208,7 @@ function updateCandidate(req, res) {
 
 // Get candidate stats (for pipeline)
 // Simplified to: pending, active, inactive
-router.get('/stats/pipeline', (req, res) => {
+router.get('/stats/pipeline', authenticateAdmin, (req, res) => {
   try {
     const stats = db.prepare(`
       SELECT status, COUNT(*) as count

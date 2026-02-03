@@ -1,17 +1,14 @@
 /**
  * Service Worker for WorkLink PWA
- * Provides offline support and caching
+ * Updated caching strategy to prevent stale content and admin route conflicts
  */
 
-const CACHE_NAME = 'worklink-v20-scoped';
-const STATIC_CACHE = 'worklink-static-v20-scoped';
-const DYNAMIC_CACHE = 'worklink-dynamic-v20-scoped';
+const CACHE_NAME = 'worklink-v22-scoped';
+const STATIC_CACHE = 'worklink-static-v22-scoped';
+const DYNAMIC_CACHE = 'worklink-dynamic-v22-scoped';
 
-// Static assets to cache immediately (versioned for cache-busting)
-// Only cache worker app specific assets, avoid root paths that might conflict with admin
+// Static assets to cache immediately (excluding root paths that conflict with admin)
 const STATIC_ASSETS = [
-  '/',
-  '/index.html',
   '/manifest.json',
   '/favicon.png?v=2',
   '/favicon-16x16.png?v=2',
@@ -30,181 +27,175 @@ const STATIC_ASSETS = [
   '/icon-512x512.png?v=2',
 ];
 
-// API routes to cache with network-first strategy
-const API_ROUTES = [
-  '/api/v1/jobs',
-  '/api/v1/gamification',
+// Routes to exclude from caching (admin, API, WebSocket)
+const EXCLUDED_ROUTES = [
+  '/admin',
+  '/api',
+  '/ws',
+  '/health'
 ];
 
-// Install event - cache static assets
+// Install event - cache static assets only
 self.addEventListener('install', (event) => {
-  console.log('[SW] Installing...');
+  console.log('[SW] Installing service worker v22...');
   event.waitUntil(
     caches.open(STATIC_CACHE)
       .then((cache) => {
         console.log('[SW] Caching static assets');
         return cache.addAll(STATIC_ASSETS);
       })
-      .then(() => self.skipWaiting())
+      .then(() => {
+        console.log('[SW] Install complete, skipping waiting');
+        self.skipWaiting();
+      })
   );
 });
 
-// Activate event - clear ALL old caches aggressively
+// Activate event - clean up old caches
 self.addEventListener('activate', (event) => {
-  console.log('[SW] Activating - clearing all old caches...');
+  console.log('[SW] Activating service worker v21...');
   event.waitUntil(
     caches.keys()
-      .then((keys) => {
-        // Delete ALL caches that don't match current version
+      .then((cacheNames) => {
         return Promise.all(
-          keys.map((key) => {
-            if (key !== STATIC_CACHE && key !== DYNAMIC_CACHE) {
-              console.log('[SW] Deleting old cache:', key);
-              return caches.delete(key);
+          cacheNames.map((cacheName) => {
+            if (cacheName !== STATIC_CACHE && cacheName !== DYNAMIC_CACHE) {
+              console.log('[SW] Deleting old cache:', cacheName);
+              return caches.delete(cacheName);
             }
           })
         );
       })
       .then(() => {
-        // Force refresh all cached static assets
-        return caches.open(STATIC_CACHE).then((cache) => {
-          return Promise.all(
-            STATIC_ASSETS.map((url) => {
-              return fetch(url, { cache: 'reload' }).then((response) => {
-                if (response.ok) {
-                  return cache.put(url, response);
-                }
-              }).catch(() => {});
-            })
-          );
-        });
+        console.log('[SW] Activation complete, claiming clients');
+        self.clients.claim();
       })
-      .then(() => self.clients.claim())
   );
 });
 
-// Fetch event - serve from cache or network
+// Fetch event - smart caching strategy
 self.addEventListener('fetch', (event) => {
-  const { request } = event;
-  const url = new URL(request.url);
+  const url = new URL(event.request.url);
+  const pathname = url.pathname;
 
   // Skip non-GET requests
-  if (request.method !== 'GET') return;
-
-  // Skip chrome-extension and other non-http(s) requests
-  if (!url.protocol.startsWith('http')) return;
-
-  // CRITICAL: Skip admin routes entirely - let them pass through
-  if (url.pathname.startsWith('/admin/') || url.pathname === '/admin') {
+  if (event.request.method !== 'GET') {
     return;
   }
 
-  // API requests - Network first, then cache
-  if (url.pathname.startsWith('/api/')) {
-    event.respondWith(networkFirst(request));
+  // Skip excluded routes (admin, API, WebSocket)
+  if (EXCLUDED_ROUTES.some(route => pathname.startsWith(route))) {
+    console.log('[SW] Skipping cache for excluded route:', pathname);
     return;
   }
 
-  // Static assets - Cache first, then network
-  event.respondWith(cacheFirst(request));
+  // Skip cross-origin requests except for assets
+  if (url.origin !== location.origin) {
+    // Only cache cross-origin assets (fonts, images, etc.)
+    if (event.request.destination === 'font' ||
+        event.request.destination === 'image' ||
+        event.request.destination === 'style') {
+      event.respondWith(cacheFirst(event.request, DYNAMIC_CACHE));
+    }
+    return;
+  }
+
+  // HTML pages: Network-first to prevent stale content
+  if (event.request.destination === 'document' || pathname === '/' || pathname.includes('.html')) {
+    event.respondWith(networkFirst(event.request, DYNAMIC_CACHE));
+  }
+  // Static assets: Cache-first for performance
+  else if (event.request.destination === 'script' ||
+           event.request.destination === 'style' ||
+           event.request.destination === 'font' ||
+           event.request.destination === 'image' ||
+           pathname.includes('/assets/')) {
+    event.respondWith(cacheFirst(event.request, STATIC_CACHE));
+  }
+  // API routes: Network-first with short cache
+  else if (pathname.startsWith('/api')) {
+    // This shouldn't hit due to exclusion above, but just in case
+    return;
+  }
+  // Everything else: Network-first
+  else {
+    event.respondWith(networkFirst(event.request, DYNAMIC_CACHE));
+  }
 });
 
-// Cache-first strategy (for static assets)
-async function cacheFirst(request) {
-  const url = new URL(request.url);
-
-  // Double-check: never cache admin routes
-  if (url.pathname.startsWith('/admin/') || url.pathname === '/admin') {
-    return fetch(request);
-  }
-
-  const cached = await caches.match(request);
-  if (cached) {
-    return cached;
-  }
-
+// Network-first strategy - prevents stale content
+async function networkFirst(request, cacheName) {
   try {
+    console.log('[SW] Network-first for:', request.url);
     const response = await fetch(request);
-    if (response.ok) {
-      const cache = await caches.open(STATIC_CACHE);
+
+    // Cache successful responses
+    if (response.status === 200) {
+      const cache = await caches.open(cacheName);
       cache.put(request, response.clone());
     }
+
     return response;
   } catch (error) {
-    // Return offline page if available, but only for worker routes
-    if (!url.pathname.startsWith('/admin/')) {
-      const offlinePage = await caches.match('/');
-      if (offlinePage) return offlinePage;
+    console.log('[SW] Network failed, trying cache for:', request.url);
+    const cached = await caches.match(request);
+    if (cached) {
+      console.log('[SW] Serving from cache:', request.url);
+      return cached;
     }
+
+    // If it's an HTML request and no cache, return index.html for SPA routing
+    // BUT exclude admin routes from SPA fallback
+    if (request.destination === 'document') {
+      const url = new URL(request.url);
+      const pathname = url.pathname;
+
+      // Don't serve PWA index.html to admin routes
+      if (!EXCLUDED_ROUTES.some(route => pathname.startsWith(route))) {
+        const indexCache = await caches.match('/index.html');
+        if (indexCache) {
+          console.log('[SW] Serving index.html for SPA route:', request.url);
+          return indexCache;
+        }
+      }
+    }
+
     throw error;
   }
 }
 
-// Network-first strategy (for API calls)
-async function networkFirst(request) {
+// Cache-first strategy - for static assets
+async function cacheFirst(request, cacheName) {
+  const cached = await caches.match(request);
+  if (cached) {
+    console.log('[SW] Cache hit for:', request.url);
+    return cached;
+  }
+
   try {
+    console.log('[SW] Cache miss, fetching:', request.url);
     const response = await fetch(request);
-    if (response.ok) {
-      const cache = await caches.open(DYNAMIC_CACHE);
+
+    if (response.status === 200) {
+      const cache = await caches.open(cacheName);
       cache.put(request, response.clone());
     }
+
     return response;
   } catch (error) {
-    const cached = await caches.match(request);
-    if (cached) {
-      return cached;
-    }
-    // Return a JSON error response for API failures
-    return new Response(
-      JSON.stringify({ success: false, error: 'You are offline', offline: true }),
-      { headers: { 'Content-Type': 'application/json' } }
-    );
+    console.log('[SW] Network failed for static asset:', request.url);
+    throw error;
   }
 }
 
-// Listen for messages from the app
+// Handle messages from the app
 self.addEventListener('message', (event) => {
-  if (event.data === 'skipWaiting') {
+  if (event.data && event.data.type === 'SKIP_WAITING') {
+    console.log('[SW] Received SKIP_WAITING message');
     self.skipWaiting();
   }
-});
 
-// Push notifications (for future use)
-self.addEventListener('push', (event) => {
-  if (!event.data) return;
-
-  const data = event.data.json();
-  const options = {
-    body: data.body || 'New notification',
-    icon: '/apple-touch-icon.png',
-    badge: '/favicon.png',
-    vibrate: [100, 50, 100],
-    data: data.data || {},
-    actions: data.actions || [],
-  };
-
-  event.waitUntil(
-    self.registration.showNotification(data.title || 'WorkLink', options)
-  );
-});
-
-// Notification click handler
-self.addEventListener('notificationclick', (event) => {
-  event.notification.close();
-
-  const url = event.notification.data?.url || '/';
-  event.waitUntil(
-    clients.matchAll({ type: 'window' }).then((clientList) => {
-      // Focus existing window if available
-      for (const client of clientList) {
-        if (client.url === url && 'focus' in client) {
-          return client.focus();
-        }
-      }
-      // Open new window
-      if (clients.openWindow) {
-        return clients.openWindow(url);
-      }
-    })
-  );
+  if (event.data && event.data.type === 'GET_VERSION') {
+    event.ports[0].postMessage({ version: 'v22-scoped' });
+  }
 });

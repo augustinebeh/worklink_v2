@@ -37,6 +37,11 @@ class SmartResponseRouter {
     this.escalationSystem = new AdminEscalationSystem();
     this.schedulingBridge = new InterviewSchedulingBridge();
 
+    // CRITICAL FIX: Add loop prevention tracking
+    this.activeRequests = new Map(); // Track active requests to prevent loops
+    this.logRateLimiter = new Map(); // Rate limit identical log messages
+    this.maxRequestDepth = 3; // Maximum recursion depth allowed
+
     // Response routing configuration
     this.routingConfig = {
       // Performance targets
@@ -72,10 +77,37 @@ class SmartResponseRouter {
     const startTime = Date.now();
 
     try {
-      logger.info('Processing message with Smart Response Router', {
+      // CRITICAL FIX: Prevent infinite loops
+      const requestKey = `${candidateId}_${this.hashString(message)}`;
+      const currentDepth = (options.requestDepth || 0) + 1;
+
+      if (currentDepth > this.maxRequestDepth) {
+        logger.error('Request depth exceeded - preventing infinite loop', {
+          candidateId,
+          requestDepth: currentDepth,
+          maxDepth: this.maxRequestDepth
+        });
+        return this.generateCriticalErrorResponse(candidateId, new Error('Request depth exceeded'));
+      }
+
+      if (this.activeRequests.has(requestKey)) {
+        logger.error('Duplicate request detected - preventing infinite loop', {
+          candidateId,
+          requestKey
+        });
+        return this.generateCriticalErrorResponse(candidateId, new Error('Duplicate request detected'));
+      }
+
+      // Track active request
+      this.activeRequests.set(requestKey, Date.now());
+      options.requestDepth = currentDepth;
+
+      // Rate-limited logging to prevent memory issues
+      this.logWithRateLimit('info', 'Processing message with Smart Response Router', {
         candidateId,
         messageLength: message.length,
-        channel: options.channel
+        channel: options.channel,
+        requestDepth: currentDepth
       });
 
       // A/B Testing check - for gradual rollout
@@ -123,7 +155,7 @@ class SmartResponseRouter {
 
       const responseTime = Date.now() - startTime;
 
-      logger.info('Smart Response Router processing complete', {
+      this.logWithRateLimit('info', 'Smart Response Router processing complete', {
         candidateId,
         responseType: qualityCheckedResponse.source,
         intent: intentAnalysis.primary,
@@ -140,7 +172,7 @@ class SmartResponseRouter {
       };
 
     } catch (error) {
-      logger.error('Smart Response Router error', {
+      this.logWithRateLimit('error', 'Smart Response Router error', {
         candidateId,
         error: error.message,
         stack: error.stack
@@ -148,6 +180,10 @@ class SmartResponseRouter {
 
       // Critical failure - always escalate rather than risk false information
       return this.generateCriticalErrorResponse(candidateId, error);
+    } finally {
+      // CRITICAL FIX: Clean up active request tracking
+      const requestKey = `${candidateId}_${this.hashString(message)}`;
+      this.activeRequests.delete(requestKey);
     }
   }
 
@@ -222,7 +258,8 @@ class SmartResponseRouter {
     }
 
     // FALLBACK: Always escalate rather than risk providing incorrect information
-    logger.warn('No clear routing path found, escalating to admin', {
+    // CRITICAL FIX: Use rate-limited logging to prevent memory issues from infinite escalation loops
+    this.logWithRateLimit('warn', 'No clear routing path found, escalating to admin', {
       candidateId: candidateContext.id,
       intent: intentAnalysis.primary,
       confidence: intentAnalysis.confidence
@@ -444,9 +481,23 @@ class SmartResponseRouter {
         error: error.message
       });
 
-      // If old system fails, use smart router as backup
-      this.routingConfig.rolloutPercentage = 100; // Emergency fallback
-      return this.processMessage(candidateId, message, options);
+      // CRITICAL FIX: Return failsafe response instead of infinite recursion
+      // The original code called this.processMessage() again causing infinite loop
+      logger.error('Both old and new systems failed - returning failsafe response', {
+        candidateId,
+        error: error.message
+      });
+
+      return {
+        content: "I'm experiencing technical difficulties right now. I've notified our admin team and they'll get back to you shortly to help with your question.",
+        source: 'failsafe_system_failure',
+        confidence: 1.0,
+        intent: 'system_error',
+        error: true,
+        escalated: true,
+        requiresAdminAttention: true,
+        systemFailure: true
+      };
     }
   }
 
@@ -655,6 +706,54 @@ class SmartResponseRouter {
       logger.error('Failed to initialize decision logging', {
         error: error.message
       });
+    }
+  }
+
+  /**
+   * CRITICAL FIX: Rate-limited logging to prevent memory issues from infinite loops
+   */
+  logWithRateLimit(level, message, data) {
+    const logKey = `${level}_${message}_${JSON.stringify(data)}`;
+    const logHash = this.hashString(logKey);
+    const now = Date.now();
+    const rateLimitWindow = 10000; // 10 seconds
+    const maxLogsPerWindow = 5;
+
+    if (!this.logRateLimiter.has(logHash)) {
+      this.logRateLimiter.set(logHash, { count: 0, lastReset: now });
+    }
+
+    const rateLimitData = this.logRateLimiter.get(logHash);
+
+    // Reset counter if window has passed
+    if (now - rateLimitData.lastReset > rateLimitWindow) {
+      rateLimitData.count = 0;
+      rateLimitData.lastReset = now;
+    }
+
+    // Only log if under rate limit
+    if (rateLimitData.count < maxLogsPerWindow) {
+      rateLimitData.count++;
+      logger[level](message, data);
+    } else if (rateLimitData.count === maxLogsPerWindow) {
+      // Log rate limit warning once
+      rateLimitData.count++;
+      logger.warn('Log rate limit exceeded for message', {
+        message: message.substring(0, 100),
+        candidateId: data.candidateId,
+        rateLimitWindow: rateLimitWindow / 1000,
+        maxLogsPerWindow
+      });
+    }
+
+    // Clean up old rate limit entries periodically
+    if (this.logRateLimiter.size > 1000) {
+      const cutoffTime = now - (rateLimitWindow * 2);
+      for (const [key, value] of this.logRateLimiter.entries()) {
+        if (value.lastReset < cutoffTime) {
+          this.logRateLimiter.delete(key);
+        }
+      }
     }
   }
 }

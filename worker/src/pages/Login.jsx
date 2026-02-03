@@ -64,14 +64,13 @@ function GoogleLoginButton({ onAuth, clientId }) {
           callback: (response) => onAuth(response.credential),
           auto_select: false,
           cancel_on_tap_outside: true,
+          redirect_uri: window.location.origin,
         });
         window.google.accounts.id.renderButton(buttonRef.current, {
-          type: 'standard',
-          theme: 'filled_black',
+          type: 'icon',
+          theme: 'outline',
           size: 'large',
-          text: 'continue_with',
-          shape: 'rectangular',
-          width: 320,
+          shape: 'circle',
         });
         initializedRef.current = true;
       }
@@ -203,15 +202,16 @@ export default function Login() {
   }, [handleTelegramAuth]);
 
   useEffect(() => {
-    if (!isLocalhost) {
-      fetch('/api/v1/auth/telegram/config').then(r => r.json()).then(d => {
-        if (d.success) setBotUsername(d.botUsername);
-      }).catch(e => console.error('Telegram config error:', e));
-    }
+    // Load Telegram config (now works on localhost too)
+    fetch('/api/v1/auth/telegram/config').then(r => r.json()).then(d => {
+      if (d.success) setBotUsername(d.botUsername);
+    }).catch(e => console.error('Telegram config error:', e));
+
+    // Load Google config
     fetch('/api/v1/auth/google/config').then(r => r.json()).then(d => {
       if (d.success) setGoogleClientId(d.clientId);
     }).catch(e => console.error('Google config error:', e));
-  }, [isLocalhost]);
+  }, []);
 
   const validateEmail = useCallback((v) => {
     if (!v.trim()) return 'Email is required';

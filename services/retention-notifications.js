@@ -1,6 +1,32 @@
 const webpush = require('web-push');
 const { db } = require('../db');
 
+// Lazy-loaded FOMO engine integration
+let fomoEngine = null;
+function getFOMOEngine() {
+  if (!fomoEngine) {
+    try {
+      fomoEngine = require('./fomo-engine');
+    } catch (e) {
+      console.log('FOMO engine not loaded:', e.message);
+    }
+  }
+  return fomoEngine;
+}
+
+// Lazy-loaded streak protection system
+let streakProtection = null;
+function getStreakProtection() {
+  if (!streakProtection) {
+    try {
+      streakProtection = require('./streak-protection-system');
+    } catch (e) {
+      console.log('Streak protection system not loaded:', e.message);
+    }
+  }
+  return streakProtection;
+}
+
 class RetentionNotificationService {
   constructor() {
     this.setupVapid();
@@ -29,8 +55,12 @@ class RetentionNotificationService {
     // Run retention checks every hour
     setInterval(() => this.checkRetentionTriggers(), 60 * 60 * 1000);
 
+    // Run FOMO-enhanced checks every 15 minutes
+    setInterval(() => this.checkFOMOTriggers(), 15 * 60 * 1000);
+
     // Run immediate checks
     this.checkRetentionTriggers();
+    this.checkFOMOTriggers();
   }
 
   async checkRetentionTriggers() {
@@ -46,6 +76,23 @@ class RetentionNotificationService {
       ]);
     } catch (error) {
       console.error('Error checking retention triggers:', error);
+    }
+  }
+
+  async checkFOMOTriggers() {
+    try {
+      console.log('🎯 Checking FOMO triggers...');
+
+      await Promise.all([
+        this.checkJobSlotScarcity(),
+        this.checkTimeLimitedOpportunities(),
+        this.checkPeerActivitySurges(),
+        this.checkCompetitivePressure(),
+        this.checkStreakProtectionOpportunities(),
+        this.checkTierCompetitionAlerts()
+      ]);
+    } catch (error) {
+      console.error('Error checking FOMO triggers:', error);
     }
   }
 
@@ -344,6 +391,503 @@ class RetentionNotificationService {
 
       default:
         throw new Error(`Unknown notification type: ${type}`);
+    }
+  }
+
+  // ==================== FOMO TRIGGER METHODS ====================
+
+  async checkJobSlotScarcity() {
+    try {
+      // Find jobs with high slot fill rates that create scarcity
+      const scarcityJobs = db.prepare(`
+        SELECT j.*,
+               (j.filled_slots * 1.0 / j.total_slots) as fill_ratio,
+               (j.total_slots - j.filled_slots) as remaining_slots,
+               COUNT(d.id) as recent_applications
+        FROM jobs j
+        LEFT JOIN deployments d ON j.id = d.job_id AND d.created_at > datetime('now', '-2 hours')
+        WHERE j.status = 'open'
+          AND j.filled_slots < j.total_slots
+          AND (j.filled_slots * 1.0 / j.total_slots) >= 0.6
+        GROUP BY j.id
+        ORDER BY fill_ratio DESC, recent_applications DESC
+        LIMIT 10
+      `).all();
+
+      for (const job of scarcityJobs) {
+        await this.sendJobScarcityAlerts(job);
+      }
+
+      console.log(`📊 Processed ${scarcityJobs.length} jobs with slot scarcity`);
+    } catch (error) {
+      console.error('Error checking job slot scarcity:', error);
+    }
+  }
+
+  async sendJobScarcityAlerts(job) {
+    try {
+      // Find candidates who might be interested in this job
+      const relevantCandidates = db.prepare(`
+        SELECT c.*, ps.subscription_endpoint, ps.subscription_p256dh, ps.subscription_auth
+        FROM candidates c
+        LEFT JOIN push_subscriptions ps ON c.id = ps.candidate_id
+        WHERE c.status = 'active'
+          AND c.location_area = ?
+          AND ps.subscription_endpoint IS NOT NULL
+          AND NOT EXISTS (
+            SELECT 1 FROM deployments d WHERE d.job_id = ? AND d.candidate_id = c.id
+          )
+      `).all(job.location_area, job.id);
+
+      const urgencyMessage = this.generateScarcityMessage(job);
+
+      for (const candidate of relevantCandidates) {
+        if (this.shouldSendNotification(candidate.id, `job_scarcity_${job.id}`)) {
+          await this.sendNotification(candidate, {
+            title: "🔥 Slots Filling Fast!",
+            body: urgencyMessage,
+            icon: '/icons/icon-192x192.png',
+            data: {
+              type: 'job_scarcity',
+              url: `/jobs/${job.id}`,
+              userId: candidate.id,
+              jobId: job.id,
+              remainingSlots: job.remaining_slots,
+              fillRatio: job.fill_ratio
+            },
+            actions: [
+              { action: 'view_job', title: 'View Job', icon: '/icons/job-icon.png' },
+              { action: 'apply_now', title: 'Apply Now!', icon: '/icons/apply-icon.png' }
+            ]
+          });
+
+          this.markNotificationSent(candidate.id, `job_scarcity_${job.id}`);
+        }
+      }
+    } catch (error) {
+      console.error('Failed to send job scarcity alerts:', error);
+    }
+  }
+
+  generateScarcityMessage(job) {
+    const messages = [
+      `Only ${job.remaining_slots} spots left for "${job.title}"! Apply now before it fills up.`,
+      `⚡ Almost full! "${job.title}" has just ${job.remaining_slots} openings remaining.`,
+      `🎯 ${job.remaining_slots} workers needed for "${job.title}" - don't miss out!`,
+      `🏃‍♂️ Hurry! "${job.title}" is ${Math.round(job.fill_ratio * 100)}% full with only ${job.remaining_slots} spots left!`
+    ];
+
+    return messages[Math.floor(Math.random() * messages.length)];
+  }
+
+  async checkTimeLimitedOpportunities() {
+    try {
+      // Find jobs with approaching deadlines
+      const urgentJobs = db.prepare(`
+        SELECT j.*,
+               ROUND((julianday(j.application_deadline) - julianday('now')) * 24, 1) as hours_remaining
+        FROM jobs j
+        WHERE j.status = 'open'
+          AND datetime(j.application_deadline) > datetime('now')
+          AND datetime(j.application_deadline) <= datetime('now', '+8 hours')
+          AND j.filled_slots < j.total_slots
+        ORDER BY j.application_deadline ASC
+      `).all();
+
+      for (const job of urgentJobs) {
+        await this.sendTimeUrgencyAlerts(job);
+      }
+
+      console.log(`⏰ Processed ${urgentJobs.length} time-limited opportunities`);
+    } catch (error) {
+      console.error('Error checking time-limited opportunities:', error);
+    }
+  }
+
+  async sendTimeUrgencyAlerts(job) {
+    try {
+      const relevantCandidates = db.prepare(`
+        SELECT c.*, ps.subscription_endpoint, ps.subscription_p256dh, ps.subscription_auth
+        FROM candidates c
+        LEFT JOIN push_subscriptions ps ON c.id = ps.candidate_id
+        WHERE c.status = 'active'
+          AND c.location_area = ?
+          AND ps.subscription_endpoint IS NOT NULL
+          AND NOT EXISTS (
+            SELECT 1 FROM deployments d WHERE d.job_id = ? AND d.candidate_id = c.id
+          )
+      `).all(job.location_area, job.id);
+
+      for (const candidate of relevantCandidates) {
+        if (this.shouldSendNotification(candidate.id, `time_urgent_${job.id}`)) {
+          const urgencyLevel = job.hours_remaining <= 2 ? 'URGENT' : 'HURRY';
+          const timeText = job.hours_remaining < 1 ? `${Math.round(job.hours_remaining * 60)} minutes` : `${job.hours_remaining} hours`;
+
+          await this.sendNotification(candidate, {
+            title: `${urgencyLevel}: Deadline Approaching!`,
+            body: `Applications for "${job.title}" close in ${timeText}!`,
+            icon: '/icons/icon-192x192.png',
+            badge: '/icons/urgent-badge.png',
+            data: {
+              type: 'time_urgent',
+              url: `/jobs/${job.id}`,
+              userId: candidate.id,
+              jobId: job.id,
+              hoursRemaining: job.hours_remaining
+            },
+            actions: [
+              { action: 'apply_now', title: 'Apply Now!', icon: '/icons/apply-icon.png' }
+            ]
+          });
+
+          this.markNotificationSent(candidate.id, `time_urgent_${job.id}`);
+        }
+      }
+    } catch (error) {
+      console.error('Failed to send time urgency alerts:', error);
+    }
+  }
+
+  async checkPeerActivitySurges() {
+    try {
+      // Analyze recent peer activity to create social proof
+      const activitySurges = db.prepare(`
+        SELECT
+          c.location_area,
+          CASE
+            WHEN c.level >= 100 THEN 'mythic'
+            WHEN c.level >= 75 THEN 'diamond'
+            WHEN c.level >= 50 THEN 'platinum'
+            WHEN c.level >= 25 THEN 'gold'
+            WHEN c.level >= 10 THEN 'silver'
+            ELSE 'bronze'
+          END as tier_level,
+          COUNT(d.id) as recent_applications,
+          COUNT(DISTINCT d.candidate_id) as active_candidates
+        FROM deployments d
+        JOIN candidates c ON d.candidate_id = c.id
+        WHERE d.created_at > datetime('now', '-2 hours')
+          AND c.status = 'active'
+        GROUP BY c.location_area, tier_level
+        HAVING recent_applications >= 5
+        ORDER BY recent_applications DESC
+      `).all();
+
+      for (const surge of activitySurges) {
+        await this.sendPeerActivityAlerts(surge);
+      }
+
+      console.log(`👥 Processed ${activitySurges.length} peer activity surges`);
+    } catch (error) {
+      console.error('Error checking peer activity surges:', error);
+    }
+  }
+
+  async sendPeerActivityAlerts(surge) {
+    try {
+      // Find candidates in the same area and tier who haven't been active recently
+      const inactiveCandidates = db.prepare(`
+        SELECT c.*, ps.subscription_endpoint, ps.subscription_p256dh, ps.subscription_auth
+        FROM candidates c
+        LEFT JOIN push_subscriptions ps ON c.id = ps.candidate_id
+        WHERE c.status = 'active'
+          AND c.location_area = ?
+          AND CASE
+                WHEN c.level >= 100 THEN 'mythic'
+                WHEN c.level >= 75 THEN 'diamond'
+                WHEN c.level >= 50 THEN 'platinum'
+                WHEN c.level >= 25 THEN 'gold'
+                WHEN c.level >= 10 THEN 'silver'
+                ELSE 'bronze'
+              END = ?
+          AND ps.subscription_endpoint IS NOT NULL
+          AND NOT EXISTS (
+            SELECT 1 FROM deployments d
+            WHERE d.candidate_id = c.id AND d.created_at > datetime('now', '-4 hours')
+          )
+        LIMIT 10
+      `).all(surge.location_area, surge.tier_level);
+
+      for (const candidate of inactiveCandidates) {
+        if (this.shouldSendNotification(candidate.id, 'peer_activity_surge')) {
+          await this.sendNotification(candidate, {
+            title: "👋 Don't get left behind!",
+            body: `${surge.recent_applications} workers in your area applied to jobs recently. Your turn?`,
+            icon: '/icons/icon-192x192.png',
+            data: {
+              type: 'peer_activity',
+              url: '/jobs',
+              userId: candidate.id,
+              peerCount: surge.recent_applications,
+              tierLevel: surge.tier_level
+            }
+          });
+
+          this.markNotificationSent(candidate.id, 'peer_activity_surge');
+        }
+      }
+    } catch (error) {
+      console.error('Failed to send peer activity alerts:', error);
+    }
+  }
+
+  async checkCompetitivePressure() {
+    try {
+      // Find jobs with multiple recent applications to create competitive pressure
+      const competitiveJobs = db.prepare(`
+        SELECT j.*, COUNT(d.id) as recent_applications
+        FROM jobs j
+        JOIN deployments d ON j.id = d.job_id
+        WHERE j.status = 'open'
+          AND d.created_at > datetime('now', '-1 hour')
+        GROUP BY j.id
+        HAVING recent_applications >= 2
+        ORDER BY recent_applications DESC
+        LIMIT 5
+      `).all();
+
+      for (const job of competitiveJobs) {
+        await this.sendCompetitivePressureAlerts(job);
+      }
+
+      console.log(`⚔️ Processed ${competitiveJobs.length} competitive job opportunities`);
+    } catch (error) {
+      console.error('Error checking competitive pressure:', error);
+    }
+  }
+
+  async sendCompetitivePressureAlerts(job) {
+    try {
+      // Find candidates who viewed this job but haven't applied
+      const viewedButNotApplied = db.prepare(`
+        SELECT DISTINCT c.*, ps.subscription_endpoint, ps.subscription_p256dh, ps.subscription_auth
+        FROM candidates c
+        LEFT JOIN push_subscriptions ps ON c.id = ps.candidate_id
+        WHERE c.status = 'active'
+          AND c.location_area = ?
+          AND ps.subscription_endpoint IS NOT NULL
+          AND NOT EXISTS (
+            SELECT 1 FROM deployments d WHERE d.job_id = ? AND d.candidate_id = c.id
+          )
+        LIMIT 15
+      `).all(job.location_area, job.id);
+
+      for (const candidate of viewedButNotApplied) {
+        if (this.shouldSendNotification(candidate.id, `competitive_${job.id}`)) {
+          await this.sendNotification(candidate, {
+            title: "🏃‍♂️ Others are applying fast!",
+            body: `${job.recent_applications} people just applied to "${job.title}". Don't miss out!`,
+            icon: '/icons/icon-192x192.png',
+            data: {
+              type: 'competitive_pressure',
+              url: `/jobs/${job.id}`,
+              userId: candidate.id,
+              jobId: job.id,
+              recentApplications: job.recent_applications
+            },
+            actions: [
+              { action: 'apply_now', title: 'Apply Now!', icon: '/icons/apply-icon.png' }
+            ]
+          });
+
+          this.markNotificationSent(candidate.id, `competitive_${job.id}`);
+        }
+      }
+    } catch (error) {
+      console.error('Failed to send competitive pressure alerts:', error);
+    }
+  }
+
+  async checkStreakProtectionOpportunities() {
+    try {
+      const streakProtection = getStreakProtection();
+      if (!streakProtection) return;
+
+      // This integrates with the streak protection system
+      const candidatesAtRisk = db.prepare(`
+        SELECT c.*, ps.subscription_endpoint, ps.subscription_p256dh, ps.subscription_auth,
+               (julianday('now') - julianday(c.streak_last_date)) * 24 as hours_since_checkin
+        FROM candidates c
+        LEFT JOIN push_subscriptions ps ON c.id = ps.candidate_id
+        WHERE c.status = 'active'
+          AND c.streak_days >= 3
+          AND ps.subscription_endpoint IS NOT NULL
+          AND hours_since_checkin > 16
+          AND hours_since_checkin < 26
+      `).all();
+
+      for (const candidate of candidatesAtRisk) {
+        const protectionData = await streakProtection.getStreakProtectionData(candidate.id);
+
+        if (protectionData && protectionData.riskScore > 0.5) {
+          await this.sendStreakProtectionAlert(candidate, protectionData);
+        }
+      }
+
+      console.log(`🔥 Processed streak protection for ${candidatesAtRisk.length} candidates`);
+    } catch (error) {
+      console.error('Error checking streak protection opportunities:', error);
+    }
+  }
+
+  async sendStreakProtectionAlert(candidate, protectionData) {
+    try {
+      if (this.shouldSendNotification(candidate.id, 'streak_protection_fomo')) {
+        const hoursLeft = Math.max(0, protectionData.hoursRemaining);
+        const riskEmoji = protectionData.riskLevel === 'critical' ? '🚨' : protectionData.riskLevel === 'high' ? '⚠️' : '🔥';
+
+        await this.sendNotification(candidate, {
+          title: `${riskEmoji} Streak Protection Available!`,
+          body: `Don't lose your ${protectionData.streakDays}-day streak! ${hoursLeft.toFixed(1)} hours left.`,
+          icon: '/icons/icon-192x192.png',
+          badge: '/icons/streak-badge.png',
+          data: {
+            type: 'streak_protection',
+            url: '/streak-protection',
+            userId: candidate.id,
+            streakDays: protectionData.streakDays,
+            riskLevel: protectionData.riskLevel,
+            hoursRemaining: hoursLeft
+          },
+          actions: [
+            { action: 'protect_streak', title: 'Protect Streak', icon: '/icons/protect-icon.png' },
+            { action: 'checkin_now', title: 'Check In Now', icon: '/icons/checkin-icon.png' }
+          ]
+        });
+
+        this.markNotificationSent(candidate.id, 'streak_protection_fomo');
+      }
+    } catch (error) {
+      console.error('Failed to send streak protection alert:', error);
+    }
+  }
+
+  async checkTierCompetitionAlerts() {
+    try {
+      // Find tier-based achievements that can motivate others
+      const recentTierAchievements = db.prepare(`
+        SELECT
+          c.location_area,
+          CASE
+            WHEN c.level >= 100 THEN 'mythic'
+            WHEN c.level >= 75 THEN 'diamond'
+            WHEN c.level >= 50 THEN 'platinum'
+            WHEN c.level >= 25 THEN 'gold'
+            WHEN c.level >= 10 THEN 'silver'
+            ELSE 'bronze'
+          END as tier_level,
+          COUNT(*) as recent_level_ups,
+          AVG(c.level) as avg_level
+        FROM candidates c
+        WHERE c.status = 'active'
+          AND datetime(c.updated_at) > datetime('now', '-6 hours')
+          AND c.level % 5 = 0  -- Level milestones
+        GROUP BY c.location_area, tier_level
+        HAVING recent_level_ups >= 2
+      `).all();
+
+      for (const achievement of recentTierAchievements) {
+        await this.sendTierCompetitionAlerts(achievement);
+      }
+
+      console.log(`🏆 Processed ${recentTierAchievements.length} tier competition opportunities`);
+    } catch (error) {
+      console.error('Error checking tier competition alerts:', error);
+    }
+  }
+
+  async sendTierCompetitionAlerts(achievement) {
+    try {
+      // Find candidates at similar tier who might be motivated
+      const competitiveCandidates = db.prepare(`
+        SELECT c.*, ps.subscription_endpoint, ps.subscription_p256dh, ps.subscription_auth
+        FROM candidates c
+        LEFT JOIN push_subscriptions ps ON c.id = ps.candidate_id
+        WHERE c.status = 'active'
+          AND c.location_area = ?
+          AND CASE
+                WHEN c.level >= 100 THEN 'mythic'
+                WHEN c.level >= 75 THEN 'diamond'
+                WHEN c.level >= 50 THEN 'platinum'
+                WHEN c.level >= 25 THEN 'gold'
+                WHEN c.level >= 10 THEN 'silver'
+                ELSE 'bronze'
+              END = ?
+          AND ps.subscription_endpoint IS NOT NULL
+          AND c.level < ?
+        LIMIT 8
+      `).all(achievement.location_area, achievement.tier_level, achievement.avg_level + 2);
+
+      for (const candidate of competitiveCandidates) {
+        if (this.shouldSendNotification(candidate.id, `tier_competition_${achievement.tier_level}`)) {
+          await this.sendNotification(candidate, {
+            title: "🏆 Your peers are leveling up!",
+            body: `${achievement.recent_level_ups} ${achievement.tier_level} workers in your area just advanced. Keep up!`,
+            icon: '/icons/icon-192x192.png',
+            data: {
+              type: 'tier_competition',
+              url: '/achievements',
+              userId: candidate.id,
+              tierLevel: achievement.tier_level,
+              peerLevelUps: achievement.recent_level_ups
+            }
+          });
+
+          this.markNotificationSent(candidate.id, `tier_competition_${achievement.tier_level}`);
+        }
+      }
+    } catch (error) {
+      console.error('Failed to send tier competition alerts:', error);
+    }
+  }
+
+  // ==================== FOMO INTEGRATION HELPERS ====================
+
+  async integrateWithFOMOEngine(candidateId, eventType, eventData) {
+    try {
+      const fomo = getFOMOEngine();
+      if (fomo) {
+        fomo.recordActivity(candidateId, eventType, eventData);
+        await fomo.processImmediateFOMO(candidateId, eventType, eventData);
+      }
+    } catch (error) {
+      console.error('Failed to integrate with FOMO engine:', error);
+    }
+  }
+
+  // Enhanced notification sending with FOMO tracking
+  async sendNotification(user, payload) {
+    try {
+      // Original notification logic
+      const subscription = {
+        endpoint: user.subscription_endpoint,
+        keys: {
+          p256dh: user.subscription_p256dh,
+          auth: user.subscription_auth
+        }
+      };
+
+      await webpush.sendNotification(subscription, JSON.stringify(payload));
+
+      // Log successful notification
+      this.logNotification(user.id, payload.data.type, 'sent');
+
+      // Track FOMO activity if applicable
+      if (payload.data.type.includes('fomo') || payload.data.type.includes('urgency') || payload.data.type.includes('scarcity')) {
+        await this.integrateWithFOMOEngine(user.id, 'notification_sent', {
+          notificationType: payload.data.type,
+          urgency: payload.urgency || 'medium'
+        });
+      }
+
+      console.log(`✅ Sent ${payload.data.type} notification to ${user.name}`);
+    } catch (error) {
+      console.error(`❌ Failed to send notification to ${user.name}:`, error);
+
+      // Remove invalid subscription
+      if (error.statusCode === 410) {
+        this.removeInvalidSubscription(user.id);
+      }
     }
   }
 }

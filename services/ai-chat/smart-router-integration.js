@@ -1,20 +1,11 @@
 /**
- * Smart Router Integration Layer
+ * Smart Router Integration Layer - DISABLED
  *
- * This module provides a seamless integration between the existing AI chat system
- * and the new Smart Response Router, allowing for gradual migration and A/B testing.
- *
- * Key Features:
- * - Drop-in replacement for existing generateResponse function
- * - A/B testing for gradual rollout
- * - Performance monitoring and comparison
- * - Fallback mechanisms for reliability
- * - Migration tracking and analytics
+ * TEMPORARILY DISABLED due to memory leak issues.
+ * This module is bypassed to prevent infinite loops and memory crashes.
  */
 
-const SmartResponseRouter = require('../smart-response-router');
 const { createLogger } = require('../../utils/structured-logger');
-const { db } = require('../../db');
 
 const logger = createLogger('smart-router-integration');
 
@@ -53,17 +44,14 @@ class SmartRouterIntegration {
 
   /**
    * Main integration point - replaces existing generateResponse function
+   * CRITICAL FIX: Temporarily disabled due to infinite loop in SmartResponseRouter
    */
   async generateResponse(candidateId, message, options = {}) {
-    const startTime = Date.now();
+    // COMPLETELY DISABLED: Smart router bypassed to prevent memory leaks
+    return null;
 
-    try {
-      logger.info('Smart Router Integration processing request', {
-        candidateId,
-        messageLength: message.length,
-        mode: options.mode
-      });
-
+      // Original code below - commented out until fix is confirmed
+      /*
       // Determine which system to use
       const useSmartRouter = this.shouldUseSmartRouter(candidateId);
 
@@ -79,6 +67,7 @@ class SmartRouterIntegration {
         // Use legacy AI chat system
         return await this.useLegacySystem(candidateId, message, options);
       }
+      */
 
     } catch (error) {
       logger.error('Smart Router Integration error', {
@@ -87,11 +76,7 @@ class SmartRouterIntegration {
       });
 
       // Fallback to legacy system on error
-      if (this.migrationConfig.fallbackOnError) {
-        return await this.useLegacySystem(candidateId, message, options);
-      }
-
-      throw error;
+      return await this.useLegacySystem(candidateId, message, options);
     }
   }
 

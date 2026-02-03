@@ -174,15 +174,15 @@ app.use((req, res, next) => {
     res.header('Strict-Transport-Security', 'max-age=31536000; includeSubDomains');
   }
 
-  // Content Security Policy (basic)
+  // Content Security Policy (updated for external resources)
   res.header(
     'Content-Security-Policy',
     "default-src 'self'; " +
-    "script-src 'self' 'unsafe-inline' 'unsafe-eval'; " +
-    "style-src 'self' 'unsafe-inline'; " +
+    "script-src 'self' 'unsafe-inline' 'unsafe-eval' https://telegram.org https://accounts.google.com; " +
+    "style-src 'self' 'unsafe-inline' https://fonts.googleapis.com; " +
     "img-src 'self' data: https:; " +
     "connect-src 'self' https:; " +
-    "font-src 'self' data:;"
+    "font-src 'self' data: https://fonts.gstatic.com;"
   );
 
   next();
@@ -244,13 +244,14 @@ if (fs.existsSync(workerDistPath)) {
   app.use(express.static(workerDistPath, {
     maxAge: process.env.NODE_ENV === 'production' ? '1d' : 0,
     setHeaders: (res, filePath) => {
-      // Prevent caching of icons, manifest, and service worker
+      // Prevent caching of icons, manifest, service worker, and HTML files
       if (filePath.includes('icon-') ||
           filePath.includes('apple-touch-icon') ||
           filePath.includes('favicon') ||
           filePath.includes('manifest.json') ||
           filePath.includes('sw.js') ||
-          filePath.includes('splash')) {
+          filePath.includes('splash') ||
+          filePath.includes('index.html')) {
         res.setHeader('Cache-Control', 'no-cache, no-store, must-revalidate');
         res.setHeader('Pragma', 'no-cache');
         res.setHeader('Expires', '0');

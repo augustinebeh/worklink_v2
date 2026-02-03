@@ -27,7 +27,9 @@
     "db:reset": "node -e \"require('./db/database').resetToSampleData()\"",
     "email:setup": "node setup-email.js",
     "email:test": "node test-email-system.js",
-    "email:send-test": "node -e \"const emailService = require('./services/email'); emailService.initialize().then(() => emailService.sendTestEmail({to: process.env.ADMIN_EMAIL || 'admin@worklink.sg', subject: 'WorkLink Test Email', text: 'Email system is working!'})).then(r => console.log('Test email sent:', r)).catch(console.error)\""
+    "email:send-test": "node -e \"const emailService = require('./services/email'); emailService.initialize().then(() => emailService.sendTestEmail({to: process.env.ADMIN_EMAIL || 'admin@worklink.sg', subject: 'WorkLink Test Email', text: 'Email system is working!'})).then(r => console.log('Test email sent:', r)).catch(console.error)\"",
+    "test-admin-ws": "node test-admin-websocket.js",
+    "debug-admin-ws": "node debug-admin-ws.js"
   },
   "keywords": [
     "recruitment",

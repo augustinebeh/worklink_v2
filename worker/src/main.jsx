@@ -9,40 +9,50 @@ ReactDOM.createRoot(document.getElementById('root')).render(
   </React.StrictMode>
 );
 
-// Register service worker for PWA with force update to fix admin routing
+// Register service worker for PWA with smart update handling
 if ('serviceWorker' in navigator) {
   window.addEventListener('load', async () => {
     try {
-      // First, unregister any existing service workers to clear old cache
-      const registrations = await navigator.serviceWorker.getRegistrations();
-      for (const registration of registrations) {
-        await registration.unregister();
-      }
+      console.log('[Main] Registering service worker...');
 
-      // Register the updated service worker
+      // Register the service worker with worker-specific scope
       const registration = await navigator.serviceWorker.register('/sw.js', {
         scope: '/',
         updateViaCache: 'none' // Force fresh fetch of service worker
       });
 
-      // Force immediate activation of new service worker
+      console.log('[Main] Service worker registered successfully');
+
+      // Check for updates and handle gracefully
       if (registration.waiting) {
-        registration.waiting.postMessage('skipWaiting');
+        console.log('[Main] New service worker waiting, activating...');
+        registration.waiting.postMessage({ type: 'SKIP_WAITING' });
+        window.location.reload();
       }
 
+      // Handle service worker updates
       registration.addEventListener('updatefound', () => {
+        console.log('[Main] Service worker update found');
         const newWorker = registration.installing;
         if (newWorker) {
           newWorker.addEventListener('statechange', () => {
             if (newWorker.state === 'installed' && navigator.serviceWorker.controller) {
-              // New service worker is available, force it to take over
-              newWorker.postMessage('skipWaiting');
+              console.log('[Main] New service worker installed, activating...');
+              newWorker.postMessage({ type: 'SKIP_WAITING' });
+              // Optionally show user notification about update
+              setTimeout(() => window.location.reload(), 1000);
             }
           });
         }
       });
+
+      // Listen for messages from service worker
+      navigator.serviceWorker.addEventListener('message', (event) => {
+        console.log('[Main] Message from SW:', event.data);
+      });
+
     } catch (error) {
-      console.log('Service worker registration failed:', error);
+      console.log('[Main] Service worker registration failed:', error);
     }
   });
 }

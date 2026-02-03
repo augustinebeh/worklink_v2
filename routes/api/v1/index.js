@@ -14,6 +14,7 @@ const deploymentRoutes = require('./deployments');
 const paymentRoutes = require('./payments');
 const clientRoutes = require('./clients');
 const tenderRoutes = require('./tenders');
+const bpoRoutes = require('./bpo');
 const trainingRoutes = require('./training');
 const gamificationRoutes = require('./gamification');
 const chatRoutes = require('./chat');
@@ -25,7 +26,7 @@ const aiAutomationRoutes = require('./ai-automation');
 const referralRoutes = require('./referrals');
 const availabilityRoutes = require('./availability');
 const notificationRoutes = require('./notifications');
-// const tenderMonitorRoutes = require('./tender-monitor'); // Temporarily disabled
+const tenderMonitorRoutes = require('./tender-monitor');
 const emailPreferencesRoutes = require('./email-preferences');
 // const emailConfigRoutes = require('./email-config'); // Disabled to prevent hanging
 
@@ -65,6 +66,12 @@ const escalationAnalyticsRoutes = require('./escalation-analytics');
 // Interview Scheduling System
 const interviewSchedulingRoutes = require('./interview-scheduling');
 
+// SLM Conversion Funnel Enhancement System
+const conversationEnhancementRoutes = require('./conversation-enhancement');
+
+// Worker Status Classification System
+const workerStatusRoutes = require('./worker-status');
+
 // Mount routes
 router.use('/auth', authRoutes);
 router.use('/candidates', candidateRoutes);
@@ -73,6 +80,7 @@ router.use('/deployments', deploymentRoutes);
 router.use('/payments', paymentRoutes);
 router.use('/clients', clientRoutes);
 router.use('/tenders', tenderRoutes);
+router.use('/bpo', bpoRoutes);
 router.use('/training', trainingRoutes);
 router.use('/gamification', gamificationRoutes);
 router.use('/chat', chatRoutes);
@@ -84,7 +92,7 @@ router.use('/ai', aiAutomationRoutes);
 router.use('/referrals', referralRoutes);
 router.use('/availability', availabilityRoutes);
 router.use('/notifications', notificationRoutes);
-// router.use('/tender-monitor', tenderMonitorRoutes); // Temporarily disabled
+router.use('/tender-monitor', tenderMonitorRoutes);
 router.use('/email-preferences', emailPreferencesRoutes);
 // router.use('/email-config', emailConfigRoutes); // Disabled to prevent hanging
 
@@ -124,6 +132,12 @@ router.use('/escalation-analytics', escalationAnalyticsRoutes);
 // Interview Scheduling System
 router.use('/interview-scheduling', interviewSchedulingRoutes);
 
+// SLM Conversion Funnel Enhancement System
+router.use('/conversation-enhancement', conversationEnhancementRoutes);
+
+// Worker Status Classification System
+router.use('/worker-status', workerStatusRoutes);
+
 // API info endpoint
 router.get('/', (req, res) => {
   res.json({
@@ -137,6 +151,7 @@ router.get('/', (req, res) => {
       payments: '/api/v1/payments',
       clients: '/api/v1/clients',
       tenders: '/api/v1/tenders',
+      bpo: '/api/v1/bpo',
       training: '/api/v1/training',
       gamification: '/api/v1/gamification',
       chat: '/api/v1/chat',
@@ -175,6 +190,10 @@ router.get('/', (req, res) => {
       smartResponseRouter: '/api/v1/smart-response-router',
       // Interview Scheduling System
       interviewScheduling: '/api/v1/interview-scheduling',
+      // SLM Conversion Funnel Enhancement System
+      conversationEnhancement: '/api/v1/conversation-enhancement',
+      // Worker Status Classification System
+      workerStatus: '/api/v1/worker-status',
     },
   });
 });

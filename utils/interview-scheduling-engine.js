@@ -15,8 +15,8 @@ const path = require('path');
 
 class InterviewSchedulingEngine {
   constructor() {
-    const dbPath = path.resolve(__dirname, '../db/database.db');
-    this.db = new Database(dbPath);
+    const { db } = require('../db');
+    this.db = db;
 
     // Scheduling configuration
     this.config = {

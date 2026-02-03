@@ -481,6 +481,166 @@ function createSchema(db) {
     );
 
     -- =====================================================
+    -- SLM CONVERSION FUNNEL ENHANCEMENT TABLES
+    -- =====================================================
+
+    -- A/B testing for conversations
+    CREATE TABLE IF NOT EXISTS conversation_ab_tests (
+      id TEXT PRIMARY KEY,
+      name TEXT NOT NULL,
+      description TEXT,
+      variables TEXT, -- JSON array of test variables
+      objective TEXT,
+      status TEXT DEFAULT 'active',
+      start_date DATETIME DEFAULT CURRENT_TIMESTAMP,
+      end_date DATETIME,
+      expected_sample_size INTEGER,
+      actual_sample_size INTEGER DEFAULT 0,
+      created_at DATETIME DEFAULT CURRENT_TIMESTAMP
+    );
+
+    -- A/B test variants
+    CREATE TABLE IF NOT EXISTS conversation_test_variants (
+      id TEXT PRIMARY KEY,
+      test_id TEXT NOT NULL,
+      name TEXT NOT NULL,
+      parameters TEXT, -- JSON object with variant parameters
+      description TEXT,
+      weight REAL DEFAULT 1.0,
+      created_at DATETIME DEFAULT CURRENT_TIMESTAMP,
+      FOREIGN KEY (test_id) REFERENCES conversation_ab_tests(id)
+    );
+
+    -- Candidate assignments to test variants
+    CREATE TABLE IF NOT EXISTS conversation_test_assignments (
+      id INTEGER PRIMARY KEY AUTOINCREMENT,
+      test_id TEXT NOT NULL,
+      candidate_id TEXT NOT NULL,
+      variant_id TEXT NOT NULL,
+      assigned_at DATETIME DEFAULT CURRENT_TIMESTAMP,
+      UNIQUE(test_id, candidate_id),
+      FOREIGN KEY (test_id) REFERENCES conversation_ab_tests(id),
+      FOREIGN KEY (variant_id) REFERENCES conversation_test_variants(id),
+      FOREIGN KEY (candidate_id) REFERENCES candidates(id)
+    );
+
+    -- Conversation performance tracking
+    CREATE TABLE IF NOT EXISTS conversation_performance_metrics (
+      id INTEGER PRIMARY KEY AUTOINCREMENT,
+      test_id TEXT,
+      variant_id TEXT,
+      candidate_id TEXT NOT NULL,
+      event_type TEXT NOT NULL, -- 'message_sent', 'replied', 'scheduled', 'confirmed'
+      event_data TEXT, -- JSON with event-specific data
+      response_time_ms INTEGER,
+      session_id TEXT,
+      created_at DATETIME DEFAULT CURRENT_TIMESTAMP,
+      FOREIGN KEY (test_id) REFERENCES conversation_ab_tests(id),
+      FOREIGN KEY (variant_id) REFERENCES conversation_test_variants(id),
+      FOREIGN KEY (candidate_id) REFERENCES candidates(id)
+    );
+
+    -- Language preferences for candidates
+    CREATE TABLE IF NOT EXISTS candidate_language_preferences (
+      id INTEGER PRIMARY KEY AUTOINCREMENT,
+      candidate_id TEXT NOT NULL UNIQUE,
+      primary_language TEXT, -- 'en', 'zh', 'ms', 'ta', 'hi'
+      region TEXT, -- 'SG', 'MY', 'CN', etc.
+      detected_language TEXT, -- Auto-detected language
+      detection_confidence REAL,
+      detection_sources TEXT, -- JSON array of detection sources
+      cultural_adaptation TEXT, -- JSON object with cultural settings
+      manual_override INTEGER DEFAULT 0,
+      last_updated DATETIME DEFAULT CURRENT_TIMESTAMP,
+      FOREIGN KEY (candidate_id) REFERENCES candidates(id)
+    );
+
+    -- SLM conversation analytics
+    CREATE TABLE IF NOT EXISTS slm_conversation_analytics (
+      id INTEGER PRIMARY KEY AUTOINCREMENT,
+      candidate_id TEXT NOT NULL,
+      session_id TEXT,
+      conversation_stage TEXT, -- 'pending', 'contacted', 'engaged', 'scheduled', 'interviewed', 'active'
+      previous_stage TEXT,
+      stage_duration_ms INTEGER,
+      conversion_tactic TEXT, -- Type of FOMO/conversion tactic used
+      template_type TEXT,
+      language_used TEXT,
+      cultural_adaptation TEXT,
+      prediction_score REAL, -- Conversion likelihood prediction
+      actual_conversion INTEGER DEFAULT 0,
+      metadata TEXT, -- JSON with additional analytics data
+      created_at DATETIME DEFAULT CURRENT_TIMESTAMP,
+      FOREIGN KEY (candidate_id) REFERENCES candidates(id)
+    );
+
+    -- Conversion funnel tracking
+    CREATE TABLE IF NOT EXISTS conversion_funnel_events (
+      id INTEGER PRIMARY KEY AUTOINCREMENT,
+      candidate_id TEXT NOT NULL,
+      event_type TEXT NOT NULL,
+      stage_from TEXT,
+      stage_to TEXT,
+      duration_ms INTEGER,
+      success INTEGER DEFAULT 1,
+      metadata TEXT, -- JSON with event-specific data
+      session_id TEXT,
+      conversion_id TEXT, -- Links related events
+      created_at DATETIME DEFAULT CURRENT_TIMESTAMP,
+      FOREIGN KEY (candidate_id) REFERENCES candidates(id)
+    );
+
+    -- Predictive model training data
+    CREATE TABLE IF NOT EXISTS conversation_prediction_data (
+      id INTEGER PRIMARY KEY AUTOINCREMENT,
+      candidate_id TEXT NOT NULL,
+      feature_set TEXT, -- JSON object with all prediction features
+      predicted_likelihood REAL,
+      prediction_confidence REAL,
+      actual_outcome INTEGER, -- 0 = no conversion, 1 = conversion
+      prediction_accuracy REAL,
+      model_version TEXT,
+      created_at DATETIME DEFAULT CURRENT_TIMESTAMP,
+      FOREIGN KEY (candidate_id) REFERENCES candidates(id)
+    );
+
+    -- FOMO campaign performance tracking
+    CREATE TABLE IF NOT EXISTS fomo_campaign_performance (
+      id INTEGER PRIMARY KEY AUTOINCREMENT,
+      campaign_type TEXT, -- 'scarcity', 'social_proof', 'urgency', 'last_chance'
+      intensity_level TEXT, -- 'low', 'medium', 'high', 'extreme'
+      target_segment TEXT,
+      language_variant TEXT,
+      cultural_adaptation TEXT,
+      candidates_reached INTEGER DEFAULT 0,
+      responses_received INTEGER DEFAULT 0,
+      interviews_scheduled INTEGER DEFAULT 0,
+      conversion_rate REAL,
+      avg_response_time_ms INTEGER,
+      campaign_start DATETIME,
+      campaign_end DATETIME,
+      created_at DATETIME DEFAULT CURRENT_TIMESTAMP
+    );
+
+    -- Real-time conversation monitoring
+    CREATE TABLE IF NOT EXISTS conversation_monitoring (
+      id INTEGER PRIMARY KEY AUTOINCREMENT,
+      candidate_id TEXT NOT NULL,
+      conversation_status TEXT, -- 'active', 'waiting_response', 'stalled', 'converted'
+      last_message_sent DATETIME,
+      last_response_received DATETIME,
+      response_time_ms INTEGER,
+      engagement_score REAL,
+      urgency_level INTEGER, -- 1-10 scale
+      requires_intervention INTEGER DEFAULT 0,
+      hot_lead_score REAL,
+      next_action TEXT,
+      escalation_needed INTEGER DEFAULT 0,
+      updated_at DATETIME DEFAULT CURRENT_TIMESTAMP,
+      FOREIGN KEY (candidate_id) REFERENCES candidates(id)
+    );
+
+    -- =====================================================
     -- AI CHAT AUTO-REPLY SYSTEM
     -- =====================================================
 
@@ -952,6 +1112,258 @@ function createSchema(db) {
     CREATE INDEX IF NOT EXISTS idx_ad_performance_job ON ad_performance(job_id);
     CREATE INDEX IF NOT EXISTS idx_ad_variable_scores_variable ON ad_variable_scores(variable_name, variable_value);
     CREATE INDEX IF NOT EXISTS idx_ad_timing_scores_hour ON ad_timing_scores(hour, day_of_week);
+
+    -- =====================================================
+    -- CONSULTANT ANALYTICS TABLES
+    -- =====================================================
+
+    -- Daily performance metrics for individual consultants
+    CREATE TABLE IF NOT EXISTS consultant_performance_daily (
+        id INTEGER PRIMARY KEY AUTOINCREMENT,
+        consultant_id TEXT NOT NULL,
+        date DATE NOT NULL,
+
+        -- Efficiency KPIs
+        candidates_scheduled INTEGER DEFAULT 0,
+        candidates_converted INTEGER DEFAULT 0,
+        interviews_conducted INTEGER DEFAULT 0,
+        no_show_rate REAL DEFAULT 0,
+        scheduling_speed_minutes REAL DEFAULT 0,
+        capacity_utilization_percent REAL DEFAULT 0,
+
+        -- Quality KPIs
+        candidate_satisfaction_score REAL DEFAULT 0,
+        interview_completion_rate REAL DEFAULT 0,
+        conversion_to_hire_rate REAL DEFAULT 0,
+        reliability_score REAL DEFAULT 0,
+        feedback_quality_score REAL DEFAULT 0,
+
+        -- Growth KPIs
+        pipeline_velocity REAL DEFAULT 0,
+        skill_development_score REAL DEFAULT 0,
+        coaching_implementation_score REAL DEFAULT 0,
+        process_improvement_suggestions INTEGER DEFAULT 0,
+        retention_contribution_score REAL DEFAULT 0,
+
+        -- Volume metrics
+        total_interactions INTEGER DEFAULT 0,
+        total_hours_worked REAL DEFAULT 0,
+        productivity_score REAL DEFAULT 0,
+
+        -- Composite scores
+        efficiency_score REAL DEFAULT 0,
+        quality_score REAL DEFAULT 0,
+        growth_score REAL DEFAULT 0,
+        overall_performance_score REAL DEFAULT 0,
+
+        -- Contextual data
+        workload_factor REAL DEFAULT 1.0,
+        market_conditions_factor REAL DEFAULT 1.0,
+
+        created_at DATETIME DEFAULT CURRENT_TIMESTAMP,
+        UNIQUE(consultant_id, date)
+    );
+
+    -- KPI scores for team comparison and ranking
+    CREATE TABLE IF NOT EXISTS consultant_kpi_scores (
+        id INTEGER PRIMARY KEY AUTOINCREMENT,
+        consultant_id TEXT NOT NULL,
+        calculation_period TEXT NOT NULL,
+        period_start DATE NOT NULL,
+        period_end DATE NOT NULL,
+
+        efficiency_kpis TEXT DEFAULT '{}',
+        quality_kpis TEXT DEFAULT '{}',
+        growth_kpis TEXT DEFAULT '{}',
+
+        scheduling_efficiency_score REAL DEFAULT 0,
+        conversion_rate_score REAL DEFAULT 0,
+        reliability_score REAL DEFAULT 0,
+        satisfaction_score REAL DEFAULT 0,
+        innovation_score REAL DEFAULT 0,
+        mentoring_score REAL DEFAULT 0,
+
+        weighted_efficiency_score REAL DEFAULT 0,
+        weighted_quality_score REAL DEFAULT 0,
+        weighted_growth_score REAL DEFAULT 0,
+        overall_kpi_score REAL DEFAULT 0,
+
+        efficiency_rank INTEGER,
+        quality_rank INTEGER,
+        growth_rank INTEGER,
+        overall_rank INTEGER,
+        percentile_rank REAL DEFAULT 0,
+
+        team_average_score REAL DEFAULT 0,
+        score_vs_team_average REAL DEFAULT 0,
+        improvement_from_last_period REAL DEFAULT 0,
+
+        calculated_at DATETIME DEFAULT CURRENT_TIMESTAMP,
+        UNIQUE(consultant_id, calculation_period, period_start)
+    );
+
+    -- Performance alerts and threshold monitoring
+    CREATE TABLE IF NOT EXISTS consultant_alerts (
+        id INTEGER PRIMARY KEY AUTOINCREMENT,
+        consultant_id TEXT,
+        alert_type TEXT NOT NULL,
+        severity TEXT DEFAULT 'medium',
+        title TEXT NOT NULL,
+        description TEXT NOT NULL,
+
+        trigger_metric TEXT,
+        trigger_value REAL,
+        threshold_value REAL,
+
+        time_period TEXT,
+        comparison_baseline TEXT,
+        affected_kpis TEXT DEFAULT '[]',
+
+        status TEXT DEFAULT 'active',
+        priority_score INTEGER DEFAULT 0,
+        auto_generated INTEGER DEFAULT 1,
+
+        acknowledged_at DATETIME,
+        acknowledged_by TEXT,
+        resolved_at DATETIME,
+        resolution_notes TEXT,
+
+        created_at DATETIME DEFAULT CURRENT_TIMESTAMP
+    );
+
+    -- Coaching recommendations and improvement suggestions
+    CREATE TABLE IF NOT EXISTS coaching_recommendations (
+        id INTEGER PRIMARY KEY AUTOINCREMENT,
+        consultant_id TEXT NOT NULL,
+        recommendation_type TEXT NOT NULL,
+        category TEXT NOT NULL,
+
+        title TEXT NOT NULL,
+        description TEXT NOT NULL,
+        detailed_guidance TEXT,
+
+        target_kpi TEXT,
+        current_performance REAL,
+        target_performance REAL,
+        estimated_impact_score REAL DEFAULT 0,
+
+        action_steps TEXT DEFAULT '[]',
+        resources_needed TEXT DEFAULT '[]',
+        estimated_time_to_implement_hours REAL DEFAULT 0,
+        difficulty_level TEXT DEFAULT 'medium',
+
+        status TEXT DEFAULT 'pending',
+        priority INTEGER DEFAULT 50,
+        implementation_deadline DATE,
+
+        baseline_measurement REAL,
+        progress_measurements TEXT DEFAULT '[]',
+        final_measurement REAL,
+        improvement_achieved REAL,
+
+        auto_generated INTEGER DEFAULT 1,
+        generated_by TEXT DEFAULT 'analytics_engine',
+        coach_assigned TEXT,
+        consultant_feedback TEXT,
+        coach_notes TEXT,
+
+        created_at DATETIME DEFAULT CURRENT_TIMESTAMP,
+        started_at DATETIME,
+        completed_at DATETIME
+    );
+
+    -- Team comparison and benchmarking data
+    CREATE TABLE IF NOT EXISTS consultant_team_analytics (
+        id INTEGER PRIMARY KEY AUTOINCREMENT,
+        calculation_date DATE NOT NULL,
+        period_type TEXT NOT NULL,
+        period_start DATE NOT NULL,
+        period_end DATE NOT NULL,
+
+        total_consultants INTEGER DEFAULT 0,
+        active_consultants INTEGER DEFAULT 0,
+
+        performance_distribution TEXT DEFAULT '{}',
+        kpi_averages TEXT DEFAULT '{}',
+        kpi_ranges TEXT DEFAULT '{}',
+
+        top_efficiency_consultant_id TEXT,
+        top_quality_consultant_id TEXT,
+        top_growth_consultant_id TEXT,
+        top_overall_consultant_id TEXT,
+
+        team_efficiency_trend REAL DEFAULT 0,
+        team_quality_trend REAL DEFAULT 0,
+        team_growth_trend REAL DEFAULT 0,
+        overall_team_trend REAL DEFAULT 0,
+
+        improvement_opportunities TEXT DEFAULT '[]',
+        best_practices TEXT DEFAULT '[]',
+        risk_areas TEXT DEFAULT '[]',
+
+        calculated_at DATETIME DEFAULT CURRENT_TIMESTAMP,
+        UNIQUE(calculation_date, period_type)
+    );
+
+    -- Achievement badges and recognition system
+    CREATE TABLE IF NOT EXISTS consultant_achievements (
+        id INTEGER PRIMARY KEY AUTOINCREMENT,
+        consultant_id TEXT NOT NULL,
+        achievement_type TEXT NOT NULL,
+        achievement_name TEXT NOT NULL,
+        description TEXT,
+
+        criteria_met TEXT DEFAULT '{}',
+        performance_period TEXT,
+
+        badge_icon TEXT,
+        badge_color TEXT,
+        rarity TEXT DEFAULT 'common',
+        points_awarded INTEGER DEFAULT 0,
+
+        auto_awarded INTEGER DEFAULT 1,
+        publicly_visible INTEGER DEFAULT 1,
+
+        earned_at DATETIME DEFAULT CURRENT_TIMESTAMP
+    );
+
+    -- Performance goals and targets
+    CREATE TABLE IF NOT EXISTS consultant_goals (
+        id INTEGER PRIMARY KEY AUTOINCREMENT,
+        consultant_id TEXT NOT NULL,
+        goal_type TEXT NOT NULL,
+        title TEXT NOT NULL,
+        description TEXT,
+
+        target_kpi TEXT,
+        current_value REAL,
+        target_value REAL,
+        target_date DATE,
+
+        status TEXT DEFAULT 'active',
+        progress_percentage REAL DEFAULT 0,
+        milestones TEXT DEFAULT '[]',
+
+        coaching_plan_id INTEGER,
+        support_provided TEXT DEFAULT '[]',
+
+        created_at DATETIME DEFAULT CURRENT_TIMESTAMP,
+        achieved_at DATETIME,
+        FOREIGN KEY (coaching_plan_id) REFERENCES coaching_recommendations(id)
+    );
+
+    -- Consultant analytics performance indices
+    CREATE INDEX IF NOT EXISTS idx_consultant_performance_daily_consultant_date ON consultant_performance_daily(consultant_id, date);
+    CREATE INDEX IF NOT EXISTS idx_consultant_performance_daily_overall_score ON consultant_performance_daily(overall_performance_score);
+    CREATE INDEX IF NOT EXISTS idx_consultant_kpi_scores_consultant_period ON consultant_kpi_scores(consultant_id, calculation_period, period_start);
+    CREATE INDEX IF NOT EXISTS idx_consultant_kpi_scores_overall_rank ON consultant_kpi_scores(overall_rank);
+    CREATE INDEX IF NOT EXISTS idx_consultant_alerts_consultant_status ON consultant_alerts(consultant_id, status);
+    CREATE INDEX IF NOT EXISTS idx_consultant_alerts_severity_created ON consultant_alerts(severity, created_at);
+    CREATE INDEX IF NOT EXISTS idx_coaching_recommendations_consultant_status ON coaching_recommendations(consultant_id, status);
+    CREATE INDEX IF NOT EXISTS idx_coaching_recommendations_priority ON coaching_recommendations(priority);
+    CREATE INDEX IF NOT EXISTS idx_consultant_team_analytics_date ON consultant_team_analytics(calculation_date);
+    CREATE INDEX IF NOT EXISTS idx_consultant_achievements_consultant ON consultant_achievements(consultant_id, earned_at);
+    CREATE INDEX IF NOT EXISTS idx_consultant_goals_consultant_status ON consultant_goals(consultant_id, status);
   `);
 
   if (process.env.NODE_ENV !== 'production') {
