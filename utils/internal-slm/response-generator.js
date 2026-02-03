@@ -682,9 +682,9 @@ class ResponseGenerator {
 }
 
 // Export the generator function
-async function generateResponse(intent, context, candidateData, entities = []) {
+async function generateResponse(intent, context, candidateData, entities = [], channel = 'app') {
   const generator = new ResponseGenerator();
-  return await generator.generateResponse(intent, context, candidateData, entities);
+  return await generator.generateResponse(intent, context, candidateData, entities, channel);
 }
 
 module.exports = { generateResponse, ResponseGenerator };
