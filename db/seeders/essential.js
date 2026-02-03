@@ -11,7 +11,7 @@ const { generateAvatar } = require('../connection');
  * @param {Database} db - SQLite database instance
  */
 function seedEssentialData(db) {
-  console.log('🌱 Seeding essential data...');
+  // Seeding essential data silently for concise output
 
   const achievementCount = db.prepare('SELECT COUNT(*) as c FROM achievements').get().c;
 
@@ -71,7 +71,7 @@ function seedEssentialData(db) {
     quests.forEach(q => {
       db.prepare('INSERT OR IGNORE INTO quests VALUES (?,?,?,?,?,?,?,?)').run(...q);
     });
-    console.log('  ✅ Seeded quests (Career Ladder Strategy)');
+    // Quests seeded silently
   }
 
   // Training
@@ -148,7 +148,9 @@ function seedEssentialData(db) {
   // Seed AI/ML settings and training data
   seedAIMLData(db);
 
-  console.log('✅ Essential data seeded (including AI/ML training data)');
+  if (process.env.NODE_ENV !== 'production') {
+    // Essential data seeded silently
+  }
 }
 
 /**

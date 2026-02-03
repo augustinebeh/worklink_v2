@@ -3,11 +3,12 @@
  * Provides offline support and caching
  */
 
-const CACHE_NAME = 'worklink-v19';
-const STATIC_CACHE = 'worklink-static-v19';
-const DYNAMIC_CACHE = 'worklink-dynamic-v19';
+const CACHE_NAME = 'worklink-v20-scoped';
+const STATIC_CACHE = 'worklink-static-v20-scoped';
+const DYNAMIC_CACHE = 'worklink-dynamic-v20-scoped';
 
 // Static assets to cache immediately (versioned for cache-busting)
+// Only cache worker app specific assets, avoid root paths that might conflict with admin
 const STATIC_ASSETS = [
   '/',
   '/index.html',
@@ -93,6 +94,11 @@ self.addEventListener('fetch', (event) => {
   // Skip chrome-extension and other non-http(s) requests
   if (!url.protocol.startsWith('http')) return;
 
+  // CRITICAL: Skip admin routes entirely - let them pass through
+  if (url.pathname.startsWith('/admin/') || url.pathname === '/admin') {
+    return;
+  }
+
   // API requests - Network first, then cache
   if (url.pathname.startsWith('/api/')) {
     event.respondWith(networkFirst(request));
@@ -105,6 +111,13 @@ self.addEventListener('fetch', (event) => {
 
 // Cache-first strategy (for static assets)
 async function cacheFirst(request) {
+  const url = new URL(request.url);
+
+  // Double-check: never cache admin routes
+  if (url.pathname.startsWith('/admin/') || url.pathname === '/admin') {
+    return fetch(request);
+  }
+
   const cached = await caches.match(request);
   if (cached) {
     return cached;
@@ -118,9 +131,11 @@ async function cacheFirst(request) {
     }
     return response;
   } catch (error) {
-    // Return offline page if available
-    const offlinePage = await caches.match('/');
-    if (offlinePage) return offlinePage;
+    // Return offline page if available, but only for worker routes
+    if (!url.pathname.startsWith('/admin/')) {
+      const offlinePage = await caches.match('/');
+      if (offlinePage) return offlinePage;
+    }
     throw error;
   }
 }

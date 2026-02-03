@@ -194,7 +194,7 @@ router.get('/health', async (req, res) => {
       details.error = error.message;
     }
 
-    // Get recent delivery statistics
+    // Get recent delivery statistics (lazy loaded)
     const EmailDeliveryTracker = require('../../../services/email/delivery-tracker');
     const deliveryTracker = new EmailDeliveryTracker();
     const recentStats = deliveryTracker.getDeliveryAnalytics('1h');

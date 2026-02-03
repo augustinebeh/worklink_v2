@@ -1,16 +1,16 @@
 import { useState, useEffect } from 'react';
 import {
-  CalendarIcon,
-  ClockIcon,
-  CheckIcon,
-  XMarkIcon,
-  PhoneIcon,
-  VideoIcon,
-  ExclamationTriangleIcon,
-  InformationCircleIcon,
-  ArrowRightIcon,
-  CalendarDaysIcon
-} from '@heroicons/react/24/outline';
+  Calendar as CalendarIcon,
+  Clock as ClockIcon,
+  Check as CheckIcon,
+  X as XMarkIcon,
+  Phone as PhoneIcon,
+  Video as VideoIcon,
+  AlertTriangle as ExclamationTriangleIcon,
+  Info as InformationCircleIcon,
+  ArrowRight as ArrowRightIcon,
+  CalendarDays as CalendarDaysIcon
+} from 'lucide-react';
 import { clsx } from 'clsx';
 
 /**

@@ -6,9 +6,17 @@
 const express = require('express');
 const router = express.Router();
 const { db } = require('../../../db');
-const EmailDeliveryTracker = require('../../../services/email/delivery-tracker');
+// Lazy load EmailDeliveryTracker to prevent startup hanging
+let EmailDeliveryTracker = null;
+let deliveryTracker = null;
 
-const deliveryTracker = new EmailDeliveryTracker();
+function getDeliveryTracker() {
+  if (!deliveryTracker) {
+    EmailDeliveryTracker = require('../../../services/email/delivery-tracker');
+    deliveryTracker = new EmailDeliveryTracker();
+  }
+  return deliveryTracker;
+}
 
 // Get email preferences for current user
 router.get('/', (req, res) => {
@@ -22,7 +30,7 @@ router.get('/', (req, res) => {
       });
     }
 
-    const preferences = deliveryTracker.getEmailPreferences(email, userType);
+    const preferences = getDeliveryTracker().getEmailPreferences(email, userType);
 
     res.json({
       success: true,
@@ -91,7 +99,7 @@ router.patch('/', (req, res) => {
       throw new Error('Invalid frequency. Must be: immediate, hourly, or daily');
     }
 
-    const updatedPreferences = deliveryTracker.updateEmailPreferences(email, preferences);
+    const updatedPreferences = getDeliveryTracker().updateEmailPreferences(email, preferences);
 
     res.json({
       success: true,
@@ -145,7 +153,7 @@ router.post('/bulk-update', (req, res) => {
     for (const update of updates) {
       try {
         const { email, ...preferences } = update;
-        const updatedPrefs = deliveryTracker.updateEmailPreferences(email, preferences);
+        const updatedPrefs = getDeliveryTracker().updateEmailPreferences(email, preferences);
         results.push({
           email,
           success: true,
@@ -185,8 +193,8 @@ router.post('/test', async (req, res) => {
       });
     }
 
-    const shouldSend = deliveryTracker.shouldSendEmail(email, category, userType);
-    const preferences = deliveryTracker.getEmailPreferences(email, userType);
+    const shouldSend = getDeliveryTracker().shouldSendEmail(email, category, userType);
+    const preferences = getDeliveryTracker().getEmailPreferences(email, userType);
 
     res.json({
       success: true,
@@ -213,7 +221,7 @@ router.get('/delivery-stats', (req, res) => {
   try {
     const { timeframe = '24h' } = req.query;
 
-    const stats = deliveryTracker.getDeliveryAnalytics(timeframe);
+    const stats = getDeliveryTracker().getDeliveryAnalytics(timeframe);
 
     res.json({
       success: true,
@@ -233,7 +241,7 @@ router.get('/delivery-status/:trackingId', (req, res) => {
   try {
     const { trackingId } = req.params;
 
-    const status = deliveryTracker.getDeliveryStatus(trackingId);
+    const status = getDeliveryTracker().getDeliveryStatus(trackingId);
 
     if (!status) {
       return res.status(404).json({
@@ -260,7 +268,7 @@ router.post('/retry-failed', async (req, res) => {
   try {
     const { limit = 50 } = req.body;
 
-    const failedEmails = deliveryTracker.getEmailsForRetry().slice(0, limit);
+    const failedEmails = getDeliveryTracker().getEmailsForRetry().slice(0, limit);
 
     if (failedEmails.length === 0) {
       return res.json({
@@ -335,7 +343,7 @@ router.post('/cleanup', (req, res) => {
       });
     }
 
-    const result = deliveryTracker.cleanOldRecords(daysToKeep);
+    const result = getDeliveryTracker().cleanOldRecords(daysToKeep);
 
     res.json({
       success: true,
@@ -407,7 +415,7 @@ router.post('/unsubscribe', (req, res) => {
       system_notifications: 0
     };
 
-    const updatedPreferences = deliveryTracker.updateEmailPreferences(email, unsubscribePreferences);
+    const updatedPreferences = getDeliveryTracker().updateEmailPreferences(email, unsubscribePreferences);
 
     res.json({
       success: true,

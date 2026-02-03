@@ -5,10 +5,13 @@
 
 require('dotenv').config();
 
+// Import logger early for validation
+const { logger } = require('./utils/structured-logger');
+
 // Environment validation - ensure required variables are set
 function validateEnvironment() {
   const requiredVars = [
-    'ANTHROPIC_API_KEY',
+    'GROQ_API_KEY',
     'TELEGRAM_BOT_TOKEN',
     'GOOGLE_API_KEY',
     'VAPID_PUBLIC_KEY',
@@ -21,15 +24,6 @@ function validateEnvironment() {
   if (missingVars.length > 0) {
     logger.error('Missing required environment variables', {
       missing_vars: missingVars,
-      module: 'environment'
-    });
-    process.exit(1);
-  }
-
-  // Validate API key formats
-  if (!process.env.ANTHROPIC_API_KEY.startsWith('sk-ant-')) {
-    logger.error('Invalid ANTHROPIC_API_KEY format', {
-      expected_prefix: 'sk-ant-',
       module: 'environment'
     });
     process.exit(1);
@@ -64,7 +58,6 @@ const compression = require('compression');
 const path = require('path');
 const fs = require('fs');
 const http = require('http');
-const { logger } = require('./utils/structured-logger');
 
 // Initialize database (schema, migrations, and seeding handled in db/index.js)
 const { db } = require('./db');
@@ -306,10 +299,11 @@ app.use((err, req, res, next) => {
   });
 });
 
-// Initialize retention notification service
+// Initialize retention notification service (temporarily disabled for debugging)
 try {
-  require('./services/retention-notifications');
-  logger.info('Retention notification service initialized', { module: 'services' });
+  logger.info('Retention notification service skipped for development', { module: 'services' });
+  // require('./services/retention-notifications');
+  // logger.info('Retention notification service initialized', { module: 'services' });
 } catch (error) {
   logger.error('Failed to initialize retention notification service', {
     error: error.message,
@@ -318,11 +312,12 @@ try {
   });
 }
 
-// Initialize job scheduler
+// Initialize job scheduler (temporarily disabled for debugging)
 try {
-  const jobScheduler = require('./services/job-scheduler');
-  jobScheduler.initialize();
-  logger.info('Background job scheduler initialized', { module: 'services' });
+  logger.info('Background job scheduler skipped for development', { module: 'services' });
+  // const jobScheduler = require('./services/job-scheduler');
+  // jobScheduler.initialize();
+  // logger.info('Background job scheduler initialized', { module: 'services' });
 } catch (error) {
   logger.error('Failed to initialize background job scheduler', {
     error: error.message,
@@ -352,18 +347,19 @@ server.listen(PORT, HOST, async () => {
     }
   });
 
-  // Initialize email service and scheduler
+  // Initialize email service and scheduler (temporarily disabled for debugging)
   try {
-    const emailService = require('./services/email');
-    const emailScheduler = require('./services/email/scheduler');
+    logger.info('Email service initialization skipped for development', { module: 'email' });
+    // const emailService = require('./services/email');
+    // const emailScheduler = require('./services/email/scheduler');
 
-    // Initialize email service
-    await emailService.initialize();
-    logger.info('Email service initialized successfully', { module: 'email' });
+    // // Initialize email service
+    // await emailService.initialize();
+    // logger.info('Email service initialized successfully', { module: 'email' });
 
-    // Start email scheduler
-    emailScheduler.start();
-    logger.info('Email scheduler started successfully', { module: 'email' });
+    // // Start email scheduler
+    // emailScheduler.start();
+    // logger.info('Email scheduler started successfully', { module: 'email' });
   } catch (error) {
     logger.warn('Email service initialization failed - continuing without email features', {
       module: 'email',
@@ -371,43 +367,39 @@ server.listen(PORT, HOST, async () => {
     });
   }
 
-  // Pretty console output in development
-  if (process.env.NODE_ENV !== 'production') {
-    console.log(`
-╔════════════════════════════════════════════════════════════╗
-║                                                            ║
-║   🚀 WorkLink Platform Server v2                          ║
-║                                                            ║
-║   Server:         http://${HOST}:${PORT}                       ║
-║   Admin Portal:   http://${HOST}:${PORT}/admin                 ║
-║   Worker PWA:     http://${HOST}:${PORT}                       ║
-║   Health Check:   http://${HOST}:${PORT}/health                ║
-║   WebSocket:      ws://${HOST}:${PORT}/ws                      ║
-║                                                            ║
-║   Environment:    ${(process.env.NODE_ENV || 'development').padEnd(20)}             ║
-║   Node Version:   ${process.version.padEnd(20)}             ║
-║                                                            ║
-╚════════════════════════════════════════════════════════════╝
-  `);
-  }
+  // Enhanced console output for all environments
+  const adminBuilt = fs.existsSync(path.join(__dirname, 'admin', 'dist'));
+  const workerBuilt = fs.existsSync(path.join(__dirname, 'worker', 'dist'));
+  const dbStatus = (() => {
+    try {
+      db.prepare('SELECT 1').get();
+      return '✅ Connected';
+    } catch (error) {
+      return '❌ Error';
+    }
+  })();
+
+  console.log(`🚀 WorkLink v2 ready on http://${HOST}:${PORT} | Admin: /admin`);
 });
 
 // Graceful shutdown handling
 process.on('SIGINT', () => {
   logger.info('Received SIGINT, shutting down gracefully...', { module: 'server' });
 
-  // Stop email scheduler
-  try {
-    const emailScheduler = require('./services/email/scheduler');
-    emailScheduler.stop();
-    logger.info('Email scheduler stopped', { module: 'email' });
-  } catch (error) {
-    logger.warn('Error stopping email scheduler', { module: 'email', error: error.message });
-  }
+  // Skip email scheduler since it's disabled
+  logger.info('Email scheduler not running (disabled)', { module: 'email' });
 
   // Close server
   server.close(() => {
     logger.info('Server closed', { module: 'server' });
+    if (db) {
+      try {
+        db.close();
+        logger.info('Database connection closed', { module: 'database' });
+      } catch (error) {
+        logger.warn('Error closing database', { module: 'database', error: error.message });
+      }
+    }
     process.exit(0);
   });
 });
@@ -415,18 +407,20 @@ process.on('SIGINT', () => {
 process.on('SIGTERM', () => {
   logger.info('Received SIGTERM, shutting down gracefully...', { module: 'server' });
 
-  // Stop email scheduler
-  try {
-    const emailScheduler = require('./services/email/scheduler');
-    emailScheduler.stop();
-    logger.info('Email scheduler stopped', { module: 'email' });
-  } catch (error) {
-    logger.warn('Error stopping email scheduler', { module: 'email', error: error.message });
-  }
+  // Skip email scheduler since it's disabled
+  logger.info('Email scheduler not running (disabled)', { module: 'email' });
 
   // Close server
   server.close(() => {
     logger.info('Server closed', { module: 'server' });
+    if (db) {
+      try {
+        db.close();
+        logger.info('Database connection closed', { module: 'database' });
+      } catch (error) {
+        logger.warn('Error closing database', { module: 'database', error: error.message });
+      }
+    }
     process.exit(0);
   });
 });

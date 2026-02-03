@@ -26,7 +26,7 @@ import {
   BrainIcon,
   ZapIcon,
   TrendingUpIcon,
-  ThunderboltIcon,
+  Zap as ThunderboltIcon,
 } from 'lucide-react';
 import { clsx } from 'clsx';
 import Logo, { LogoIcon } from '../ui/Logo';

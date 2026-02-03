@@ -954,7 +954,9 @@ function createSchema(db) {
     CREATE INDEX IF NOT EXISTS idx_ad_timing_scores_hour ON ad_timing_scores(hour, day_of_week);
   `);
 
-  console.log('✅ Schema created successfully');
+  if (process.env.NODE_ENV !== 'production') {
+    console.log('✅ Schema created successfully');
+  }
 }
 
 /**
@@ -1107,7 +1109,9 @@ function runMigrations(db) {
     }
   });
 
-  console.log('✅ Migrations completed');
+  if (process.env.NODE_ENV !== 'production') {
+    console.log('✅ Migrations completed');
+  }
 }
 
 module.exports = {

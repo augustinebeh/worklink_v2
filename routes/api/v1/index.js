@@ -25,9 +25,9 @@ const aiAutomationRoutes = require('./ai-automation');
 const referralRoutes = require('./referrals');
 const availabilityRoutes = require('./availability');
 const notificationRoutes = require('./notifications');
-const tenderMonitorRoutes = require('./tender-monitor');
+// const tenderMonitorRoutes = require('./tender-monitor'); // Temporarily disabled
 const emailPreferencesRoutes = require('./email-preferences');
-const emailConfigRoutes = require('./email-config');
+// const emailConfigRoutes = require('./email-config'); // Disabled to prevent hanging
 
 // Messaging & Webhooks
 const telegramWebhookRoutes = require('./webhooks/telegram');
@@ -47,20 +47,20 @@ const chatAttachmentsRoutes = require('./chat-attachments');
 const quickRepliesRoutes = require('./quick-replies');
 
 // Background Job Scheduler
-const jobSchedulerRoutes = require('./job-scheduler');
+// const jobSchedulerRoutes = require('./job-scheduler'); // Temporarily disabled
 
 // 100x Consultant Performance System
 const consultantPerformanceRoutes = require('./consultant-performance');
 
 // Fact-Based Template Response System
-const templateResponseRoutes = require('./template-responses');
+// const templateResponseRoutes = require('./template-responses'); // Temporarily disabled
 
 // Admin Escalation and Handoff System
 const adminEscalationRoutes = require('./admin-escalation');
 const escalationAnalyticsRoutes = require('./escalation-analytics');
 
 // Smart Response Router System
-const smartResponseRouterRoutes = require('./smart-response-router');
+// const smartResponseRouterRoutes = require('./smart-response-router'); // Temporarily disabled
 
 // Interview Scheduling System
 const interviewSchedulingRoutes = require('./interview-scheduling');
@@ -84,9 +84,9 @@ router.use('/ai', aiAutomationRoutes);
 router.use('/referrals', referralRoutes);
 router.use('/availability', availabilityRoutes);
 router.use('/notifications', notificationRoutes);
-router.use('/tender-monitor', tenderMonitorRoutes);
+// router.use('/tender-monitor', tenderMonitorRoutes); // Temporarily disabled
 router.use('/email-preferences', emailPreferencesRoutes);
-router.use('/email-config', emailConfigRoutes);
+// router.use('/email-config', emailConfigRoutes); // Disabled to prevent hanging
 
 // Messaging & Webhooks
 router.use('/webhooks/telegram', telegramWebhookRoutes);
@@ -106,20 +106,20 @@ router.use('/chat/attachments', chatAttachmentsRoutes);
 router.use('/quick-replies', quickRepliesRoutes);
 
 // Background Job Scheduler
-router.use('/job-scheduler', jobSchedulerRoutes);
+// router.use('/job-scheduler', jobSchedulerRoutes); // Temporarily disabled
 
 // 100x Consultant Performance System
 router.use('/consultant-performance', consultantPerformanceRoutes);
 
 // Fact-Based Template Response System
-router.use('/template-responses', templateResponseRoutes);
+// router.use('/template-responses', templateResponseRoutes); // Temporarily disabled
 
 // Admin Escalation and Handoff System
 router.use('/admin-escalation', adminEscalationRoutes);
 router.use('/escalation-analytics', escalationAnalyticsRoutes);
 
 // Smart Response Router System
-router.use('/smart-response-router', smartResponseRouterRoutes);
+// router.use('/smart-response-router', smartResponseRouterRoutes); // Temporarily disabled
 
 // Interview Scheduling System
 router.use('/interview-scheduling', interviewSchedulingRoutes);
@@ -149,7 +149,7 @@ router.get('/', (req, res) => {
       notifications: '/api/v1/notifications',
       tenderMonitor: '/api/v1/tender-monitor',
       emailPreferences: '/api/v1/email-preferences',
-      emailConfig: '/api/v1/email-config',
+      // emailConfig: '/api/v1/email-config', // Disabled
       // Messaging
       messaging: '/api/v1/messaging',
       webhooks: {

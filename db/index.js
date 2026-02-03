@@ -17,7 +17,7 @@ const db = createConnection();
  * Initialize the database with schema, migrations, and data
  */
 function initializeDatabase() {
-  console.log('🚀 Initializing WorkLink database...');
+  // Minimal logging for concise output
 
   // Create schema
   createSchema(db);
@@ -36,7 +36,7 @@ function initializeDatabase() {
     seedSampleData(db);
   }
 
-  console.log('✅ Database initialization complete');
+  // Database initialized silently for concise output
 }
 
 // Initialize on module load

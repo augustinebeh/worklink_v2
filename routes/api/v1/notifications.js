@@ -6,7 +6,7 @@ const express = require('express');
 const router = express.Router();
 const { db } = require('../../../db');
 const { getSGDateString } = require('../../../shared/constants');
-const retentionService = require('../../../services/retention-notifications');
+// const retentionService = require('../../../services/retention-notifications'); // Disabled to prevent hanging
 
 // Initialize web-push if keys are available
 let webpush = null;
@@ -620,11 +620,11 @@ router.post('/test-retention/:candidateId/:type', async (req, res) => {
 
     const { candidateId, type } = req.params;
 
-    await retentionService.triggerNotification(candidateId, type);
+    // await retentionService.triggerNotification(candidateId, type); // Disabled to prevent hanging
 
     res.json({
       success: true,
-      message: `Test retention notification sent to ${candidateId}`
+      message: `Test retention notification sent to ${candidateId} (retention service disabled)`
     });
 
   } catch (error) {

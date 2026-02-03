@@ -47,7 +47,7 @@ export function AuthProvider({ children }) {
     setUser(null);
     sessionStorage.removeItem('admin_user');
     sessionStorage.removeItem('admin_token');
-    navigate('/login');
+    navigate('login');
   };
 
   const value = {

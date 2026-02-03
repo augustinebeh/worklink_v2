@@ -47,7 +47,7 @@ function ProtectedRoute({ children }) {
   }
 
   if (!isAuthenticated) {
-    return <Navigate to="/login" replace />;
+    return <Navigate to="login" replace />;
   }
 
   return children;
@@ -57,7 +57,7 @@ function AppRoutes() {
   return (
     <Routes>
       {/* Public routes */}
-      <Route path="/login" element={<Login />} />
+      <Route path="login" element={<Login />} />
 
       {/* Protected routes */}
       <Route
@@ -108,7 +108,7 @@ function AppRoutes() {
         <Route path="ad-optimization" element={<AdOptimization />} />
 
         {/* Redirects for removed/consolidated pages */}
-        <Route path="analytics" element={<Navigate to="/financials" replace />} />
+        <Route path="analytics" element={<Navigate to="financials" replace />} />
       </Route>
 
       {/* Catch all */}

@@ -18,14 +18,31 @@ const {
   calculateCandidateMatchScore,
 } = require('../../../utils/candidate-matching');
 
-// Production web scraping imports
-const GeBIZScraper = require('../../../utils/scraping/gebiz-scraper');
-const scrapingMonitor = require('../../../utils/scraping/scraping-monitor');
-const DataValidator = require('../../../utils/scraping/data-validator');
+// Production web scraping imports (lazy-loaded to prevent blocking server startup)
+let GeBIZScraper = null;
+let scrapingMonitor = null;
+let DataValidator = null;
 
 // Initialize scraper and validator instances
 let gebizScraper = null;
-const dataValidator = new DataValidator();
+let dataValidator = null;
+
+// Lazy loading function for scraping dependencies
+function ensureScrapingDependencies() {
+  if (!GeBIZScraper) {
+    console.log('🔄 Loading scraping dependencies...');
+    GeBIZScraper = require('../../../utils/scraping/gebiz-scraper');
+    scrapingMonitor = require('../../../utils/scraping/scraping-monitor');
+    DataValidator = require('../../../utils/scraping/data-validator');
+    dataValidator = new DataValidator();
+    console.log('✅ Scraping dependencies loaded successfully');
+  }
+}
+
+function getScrapingDeps() {
+  ensureScrapingDependencies();
+  return { GeBIZScraper, scrapingMonitor, DataValidator, dataValidator };
+}
 
 // ============================================
 // GEBIZ TENDER SCRAPER (Simulated for now)
@@ -38,6 +55,9 @@ router.post('/gebiz/scrape', async (req, res) => {
   const sessionId = `SCR${Date.now()}`;
 
   try {
+    // Load scraping dependencies on first use
+    ensureScrapingDependencies();
+
     const {
       categories = ['manpower', 'hr services', 'event support'],
       useHeadless = true,
@@ -221,6 +241,8 @@ router.post('/gebiz/scrape', async (req, res) => {
  */
 router.get('/gebiz/status', (req, res) => {
   try {
+    ensureScrapingDependencies();
+
     const recentTenders = db.prepare(`
       SELECT id, title, agency, estimated_value, closing_date, created_at,
              data_quality_score, scraping_session_id
@@ -295,6 +317,8 @@ router.get('/gebiz/status', (req, res) => {
  */
 router.get('/gebiz/session/:sessionId', (req, res) => {
   try {
+    ensureScrapingDependencies();
+
     const sessionStatus = scrapingMonitor.getSessionStatus(req.params.sessionId);
 
     if (!sessionStatus) {
@@ -318,6 +342,8 @@ router.get('/gebiz/session/:sessionId', (req, res) => {
  */
 router.post('/gebiz/configure', async (req, res) => {
   try {
+    ensureScrapingDependencies();
+
     const {
       headless = true,
       timeout = 30000,
@@ -364,6 +390,8 @@ router.post('/gebiz/test', async (req, res) => {
   const testSessionId = `TEST${Date.now()}`;
 
   try {
+    ensureScrapingDependencies();
+
     scrapingMonitor.startSession(testSessionId, { test: true });
 
     if (!gebizScraper) {
@@ -411,6 +439,8 @@ router.post('/gebiz/test', async (req, res) => {
  */
 router.post('/gebiz/cleanup', async (req, res) => {
   try {
+    ensureScrapingDependencies();
+
     if (gebizScraper) {
       await gebizScraper.cleanup();
       gebizScraper = null;
