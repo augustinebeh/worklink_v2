@@ -51,12 +51,14 @@ function getLastCandidateMessageChannel(candidateId) {
  * @param {object} options - { channel, templateId, aiGenerated, aiSource, replyToChannel }
  */
 async function sendToCandidate(candidateId, content, options = {}) {
-  const { 
-    channel = 'auto', 
-    templateId = null, 
-    aiGenerated = false, 
+  const {
+    channel = 'auto',
+    templateId = null,
+    aiGenerated = false,
     aiSource = null,
-    replyToChannel = null  // Explicit channel from AI processing
+    replyToChannel = null,  // Explicit channel from AI processing
+    quickReplies = null,    // Quick reply buttons for PWA
+    telegramButtons = null  // Inline keyboard for Telegram
   } = options;
 
   // Get candidate info
@@ -100,13 +102,21 @@ async function sendToCandidate(candidateId, content, options = {}) {
 
   // Send to Telegram if needed
   if (shouldSendToTelegram) {
-    const telegramResult = await telegram.sendMessage(candidate.telegram_chat_id, content);
+    let telegramResult;
+
+    // Send with inline keyboard buttons if available
+    if (telegramButtons && telegramButtons.length > 0) {
+      telegramResult = await telegram.sendMessageWithButtons(candidate.telegram_chat_id, content, telegramButtons);
+    } else {
+      telegramResult = await telegram.sendMessage(candidate.telegram_chat_id, content);
+    }
+
     if (telegramResult.success) {
       externalId = String(telegramResult.messageId);
       deliveryMethod.push('telegram');
       sentToTelegram = true;
       db.prepare(`UPDATE messages SET external_id = ? WHERE id = ?`).run(externalId, messageId);
-      console.log(`✅ [Telegram] Message sent to ${candidateId}`);
+      console.log(`✅ [Telegram] Message sent to ${candidateId}${telegramButtons ? ' with buttons' : ''}`);
     } else {
       console.error(`❌ [Telegram] Failed to send to ${candidateId}:`, telegramResult.error);
     }
@@ -117,10 +127,15 @@ async function sendToCandidate(candidateId, content, options = {}) {
 
   // Send to PWA if needed
   if (shouldSendToApp) {
-    // Send via WebSocket
+    // Send via WebSocket with quick replies metadata
+    const messageWithQuickReplies = {
+      ...message,
+      quickReplies: quickReplies || []
+    };
+
     broadcastToCandidate(candidateId, {
       type: EventTypes.CHAT_MESSAGE,
-      message,
+      message: messageWithQuickReplies,
     });
     deliveryMethod.push('websocket');
     sentToApp = true;

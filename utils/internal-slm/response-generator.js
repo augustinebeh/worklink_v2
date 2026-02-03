@@ -23,7 +23,7 @@ class ResponseGenerator {
     const personalizedContent = this.personalizeTemplate(template, candidateData, entities);
     const finalResponse = this.addPersonalityTouches(personalizedContent, intent, channel);
 
-    return {
+    const response = {
       content: finalResponse,
       intent,
       confidence: template.confidence || 0.85,
@@ -32,6 +32,19 @@ class ResponseGenerator {
       conversationFlow: template.conversationFlow,
       channel: channel
     };
+
+    // Generate smart quick replies based on intent and nextActions
+    const quickReplies = this.generateSmartQuickReplies(intent, template.nextActions || [], candidateData, channel);
+    if (quickReplies.length > 0) {
+      response.quickReplies = quickReplies;
+
+      // Generate Telegram inline keyboards for Telegram channel
+      if (channel === 'telegram') {
+        response.telegramButtons = this.generateTelegramButtons(quickReplies);
+      }
+    }
+
+    return response;
   }
 
   /**
@@ -356,6 +369,165 @@ class ResponseGenerator {
     }
 
     return content;
+  }
+
+  /**
+   * Generate smart quick replies based on intent and context
+   */
+  generateSmartQuickReplies(intent, nextActions, candidateData, channel = 'app') {
+    const quickReplies = [];
+
+    // Generate contextual quick replies based on intent
+    switch (intent) {
+      case 'greeting_pending':
+        quickReplies.push(
+          {
+            text: channel === 'telegram' ? '📅 Schedule Interview' : 'Schedule Interview',
+            action: 'schedule_interview',
+            params: { candidateId: candidateData.id },
+            metadata: { icon: 'calendar', color: 'emerald' }
+          },
+          {
+            text: channel === 'telegram' ? '❓ Ask Question' : 'Ask Question',
+            action: 'general_inquiry',
+            params: { topic: 'general' },
+            metadata: { icon: 'help-circle', color: 'blue' }
+          }
+        );
+        break;
+
+      case 'greeting_active':
+        quickReplies.push(
+          {
+            text: channel === 'telegram' ? '💼 View Jobs' : 'View Jobs',
+            action: 'job_inquiry',
+            params: { type: 'available' },
+            metadata: { icon: 'briefcase', color: 'violet' }
+          },
+          {
+            text: channel === 'telegram' ? '💰 Payment Info' : 'Payment Info',
+            action: 'payment_inquiry',
+            params: { type: 'status' },
+            metadata: { icon: 'dollar-sign', color: 'emerald' }
+          }
+        );
+        break;
+
+      case 'interview_offer':
+        quickReplies.push(
+          {
+            text: channel === 'telegram' ? '✅ Yes, Schedule' : 'Yes, Schedule',
+            action: 'accept_interview_offer',
+            params: { candidateId: candidateData.id },
+            metadata: { icon: 'check', color: 'emerald' }
+          },
+          {
+            text: channel === 'telegram' ? '📅 Different Time' : 'Different Time',
+            action: 'request_different_time',
+            params: { preference: 'other' },
+            metadata: { icon: 'clock', color: 'amber' }
+          }
+        );
+        break;
+
+      case 'slot_options':
+        // Generate quick replies for time slot selection
+        // These should be generated dynamically based on available slots
+        quickReplies.push(
+          {
+            text: 'Option 1',
+            action: 'select_time_slot',
+            params: { slotId: 1 },
+            metadata: { icon: 'calendar', color: 'emerald' }
+          },
+          {
+            text: 'Option 2',
+            action: 'select_time_slot',
+            params: { slotId: 2 },
+            metadata: { icon: 'calendar', color: 'emerald' }
+          },
+          {
+            text: 'Option 3',
+            action: 'select_time_slot',
+            params: { slotId: 3 },
+            metadata: { icon: 'calendar', color: 'emerald' }
+          },
+          {
+            text: channel === 'telegram' ? '🔄 More Options' : 'More Options',
+            action: 'request_more_slots',
+            params: {},
+            metadata: { icon: 'refresh-cw', color: 'blue' }
+          }
+        );
+        break;
+
+      case 'booking_confirmation':
+        quickReplies.push(
+          {
+            text: channel === 'telegram' ? '✅ Confirmed' : 'Confirmed',
+            action: 'acknowledge_booking',
+            params: { confirmed: true },
+            metadata: { icon: 'check-circle', color: 'emerald' }
+          },
+          {
+            text: channel === 'telegram' ? '📅 Reschedule' : 'Reschedule',
+            action: 'request_reschedule',
+            params: {},
+            metadata: { icon: 'calendar', color: 'amber' }
+          }
+        );
+        break;
+
+      default:
+        // General availability-based quick replies
+        if (nextActions.includes('schedule_interview')) {
+          quickReplies.push({
+            text: channel === 'telegram' ? '📅 Schedule Now' : 'Schedule Now',
+            action: 'schedule_interview',
+            params: { candidateId: candidateData.id },
+            metadata: { icon: 'calendar', color: 'emerald' }
+          });
+        }
+
+        if (nextActions.includes('escalate_to_admin')) {
+          quickReplies.push({
+            text: channel === 'telegram' ? '👤 Talk to Admin' : 'Talk to Admin',
+            action: 'escalate_to_admin',
+            params: { reason: 'user_request' },
+            metadata: { icon: 'user', color: 'blue' }
+          });
+        }
+
+        // Always provide general help option
+        quickReplies.push({
+          text: channel === 'telegram' ? '❓ Help' : 'Help',
+          action: 'general_help',
+          params: {},
+          metadata: { icon: 'help-circle', color: 'gray' }
+        });
+        break;
+    }
+
+    return quickReplies;
+  }
+
+  /**
+   * Generate Telegram inline keyboard buttons
+   */
+  generateTelegramButtons(quickReplies) {
+    // Convert quick replies to Telegram inline keyboard format
+    const buttons = quickReplies.map(reply => ({
+      text: reply.text,
+      callback_data: `${reply.action}:${JSON.stringify(reply.params)}`
+    }));
+
+    // Group buttons in rows (max 2 buttons per row for better mobile UX)
+    const buttonRows = [];
+    for (let i = 0; i < buttons.length; i += 2) {
+      buttonRows.push(buttons.slice(i, i + 2));
+    }
+
+    return buttonRows;
   }
 
   /**

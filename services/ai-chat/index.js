@@ -586,6 +586,8 @@ async function processIncomingMessage(candidateId, content, channel = 'app') {
                 aiGenerated: true,
                 aiSource: 'slm',
                 slmGenerated: true,
+                quickReplies: slmResponse.quickReplies || [],
+                telegramButtons: slmResponse.telegramButtons || null
               });
               console.log(`🤖 [SLM] SLM response sent successfully via ${result.channel}`);
             } catch (err) {
