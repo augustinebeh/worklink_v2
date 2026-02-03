@@ -14,6 +14,7 @@ import { XP_THRESHOLDS as xpThresholds, LEVEL_TITLES as levelTitles } from '../.
  * @param {string} size - Bar height: 'sm' | 'md' | 'lg' (default: 'md')
  * @param {boolean} animating - Whether the bar is currently animating (glow effect)
  * @param {boolean} compact - Compact mode (just the bar, no text)
+ * @param {number} pendingXP - XP that is pending/being added for visual feedback
  */
 const XPBar = forwardRef(function XPBar({
   currentXP = 0,
@@ -23,24 +24,37 @@ const XPBar = forwardRef(function XPBar({
   size = 'md',
   animating = false,
   compact = false,
+  pendingXP = 0,
 }, ref) {
   const maxLevel = xpThresholds.length;
+  const baseCurrentXP = currentXP - pendingXP; // XP without pending
   const currentThreshold = xpThresholds[level - 1] || 0;
   const nextThreshold = xpThresholds[level] || xpThresholds[maxLevel - 1];
-  const xpInLevel = Math.max(0, currentXP - currentThreshold);
+  const xpInLevel = Math.max(0, baseCurrentXP - currentThreshold);
   const xpNeeded = Math.max(1, nextThreshold - currentThreshold);
   const progress = level >= maxLevel ? 100 : Math.min((xpInLevel / xpNeeded) * 100, 100);
   const xpToNext = xpNeeded - xpInLevel;
   const nextTitle = levelTitles[level + 1] || 'Max Level';
 
+  // Calculate pending XP progress for visual feedback
+  const pendingXpInLevel = Math.max(0, currentXP - currentThreshold);
+  const pendingProgress = level >= maxLevel ? 100 : Math.min((pendingXpInLevel / xpNeeded) * 100, 100);
+  const hasPendingXP = pendingXP > 0;
+
   if (compact) {
     return (
       <div className="xp-bar-shared xp-bar-compact">
-        <div ref={ref} className={clsx('xp-bar-track', size, animating && 'animating')}>
+        <div ref={ref} className={clsx('xp-bar-track', size, (animating || hasPendingXP) && 'animating')}>
           <div
             className={clsx('xp-bar-fill-shared', animating && 'animating')}
             style={{ width: `${Math.max(progress, 2)}%` }}
           />
+          {hasPendingXP && (
+            <div
+              className="absolute inset-0 rounded-full bg-gradient-to-r from-emerald-400 via-cyan-400 to-violet-400 opacity-60 animate-pulse"
+              style={{ width: `${Math.max(pendingProgress, 2)}%` }}
+            />
+          )}
         </div>
       </div>
     );
@@ -57,9 +71,14 @@ const XPBar = forwardRef(function XPBar({
           )}>
             <span className={clsx(
               'xp-bar-progress-current transition-all duration-500',
-              animating && 'text-emerald-300'
+              (animating || hasPendingXP) && 'text-emerald-300'
             )}>
               {xpInLevel.toLocaleString()}
+              {hasPendingXP && (
+                <span className="text-emerald-400 font-bold animate-pulse">
+                  +{pendingXP}
+                </span>
+              )}
             </span>
             <span className="xp-bar-progress-total"> / {xpNeeded.toLocaleString()} XP</span>
           </span>
@@ -67,11 +86,20 @@ const XPBar = forwardRef(function XPBar({
       )}
 
       {/* The ref is on the track bar itself for precise flying XP targeting */}
-      <div ref={ref} className={clsx('xp-bar-track', size, animating && 'animating')}>
+      <div ref={ref} className={clsx('xp-bar-track', size, (animating || hasPendingXP) && 'animating')}>
+        {/* Base XP progress */}
         <div
           className={clsx('xp-bar-fill-shared', animating && 'animating')}
           style={{ width: `${Math.max(progress, 2)}%` }}
         />
+
+        {/* Pending XP overlay with glow effect */}
+        {hasPendingXP && (
+          <div
+            className="absolute inset-0 rounded-full bg-gradient-to-r from-emerald-400 via-cyan-400 to-violet-400 opacity-60 animate-pulse"
+            style={{ width: `${Math.max(pendingProgress, 2)}%` }}
+          />
+        )}
       </div>
 
       {showFooter && level < maxLevel && (

@@ -28,7 +28,7 @@ import {
 export default function JobDetail() {
   const { id } = useParams();
   const navigate = useNavigate();
-  const { user } = useAuth();
+  const { user, refreshUser } = useAuth();
   const toast = useToast();
   const [job, setJob] = useState(null);
   const [loading, setLoading] = useState(true);
@@ -46,9 +46,14 @@ export default function JobDetail() {
       if (data.success) {
         setJob(data.data);
         if (user) {
-          const deployRes = await fetch(`/api/v1/deployments?job_id=${id}&candidate_id=${user.id}`);
-          const deployData = await deployRes.json();
-          setHasApplied(deployData.data?.length > 0);
+          // Check if user has already applied to this job
+          const applicationRes = await fetch(`/api/v1/jobs/${id}/applications?candidate_id=${user.id}`, {
+            headers: {
+              'Authorization': `Bearer ${localStorage.getItem('token')}`
+            }
+          });
+          const applicationData = await applicationRes.json();
+          setHasApplied(applicationData.success && applicationData.data?.length > 0);
         }
       }
     } catch (error) {
@@ -64,22 +69,51 @@ export default function JobDetail() {
       return;
     }
 
+    // Check if user's account status is pending
+    if (user.status === 'pending') {
+      toast.error('Account Pending', 'Your account is still being reviewed. Please wait for approval before applying to jobs.');
+      return;
+    }
+
+    // Check if job is fully booked
+    if (slotsLeft === 0) {
+      toast.error('Fully Booked', 'This job is now fully booked.');
+      return;
+    }
+
     setApplying(true);
     try {
-      const res = await fetch('/api/v1/deployments', {
+      const res = await fetch(`/api/v1/jobs/${id}/accept`, {
         method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ job_id: id, candidate_id: user.id }),
+        headers: {
+          'Content-Type': 'application/json',
+          'Authorization': `Bearer ${localStorage.getItem('token')}`
+        },
+        body: JSON.stringify({ candidate_id: user.id }),
       });
       const data = await res.json();
+
       if (data.success) {
         setHasApplied(true);
-        toast.success('Applied!', 'Your application has been submitted');
+        // Refresh job data to get updated slot count
+        await fetchJob();
+        toast.success('Applied!', 'Your application has been submitted successfully');
       } else {
-        toast.error('Failed', data.error || 'Could not apply');
+        // Handle specific error cases
+        if (data.error?.includes('pending')) {
+          toast.error('Account Pending', 'Your account is still being reviewed. Please wait for approval.');
+        } else if (data.error?.includes('full') || data.error?.includes('booked')) {
+          toast.error('Fully Booked', 'This job is now fully booked.');
+        } else if (data.error?.includes('already applied')) {
+          toast.error('Already Applied', 'You have already applied to this job.');
+          setHasApplied(true);
+        } else {
+          toast.error('Application Failed', data.error || 'Could not submit your application. Please try again.');
+        }
       }
     } catch (error) {
-      toast.error('Error', 'Please try again');
+      console.error('Apply error:', error);
+      toast.error('Network Error', 'Please check your connection and try again');
     } finally {
       setApplying(false);
     }
@@ -137,7 +171,7 @@ export default function JobDetail() {
   const slotsLeft = job.total_slots - job.filled_slots;
 
   return (
-    <div className="min-h-screen bg-theme-primary pb-32">
+    <div className="min-h-screen bg-theme-primary pb-24">
       {/* Header */}
       <div className="sticky top-0 z-10 bg-theme-primary/95 backdrop-blur-xl px-4 pt-4 pb-4 border-b border-white/[0.05]">
         <div className="flex items-center justify-between">
@@ -275,7 +309,7 @@ export default function JobDetail() {
       </div>
 
       {/* Fixed Apply Button */}
-      <div className="fixed bottom-0 left-0 right-0 p-4 bg-theme-primary/95 backdrop-blur-xl border-t border-white/[0.05]" style={{ paddingBottom: 'calc(env(safe-area-inset-bottom, 0px) + 16px)' }}>
+      <div className="fixed left-0 right-0 p-4 bg-theme-primary/95 backdrop-blur-xl border-t border-white/[0.05] z-40 bottom-above-nav">
         <div className="flex items-center gap-4">
           <div className="flex-1">
             <p className="text-white/50 text-sm">Total Pay</p>

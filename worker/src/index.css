@@ -749,6 +749,16 @@
     padding-top: max(1rem, calc(env(safe-area-inset-top) + 0.5rem));
   }
 
+  /* Standard page bottom padding accounting for BottomNav and safe areas */
+  .pb-nav-safe {
+    padding-bottom: max(6rem, calc(env(safe-area-inset-bottom, 0px) + 6rem)); /* 6rem = 96px for BottomNav + padding */
+  }
+
+  /* For pages with fixed bottom elements that should sit above BottomNav */
+  .bottom-above-nav {
+    bottom: max(4rem, calc(env(safe-area-inset-bottom, 0px) + 4rem)); /* 4rem = 64px for BottomNav */
+  }
+
   /* Scrollbar hide utility */
   .scrollbar-hide {
     -ms-overflow-style: none;

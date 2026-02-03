@@ -1,6 +1,7 @@
 import { useState, useEffect } from 'react';
 import { clsx } from 'clsx';
 import { getLevelTier } from '../../../../shared/utils/gamification-browser';
+import { getOptimizedProfileImage, preloadImage } from '../../utils/imageUtils';
 
 /**
  * ProfileAvatar - Avatar with intricate decorative borders
@@ -448,10 +449,20 @@ export default function ProfileAvatar({
   } : config;
 
   const [imageLoaded, setImageLoaded] = useState(false);
+  const [optimizedPhotoUrl, setOptimizedPhotoUrl] = useState(null);
 
+  // Optimize and preload image when photoUrl changes
   useEffect(() => {
     setImageLoaded(false);
-  }, [photoUrl]);
+    const optimized = getOptimizedProfileImage(photoUrl, name);
+    setOptimizedPhotoUrl(optimized);
+
+    if (optimized) {
+      preloadImage(optimized).then((success) => {
+        setImageLoaded(success);
+      });
+    }
+  }, [photoUrl, name]);
 
   const sizes = {
     sm: { container: 'w-10 h-10', text: 'text-sm', badge: 'text-[8px] px-1', badgeOffset: '-bottom-1', padding: 'p-[2px]' },
@@ -542,16 +553,16 @@ export default function ProfileAvatar({
           finalConfig.ring,
           isCurrentUser ? 'text-white' : 'text-dark-300'
         )}>
-          {photoUrl ? (
+          {optimizedPhotoUrl && (
             <img
-              src={photoUrl}
+              src={optimizedPhotoUrl}
               alt={name}
               className="w-full h-full object-cover"
               style={{ display: imageLoaded ? 'block' : 'none' }}
               onLoad={() => setImageLoaded(true)}
               onError={() => setImageLoaded(false)}
             />
-          ) : null}
+          )}
           <span
             className={clsx(isCurrentUser ? 'text-primary-400' : '', 'select-none')}
             style={{ display: imageLoaded ? 'none' : 'flex' }}

@@ -1,0 +1,162 @@
+/* Profile Image Cropping Styles */
+
+/* Smooth zoom transitions */
+.crop-image {
+  transition: transform 0.15s ease-out;
+}
+
+/* Custom range slider styles */
+.zoom-slider {
+  -webkit-appearance: none;
+  appearance: none;
+  height: 6px;
+  border-radius: 3px;
+  background: rgba(255, 255, 255, 0.1);
+  outline: none;
+}
+
+.zoom-slider::-webkit-slider-thumb {
+  -webkit-appearance: none;
+  appearance: none;
+  width: 20px;
+  height: 20px;
+  border-radius: 50%;
+  background: linear-gradient(135deg, #10b981, #06b6d4);
+  cursor: pointer;
+  box-shadow: 0 4px 12px rgba(16, 185, 129, 0.3);
+  transition: all 0.2s ease;
+}
+
+.zoom-slider::-webkit-slider-thumb:hover {
+  transform: scale(1.1);
+  box-shadow: 0 6px 16px rgba(16, 185, 129, 0.4);
+}
+
+.zoom-slider::-moz-range-thumb {
+  width: 20px;
+  height: 20px;
+  border-radius: 50%;
+  background: linear-gradient(135deg, #10b981, #06b6d4);
+  cursor: pointer;
+  border: none;
+  box-shadow: 0 4px 12px rgba(16, 185, 129, 0.3);
+  transition: all 0.2s ease;
+}
+
+.zoom-slider::-moz-range-thumb:hover {
+  transform: scale(1.1);
+  box-shadow: 0 6px 16px rgba(16, 185, 129, 0.4);
+}
+
+/* Modal animations */
+@keyframes modalEnter {
+  from {
+    opacity: 0;
+    transform: scale(0.95) translateY(20px);
+  }
+  to {
+    opacity: 1;
+    transform: scale(1) translateY(0);
+  }
+}
+
+@keyframes backdropEnter {
+  from {
+    opacity: 0;
+  }
+  to {
+    opacity: 1;
+  }
+}
+
+.modal-backdrop {
+  animation: backdropEnter 0.2s ease-out;
+}
+
+.modal-content {
+  animation: modalEnter 0.3s cubic-bezier(0.16, 1, 0.3, 1);
+}
+
+/* Crop area highlight */
+.crop-preview-ring {
+  box-shadow:
+    0 0 0 2px rgba(16, 185, 129, 0.6),
+    0 0 20px rgba(16, 185, 129, 0.3),
+    inset 0 0 40px rgba(0, 0, 0, 0.8);
+}
+
+/* Dragging cursor states */
+.crop-image.dragging {
+  cursor: grabbing !important;
+  user-select: none;
+}
+
+.crop-image:not(.dragging) {
+  cursor: grab;
+}
+
+/* Button hover effects */
+.crop-control-button {
+  transition: all 0.2s ease;
+}
+
+.crop-control-button:hover {
+  transform: translateY(-1px);
+  box-shadow: 0 4px 12px rgba(255, 255, 255, 0.1);
+}
+
+.crop-control-button:active {
+  transform: translateY(0);
+}
+
+/* Loading spinner for cropping */
+@keyframes cropSpinner {
+  from {
+    transform: rotate(0deg);
+  }
+  to {
+    transform: rotate(360deg);
+  }
+}
+
+.crop-loading-spinner {
+  animation: cropSpinner 1s linear infinite;
+}
+
+/* Touch-friendly controls for mobile */
+@media (max-width: 640px) {
+  .crop-control-button {
+    min-height: 44px;
+    min-width: 44px;
+  }
+
+  .zoom-slider::-webkit-slider-thumb {
+    width: 24px;
+    height: 24px;
+  }
+
+  .zoom-slider::-moz-range-thumb {
+    width: 24px;
+    height: 24px;
+  }
+}
+
+/* Accessibility improvements */
+.crop-control-button:focus {
+  outline: 2px solid rgba(16, 185, 129, 0.6);
+  outline-offset: 2px;
+}
+
+.zoom-slider:focus {
+  outline: 2px solid rgba(16, 185, 129, 0.6);
+  outline-offset: 2px;
+}
+
+/* High contrast mode support */
+@media (prefers-contrast: high) {
+  .crop-preview-ring {
+    box-shadow:
+      0 0 0 3px #ffffff,
+      inset 0 0 40px rgba(0, 0, 0, 0.9);
+  }
+}

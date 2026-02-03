@@ -39,6 +39,7 @@ import { DEFAULTS } from '../utils/constants';
 import ProfileAvatar from '../components/ui/ProfileAvatar';
 import XPBar from '../components/gamification/XPBar';
 import { StatCard, SectionHeader } from '../components/common';
+import ProfileImageCrop from '../components/ui/ProfileImageCrop';
 
 // Rarity colors
 const RARITY_COLORS = {
@@ -398,6 +399,8 @@ export default function Profile() {
   const [showBorderModal, setShowBorderModal] = useState(false);
   const [borders, setBorders] = useState([]);
   const [selectedBorderId, setSelectedBorderId] = useState(null);
+  const [showCropModal, setShowCropModal] = useState(false);
+  const [selectedImage, setSelectedImage] = useState(null);
 
   useEffect(() => {
     if (user?.id) {
@@ -469,35 +472,60 @@ export default function Profile() {
   const handlePhotoUpload = async (e) => {
     const file = e.target?.files?.[0];
     if (!file) return;
+
     if (!file.type.startsWith('image/')) {
       toast.error('Invalid file', 'Please select an image');
       return;
     }
+
     if (file.size > 5 * 1024 * 1024) {
       toast.error('File too large', 'Max 5MB');
       return;
     }
-    setUploadingPhoto(true);
+
     setShowProfileActionModal(false);
+
+    // Convert to base64 and show crop modal
     const reader = new FileReader();
-    reader.onload = async (event) => {
-      try {
-        const res = await fetch(`/api/v1/candidates/${user.id}/photo`, {
-          method: 'POST',
-          headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify({ photo: event.target?.result }),
-        });
-        const data = await res.json();
-        if (data.success) {
-          toast.success('Updated!', 'Profile picture changed');
-          refreshUser();
-        }
-      } catch (error) {
-        toast.error('Failed', 'Please try again');
-      }
-      setUploadingPhoto(false);
+    reader.onload = (event) => {
+      setSelectedImage(event.target?.result);
+      setShowCropModal(true);
+    };
+    reader.onerror = () => {
+      toast.error('Upload failed', 'Could not read file');
     };
     reader.readAsDataURL(file);
+  };
+
+  const handleCropSave = async (croppedImage) => {
+    if (!user?.id) return;
+
+    setUploadingPhoto(true);
+
+    try {
+      const res = await fetch(`/api/v1/candidates/${user.id}/photo`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ photo: croppedImage }),
+      });
+
+      const data = await res.json();
+
+      if (data.success) {
+        if (data.questUnlocked) {
+          toast.success('Photo uploaded! 🎉', 'Profile quest unlocked - claim your XP in Quests!');
+        } else {
+          toast.success('Updated!', 'Profile picture changed');
+        }
+        refreshUser();
+      } else {
+        toast.error('Upload failed', data.error || 'Please try again');
+      }
+    } catch (error) {
+      toast.error('Failed', 'Please try again');
+    } finally {
+      setUploadingPhoto(false);
+    }
   };
 
   const handleConnectTelegram = async () => {
@@ -831,6 +859,18 @@ export default function Profile() {
           </div>
         </div>
       )}
+
+      {/* Profile Image Crop Modal */}
+      <ProfileImageCrop
+        isOpen={showCropModal}
+        onClose={() => {
+          setShowCropModal(false);
+          setSelectedImage(null);
+        }}
+        onSave={handleCropSave}
+        initialImage={selectedImage}
+        title="Crop Profile Picture"
+      />
 
       <style>{`
         @keyframes dropdown {

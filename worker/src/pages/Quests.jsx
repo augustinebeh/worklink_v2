@@ -196,6 +196,7 @@ export default function Quests() {
   const [loading, setLoading] = useState(true);
   const [claiming, setClaiming] = useState(null);
   const [filter, setFilter] = useState('all');
+  const [pendingXP, setPendingXP] = useState(0); // Track pending XP for immediate feedback
 
   useEffect(() => {
     if (user) fetchQuests();
@@ -248,6 +249,9 @@ export default function Quests() {
   const handleClaim = async (quest) => {
     setClaiming(quest.id);
     try {
+      // Add immediate visual feedback by adding pending XP
+      setPendingXP(prev => prev + quest.xp_reward);
+
       const res = await fetch(`/api/v1/gamification/quests/${quest.id}/claim`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
@@ -256,12 +260,21 @@ export default function Quests() {
       const data = await res.json();
       if (data.success) {
         toast.success('Quest Completed!', `+${quest.xp_reward} XP earned`);
-        fetchQuests();
-        refreshUser();
+
+        // Refresh data and clear pending XP after server sync
+        await Promise.all([
+          fetchQuests(),
+          refreshUser()
+        ]);
+        setPendingXP(prev => prev - quest.xp_reward);
       } else {
+        // Remove pending XP if failed
+        setPendingXP(prev => prev - quest.xp_reward);
         toast.error('Failed', data.error || 'Could not claim reward');
       }
     } catch (error) {
+      // Remove pending XP if error
+      setPendingXP(prev => prev - quest.xp_reward);
       toast.error('Error', 'Please try again');
     } finally {
       setClaiming(null);
@@ -303,7 +316,11 @@ export default function Quests() {
 
             {/* XP Progress Bar */}
             <div className="mb-4">
-              <XPBar currentXP={user?.xp || 0} level={calculateLevel(user?.xp || 0)} />
+              <XPBar
+                currentXP={(user?.xp || 0) + pendingXP}
+                level={calculateLevel((user?.xp || 0) + pendingXP)}
+                pendingXP={pendingXP}
+              />
             </div>
 
             {/* Stats Row */}

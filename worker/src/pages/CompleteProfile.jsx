@@ -14,6 +14,7 @@ import {
 import { useAuth } from '../contexts/AuthContext';
 import { useToast } from '../components/ui/Toast';
 import { clsx } from 'clsx';
+import ProfileImageCrop from '../components/ui/ProfileImageCrop';
 
 function FormField({ label, icon: Icon, children, error, completed }) {
   return (
@@ -114,6 +115,8 @@ export default function CompleteProfile() {
   const [errors, setErrors] = useState({});
   const [saving, setSaving] = useState(false);
   const [uploadingPhoto, setUploadingPhoto] = useState(false);
+  const [showCropModal, setShowCropModal] = useState(false);
+  const [selectedImage, setSelectedImage] = useState(null);
 
   useEffect(() => {
     if (user) {
@@ -147,36 +150,46 @@ export default function CompleteProfile() {
       return;
     }
 
-    setUploadingPhoto(true);
-
-    // Convert to base64
+    // Convert to base64 and show crop modal
     const reader = new FileReader();
-    reader.onload = async (event) => {
-      try {
-        const res = await fetch(`/api/v1/candidates/${user.id}/photo`, {
-          method: 'POST',
-          headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify({ photo: event.target?.result }),
-        });
-        const data = await res.json();
-
-        if (data.success) {
-          toast.success('Photo uploaded', 'Your profile picture has been updated');
-          await refreshUser?.();
-        } else {
-          toast.error('Upload failed', data.error || 'Please try again');
-        }
-      } catch (error) {
-        toast.error('Upload failed', 'Please try again');
-      } finally {
-        setUploadingPhoto(false);
-      }
+    reader.onload = (event) => {
+      setSelectedImage(event.target?.result);
+      setShowCropModal(true);
     };
     reader.onerror = () => {
       toast.error('Upload failed', 'Could not read the image file');
-      setUploadingPhoto(false);
     };
     reader.readAsDataURL(file);
+  };
+
+  const handleCropSave = async (croppedImage) => {
+    if (!user?.id) return;
+
+    setUploadingPhoto(true);
+
+    try {
+      const res = await fetch(`/api/v1/candidates/${user.id}/photo`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ photo: croppedImage }),
+      });
+      const data = await res.json();
+
+      if (data.success) {
+        if (data.questUnlocked) {
+          toast.success('Photo uploaded! 🎉', 'Profile quest unlocked - claim your XP in Quests!');
+        } else {
+          toast.success('Photo uploaded', 'Your profile picture has been updated');
+        }
+        await refreshUser?.();
+      } else {
+        toast.error('Upload failed', data.error || 'Please try again');
+      }
+    } catch (error) {
+      toast.error('Upload failed', 'Please try again');
+    } finally {
+      setUploadingPhoto(false);
+    }
   };
 
   const validate = () => {
@@ -398,6 +411,18 @@ export default function CompleteProfile() {
           )}
         </button>
       </div>
+
+      {/* Profile Image Crop Modal */}
+      <ProfileImageCrop
+        isOpen={showCropModal}
+        onClose={() => {
+          setShowCropModal(false);
+          setSelectedImage(null);
+        }}
+        onSave={handleCropSave}
+        initialImage={selectedImage}
+        title="Crop Profile Picture"
+      />
     </div>
   );
 }
