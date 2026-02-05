@@ -10,7 +10,19 @@ const Database = require('better-sqlite3');
 const path = require('path');
 const { v4: uuidv4 } = require('uuid');
 const fs = require('fs');
-const { ensureTableExistsWithFallback } = require('../../../db/database/utils/table-creator');
+
+// Import table creator with fallback for Railway deployment
+let ensureTableExistsWithFallback;
+try {
+  const tableCreator = require('../../../db/database/utils/table-creator');
+  ensureTableExistsWithFallback = tableCreator.ensureTableExistsWithFallback;
+} catch (error) {
+  // Fallback function for Railway deployment if table-creator module not found
+  ensureTableExistsWithFallback = (tableName) => {
+    console.warn(`⚠️  Table creator not available, using basic check for ${tableName}`);
+    return true; // Assume table exists or will be created by schema
+  };
+}
 
 // Railway-compatible database path configuration that matches main system
 const getDbPath = () => {

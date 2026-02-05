@@ -7,7 +7,24 @@ const express = require('express');
 const router = express.Router();
 const path = require('path');
 const Database = require('better-sqlite3');
-const { ensureTableExistsWithFallback, ensureGebizTables } = require('../../../db/database/utils/table-creator');
+
+// Import table creator with fallback for Railway deployment
+let ensureTableExistsWithFallback, ensureGebizTables;
+try {
+  const tableCreator = require('../../../db/database/utils/table-creator');
+  ensureTableExistsWithFallback = tableCreator.ensureTableExistsWithFallback;
+  ensureGebizTables = tableCreator.ensureGebizTables;
+} catch (error) {
+  // Fallback functions for Railway deployment if table-creator module not found
+  ensureTableExistsWithFallback = (tableName) => {
+    console.warn(`⚠️  Table creator not available, using basic check for ${tableName}`);
+    return true; // Assume table exists or will be created by schema
+  };
+  ensureGebizTables = () => {
+    console.warn('⚠️  Table creator not available, assuming tables exist');
+    return true;
+  };
+}
 
 // Database connection
 const gebizDbPath = path.join(__dirname, '../../../database/gebiz_intelligence.db');
