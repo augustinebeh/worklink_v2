@@ -17,6 +17,7 @@ import Button from '../ui/Button';
 import Input from '../ui/Input';
 import Select from '../ui/Select';
 import { useToast } from '../ui/Toast';
+import { lifecycleService } from '../../shared/services/api';
 
 const STAGE_OPTIONS = [
   { value: 'renewal_watch', label: 'Renewal Watch' },
@@ -123,24 +124,34 @@ export default function CreateTenderModal({ isOpen, onClose, onSuccess }) {
 
     setLoading(true);
     try {
-      // Simulate API call - replace with actual API call
+      // Prepare tender data for API call
       const tenderData = {
-        ...formData,
+        title: formData.title,
+        agency: formData.agency,
+        external_url: formData.external_id || null,
         estimated_value: formData.estimated_value ? parseFloat(formData.estimated_value) : null,
-        win_probability: formData.win_probability ? parseInt(formData.win_probability) : null,
-        created_at: new Date().toISOString()
+        stage: formData.stage,
+        priority: formData.priority,
+        source_type: 'manual_entry',
+        assigned_to: formData.assigned_to || null,
+        description: formData.description || formData.notes || null,
+        closing_date: formData.closing_date || null
       };
 
-      // Simulate API delay
-      await new Promise(resolve => setTimeout(resolve, 1500));
+      // Call actual API to create tender
+      const response = await lifecycleService.createTender(tenderData);
 
-      if (onSuccess) {
-        onSuccess(tenderData);
+      if (response.success) {
+        if (onSuccess) {
+          onSuccess(response.data);
+        }
+
+        toast.success('Tender Created', 'New tender has been added successfully');
+        resetForm();
+        onClose();
+      } else {
+        throw new Error(response.error || 'Failed to create tender');
       }
-
-      toast.success('Tender Created', 'New tender has been added successfully');
-      resetForm();
-      onClose();
     } catch (error) {
       console.error('Error creating tender:', error);
       toast.error('Creation Failed', 'Unable to create tender');

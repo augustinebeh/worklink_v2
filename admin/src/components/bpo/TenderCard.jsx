@@ -115,6 +115,7 @@ export default function TenderCard({
       role="button"
       aria-label={`Tender card: ${tender.title}`}
       tabIndex={0}
+      data-card-element="true"
     >
       {/* Header with priority badge */}
       <div className="flex items-start justify-between mb-2">

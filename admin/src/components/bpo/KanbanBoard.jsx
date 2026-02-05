@@ -1,4 +1,4 @@
-import React, { useState, useEffect, useMemo } from 'react';
+import React, { useState, useEffect, useMemo, useRef } from 'react';
 import {
   DndContext,
   DragOverlay,
@@ -70,6 +70,11 @@ export default function KanbanBoard({
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState(null);
   const [isMobile, setIsMobile] = useState(false);
+
+  // Drag-to-scroll state
+  const [isDragScrolling, setIsDragScrolling] = useState(false);
+  const [dragScrollStart, setDragScrollStart] = useState({ x: 0, scrollLeft: 0 });
+  const kanbanContainerRef = useRef(null);
 
   // Drag and drop hook
   const {
@@ -199,6 +204,47 @@ export default function KanbanBoard({
     }
   };
 
+  // Drag-to-scroll handlers for kanban board background
+  const handleMouseDownScroll = (e) => {
+    // Only start drag scrolling if not already dragging a card and clicking on background
+    if (isDragging || !kanbanContainerRef.current) return;
+
+    // Check if we're clicking on a card or button (avoid scrolling on interactive elements)
+    const target = e.target;
+    if (target.closest('[data-card-element="true"]') ||
+        target.closest('button') ||
+        target.closest('[role="button"]') ||
+        target.closest('.sortable-item')) {
+      return;
+    }
+
+    setIsDragScrolling(true);
+    setDragScrollStart({
+      x: e.pageX - kanbanContainerRef.current.offsetLeft,
+      scrollLeft: kanbanContainerRef.current.scrollLeft
+    });
+
+    // Prevent text selection during drag
+    e.preventDefault();
+  };
+
+  const handleMouseMoveScroll = (e) => {
+    if (!isDragScrolling || !kanbanContainerRef.current) return;
+
+    e.preventDefault();
+    const x = e.pageX - kanbanContainerRef.current.offsetLeft;
+    const walk = (x - dragScrollStart.x) * 2; // Multiply for faster scrolling
+    kanbanContainerRef.current.scrollLeft = dragScrollStart.scrollLeft - walk;
+  };
+
+  const handleMouseUpScroll = () => {
+    setIsDragScrolling(false);
+  };
+
+  const handleMouseLeaveScroll = () => {
+    setIsDragScrolling(false);
+  };
+
   if (error) {
     return (
       <div className="flex items-center justify-center py-12">
@@ -264,13 +310,20 @@ export default function KanbanBoard({
         {/* Sortable Context for stages */}
         <SortableContext items={stageIds} strategy={verticalListSortingStrategy}>
           <div
+            ref={kanbanContainerRef}
             className={clsx(
               'flex gap-4 overflow-x-auto pb-4',
               'scrollbar-thin scrollbar-thumb-slate-300 dark:scrollbar-thumb-slate-600 scrollbar-track-slate-100 dark:scrollbar-track-slate-800',
-              isDragging && 'cursor-grabbing'
+              isDragging && 'cursor-grabbing',
+              isDragScrolling && 'cursor-grabbing select-none',
+              !isDragging && !isDragScrolling && 'cursor-grab'
             )}
             role="application"
             aria-label="Tender lifecycle kanban board"
+            onMouseDown={handleMouseDownScroll}
+            onMouseMove={handleMouseMoveScroll}
+            onMouseUp={handleMouseUpScroll}
+            onMouseLeave={handleMouseLeaveScroll}
           >
             {loading ? (
               // Loading skeletons
