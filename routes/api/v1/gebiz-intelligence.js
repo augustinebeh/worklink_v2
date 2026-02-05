@@ -7,61 +7,286 @@ const express = require('express');
 const router = express.Router();
 const path = require('path');
 const Database = require('better-sqlite3');
+const fs = require('fs');
 
-// Import table creator with fallback for Railway deployment
-let ensureTableExistsWithFallback, ensureGebizTables;
-try {
-  const tableCreator = require('../../../db/database/utils/table-creator');
-  ensureTableExistsWithFallback = tableCreator.ensureTableExistsWithFallback;
-  ensureGebizTables = tableCreator.ensureGebizTables;
-} catch (error) {
-  // Fallback functions for Railway deployment if table-creator module not found
-  ensureTableExistsWithFallback = (tableName) => {
-    console.warn(`⚠️  Table creator not available, using basic check for ${tableName}`);
-    return true; // Assume table exists or will be created by schema
-  };
-  ensureGebizTables = () => {
-    console.warn('⚠️  Table creator not available, assuming tables exist');
-    return true;
-  };
+/**
+ * Robust GeBIZ Table Creation for Railway Deployment
+ * Ensures all required tables exist before any database operations
+ */
+class GeBIZTableManager {
+  constructor(db) {
+    this.db = db;
+    this.initialized = false;
+    this.initializationAttempted = false;
+  }
+
+  /**
+   * Check if a table exists
+   */
+  tableExists(tableName) {
+    try {
+      const result = this.db.prepare(`
+        SELECT name FROM sqlite_master
+        WHERE type='table' AND name=?
+      `).get(tableName);
+      return !!result;
+    } catch (error) {
+      console.error(`❌ Error checking table ${tableName}:`, error.message);
+      return false;
+    }
+  }
+
+  /**
+   * Create the gebiz_historical_tenders table with all indexes
+   */
+  createHistoricalTendersTable() {
+    const sql = `
+      CREATE TABLE IF NOT EXISTS gebiz_historical_tenders (
+        id INTEGER PRIMARY KEY AUTOINCREMENT,
+        tender_no TEXT UNIQUE NOT NULL,
+        description TEXT,
+        awarded_amount REAL,
+        supplier_name TEXT,
+        award_date DATE,
+        agency TEXT,
+        category TEXT,
+        contract_period_start DATE,
+        contract_period_end DATE,
+        raw_data TEXT,
+        imported_at DATETIME,
+        created_at DATETIME DEFAULT CURRENT_TIMESTAMP,
+        updated_at DATETIME DEFAULT CURRENT_TIMESTAMP
+      );
+
+      CREATE INDEX IF NOT EXISTS idx_gebiz_hist_supplier ON gebiz_historical_tenders(supplier_name);
+      CREATE INDEX IF NOT EXISTS idx_gebiz_hist_award_date ON gebiz_historical_tenders(award_date);
+      CREATE INDEX IF NOT EXISTS idx_gebiz_hist_category ON gebiz_historical_tenders(category);
+      CREATE INDEX IF NOT EXISTS idx_gebiz_hist_agency ON gebiz_historical_tenders(agency);
+      CREATE INDEX IF NOT EXISTS idx_gebiz_hist_amount ON gebiz_historical_tenders(awarded_amount);
+    `;
+
+    try {
+      this.db.exec(sql);
+      console.log('✅ gebiz_historical_tenders table created/verified');
+      return true;
+    } catch (error) {
+      console.error('❌ Failed to create gebiz_historical_tenders table:', error.message);
+      return false;
+    }
+  }
+
+  /**
+   * Create the gebiz_active_tenders table with all indexes
+   */
+  createActiveTendersTable() {
+    const sql = `
+      CREATE TABLE IF NOT EXISTS gebiz_active_tenders (
+        id INTEGER PRIMARY KEY AUTOINCREMENT,
+        tender_no TEXT UNIQUE NOT NULL,
+        title TEXT NOT NULL,
+        agency TEXT,
+        closing_date DATE,
+        published_date DATE,
+        category TEXT,
+        estimated_value REAL,
+        url TEXT,
+        details TEXT,
+        has_details BOOLEAN DEFAULT 0,
+        status TEXT DEFAULT 'open',
+        scraped_at DATETIME,
+        created_at DATETIME DEFAULT CURRENT_TIMESTAMP,
+        updated_at DATETIME DEFAULT CURRENT_TIMESTAMP
+      );
+
+      CREATE INDEX IF NOT EXISTS idx_gebiz_active_tender_no ON gebiz_active_tenders(tender_no);
+      CREATE INDEX IF NOT EXISTS idx_gebiz_active_closing ON gebiz_active_tenders(closing_date);
+      CREATE INDEX IF NOT EXISTS idx_gebiz_active_agency ON gebiz_active_tenders(agency);
+      CREATE INDEX IF NOT EXISTS idx_gebiz_active_status ON gebiz_active_tenders(status);
+    `;
+
+    try {
+      this.db.exec(sql);
+      console.log('✅ gebiz_active_tenders table created/verified');
+      return true;
+    } catch (error) {
+      console.error('❌ Failed to create gebiz_active_tenders table:', error.message);
+      return false;
+    }
+  }
+
+  /**
+   * Create essential configuration table
+   */
+  createConfigTable() {
+    const sql = `
+      CREATE TABLE IF NOT EXISTS scraping_config (
+        id INTEGER PRIMARY KEY AUTOINCREMENT,
+        config_key TEXT UNIQUE NOT NULL,
+        config_value TEXT NOT NULL,
+        description TEXT,
+        updated_by TEXT,
+        created_at DATETIME DEFAULT CURRENT_TIMESTAMP,
+        updated_at DATETIME DEFAULT CURRENT_TIMESTAMP
+      );
+
+      INSERT OR IGNORE INTO scraping_config (config_key, config_value, description) VALUES
+        ('gebiz_keywords', '["manpower", "cleaning", "security", "hospitality", "catering", "event staff"]', 'Keywords to filter relevant GeBIZ tenders'),
+        ('gebiz_historical_sync_enabled', 'true', 'Enable daily historical data sync'),
+        ('gebiz_active_scrape_enabled', 'true', 'Enable active tender scraping'),
+        ('alert_high_value_threshold', '100000', 'Tender value threshold for high-priority alerts (SGD)'),
+        ('rate_limit_requests_per_minute', '10', 'Max requests per minute for scraping');
+    `;
+
+    try {
+      this.db.exec(sql);
+      console.log('✅ scraping_config table created/verified');
+      return true;
+    } catch (error) {
+      console.error('❌ Failed to create scraping_config table:', error.message);
+      return false;
+    }
+  }
+
+  /**
+   * Initialize all required tables
+   */
+  async initializeTables() {
+    if (this.initialized) return true;
+    if (this.initializationAttempted) return this.initialized;
+
+    this.initializationAttempted = true;
+    console.log('🔧 Initializing GeBIZ tables for Railway deployment...');
+
+    try {
+      // Create all essential tables
+      const results = [
+        this.createHistoricalTendersTable(),
+        this.createActiveTendersTable(),
+        this.createConfigTable()
+      ];
+
+      this.initialized = results.every(result => result === true);
+
+      if (this.initialized) {
+        console.log('✅ All GeBIZ tables initialized successfully');
+      } else {
+        console.error('❌ Some GeBIZ tables failed to initialize');
+      }
+
+      return this.initialized;
+    } catch (error) {
+      console.error('❌ GeBIZ table initialization failed:', error.message);
+      this.initialized = false;
+      return false;
+    }
+  }
+
+  /**
+   * Ensure a specific table exists
+   */
+  async ensureTable(tableName) {
+    if (!this.initialized) {
+      await this.initializeTables();
+    }
+
+    return this.tableExists(tableName);
+  }
 }
 
-// Database connection
-const gebizDbPath = path.join(__dirname, '../../../database/gebiz_intelligence.db');
+// Database connection with Railway-compatible path handling
+const IS_RAILWAY = process.env.RAILWAY_ENVIRONMENT || process.env.NODE_ENV === 'production';
+const DB_DIR = IS_RAILWAY
+  ? (process.env.RAILWAY_VOLUME_MOUNT_PATH || '/app/data')
+  : path.join(__dirname, '../../../database');
+
+// Ensure database directory exists
+if (!fs.existsSync(DB_DIR)) {
+  fs.mkdirSync(DB_DIR, { recursive: true });
+  console.log(`📁 Created database directory: ${DB_DIR}`);
+}
+
+const gebizDbPath = path.join(DB_DIR, 'gebiz_intelligence.db');
 let gebizDb;
+let tableManager;
 
 // Initialize database connection
 try {
+  console.log(`🔌 Connecting to GeBIZ database: ${gebizDbPath}`);
   gebizDb = new Database(gebizDbPath);
   gebizDb.pragma('journal_mode = WAL');
+  gebizDb.pragma('foreign_keys = ON');
+
+  // Initialize table manager
+  tableManager = new GeBIZTableManager(gebizDb);
+
   console.log('✅ GeBIZ Intelligence database connected');
+
+  // Initialize tables immediately for Railway
+  if (IS_RAILWAY) {
+    tableManager.initializeTables().catch(error => {
+      console.error('❌ Failed to initialize tables on startup:', error.message);
+    });
+  }
+
 } catch (error) {
   console.error('❌ GeBIZ Intelligence database connection failed:', error.message);
   console.error('   Database path:', gebizDbPath);
-  console.error('   Run: node scripts/init-gebiz-database.js');
+
+  // For Railway, attempt to create database directory and retry
+  if (IS_RAILWAY) {
+    try {
+      console.log('🔄 Attempting Railway database recovery...');
+      if (!fs.existsSync(path.dirname(gebizDbPath))) {
+        fs.mkdirSync(path.dirname(gebizDbPath), { recursive: true });
+      }
+      gebizDb = new Database(gebizDbPath);
+      gebizDb.pragma('journal_mode = WAL');
+      tableManager = new GeBIZTableManager(gebizDb);
+      console.log('✅ Railway database recovery successful');
+    } catch (retryError) {
+      console.error('❌ Railway database recovery failed:', retryError.message);
+    }
+  }
+}
+
+/**
+ * Middleware to ensure GeBIZ tables exist before any operation
+ */
+async function ensureGeBIZTablesMiddleware(req, res, next) {
+  if (!gebizDb || !tableManager) {
+    return res.status(503).json({
+      success: false,
+      error: 'GeBIZ database not initialized',
+      message: 'Database connection failed. Please contact support.'
+    });
+  }
+
+  try {
+    const tablesReady = await tableManager.initializeTables();
+    if (!tablesReady) {
+      return res.status(503).json({
+        success: false,
+        error: 'Failed to initialize GeBIZ tables',
+        message: 'Database setup failed. Please contact support.'
+      });
+    }
+    next();
+  } catch (error) {
+    console.error('❌ Table initialization middleware error:', error.message);
+    return res.status(503).json({
+      success: false,
+      error: 'Database initialization error',
+      message: error.message
+    });
+  }
 }
 
 /**
  * GET /api/v1/gebiz/dashboard
  * Get dashboard overview statistics
  */
-router.get('/dashboard', (req, res) => {
+router.get('/dashboard', ensureGeBIZTablesMiddleware, (req, res) => {
   try {
-    if (!gebizDb) {
-      return res.status(503).json({
-        success: false,
-        error: 'GeBIZ database not initialized. Run: node scripts/init-gebiz-database.js'
-      });
-    }
-
-    // Ensure GeBIZ tables exist (if !table then create table pattern)
-    if (!ensureTableExistsWithFallback('gebiz_historical_tenders')) {
-      return res.status(503).json({
-        success: false,
-        error: 'Failed to initialize GeBIZ intelligence tables',
-        message: 'Database setup required'
-      });
-    }
 
     const stats = {
       // Total historical tenders
@@ -107,23 +332,8 @@ router.get('/dashboard', (req, res) => {
  * GET /api/v1/gebiz/competitors
  * Get top competitors list
  */
-router.get('/competitors', (req, res) => {
+router.get('/competitors', ensureGeBIZTablesMiddleware, (req, res) => {
   try {
-    if (!gebizDb) {
-      return res.status(503).json({
-        success: false,
-        error: 'GeBIZ database not initialized'
-      });
-    }
-
-    // Ensure GeBIZ tables exist (if !table then create table pattern)
-    if (!ensureTableExistsWithFallback('gebiz_historical_tenders')) {
-      return res.status(503).json({
-        success: false,
-        error: 'Failed to initialize GeBIZ intelligence tables',
-        message: 'Database setup required'
-      });
-    }
 
     const { limit = 20, category, period = 6 } = req.query;
 
@@ -168,14 +378,8 @@ router.get('/competitors', (req, res) => {
  * GET /api/v1/gebiz/competitor/:name
  * Get specific competitor details
  */
-router.get('/competitor/:name', (req, res) => {
+router.get('/competitor/:name', ensureGeBIZTablesMiddleware, (req, res) => {
   try {
-    if (!gebizDb) {
-      return res.status(503).json({
-        success: false,
-        error: 'GeBIZ database not initialized'
-      });
-    }
 
     const { name } = req.params;
 
@@ -218,14 +422,8 @@ router.get('/competitor/:name', (req, res) => {
  * GET /api/v1/gebiz/tenders/historical
  * Search historical tenders
  */
-router.get('/tenders/historical', (req, res) => {
+router.get('/tenders/historical', ensureGeBIZTablesMiddleware, (req, res) => {
   try {
-    if (!gebizDb) {
-      return res.status(503).json({
-        success: false,
-        error: 'GeBIZ database not initialized'
-      });
-    }
 
     const {
       page = 1,
@@ -317,14 +515,8 @@ router.get('/tenders/historical', (req, res) => {
  * GET /api/v1/gebiz/categories
  * Get list of all categories
  */
-router.get('/categories', (req, res) => {
+router.get('/categories', ensureGeBIZTablesMiddleware, (req, res) => {
   try {
-    if (!gebizDb) {
-      return res.status(503).json({
-        success: false,
-        error: 'GeBIZ database not initialized'
-      });
-    }
 
     const categories = gebizDb.prepare(`
       SELECT DISTINCT category, COUNT(*) as count
@@ -346,14 +538,8 @@ router.get('/categories', (req, res) => {
  * GET /api/v1/gebiz/agencies
  * Get list of all agencies
  */
-router.get('/agencies', (req, res) => {
+router.get('/agencies', ensureGeBIZTablesMiddleware, (req, res) => {
   try {
-    if (!gebizDb) {
-      return res.status(503).json({
-        success: false,
-        error: 'GeBIZ database not initialized'
-      });
-    }
 
     const agencies = gebizDb.prepare(`
       SELECT DISTINCT agency, COUNT(*) as tender_count
@@ -375,7 +561,7 @@ router.get('/agencies', (req, res) => {
  * POST /api/v1/gebiz/sync/historical
  * Trigger historical data sync
  */
-router.post('/sync/historical', async (req, res) => {
+router.post('/sync/historical', ensureGeBIZTablesMiddleware, async (req, res) => {
   try {
     // Check if sync service is available
     const syncServicePath = path.join(__dirname, '../../../services/gebiz-scraping/historical-sync.js');
@@ -408,23 +594,8 @@ router.post('/sync/historical', async (req, res) => {
  * GET /api/v1/gebiz/stats
  * Get database statistics
  */
-router.get('/stats', (req, res) => {
+router.get('/stats', ensureGeBIZTablesMiddleware, (req, res) => {
   try {
-    if (!gebizDb) {
-      return res.status(503).json({
-        success: false,
-        error: 'GeBIZ database not initialized'
-      });
-    }
-
-    // Ensure GeBIZ tables exist (if !table then create table pattern)
-    if (!ensureTableExistsWithFallback('gebiz_historical_tenders')) {
-      return res.status(503).json({
-        success: false,
-        error: 'Failed to initialize GeBIZ intelligence tables',
-        message: 'Database setup required'
-      });
-    }
 
     const stats = {
       tenders: gebizDb.prepare('SELECT COUNT(*) as count FROM gebiz_historical_tenders').get().count,
@@ -439,6 +610,142 @@ router.get('/stats', (req, res) => {
   } catch (error) {
     console.error('Stats error:', error);
     res.status(500).json({ success: false, error: error.message });
+  }
+});
+
+/**
+ * GET /api/v1/gebiz/health
+ * Health check endpoint - verifies database and table status
+ */
+router.get('/health', (req, res) => {
+  try {
+    const health = {
+      database_connected: !!gebizDb,
+      database_path: gebizDbPath,
+      environment: IS_RAILWAY ? 'Railway' : 'Local',
+      table_status: {}
+    };
+
+    if (gebizDb && tableManager) {
+      // Check each critical table
+      const criticalTables = [
+        'gebiz_historical_tenders',
+        'gebiz_active_tenders',
+        'scraping_config'
+      ];
+
+      criticalTables.forEach(tableName => {
+        health.table_status[tableName] = tableManager.tableExists(tableName);
+      });
+
+      health.all_tables_ready = Object.values(health.table_status).every(status => status === true);
+      health.manager_initialized = tableManager.initialized;
+    }
+
+    const statusCode = health.database_connected && health.all_tables_ready ? 200 : 503;
+    res.status(statusCode).json({ success: health.all_tables_ready, health });
+
+  } catch (error) {
+    console.error('Health check error:', error);
+    res.status(503).json({
+      success: false,
+      health: { error: error.message },
+      message: 'Health check failed'
+    });
+  }
+});
+
+/**
+ * POST /api/v1/gebiz/init-tables
+ * Force table initialization - useful for Railway deployment debugging
+ */
+router.post('/init-tables', async (req, res) => {
+  try {
+    if (!gebizDb || !tableManager) {
+      return res.status(503).json({
+        success: false,
+        error: 'Database not available',
+        message: 'GeBIZ database connection is not established'
+      });
+    }
+
+    console.log('🔧 Manual table initialization requested...');
+    const result = await tableManager.initializeTables();
+
+    if (result) {
+      // Get table status
+      const tables = gebizDb.prepare(`
+        SELECT name FROM sqlite_master
+        WHERE type='table'
+        ORDER BY name
+      `).all();
+
+      res.json({
+        success: true,
+        message: 'Tables initialized successfully',
+        tables: tables.map(t => t.name),
+        count: tables.length
+      });
+    } else {
+      res.status(500).json({
+        success: false,
+        error: 'Table initialization failed',
+        message: 'Check server logs for details'
+      });
+    }
+
+  } catch (error) {
+    console.error('Table initialization error:', error);
+    res.status(500).json({
+      success: false,
+      error: error.message,
+      message: 'Table initialization failed'
+    });
+  }
+});
+
+/**
+ * GET /api/v1/gebiz/debug-info
+ * Debug information for troubleshooting Railway deployment
+ */
+router.get('/debug-info', (req, res) => {
+  try {
+    const debug = {
+      environment: {
+        NODE_ENV: process.env.NODE_ENV,
+        RAILWAY_ENVIRONMENT: process.env.RAILWAY_ENVIRONMENT,
+        RAILWAY_VOLUME_MOUNT_PATH: process.env.RAILWAY_VOLUME_MOUNT_PATH,
+        IS_RAILWAY: IS_RAILWAY
+      },
+      paths: {
+        DB_DIR: DB_DIR,
+        gebizDbPath: gebizDbPath,
+        db_dir_exists: fs.existsSync(DB_DIR),
+        db_file_exists: fs.existsSync(gebizDbPath)
+      },
+      database: {
+        connected: !!gebizDb,
+        manager_available: !!tableManager,
+        manager_initialized: tableManager?.initialized || false
+      }
+    };
+
+    // Add database file stats if it exists
+    if (fs.existsSync(gebizDbPath)) {
+      const stats = fs.statSync(gebizDbPath);
+      debug.paths.db_file_size = stats.size;
+      debug.paths.db_file_modified = stats.mtime;
+    }
+
+    res.json({ success: true, debug });
+
+  } catch (error) {
+    console.error('Debug info error:', error);
+    res.status(500).json({
+      success: false,
+      error: error.message,
+      message: 'Failed to get debug info'
+    });
   }
 });
 

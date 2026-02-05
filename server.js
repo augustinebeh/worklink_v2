@@ -350,6 +350,31 @@ server.listen(PORT, HOST, async () => {
     }
   });
 
+  // Initialize GeBIZ tables for Railway deployment
+  try {
+    const { ensureGeBIZTables } = require('./scripts/ensure-gebiz-tables');
+
+    logger.info('Ensuring GeBIZ database tables exist...', { module: 'gebiz-init' });
+    const gebizTablesReady = await ensureGeBIZTables(false);
+
+    if (gebizTablesReady) {
+      logger.info('GeBIZ database tables initialized successfully', {
+        module: 'gebiz-init',
+        status: 'ready'
+      });
+    } else {
+      logger.warn('GeBIZ database tables initialization failed - GeBIZ features may not work', {
+        module: 'gebiz-init',
+        status: 'failed'
+      });
+    }
+  } catch (error) {
+    logger.warn('GeBIZ table initialization failed - continuing without some GeBIZ features', {
+      module: 'gebiz-init',
+      error: error.message
+    });
+  }
+
   // Initialize email service and scheduler (temporarily disabled for debugging)
   try {
     logger.info('Email service initialization skipped for development', { module: 'email' });
