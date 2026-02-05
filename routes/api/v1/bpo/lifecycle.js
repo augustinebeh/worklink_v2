@@ -174,26 +174,6 @@ router.post('/', (req, res) => {
   try {
     const db = new Database(DB_PATH);
 
-    // Check if bpo_tender_lifecycle table exists (Railway compatibility)
-    const tableCheck = db.prepare("SELECT name FROM sqlite_master WHERE type='table' AND name='bpo_tender_lifecycle'").get();
-    if (!tableCheck) {
-      db.close();
-      return res.status(200).json({
-        success: true,
-        data: {
-          id: 'railway-fallback-' + Date.now(),
-          title: req.body.title,
-          agency: req.body.agency,
-          stage: req.body.stage || 'new_opportunity',
-          priority: req.body.priority || 'medium',
-          estimated_value: req.body.estimated_value,
-          created_at: new Date().toISOString(),
-          updated_at: new Date().toISOString()
-        },
-        message: 'Tender created successfully (Railway mode - table unavailable)'
-      });
-    }
-
     const {
       source_type,
       source_id,

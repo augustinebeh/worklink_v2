@@ -1364,6 +1364,90 @@ function createSchema(db) {
     CREATE INDEX IF NOT EXISTS idx_consultant_team_analytics_date ON consultant_team_analytics(calculation_date);
     CREATE INDEX IF NOT EXISTS idx_consultant_achievements_consultant ON consultant_achievements(consultant_id, earned_at);
     CREATE INDEX IF NOT EXISTS idx_consultant_goals_consultant_status ON consultant_goals(consultant_id, status);
+
+    -- ============================================================================
+    -- BPO TENDER LIFECYCLE TABLE (7-stage pipeline management)
+    -- ============================================================================
+    CREATE TABLE IF NOT EXISTS bpo_tender_lifecycle (
+      id TEXT PRIMARY KEY, -- UUID
+
+      -- Source Tracking
+      source_type TEXT NOT NULL, -- 'gebiz_active', 'gebiz_historical_renewal', 'manual_entry', 'competitor_intel'
+      source_id INTEGER, -- ID from source table
+      tender_no TEXT UNIQUE,
+
+      -- Basic Info
+      title TEXT NOT NULL,
+      agency TEXT,
+      description TEXT,
+      category TEXT,
+
+      -- Dates
+      published_date DATE,
+      closing_date DATE,
+      contract_start_date DATE,
+      contract_end_date DATE,
+
+      -- Financial
+      estimated_value REAL,
+      our_bid_amount REAL,
+      actual_contract_value REAL,
+      estimated_cost REAL,
+      estimated_margin REAL, -- Percentage
+
+      -- Pipeline Stage
+      stage TEXT DEFAULT 'new_opportunity',
+      -- 'renewal_watch', 'new_opportunity', 'review', 'bidding', 'internal_approval', 'submitted', 'awarded', 'lost'
+
+      stage_updated_at DATETIME,
+
+      -- Go/No-Go Decision
+      qualification_score INTEGER, -- 0-100 from Go/No-Go checklist
+      qualification_details TEXT, -- JSON with checklist answers
+      decision TEXT, -- 'go', 'no-go', 'maybe', 'pending'
+      decision_made_at DATETIME,
+      decision_made_by TEXT,
+      decision_reasoning TEXT,
+
+      -- Assignment
+      assigned_to TEXT, -- User ID or name
+      assigned_team TEXT, -- JSON array of team members
+
+      -- Status Tracking
+      is_urgent BOOLEAN DEFAULT 0,
+      is_featured BOOLEAN DEFAULT 0,
+      priority TEXT DEFAULT 'medium', -- 'low', 'medium', 'high', 'critical'
+
+      -- Win/Loss
+      outcome TEXT, -- 'won', 'lost', 'pending'
+      outcome_date DATE,
+      winner TEXT, -- Supplier name if we lost
+      loss_reason TEXT,
+
+      -- Renewal Tracking (if this is a renewal opportunity)
+      is_renewal BOOLEAN DEFAULT 0,
+      renewal_id TEXT, -- References contract_renewals.id
+      incumbent_supplier TEXT,
+
+      -- Documents & Links
+      external_url TEXT,
+      documents TEXT, -- JSON array of document URLs
+
+      -- Metadata
+      tags TEXT, -- JSON array of tags
+      notes TEXT,
+      created_at DATETIME DEFAULT CURRENT_TIMESTAMP,
+      updated_at DATETIME DEFAULT CURRENT_TIMESTAMP
+    );
+
+    CREATE INDEX IF NOT EXISTS idx_lifecycle_stage ON bpo_tender_lifecycle(stage);
+    CREATE INDEX IF NOT EXISTS idx_lifecycle_closing ON bpo_tender_lifecycle(closing_date);
+    CREATE INDEX IF NOT EXISTS idx_lifecycle_agency ON bpo_tender_lifecycle(agency);
+    CREATE INDEX IF NOT EXISTS idx_lifecycle_assigned ON bpo_tender_lifecycle(assigned_to);
+    CREATE INDEX IF NOT EXISTS idx_lifecycle_outcome ON bpo_tender_lifecycle(outcome);
+    CREATE INDEX IF NOT EXISTS idx_lifecycle_priority ON bpo_tender_lifecycle(priority);
+    CREATE INDEX IF NOT EXISTS idx_lifecycle_renewal ON bpo_tender_lifecycle(is_renewal);
+    CREATE INDEX IF NOT EXISTS idx_lifecycle_tender_no ON bpo_tender_lifecycle(tender_no);
   `);
 
   if (process.env.NODE_ENV !== 'production') {
