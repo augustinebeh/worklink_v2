@@ -537,6 +537,42 @@ router.get('/dashboard/stats', (req, res) => {
   try {
     const db = new Database(DB_PATH, { readonly: true });
 
+    // Check if bpo_tender_lifecycle table exists (Railway compatibility)
+    const tableCheck = db.prepare("SELECT name FROM sqlite_master WHERE type='table' AND name='bpo_tender_lifecycle'").get();
+    if (!tableCheck) {
+      db.close();
+      return res.json({
+        success: true,
+        data: {
+          total_tenders: 0,
+          renewal_watch: 0,
+          renewal_watch_count: 0,
+          new_opportunity: 0,
+          new_opportunity_count: 0,
+          review: 0,
+          review_count: 0,
+          bidding: 0,
+          bidding_count: 0,
+          internal_approval: 0,
+          internal_approval_count: 0,
+          submitted: 0,
+          submitted_count: 0,
+          won: 0,
+          awarded_count: 0,
+          lost: 0,
+          lost_count: 0,
+          urgent: 0,
+          renewals: 0,
+          total_pipeline_value: 0,
+          total_won_value: 0,
+          win_rate: 0,
+          conversion_rate: 0,
+          avg_tender_value: 0
+        },
+        message: 'BPO lifecycle system not available on this deployment'
+      });
+    }
+
     // Overall stats with _count suffix for frontend compatibility
     const stats = db.prepare(`
       SELECT
@@ -600,7 +636,18 @@ router.get('/dashboard/stats', (req, res) => {
 router.get('/dashboard/deadlines', (req, res) => {
   try {
     const db = new Database(DB_PATH, { readonly: true });
-    
+
+    // Check if bpo_tender_lifecycle table exists (Railway compatibility)
+    const tableCheck = db.prepare("SELECT name FROM sqlite_master WHERE type='table' AND name='bpo_tender_lifecycle'").get();
+    if (!tableCheck) {
+      db.close();
+      return res.json({
+        success: true,
+        data: [],
+        message: 'BPO lifecycle system not available on this deployment'
+      });
+    }
+
     const { days = 7 } = req.query;
     
     const deadlines = db.prepare(`
