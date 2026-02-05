@@ -465,13 +465,21 @@ router.post('/:id/move', (req, res) => {
     }
     
     const tender = db.prepare('SELECT * FROM bpo_tender_lifecycle WHERE id = ?').get(req.params.id);
-    
-    // Log audit trail
-    db.prepare(`
-      INSERT INTO audit_log (id, event_type, event_action, resource_type, resource_id, user_id, new_value)
-      VALUES (?, 'stage_changed', 'update', 'tender', ?, ?, ?)
-    `).run(uuidv4(), req.params.id, user_id || 'unknown', JSON.stringify({ new_stage }));
-    
+
+    // Log audit trail (Railway compatible - optional)
+    try {
+      const auditTableCheck = db.prepare("SELECT name FROM sqlite_master WHERE type='table' AND name='audit_log'").get();
+      if (auditTableCheck) {
+        db.prepare(`
+          INSERT INTO audit_log (id, event_type, event_action, resource_type, resource_id, user_id, new_value)
+          VALUES (?, 'stage_changed', 'update', 'tender', ?, ?, ?)
+        `).run(uuidv4(), req.params.id, user_id || 'unknown', JSON.stringify({ new_stage }));
+      }
+    } catch (auditError) {
+      // Audit logging failed but don't break the main operation
+      console.warn('Audit logging failed:', auditError.message);
+    }
+
     db.close();
     
     res.json({
