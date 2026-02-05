@@ -9,8 +9,29 @@ const router = express.Router();
 const Database = require('better-sqlite3');
 const path = require('path');
 const { v4: uuidv4 } = require('uuid');
+const fs = require('fs');
 
-const DB_PATH = path.join(__dirname, '../../../../database/gebiz_intelligence.db');
+// Railway-compatible database path configuration
+const getDbPath = () => {
+  // Try GeBIZ intelligence database first (local development)
+  const gebizDbPath = path.join(__dirname, '../../../../database/gebiz_intelligence.db');
+
+  // If GeBIZ database exists, use it
+  if (fs.existsSync(gebizDbPath)) {
+    return gebizDbPath;
+  }
+
+  // Fallback to main database for Railway deployment
+  const mainDbPath = path.join(__dirname, '../../../../data/worklink.db');
+  if (fs.existsSync(mainDbPath)) {
+    return mainDbPath;
+  }
+
+  // Final fallback for Railway with different structure
+  return process.env.DATABASE_URL || '/opt/render/project/src/data/worklink.db';
+};
+
+const DB_PATH = getDbPath();
 
 // ============================================================================
 // GET /api/v1/gebiz/renewals - List all renewal predictions
@@ -18,6 +39,22 @@ const DB_PATH = path.join(__dirname, '../../../../database/gebiz_intelligence.db
 router.get('/', (req, res) => {
   try {
     const db = new Database(DB_PATH, { readonly: true });
+
+    // Check if renewal tables exist (Railway compatibility)
+    const tableCheck = db.prepare("SELECT name FROM sqlite_master WHERE type='table' AND name='renewals'").get();
+    if (!tableCheck) {
+      // Return empty data with success flag for Railway deployment
+      return res.json({
+        success: true,
+        data: [],
+        meta: {
+          total: 0,
+          limit: parseInt(req.query.limit) || 100,
+          offset: parseInt(req.query.offset) || 0,
+          message: 'Renewal tracking not available on this deployment'
+        }
+      });
+    }
     
     const {
       status = 'all', // 'all', 'upcoming', 'engaged', 'high_priority'
@@ -120,7 +157,18 @@ router.get('/', (req, res) => {
 router.get('/:id', (req, res) => {
   try {
     const db = new Database(DB_PATH, { readonly: true });
-    
+
+    // Check if renewal tables exist (Railway compatibility)
+    const tableCheck = db.prepare("SELECT name FROM sqlite_master WHERE type='table' AND name='contract_renewals'").get();
+    if (!tableCheck) {
+      db.close();
+      return res.status(404).json({
+        success: false,
+        error: 'Renewal not found',
+        message: 'Renewal tracking not available on this deployment'
+      });
+    }
+
     const renewal = db.prepare(`
       SELECT 
         r.*,
@@ -189,7 +237,18 @@ router.get('/:id', (req, res) => {
 router.post('/', (req, res) => {
   try {
     const db = new Database(DB_PATH);
-    
+
+    // Check if renewal tables exist (Railway compatibility)
+    const tableCheck = db.prepare("SELECT name FROM sqlite_master WHERE type='table' AND name='contract_renewals'").get();
+    if (!tableCheck) {
+      db.close();
+      return res.status(503).json({
+        success: false,
+        error: 'Renewal tracking not available on this deployment',
+        message: 'The renewal system requires the GeBIZ intelligence database which is not available on Railway deployment'
+      });
+    }
+
     const {
       original_tender_id,
       original_tender_no,
@@ -280,7 +339,18 @@ router.post('/', (req, res) => {
 router.patch('/:id', (req, res) => {
   try {
     const db = new Database(DB_PATH);
-    
+
+    // Check if renewal tables exist (Railway compatibility)
+    const tableCheck = db.prepare("SELECT name FROM sqlite_master WHERE type='table' AND name='contract_renewals'").get();
+    if (!tableCheck) {
+      db.close();
+      return res.status(503).json({
+        success: false,
+        error: 'Renewal tracking not available on this deployment',
+        message: 'The renewal system requires the GeBIZ intelligence database which is not available on Railway deployment'
+      });
+    }
+
     const allowedFields = [
       'engagement_status',
       'assigned_bd_manager',
@@ -349,7 +419,18 @@ router.patch('/:id', (req, res) => {
 router.delete('/:id', (req, res) => {
   try {
     const db = new Database(DB_PATH);
-    
+
+    // Check if renewal tables exist (Railway compatibility)
+    const tableCheck = db.prepare("SELECT name FROM sqlite_master WHERE type='table' AND name='contract_renewals'").get();
+    if (!tableCheck) {
+      db.close();
+      return res.status(503).json({
+        success: false,
+        error: 'Renewal tracking not available on this deployment',
+        message: 'The renewal system requires the GeBIZ intelligence database which is not available on Railway deployment'
+      });
+    }
+
     // Delete activities first (foreign key)
     db.prepare('DELETE FROM renewal_engagement_activities WHERE renewal_id = ?').run(req.params.id);
     
@@ -378,7 +459,18 @@ router.delete('/:id', (req, res) => {
 router.post('/:id/activities', (req, res) => {
   try {
     const db = new Database(DB_PATH);
-    
+
+    // Check if renewal tables exist (Railway compatibility)
+    const tableCheck = db.prepare("SELECT name FROM sqlite_master WHERE type='table' AND name='renewal_engagement_activities'").get();
+    if (!tableCheck) {
+      db.close();
+      return res.status(503).json({
+        success: false,
+        error: 'Renewal tracking not available on this deployment',
+        message: 'The renewal system requires the GeBIZ intelligence database which is not available on Railway deployment'
+      });
+    }
+
     const {
       activity_type,
       activity_date,
@@ -443,7 +535,20 @@ router.post('/:id/activities', (req, res) => {
 router.get('/dashboard/timeline', (req, res) => {
   try {
     const db = new Database(DB_PATH, { readonly: true });
-    
+
+    // Check if renewal tables exist (Railway compatibility)
+    const tableCheck = db.prepare("SELECT name FROM sqlite_master WHERE type='table' AND name='contract_renewals'").get();
+    if (!tableCheck) {
+      db.close();
+      return res.json({
+        success: true,
+        data: {
+          timeline: []
+        },
+        message: 'Renewal tracking not available on this deployment'
+      });
+    }
+
     const { months = 12 } = req.query;
     
     const timeline = db.prepare(`
@@ -501,7 +606,18 @@ router.get('/dashboard/timeline', (req, res) => {
 router.post('/predict', (req, res) => {
   try {
     const db = new Database(DB_PATH);
-    
+
+    // Check if renewal tables exist (Railway compatibility)
+    const tableCheck = db.prepare("SELECT name FROM sqlite_master WHERE type='table' AND name='contract_renewals'").get();
+    if (!tableCheck) {
+      db.close();
+      return res.status(503).json({
+        success: false,
+        error: 'Renewal tracking not available on this deployment',
+        message: 'The renewal system requires the GeBIZ intelligence database which is not available on Railway deployment'
+      });
+    }
+
     // Get all historical tenders with contract end dates approaching
     const candidates = db.prepare(`
       SELECT * FROM gebiz_historical_tenders
@@ -632,7 +748,30 @@ router.post('/predict', (req, res) => {
 router.get('/dashboard/stats', (req, res) => {
   try {
     const db = new Database(DB_PATH, { readonly: true });
-    
+
+    // Check if renewal tables exist (Railway compatibility)
+    const tableCheck = db.prepare("SELECT name FROM sqlite_master WHERE type='table' AND name='contract_renewals'").get();
+    if (!tableCheck) {
+      db.close();
+      return res.json({
+        success: true,
+        data: {
+          summary: {
+            total_renewals: 0,
+            next_3_months: 0,
+            next_6_months: 0,
+            high_probability: 0,
+            not_started: 0,
+            in_progress: 0,
+            total_value: 0,
+            avg_probability: 0
+          },
+          top_agencies: []
+        },
+        message: 'Renewal tracking not available on this deployment'
+      });
+    }
+
     const stats = db.prepare(`
       SELECT 
         COUNT(*) as total_renewals,
