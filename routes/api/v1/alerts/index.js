@@ -9,8 +9,29 @@ const router = express.Router();
 const Database = require('better-sqlite3');
 const path = require('path');
 const { v4: uuidv4 } = require('uuid');
+const fs = require('fs');
 
-const DB_PATH = path.join(__dirname, '../../../../database/gebiz_intelligence.db');
+// Railway-compatible database path configuration
+const getDbPath = () => {
+  // Try GeBIZ intelligence database first (local development)
+  const gebizDbPath = path.join(__dirname, '../../../../database/gebiz_intelligence.db');
+
+  // If GeBIZ database exists, use it
+  if (fs.existsSync(gebizDbPath)) {
+    return gebizDbPath;
+  }
+
+  // Fallback to main database for Railway deployment
+  const mainDbPath = path.join(__dirname, '../../../../data/worklink.db');
+  if (fs.existsSync(mainDbPath)) {
+    return mainDbPath;
+  }
+
+  // Final fallback for Railway with different structure
+  return process.env.DATABASE_URL || '/opt/render/project/src/data/worklink.db';
+};
+
+const DB_PATH = getDbPath();
 
 // ============================================================================
 // ALERT RULES MANAGEMENT
@@ -20,17 +41,28 @@ const DB_PATH = path.join(__dirname, '../../../../database/gebiz_intelligence.db
 router.get('/rules', (req, res) => {
   try {
     const db = new Database(DB_PATH, { readonly: true });
-    
+
+    // Check if alert_rules table exists (Railway compatibility)
+    const tableCheck = db.prepare("SELECT name FROM sqlite_master WHERE type='table' AND name='alert_rules'").get();
+    if (!tableCheck) {
+      db.close();
+      return res.json({
+        success: true,
+        data: [],
+        message: 'Alert system not available on this deployment'
+      });
+    }
+
     const { active_only = 'true' } = req.query;
-    
+
     let query = 'SELECT * FROM alert_rules';
     if (active_only === 'true') {
       query += ' WHERE active = 1';
     }
     query += ' ORDER BY priority DESC, rule_name ASC';
-    
+
     const rules = db.prepare(query).all();
-    
+
     // Parse JSON fields
     rules.forEach(rule => {
       rule.conditions = JSON.parse(rule.conditions || '{}');
@@ -40,9 +72,9 @@ router.get('/rules', (req, res) => {
         rule.escalation_recipients = JSON.parse(rule.escalation_recipients);
       }
     });
-    
+
     db.close();
-    
+
     res.json({ success: true, data: rules });
   } catch (error) {
     console.error('Error fetching alert rules:', error);
@@ -54,7 +86,18 @@ router.get('/rules', (req, res) => {
 router.post('/rules', (req, res) => {
   try {
     const db = new Database(DB_PATH);
-    
+
+    // Check if alert_rules table exists (Railway compatibility)
+    const tableCheck = db.prepare("SELECT name FROM sqlite_master WHERE type='table' AND name='alert_rules'").get();
+    if (!tableCheck) {
+      db.close();
+      return res.status(503).json({
+        success: false,
+        error: 'Alert system not available on this deployment',
+        message: 'The alert system requires the GeBIZ intelligence database which is not available on Railway deployment'
+      });
+    }
+
     const {
       rule_name,
       rule_type,
@@ -212,14 +255,31 @@ router.delete('/rules/:id', (req, res) => {
 router.get('/history', (req, res) => {
   try {
     const db = new Database(DB_PATH, { readonly: true });
-    
+
+    // Check if alert_history table exists (Railway compatibility)
+    const tableCheck = db.prepare("SELECT name FROM sqlite_master WHERE type='table' AND name='alert_history'").get();
+    if (!tableCheck) {
+      db.close();
+      return res.json({
+        success: true,
+        data: [],
+        meta: {
+          unread_count: 0,
+          total: 0,
+          limit: parseInt(req.query.limit) || 50,
+          offset: parseInt(req.query.offset) || 0
+        },
+        message: 'Alert system not available on this deployment'
+      });
+    }
+
     const {
       unread_only = 'false',
       priority,
       limit = 50,
       offset = 0
     } = req.query;
-    
+
     let query = 'SELECT * FROM alert_history WHERE 1=1';
     const params = [];
     
@@ -270,7 +330,17 @@ router.get('/history', (req, res) => {
 router.post('/history/:id/acknowledge', (req, res) => {
   try {
     const db = new Database(DB_PATH);
-    
+
+    // Check if alert_history table exists (Railway compatibility)
+    const tableCheck = db.prepare("SELECT name FROM sqlite_master WHERE type='table' AND name='alert_history'").get();
+    if (!tableCheck) {
+      db.close();
+      return res.json({
+        success: true,
+        message: 'Alert system not available on this deployment'
+      });
+    }
+
     const { user_id, action_taken, action_notes } = req.body;
     
     const result = db.prepare(`
@@ -304,7 +374,17 @@ router.post('/history/:id/acknowledge', (req, res) => {
 router.post('/history/mark-all-read', (req, res) => {
   try {
     const db = new Database(DB_PATH);
-    
+
+    // Check if alert_history table exists (Railway compatibility)
+    const tableCheck = db.prepare("SELECT name FROM sqlite_master WHERE type='table' AND name='alert_history'").get();
+    if (!tableCheck) {
+      db.close();
+      return res.json({
+        success: true,
+        message: 'Alert system not available on this deployment'
+      });
+    }
+
     const { user_id } = req.body;
     
     const result = db.prepare(`
@@ -331,11 +411,24 @@ router.post('/history/mark-all-read', (req, res) => {
 router.get('/unread-count', (req, res) => {
   try {
     const db = new Database(DB_PATH, { readonly: true });
-    
+
+    // Check if alert_history table exists (Railway compatibility)
+    const tableCheck = db.prepare("SELECT name FROM sqlite_master WHERE type='table' AND name='alert_history'").get();
+    if (!tableCheck) {
+      db.close();
+      return res.json({
+        success: true,
+        data: {
+          unread_count: 0
+        },
+        message: 'Alert system not available on this deployment'
+      });
+    }
+
     const result = db.prepare('SELECT COUNT(*) as count FROM alert_history WHERE acknowledged = 0').get();
-    
+
     db.close();
-    
+
     res.json({
       success: true,
       data: {
