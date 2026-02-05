@@ -7,10 +7,24 @@
 const express = require('express');
 const router = express.Router();
 const Database = require('better-sqlite3');
+const path = require('path');
 const { v4: uuidv4 } = require('uuid');
+const fs = require('fs');
 
-// Use the same database path as the main WorkLink system and GeBIZ scraper
-const { DB_PATH } = require('../../../db/database/config');
+// Railway-compatible database path configuration that matches main system
+const getDbPath = () => {
+  try {
+    // Try to use the main config first (for local development)
+    const { DB_PATH } = require('../../../db/database/config');
+    return DB_PATH;
+  } catch (error) {
+    // Fallback for Railway deployment - use same logic as main config
+    const DATA_DIR = process.env.RAILWAY_VOLUME_MOUNT_PATH || path.join(__dirname, '../../../data');
+    return path.join(DATA_DIR, 'worklink.db');
+  }
+};
+
+const DB_PATH = getDbPath();
 
 // ============================================================================
 // GET /api/v1/bpo/lifecycle - List all tenders in pipeline
