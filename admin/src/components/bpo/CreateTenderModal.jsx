@@ -138,8 +138,12 @@ export default function CreateTenderModal({ isOpen, onClose, onSuccess }) {
         closing_date: formData.closing_date || null
       };
 
+      console.log('🚀 Creating tender with data:', tenderData);
+
       // Call actual API to create tender
       const response = await lifecycleService.createTender(tenderData);
+
+      console.log('📥 API Response:', response);
 
       if (response.success) {
         if (onSuccess) {
@@ -153,7 +157,12 @@ export default function CreateTenderModal({ isOpen, onClose, onSuccess }) {
         throw new Error(response.error || 'Failed to create tender');
       }
     } catch (error) {
-      console.error('Error creating tender:', error);
+      console.error('❌ Error creating tender:', error);
+      console.error('❌ Error details:', {
+        message: error.message,
+        stack: error.stack,
+        response: error.response
+      });
       toast.error('Creation Failed', 'Unable to create tender');
     } finally {
       setLoading(false);
