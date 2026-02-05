@@ -46,25 +46,11 @@ router.get('/', (req, res) => {
       db.close();
       return res.json({
         success: true,
-        data: {
-          tenders: [],
-          stages: {
-            renewal_watch: [],
-            new_opportunity: [],
-            review: [],
-            bidding: [],
-            internal_approval: [],
-            submitted: [],
-            awarded: [],
-            lost: []
-          },
-          summary: {
-            total: 0,
-            by_stage: {},
-            by_priority: { critical: 0, high: 0, medium: 0, low: 0 },
-            urgent_count: 0,
-            renewal_count: 0
-          }
+        data: [], // Frontend expects data to be an array of tenders
+        meta: {
+          total: 0,
+          limit: parseInt(req.query.limit) || 100,
+          offset: parseInt(req.query.offset) || 0
         },
         message: 'BPO lifecycle system not available on this deployment'
       });
