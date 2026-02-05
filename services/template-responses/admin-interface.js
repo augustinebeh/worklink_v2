@@ -5,7 +5,7 @@
  * and analyzing response effectiveness
  */
 
-const { db } = require('../../db/database');
+const { db } = require('../../db');
 
 class TemplateAdminInterface {
   constructor() {

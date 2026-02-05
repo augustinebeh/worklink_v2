@@ -5,7 +5,7 @@
 
 const express = require('express');
 const router = express.Router();
-const { db } = require('../../../../db/database');
+const { db } = require('../../../../db');
 const messaging = require('../../../../services/messaging');
 const telegram = require('../../../../services/messaging/telegram');
 const logger = require('../../../../utils/logger');

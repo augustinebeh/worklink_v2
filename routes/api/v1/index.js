@@ -1,6 +1,8 @@
 /**
  * WorkLink API v1 Routes
  * Aggregates all route modules
+ * 
+ * UPDATED: Re-enabled previously disabled routes
  */
 
 const express = require('express');
@@ -28,7 +30,8 @@ const availabilityRoutes = require('./availability');
 const notificationRoutes = require('./notifications');
 const tenderMonitorRoutes = require('./tender-monitor');
 const emailPreferencesRoutes = require('./email-preferences');
-// const emailConfigRoutes = require('./email-config'); // Disabled to prevent hanging
+// Note: email-config disabled - not critical for core functionality
+// const emailConfigRoutes = require('./email-config');
 
 // Messaging & Webhooks
 const telegramWebhookRoutes = require('./webhooks/telegram');
@@ -45,23 +48,26 @@ const llmConfigRoutes = require('./llm-config');
 // Enhanced Chat Features
 const conversationsRoutes = require('./conversations');
 const chatAttachmentsRoutes = require('./chat-attachments');
+
+// Scraping Services
+const gebizRssRoutes = require('./scraping/gebiz-rss');
 const quickRepliesRoutes = require('./quick-replies');
 
-// Background Job Scheduler
-// const jobSchedulerRoutes = require('./job-scheduler'); // Temporarily disabled
+// Background Job Scheduler - RE-ENABLED
+const jobSchedulerRoutes = require('./job-scheduler');
 
-// 100x Consultant Performance System
+// 100x Consultant Performance System - RE-ENABLED
 const consultantPerformanceRoutes = require('./consultant-performance');
 
-// Fact-Based Template Response System
-// const templateResponseRoutes = require('./template-responses'); // Temporarily disabled
+// Fact-Based Template Response System - RE-ENABLED
+const templateResponseRoutes = require('./template-responses');
 
 // Admin Escalation and Handoff System
 const adminEscalationRoutes = require('./admin-escalation');
 const escalationAnalyticsRoutes = require('./escalation-analytics');
 
 // Smart Response Router System
-// const smartResponseRouterRoutes = require('./smart-response-router'); // Temporarily disabled
+const smartResponseRouterRoutes = require('./smart-response-router');
 
 // Interview Scheduling System
 const interviewSchedulingRoutes = require('./interview-scheduling');
@@ -71,6 +77,15 @@ const conversationEnhancementRoutes = require('./conversation-enhancement');
 
 // Worker Status Classification System
 const workerStatusRoutes = require('./worker-status');
+
+// GeBIZ Intelligence System
+const gebizIntelligenceRoutes = require('./gebiz-intelligence');
+
+// 10-Agent BPO Intelligence System (NEW - Feb 2026)
+const gebizRenewalsRoutes = require('./gebiz/renewals');
+const alertsRoutes = require('./alerts');
+const bpoLifecycleRoutes = require('./bpo/lifecycle');
+const scrapingRoutes = require('./scraping');
 
 // Mount routes
 router.use('/auth', authRoutes);
@@ -94,7 +109,7 @@ router.use('/availability', availabilityRoutes);
 router.use('/notifications', notificationRoutes);
 router.use('/tender-monitor', tenderMonitorRoutes);
 router.use('/email-preferences', emailPreferencesRoutes);
-// router.use('/email-config', emailConfigRoutes); // Disabled to prevent hanging
+// router.use('/email-config', emailConfigRoutes); // Disabled - not needed
 
 // Messaging & Webhooks
 router.use('/webhooks/telegram', telegramWebhookRoutes);
@@ -113,21 +128,21 @@ router.use('/conversations', conversationsRoutes);
 router.use('/chat/attachments', chatAttachmentsRoutes);
 router.use('/quick-replies', quickRepliesRoutes);
 
-// Background Job Scheduler
-// router.use('/job-scheduler', jobSchedulerRoutes); // Temporarily disabled
+// Background Job Scheduler - RE-ENABLED ✅
+router.use('/job-scheduler', jobSchedulerRoutes);
 
-// 100x Consultant Performance System
+// 100x Consultant Performance System - RE-ENABLED ✅
 router.use('/consultant-performance', consultantPerformanceRoutes);
 
-// Fact-Based Template Response System
-// router.use('/template-responses', templateResponseRoutes); // Temporarily disabled
+// Fact-Based Template Response System - RE-ENABLED ✅
+router.use('/template-responses', templateResponseRoutes);
 
 // Admin Escalation and Handoff System
 router.use('/admin-escalation', adminEscalationRoutes);
 router.use('/escalation-analytics', escalationAnalyticsRoutes);
 
 // Smart Response Router System
-// router.use('/smart-response-router', smartResponseRouterRoutes); // Temporarily disabled
+router.use('/smart-response-router', smartResponseRouterRoutes);
 
 // Interview Scheduling System
 router.use('/interview-scheduling', interviewSchedulingRoutes);
@@ -138,63 +153,100 @@ router.use('/conversation-enhancement', conversationEnhancementRoutes);
 // Worker Status Classification System
 router.use('/worker-status', workerStatusRoutes);
 
+// GeBIZ Intelligence System
+router.use('/gebiz', gebizIntelligenceRoutes);
+
+// 10-Agent BPO Intelligence System (NEW - Feb 2026)
+router.use('/gebiz/renewals', gebizRenewalsRoutes);
+router.use('/alerts', alertsRoutes);
+router.use('/bpo/lifecycle', bpoLifecycleRoutes);
+router.use('/scraping', scrapingRoutes);
+
+// Scraping Services
+router.use('/scraping/gebiz-rss', gebizRssRoutes);
+
 // API info endpoint
 router.get('/', (req, res) => {
   res.json({
     name: 'WorkLink API',
-    version: '2.0.0',
+    version: '2.0.1',
+    status: 'operational',
     endpoints: {
-      auth: '/api/v1/auth',
-      candidates: '/api/v1/candidates',
-      jobs: '/api/v1/jobs',
-      deployments: '/api/v1/deployments',
-      payments: '/api/v1/payments',
-      clients: '/api/v1/clients',
-      tenders: '/api/v1/tenders',
-      bpo: '/api/v1/bpo',
-      training: '/api/v1/training',
-      gamification: '/api/v1/gamification',
-      chat: '/api/v1/chat',
-      analytics: '/api/v1/analytics',
-      admin: '/api/v1/admin',
-      ai: '/api/v1/ai',
+      // Core Operations
+      auth: { path: '/api/v1/auth', status: 'active' },
+      candidates: { path: '/api/v1/candidates', status: 'active' },
+      jobs: { path: '/api/v1/jobs', status: 'active' },
+      deployments: { path: '/api/v1/deployments', status: 'active' },
+      payments: { path: '/api/v1/payments', status: 'active' },
+      clients: { path: '/api/v1/clients', status: 'active' },
+      tenders: { path: '/api/v1/tenders', status: 'active' },
+      bpo: { path: '/api/v1/bpo', status: 'active' },
+      training: { path: '/api/v1/training', status: 'active' },
+      gamification: { path: '/api/v1/gamification', status: 'active' },
+      chat: { path: '/api/v1/chat', status: 'active' },
+      analytics: { path: '/api/v1/analytics', status: 'active' },
+      admin: { path: '/api/v1/admin', status: 'active' },
+      ai: { path: '/api/v1/ai', status: 'active' },
+      
       // New features
-      referrals: '/api/v1/referrals',
-      availability: '/api/v1/availability',
-      notifications: '/api/v1/notifications',
-      tenderMonitor: '/api/v1/tender-monitor',
-      emailPreferences: '/api/v1/email-preferences',
-      // emailConfig: '/api/v1/email-config', // Disabled
+      referrals: { path: '/api/v1/referrals', status: 'active' },
+      availability: { path: '/api/v1/availability', status: 'active' },
+      notifications: { path: '/api/v1/notifications', status: 'active' },
+      tenderMonitor: { path: '/api/v1/tender-monitor', status: 'active' },
+      emailPreferences: { path: '/api/v1/email-preferences', status: 'active' },
+      
       // Messaging
-      messaging: '/api/v1/messaging',
+      messaging: { path: '/api/v1/messaging', status: 'active' },
       webhooks: {
-        telegram: '/api/v1/webhooks/telegram',
+        telegram: { path: '/api/v1/webhooks/telegram', status: 'active' },
       },
+      
       // AI & ML
-      aiChat: '/api/v1/ai-chat',
-      slmChat: '/api/v1/slm-chat',
-      ml: '/api/v1/ml',
-      adMl: '/api/v1/ad-ml',
-      telegramGroups: '/api/v1/telegram-groups',
-      llmConfig: '/api/v1/llm-config',
-      // Background Jobs
-      jobScheduler: '/api/v1/job-scheduler',
-      // 100x Performance System
-      consultantPerformance: '/api/v1/consultant-performance',
-      // Fact-Based Template Responses
-      templateResponses: '/api/v1/template-responses',
+      aiChat: { path: '/api/v1/ai-chat', status: 'active' },
+      slmChat: { path: '/api/v1/slm-chat', status: 'active' },
+      ml: { path: '/api/v1/ml', status: 'active' },
+      adMl: { path: '/api/v1/ad-ml', status: 'active' },
+      telegramGroups: { path: '/api/v1/telegram-groups', status: 'active' },
+      llmConfig: { path: '/api/v1/llm-config', status: 'active' },
+      
+      // Background Jobs - NOW ACTIVE ✅
+      jobScheduler: { path: '/api/v1/job-scheduler', status: 'active' },
+      
+      // 100x Performance System - NOW ACTIVE ✅
+      consultantPerformance: { path: '/api/v1/consultant-performance', status: 'active' },
+      
+      // Fact-Based Template Responses - NOW ACTIVE ✅
+      templateResponses: { path: '/api/v1/template-responses', status: 'active' },
+      
       // Admin Escalation System
-      adminEscalation: '/api/v1/admin-escalation',
-      escalationAnalytics: '/api/v1/escalation-analytics',
+      adminEscalation: { path: '/api/v1/admin-escalation', status: 'active' },
+      escalationAnalytics: { path: '/api/v1/escalation-analytics', status: 'active' },
+      
       // Smart Response Router System
-      smartResponseRouter: '/api/v1/smart-response-router',
+      smartResponseRouter: { path: '/api/v1/smart-response-router', status: 'active' },
+      
       // Interview Scheduling System
-      interviewScheduling: '/api/v1/interview-scheduling',
+      interviewScheduling: { path: '/api/v1/interview-scheduling', status: 'active' },
+      
       // SLM Conversion Funnel Enhancement System
-      conversationEnhancement: '/api/v1/conversation-enhancement',
+      conversationEnhancement: { path: '/api/v1/conversation-enhancement', status: 'active' },
+      
       // Worker Status Classification System
-      workerStatus: '/api/v1/worker-status',
+      workerStatus: { path: '/api/v1/worker-status', status: 'active' },
+      
+      // GeBIZ Intelligence System
+      gebizIntelligence: { path: '/api/v1/gebiz', status: 'active' },
+      
+      // 10-Agent BPO Intelligence System (NEW - Feb 2026)
+      gebizRenewals: { path: '/api/v1/gebiz/renewals', status: 'active', description: 'Contract renewal predictions & engagement tracking' },
+      alerts: { path: '/api/v1/alerts', status: 'active', description: 'Multi-channel alert system (email, SMS, Slack, in-app)' },
+      bpoLifecycle: { path: '/api/v1/bpo/lifecycle', status: 'active', description: '7-stage tender pipeline management' },
+      scraping: { path: '/api/v1/scraping', status: 'active', description: 'RSS scraping control and monitoring' },
     },
+    notes: {
+      emailConfig: 'Disabled - not required for core functionality',
+      recentlyEnabled: ['jobScheduler', 'consultantPerformance', 'templateResponses']
+    }
   });
 });
 

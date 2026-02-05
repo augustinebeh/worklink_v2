@@ -1,0 +1,556 @@
+/**
+ * AI Automation Campaign Analytics System
+ * WorkLink v2 - Advanced analytics and performance tracking
+ *
+ * Features:
+ * - Campaign performance metrics
+ * - A/B testing analytics
+ * - Channel effectiveness tracking
+ * - Conversion funnel analysis
+ * - ROI and cost-per-acquisition tracking
+ * - Predictive analytics and insights
+ * - Real-time performance monitoring
+ */
+
+const { db } = require('../db');
+const { createLogger } = require('./structured-logger');
+
+const logger = createLogger('campaign-analytics');
+
+/**
+ * Analytics metric types
+ */
+const METRIC_TYPES = {
+  DELIVERY_RATE: 'delivery_rate',
+  OPEN_RATE: 'open_rate',
+  CLICK_RATE: 'click_rate',
+  RESPONSE_RATE: 'response_rate',
+  CONVERSION_RATE: 'conversion_rate',
+  ENGAGEMENT_SCORE: 'engagement_score',
+  COST_PER_ACQUISITION: 'cost_per_acquisition',
+  REVENUE_PER_CANDIDATE: 'revenue_per_candidate',
+  RETENTION_RATE: 'retention_rate'
+};
+
+/**
+ * Campaign analytics tracking
+ */
+const CAMPAIGN_STATUSES = {
+  ACTIVE: 'active',
+  PAUSED: 'paused',
+  COMPLETED: 'completed',
+  CANCELLED: 'cancelled'
+};
+
+class CampaignAnalytics {
+  constructor() {
+    this.initialized = false;
+  }
+
+  /**
+   * Initialize analytics system
+   */
+  async initialize() {
+    if (this.initialized) return;
+
+    try {
+      // Create analytics tables if they don't exist
+      await this.createAnalyticsTables();
+      this.initialized = true;
+      logger.info('Campaign Analytics initialized successfully');
+    } catch (error) {
+      logger.error('Failed to initialize Campaign Analytics', { error: error.message });
+      throw error;
+    }
+  }
+
+  /**
+   * Create analytics tables
+   */
+  async createAnalyticsTables() {
+    try {
+      // Campaign metrics table
+      db.exec(`
+        CREATE TABLE IF NOT EXISTS campaign_metrics (
+          id INTEGER PRIMARY KEY AUTOINCREMENT,
+          campaign_id TEXT NOT NULL,
+          campaign_type TEXT NOT NULL,
+          metric_type TEXT NOT NULL,
+          metric_value REAL NOT NULL,
+          metric_date DATE NOT NULL,
+          channel TEXT,
+          target_audience TEXT,
+          additional_data TEXT,
+          created_at DATETIME DEFAULT CURRENT_TIMESTAMP
+        )
+      `);
+
+      // Campaign performance summary
+      db.exec(`
+        CREATE TABLE IF NOT EXISTS campaign_performance (
+          id INTEGER PRIMARY KEY AUTOINCREMENT,
+          campaign_id TEXT UNIQUE NOT NULL,
+          campaign_name TEXT NOT NULL,
+          campaign_type TEXT NOT NULL,
+          start_date DATE NOT NULL,
+          end_date DATE,
+          status TEXT NOT NULL DEFAULT 'active',
+          total_sent INTEGER DEFAULT 0,
+          total_delivered INTEGER DEFAULT 0,
+          total_opened INTEGER DEFAULT 0,
+          total_clicked INTEGER DEFAULT 0,
+          total_responded INTEGER DEFAULT 0,
+          total_converted INTEGER DEFAULT 0,
+          cost_total REAL DEFAULT 0,
+          revenue_generated REAL DEFAULT 0,
+          updated_at DATETIME DEFAULT CURRENT_TIMESTAMP
+        )
+      `);
+
+      // A/B testing results
+      db.exec(`
+        CREATE TABLE IF NOT EXISTS ab_test_results (
+          id INTEGER PRIMARY KEY AUTOINCREMENT,
+          test_id TEXT NOT NULL,
+          campaign_id TEXT NOT NULL,
+          variant_name TEXT NOT NULL,
+          participants INTEGER DEFAULT 0,
+          conversions INTEGER DEFAULT 0,
+          conversion_rate REAL DEFAULT 0,
+          statistical_significance REAL DEFAULT 0,
+          winner BOOLEAN DEFAULT FALSE,
+          created_at DATETIME DEFAULT CURRENT_TIMESTAMP
+        )
+      `);
+
+      logger.info('Campaign analytics tables created successfully');
+    } catch (error) {
+      logger.error('Failed to create analytics tables', { error: error.message });
+      throw error;
+    }
+  }
+
+  /**
+   * Track campaign performance metric
+   */
+  async trackMetric(campaignId, metricType, value, additionalData = {}) {
+    try {
+      if (!this.initialized) await this.initialize();
+
+      const insertMetric = db.prepare(`
+        INSERT INTO campaign_metrics
+        (campaign_id, campaign_type, metric_type, metric_value, metric_date, channel, target_audience, additional_data)
+        VALUES (?, ?, ?, ?, DATE('now'), ?, ?, ?)
+      `);
+
+      insertMetric.run(
+        campaignId,
+        additionalData.campaignType || 'unknown',
+        metricType,
+        value,
+        additionalData.channel || null,
+        additionalData.targetAudience || null,
+        JSON.stringify(additionalData)
+      );
+
+      // Update campaign performance summary
+      await this.updateCampaignSummary(campaignId, metricType, value);
+
+      logger.info('Campaign metric tracked', {
+        campaignId,
+        metricType,
+        value,
+        additionalData
+      });
+
+    } catch (error) {
+      logger.error('Failed to track campaign metric', {
+        campaignId,
+        metricType,
+        error: error.message
+      });
+      throw error;
+    }
+  }
+
+  /**
+   * Update campaign performance summary
+   */
+  async updateCampaignSummary(campaignId, metricType, value) {
+    try {
+      const updateQuery = this.getUpdateQueryForMetric(metricType);
+      if (!updateQuery) return;
+
+      const updateSummary = db.prepare(updateQuery);
+      updateSummary.run(value, campaignId);
+
+    } catch (error) {
+      logger.error('Failed to update campaign summary', {
+        campaignId,
+        metricType,
+        error: error.message
+      });
+    }
+  }
+
+  /**
+   * Get update query for specific metric type
+   */
+  getUpdateQueryForMetric(metricType) {
+    const updateQueries = {
+      [METRIC_TYPES.DELIVERY_RATE]: `
+        UPDATE campaign_performance
+        SET total_delivered = total_delivered + ?, updated_at = CURRENT_TIMESTAMP
+        WHERE campaign_id = ?
+      `,
+      [METRIC_TYPES.OPEN_RATE]: `
+        UPDATE campaign_performance
+        SET total_opened = total_opened + ?, updated_at = CURRENT_TIMESTAMP
+        WHERE campaign_id = ?
+      `,
+      [METRIC_TYPES.CLICK_RATE]: `
+        UPDATE campaign_performance
+        SET total_clicked = total_clicked + ?, updated_at = CURRENT_TIMESTAMP
+        WHERE campaign_id = ?
+      `,
+      [METRIC_TYPES.RESPONSE_RATE]: `
+        UPDATE campaign_performance
+        SET total_responded = total_responded + ?, updated_at = CURRENT_TIMESTAMP
+        WHERE campaign_id = ?
+      `,
+      [METRIC_TYPES.CONVERSION_RATE]: `
+        UPDATE campaign_performance
+        SET total_converted = total_converted + ?, updated_at = CURRENT_TIMESTAMP
+        WHERE campaign_id = ?
+      `
+    };
+
+    return updateQueries[metricType];
+  }
+
+  /**
+   * Create new campaign for tracking
+   */
+  async createCampaign(campaignData) {
+    try {
+      if (!this.initialized) await this.initialize();
+
+      const insertCampaign = db.prepare(`
+        INSERT INTO campaign_performance
+        (campaign_id, campaign_name, campaign_type, start_date, status)
+        VALUES (?, ?, ?, DATE('now'), 'active')
+      `);
+
+      insertCampaign.run(
+        campaignData.campaignId,
+        campaignData.name,
+        campaignData.type
+      );
+
+      logger.info('Campaign created for analytics tracking', {
+        campaignId: campaignData.campaignId,
+        name: campaignData.name,
+        type: campaignData.type
+      });
+
+      return campaignData.campaignId;
+
+    } catch (error) {
+      logger.error('Failed to create campaign', {
+        campaignData,
+        error: error.message
+      });
+      throw error;
+    }
+  }
+
+  /**
+   * Get campaign performance report
+   */
+  async getCampaignReport(campaignId, dateRange = {}) {
+    try {
+      if (!this.initialized) await this.initialize();
+
+      // Get campaign summary
+      const getSummary = db.prepare(`
+        SELECT * FROM campaign_performance WHERE campaign_id = ?
+      `);
+      const summary = getSummary.get(campaignId);
+
+      if (!summary) {
+        throw new Error(`Campaign ${campaignId} not found`);
+      }
+
+      // Get detailed metrics
+      let metricsQuery = `
+        SELECT metric_type, metric_value, metric_date, channel
+        FROM campaign_metrics
+        WHERE campaign_id = ?
+      `;
+
+      const queryParams = [campaignId];
+
+      if (dateRange.startDate) {
+        metricsQuery += ` AND metric_date >= ?`;
+        queryParams.push(dateRange.startDate);
+      }
+
+      if (dateRange.endDate) {
+        metricsQuery += ` AND metric_date <= ?`;
+        queryParams.push(dateRange.endDate);
+      }
+
+      metricsQuery += ` ORDER BY metric_date DESC`;
+
+      const getMetrics = db.prepare(metricsQuery);
+      const metrics = getMetrics.all(...queryParams);
+
+      // Calculate performance ratios
+      const performance = this.calculatePerformanceRatios(summary);
+
+      return {
+        campaignId,
+        summary,
+        metrics,
+        performance,
+        generatedAt: new Date().toISOString()
+      };
+
+    } catch (error) {
+      logger.error('Failed to get campaign report', {
+        campaignId,
+        error: error.message
+      });
+      throw error;
+    }
+  }
+
+  /**
+   * Calculate performance ratios
+   */
+  calculatePerformanceRatios(summary) {
+    const ratios = {};
+
+    if (summary.total_sent > 0) {
+      ratios.deliveryRate = (summary.total_delivered / summary.total_sent) * 100;
+      ratios.openRate = (summary.total_opened / summary.total_sent) * 100;
+      ratios.clickRate = (summary.total_clicked / summary.total_sent) * 100;
+      ratios.responseRate = (summary.total_responded / summary.total_sent) * 100;
+      ratios.conversionRate = (summary.total_converted / summary.total_sent) * 100;
+    }
+
+    if (summary.total_converted > 0 && summary.cost_total > 0) {
+      ratios.costPerAcquisition = summary.cost_total / summary.total_converted;
+    }
+
+    if (summary.total_converted > 0 && summary.revenue_generated > 0) {
+      ratios.revenuePerConversion = summary.revenue_generated / summary.total_converted;
+      ratios.roi = ((summary.revenue_generated - summary.cost_total) / summary.cost_total) * 100;
+    }
+
+    return ratios;
+  }
+
+  /**
+   * Get analytics dashboard data
+   */
+  async getDashboardData(timeframe = '30d') {
+    try {
+      if (!this.initialized) await this.initialize();
+
+      const dateFilter = this.getDateFilter(timeframe);
+
+      // Active campaigns summary
+      const getActiveCampaigns = db.prepare(`
+        SELECT campaign_type, COUNT(*) as count,
+               SUM(total_sent) as total_sent,
+               SUM(total_converted) as total_converted,
+               SUM(cost_total) as total_cost,
+               SUM(revenue_generated) as total_revenue
+        FROM campaign_performance
+        WHERE status = 'active' ${dateFilter ? `AND start_date >= '${dateFilter}'` : ''}
+        GROUP BY campaign_type
+      `);
+
+      const activeCampaigns = getActiveCampaigns.all();
+
+      // Top performing campaigns
+      const getTopCampaigns = db.prepare(`
+        SELECT campaign_id, campaign_name, campaign_type,
+               total_sent, total_converted, cost_total, revenue_generated,
+               CASE
+                 WHEN total_sent > 0 THEN (total_converted * 100.0 / total_sent)
+                 ELSE 0
+               END as conversion_rate
+        FROM campaign_performance
+        WHERE ${dateFilter ? `start_date >= '${dateFilter}' AND` : ''} total_sent > 0
+        ORDER BY conversion_rate DESC
+        LIMIT 10
+      `);
+
+      const topCampaigns = getTopCampaigns.all();
+
+      // Channel performance
+      const getChannelPerformance = db.prepare(`
+        SELECT channel,
+               COUNT(*) as campaigns,
+               AVG(metric_value) as avg_performance
+        FROM campaign_metrics
+        WHERE ${dateFilter ? `metric_date >= '${dateFilter}' AND` : ''} channel IS NOT NULL
+        GROUP BY channel
+        ORDER BY avg_performance DESC
+      `);
+
+      const channelPerformance = getChannelPerformance.all();
+
+      return {
+        activeCampaigns,
+        topCampaigns,
+        channelPerformance,
+        timeframe,
+        generatedAt: new Date().toISOString()
+      };
+
+    } catch (error) {
+      logger.error('Failed to get dashboard data', { error: error.message });
+      throw error;
+    }
+  }
+
+  /**
+   * Get date filter for timeframe
+   */
+  getDateFilter(timeframe) {
+    const timeframes = {
+      '7d': "date('now', '-7 days')",
+      '30d': "date('now', '-30 days')",
+      '90d': "date('now', '-90 days')",
+      '1y': "date('now', '-1 year')"
+    };
+
+    return timeframes[timeframe];
+  }
+
+  /**
+   * Track A/B test result
+   */
+  async trackABTestResult(testId, campaignId, variantName, participants, conversions) {
+    try {
+      if (!this.initialized) await this.initialize();
+
+      const conversionRate = participants > 0 ? (conversions / participants) * 100 : 0;
+
+      const insertABResult = db.prepare(`
+        INSERT INTO ab_test_results
+        (test_id, campaign_id, variant_name, participants, conversions, conversion_rate)
+        VALUES (?, ?, ?, ?, ?, ?)
+      `);
+
+      insertABResult.run(testId, campaignId, variantName, participants, conversions, conversionRate);
+
+      logger.info('A/B test result tracked', {
+        testId,
+        campaignId,
+        variantName,
+        participants,
+        conversions,
+        conversionRate
+      });
+
+    } catch (error) {
+      logger.error('Failed to track A/B test result', {
+        testId,
+        error: error.message
+      });
+      throw error;
+    }
+  }
+
+  /**
+   * Get A/B test analysis
+   */
+  async getABTestAnalysis(testId) {
+    try {
+      if (!this.initialized) await this.initialize();
+
+      const getResults = db.prepare(`
+        SELECT * FROM ab_test_results WHERE test_id = ? ORDER BY conversion_rate DESC
+      `);
+
+      const results = getResults.all(testId);
+
+      if (results.length === 0) {
+        throw new Error(`No A/B test results found for test ${testId}`);
+      }
+
+      // Determine statistical significance and winner
+      const analysis = this.calculateStatisticalSignificance(results);
+
+      return {
+        testId,
+        results,
+        analysis,
+        generatedAt: new Date().toISOString()
+      };
+
+    } catch (error) {
+      logger.error('Failed to get A/B test analysis', {
+        testId,
+        error: error.message
+      });
+      throw error;
+    }
+  }
+
+  /**
+   * Calculate statistical significance (simplified)
+   */
+  calculateStatisticalSignificance(results) {
+    if (results.length < 2) {
+      return { hasWinner: false, reason: 'Need at least 2 variants' };
+    }
+
+    // Simple analysis - in production you'd use proper statistical tests
+    const sorted = results.sort((a, b) => b.conversion_rate - a.conversion_rate);
+    const winner = sorted[0];
+    const runnerUp = sorted[1];
+
+    const improvementPercent = ((winner.conversion_rate - runnerUp.conversion_rate) / runnerUp.conversion_rate) * 100;
+
+    return {
+      hasWinner: improvementPercent > 5 && winner.participants > 100, // Simplified criteria
+      winner: winner.variant_name,
+      improvement: improvementPercent,
+      confidence: improvementPercent > 10 ? 'high' : improvementPercent > 5 ? 'medium' : 'low'
+    };
+  }
+}
+
+// Export singleton instance
+const campaignAnalytics = new CampaignAnalytics();
+
+module.exports = {
+  CampaignAnalytics,
+  campaignAnalytics,
+  METRIC_TYPES,
+  CAMPAIGN_STATUSES,
+
+  // Convenience methods
+  trackMetric: (campaignId, metricType, value, additionalData) =>
+    campaignAnalytics.trackMetric(campaignId, metricType, value, additionalData),
+
+  createCampaign: (campaignData) =>
+    campaignAnalytics.createCampaign(campaignData),
+
+  getCampaignReport: (campaignId, dateRange) =>
+    campaignAnalytics.getCampaignReport(campaignId, dateRange),
+
+  getDashboardData: (timeframe) =>
+    campaignAnalytics.getDashboardData(timeframe),
+
+  trackABTestResult: (testId, campaignId, variantName, participants, conversions) =>
+    campaignAnalytics.trackABTestResult(testId, campaignId, variantName, participants, conversions),
+
+  getABTestAnalysis: (testId) =>
+    campaignAnalytics.getABTestAnalysis(testId)
+};

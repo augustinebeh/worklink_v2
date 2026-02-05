@@ -1,0 +1,208 @@
+/**
+ * Tender Analysis Routes - AI-powered tender evaluation
+ * Analyze tenders using Claude AI and rule-based algorithms
+ * 
+ * @module ai-automation/tenders/analysis.routes
+ */
+
+const express = require('express');
+const router = express.Router();
+const { db } = require('../../../../../db');
+const { analyzeTender: analyzeWithClaude } = require('../../../../../utils/claude');
+const { analyzeTender } = require('../utils/scraping-helpers');
+
+/**
+ * POST /:id/analyze
+ * Analyze a single tender using Claude AI
+ */
+router.post('/:id/analyze', async (req, res) => {
+  try {
+    const tender = db.prepare('SELECT * FROM tenders WHERE id = ?').get(req.params.id);
+    
+    if (!tender) {
+      return res.status(404).json({
+        success: false,
+        error: 'Tender not found'
+      });
+    }
+
+    // Get company context for better analysis
+    const companyContext = {
+      totalCandidates: db.prepare(`
+        SELECT COUNT(*) as c FROM candidates WHERE status = 'active'
+      `).get().c,
+      avgRating: db.prepare(`
+        SELECT AVG(rating) as r FROM candidates WHERE rating IS NOT NULL
+      `).get().r || 4.2,
+    };
+
+    let analysis;
+    let aiPowered = false;
+
+    try {
+      // Use Claude AI for analysis
+      analysis = await analyzeWithClaude(tender, companyContext);
+      aiPowered = true;
+    } catch (aiError) {
+      console.warn('Claude AI unavailable, using fallback analysis:', aiError.message);
+      // Fallback to rule-based analysis
+      analysis = analyzeTender(tender);
+    }
+
+    // Update tender with analysis
+    db.prepare(`
+      UPDATE tenders
+      SET win_probability = ?, recommended_action = ?, updated_at = datetime('now')
+      WHERE id = ?
+    `).run(analysis.win_probability || analysis.winProbability, 
+           analysis.recommended_action || analysis.recommendedAction,
+           tender.id);
+
+    res.json({
+      success: true,
+      data: {
+        tender,
+        analysis,
+        aiPowered,
+      }
+    });
+  } catch (error) {
+    res.status(500).json({
+      success: false,
+      error: error.message
+    });
+  }
+});
+
+/**
+ * POST /analyze-all
+ * Batch analyze all new tenders using Claude AI
+ */
+router.post('/analyze-all', async (req, res) => {
+  try {
+    const newTenders = db.prepare(`
+      SELECT * FROM tenders WHERE status = 'new' AND win_probability IS NULL
+    `).all();
+
+    if (newTenders.length === 0) {
+      return res.json({
+        success: true,
+        message: 'No new tenders to analyze',
+        data: []
+      });
+    }
+
+    const companyContext = {
+      totalCandidates: db.prepare(`
+        SELECT COUNT(*) as c FROM candidates WHERE status = 'active'
+      `).get().c,
+      avgRating: db.prepare(`
+        SELECT AVG(rating) as r FROM candidates WHERE rating IS NOT NULL
+      `).get().r || 4.2,
+    };
+
+    const results = [];
+    let aiSuccessCount = 0;
+    let fallbackCount = 0;
+
+    for (const tender of newTenders) {
+      let analysis;
+      let aiPowered = false;
+
+      try {
+        analysis = await analyzeWithClaude(tender, companyContext);
+        aiPowered = true;
+        aiSuccessCount++;
+      } catch (aiError) {
+        // Fallback to rule-based
+        analysis = analyzeTender(tender);
+        fallbackCount++;
+      }
+
+      db.prepare(`
+        UPDATE tenders
+        SET win_probability = ?, recommended_action = ?, updated_at = datetime('now')
+        WHERE id = ?
+      `).run(analysis.win_probability || analysis.winProbability,
+             analysis.recommended_action || analysis.recommendedAction,
+             tender.id);
+
+      results.push({
+        id: tender.id,
+        title: tender.title,
+        winProbability: analysis.win_probability || analysis.winProbability,
+        recommendedAction: analysis.recommended_action || analysis.recommendedAction,
+        aiPowered
+      });
+    }
+
+    res.json({
+      success: true,
+      message: `Analyzed ${results.length} tenders (${aiSuccessCount} AI, ${fallbackCount} fallback)`,
+      data: results,
+      stats: {
+        total: results.length,
+        aiPowered: aiSuccessCount,
+        fallback: fallbackCount
+      }
+    });
+  } catch (error) {
+    res.status(500).json({
+      success: false,
+      error: error.message
+    });
+  }
+});
+
+/**
+ * GET /:id/analysis
+ * Get existing analysis for a tender
+ */
+router.get('/:id/analysis', (req, res) => {
+  try {
+    const tender = db.prepare(`
+      SELECT id, title, agency, estimated_value, manpower_required,
+             win_probability, recommended_action, updated_at
+      FROM tenders
+      WHERE id = ?
+    `).get(req.params.id);
+
+    if (!tender) {
+      return res.status(404).json({
+        success: false,
+        error: 'Tender not found'
+      });
+    }
+
+    if (!tender.win_probability) {
+      return res.json({
+        success: true,
+        data: {
+          tender,
+          analyzed: false,
+          message: 'Tender not yet analyzed'
+        }
+      });
+    }
+
+    res.json({
+      success: true,
+      data: {
+        tender,
+        analyzed: true,
+        analysis: {
+          winProbability: tender.win_probability,
+          recommendedAction: tender.recommended_action,
+          analyzedAt: tender.updated_at
+        }
+      }
+    });
+  } catch (error) {
+    res.status(500).json({
+      success: false,
+      error: error.message
+    });
+  }
+});
+
+module.exports = router;

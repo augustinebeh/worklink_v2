@@ -1,6 +1,6 @@
 const express = require('express');
 const router = express.Router();
-const { db } = require('../../../db/database');
+const { db } = require('../../../db');
 
 // Get all deployments with filters
 router.get('/', (req, res) => {
@@ -53,6 +53,61 @@ router.get('/', (req, res) => {
 
     const deployments = db.prepare(sql).all(...params);
     res.json({ success: true, data: deployments });
+  } catch (error) {
+    res.status(500).json({ success: false, error: error.message });
+  }
+});
+
+// Create new deployment (assign worker to job)
+router.post('/', (req, res) => {
+  try {
+    const { job_id, candidate_id, status = 'assigned' } = req.body;
+
+    if (!job_id || !candidate_id) {
+      return res.status(400).json({ success: false, error: 'job_id and candidate_id are required' });
+    }
+
+    // Check if job exists
+    const job = db.prepare('SELECT * FROM jobs WHERE id = ?').get(job_id);
+    if (!job) {
+      return res.status(404).json({ success: false, error: 'Job not found' });
+    }
+
+    // Check if candidate exists
+    const candidate = db.prepare('SELECT * FROM candidates WHERE id = ?').get(candidate_id);
+    if (!candidate) {
+      return res.status(404).json({ success: false, error: 'Candidate not found' });
+    }
+
+    // Check if job has available slots
+    if (job.filled_slots >= job.total_slots) {
+      return res.status(400).json({ success: false, error: 'Job is fully booked' });
+    }
+
+    // Check if already deployed
+    const existing = db.prepare('SELECT * FROM deployments WHERE job_id = ? AND candidate_id = ?').get(job_id, candidate_id);
+    if (existing) {
+      return res.status(400).json({ success: false, error: 'Candidate already assigned to this job' });
+    }
+
+    // Create deployment
+    const deployment_id = 'DEP' + Date.now().toString(36).toUpperCase();
+    db.prepare(`
+      INSERT INTO deployments (id, job_id, candidate_id, status)
+      VALUES (?, ?, ?, ?)
+    `).run(deployment_id, job_id, candidate_id, status);
+
+    // Update job filled slots
+    db.prepare('UPDATE jobs SET filled_slots = filled_slots + 1 WHERE id = ?').run(job_id);
+
+    // Check if job is now fully booked and update status
+    const updatedJob = db.prepare('SELECT filled_slots, total_slots FROM jobs WHERE id = ?').get(job_id);
+    if (updatedJob.filled_slots >= updatedJob.total_slots) {
+      db.prepare('UPDATE jobs SET status = ? WHERE id = ?').run('filled', job_id);
+    }
+
+    const deployment = db.prepare('SELECT * FROM deployments WHERE id = ?').get(deployment_id);
+    res.json({ success: true, data: deployment });
   } catch (error) {
     res.status(500).json({ success: false, error: error.message });
   }

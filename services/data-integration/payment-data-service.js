@@ -5,7 +5,7 @@
  * processing dates, and timeline data.
  */
 
-const { db } = require('../../db/database');
+const { db } = require('../../db');
 
 class PaymentDataService {
   /**

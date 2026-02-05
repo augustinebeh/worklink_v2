@@ -1,8 +1,8 @@
 import { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
-import { 
-  PlusIcon, 
-  SearchIcon, 
+import {
+  PlusIcon,
+  SearchIcon,
   CalendarIcon,
   MapPinIcon,
   ClockIcon,
@@ -10,6 +10,7 @@ import {
   DollarSignIcon,
   ZapIcon,
 } from 'lucide-react';
+import { api } from '../shared/services/api';
 import Card, { CardHeader, CardTitle } from '../components/ui/Card';
 import Badge, { StatusBadge } from '../components/ui/Badge';
 import Button from '../components/ui/Button';
@@ -21,7 +22,7 @@ import { clsx } from 'clsx';
 
 export default function Jobs() {
   const navigate = useNavigate();
-  const [jobs, setJobs] = useState([]);
+  const [allJobs, setAllJobs] = useState([]); // Store ALL jobs for stats
   const [clients, setClients] = useState([]);
   const [loading, setLoading] = useState(true);
   const [statusFilter, setStatusFilter] = useState('all');
@@ -48,17 +49,14 @@ export default function Jobs() {
   useEffect(() => {
     fetchJobs();
     fetchClients();
-  }, [statusFilter]);
+  }, []); // Remove statusFilter dependency - fetch all jobs once
 
   const fetchJobs = async () => {
     try {
-      const params = new URLSearchParams();
-      if (statusFilter !== 'all') params.append('status', statusFilter);
-      
-      const res = await fetch(`/api/v1/jobs?${params}`);
-      const data = await res.json();
+      // Always fetch ALL jobs (no status filter)
+      const data = await api.jobs.getAll();
       if (data.success) {
-        setJobs(data.data);
+        setAllJobs(data.data);
       }
     } catch (error) {
       console.error('Failed to fetch jobs:', error);
@@ -69,8 +67,7 @@ export default function Jobs() {
 
   const fetchClients = async () => {
     try {
-      const res = await fetch('/api/v1/clients');
-      const data = await res.json();
+      const data = await api.clients.getAll();
       if (data.success) {
         setClients(data.data);
       }
@@ -81,17 +78,12 @@ export default function Jobs() {
 
   const handleCreateJob = async () => {
     try {
-      const res = await fetch('/api/v1/jobs', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({
-          ...formData,
-          pay_rate: parseFloat(formData.pay_rate),
-          total_slots: parseInt(formData.total_slots),
-          xp_bonus: parseInt(formData.xp_bonus) || 0,
-        }),
+      const data = await api.jobs.create({
+        ...formData,
+        pay_rate: parseFloat(formData.pay_rate),
+        total_slots: parseInt(formData.total_slots),
+        xp_bonus: parseInt(formData.xp_bonus) || 0,
       });
-      const data = await res.json();
       if (data.success) {
         setShowAddModal(false);
         setFormData({
@@ -114,20 +106,32 @@ export default function Jobs() {
     }
   };
 
-  // Filter jobs
-  const filteredJobs = jobs.filter(job => {
-    if (!searchQuery) return true;
-    return job.title.toLowerCase().includes(searchQuery.toLowerCase()) ||
-           job.location?.toLowerCase().includes(searchQuery.toLowerCase()) ||
-           job.client_name?.toLowerCase().includes(searchQuery.toLowerCase());
-  });
+  // Filter jobs by status and search query
+  const filteredJobs = allJobs
+    .filter(job => {
+      // First filter by status
+      if (statusFilter !== 'all' && job.status !== statusFilter) {
+        return false;
+      }
+      // Then filter by search query
+      if (!searchQuery) return true;
+      return job.title.toLowerCase().includes(searchQuery.toLowerCase()) ||
+             job.location?.toLowerCase().includes(searchQuery.toLowerCase()) ||
+             job.client_name?.toLowerCase().includes(searchQuery.toLowerCase());
+    })
+    .sort((a, b) => {
+      // Sort by date (most recent first)
+      const dateA = new Date(a.job_date);
+      const dateB = new Date(b.job_date);
+      return dateB - dateA; // Descending order (newest first)
+    });
 
-  // Stats
+  // Stats - ALWAYS computed from ALL jobs, not filtered
   const stats = {
-    total: jobs.length,
-    open: jobs.filter(j => j.status === 'open').length,
-    filled: jobs.filter(j => j.status === 'filled').length,
-    completed: jobs.filter(j => j.status === 'completed').length,
+    total: allJobs.length,
+    open: allJobs.filter(j => j.status === 'open').length,
+    filled: allJobs.filter(j => j.status === 'filled').length,
+    completed: allJobs.filter(j => j.status === 'completed').length,
   };
 
   const formatDate = (dateStr) => {

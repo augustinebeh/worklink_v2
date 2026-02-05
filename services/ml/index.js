@@ -12,7 +12,7 @@
  * 4. Export training data for fine-tuning your own model
  */
 
-const { db } = require('../../db/database');
+const { db } = require('../../db');
 const embeddings = require('./embeddings');
 
 /**

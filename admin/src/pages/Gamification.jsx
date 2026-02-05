@@ -12,6 +12,7 @@ import {
   PlusIcon,
   SearchIcon,
 } from 'lucide-react';
+import { api } from '../shared/services/api';
 import Card, { CardHeader, CardTitle, CardContent } from '../components/ui/Card';
 import Badge from '../components/ui/Badge';
 import Button from '../components/ui/Button';
@@ -220,15 +221,12 @@ export default function Gamification() {
 
   const fetchData = async () => {
     try {
-      const [achievementsRes, questsRes, leaderboardRes] = await Promise.all([
-        fetch('/api/v1/gamification/achievements'),
-        fetch('/api/v1/gamification/quests'),
-        fetch('/api/v1/gamification/leaderboard?limit=10'),
+      // TODO: Create gamificationService - using raw client for now
+      const [achievementsData, questsData, leaderboardData] = await Promise.all([
+        api.client.get('/gamification/achievements'),
+        api.client.get('/gamification/quests'),
+        api.client.get('/gamification/leaderboard', { params: { limit: 10 } }),
       ]);
-
-      const achievementsData = await achievementsRes.json();
-      const questsData = await questsRes.json();
-      const leaderboardData = await leaderboardRes.json();
 
       if (achievementsData.success) setAchievements(achievementsData.data);
       if (questsData.success) setQuests(questsData.data);
@@ -253,12 +251,8 @@ export default function Gamification() {
   const handleSaveAchievement = async () => {
     setSaving(true);
     try {
-      const res = await fetch('/api/v1/gamification/achievements', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify(achievementForm),
-      });
-      const data = await res.json();
+      // TODO: Create gamificationService - using raw client for now
+      const data = await api.client.post('/gamification/achievements', achievementForm);
       if (data.success) {
         setShowAchievementModal(false);
         setAchievementForm({ name: '', description: '', icon: '🏆', xp_reward: 100, rarity: 'common' });
@@ -274,12 +268,8 @@ export default function Gamification() {
   const handleSaveQuest = async () => {
     setSaving(true);
     try {
-      const res = await fetch('/api/v1/gamification/quests', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify(questForm),
-      });
-      const data = await res.json();
+      // TODO: Create gamificationService - using raw client for now
+      const data = await api.client.post('/gamification/quests', questForm);
       if (data.success) {
         setShowQuestModal(false);
         setQuestForm({ title: '', description: '', type: 'daily', xp_reward: 50, active: true });
@@ -295,12 +285,8 @@ export default function Gamification() {
   const handleSaveScheme = async () => {
     setSaving(true);
     try {
-      const res = await fetch('/api/v1/gamification/incentives', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify(schemeForm),
-      });
-      const data = await res.json();
+      // TODO: Create gamificationService - using raw client for now
+      const data = await api.client.post('/gamification/incentives', schemeForm);
       if (data.success) {
         setShowSchemeModal(false);
         setSchemeForm({ name: '', description: '', bonus_amount: 20, condition: '', active: true });

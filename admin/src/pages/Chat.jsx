@@ -43,6 +43,7 @@ import {
   ArrowDown,
 } from 'lucide-react';
 import EmojiPicker from 'emoji-picker-react';
+import { api } from '../shared/services/api';
 import Card from '../components/ui/Card';
 import Badge from '../components/ui/Badge';
 import { useToast } from '../components/ui/Toast';
@@ -1290,8 +1291,7 @@ export default function AdminChat() {
 
   const fetchConversations = async () => {
     try {
-      const res = await fetch('/api/v1/chat/admin/conversations');
-      const data = await res.json();
+      const data = await api.chat.getConversations();
       if (data.success) setConversations(data.data);
     } catch (error) {
       console.error('Failed to fetch conversations:', error);
@@ -1302,8 +1302,7 @@ export default function AdminChat() {
 
   const fetchCandidates = async () => {
     try {
-      const res = await fetch('/api/v1/chat/admin/candidates');
-      const data = await res.json();
+      const data = await api.chat.getCandidates();
       if (data.success) setCandidates(data.data);
     } catch (error) {
       console.error('Failed to fetch candidates:', error);
@@ -1312,8 +1311,7 @@ export default function AdminChat() {
 
   const fetchTemplates = async () => {
     try {
-      const res = await fetch('/api/v1/chat/templates');
-      const data = await res.json();
+      const data = await api.chat.getTemplates();
       if (data.success) setTemplates(data.data);
     } catch (error) {
       console.error('Failed to fetch templates:', error);
@@ -1322,11 +1320,10 @@ export default function AdminChat() {
 
   const fetchMessages = async (candidateId) => {
     try {
-      const res = await fetch(`/api/v1/chat/${candidateId}/messages`);
-      const data = await res.json();
+      const data = await api.chat.getMessages(candidateId);
       if (data.success) {
         setMessages(data.data.messages || []);
-        fetch(`/api/v1/chat/admin/${candidateId}/read`, { method: 'POST' });
+        api.chat.markAsRead(candidateId);
       }
     } catch (error) {
       console.error('Failed to fetch messages:', error);

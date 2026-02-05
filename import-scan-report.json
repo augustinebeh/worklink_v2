@@ -1,0 +1,241 @@
+{
+  "brokenImports": [
+    {
+      "file": "/home/augustine/Augustine_Projects/worklink_v2/admin/src/components/modals/AddJobModal.jsx",
+      "line": 13,
+      "import": "../hooks/useClients",
+      "type": "import"
+    },
+    {
+      "file": "/home/augustine/Augustine_Projects/worklink_v2/admin/src/shared/examples/CandidatesPageMigration.example.jsx",
+      "line": 84,
+      "import": "../components/modals",
+      "type": "import"
+    },
+    {
+      "file": "/home/augustine/Augustine_Projects/worklink_v2/admin/src/shared/examples/CandidatesPageMigration.example.jsx",
+      "line": 85,
+      "import": "../shared/hooks/useCandidates",
+      "type": "import"
+    },
+    {
+      "file": "/home/augustine/Augustine_Projects/worklink_v2/admin/src/shared/examples/CandidatesPageMigration.example.jsx",
+      "line": 86,
+      "import": "../components/ui/Toast",
+      "type": "import"
+    },
+    {
+      "file": "/home/augustine/Augustine_Projects/worklink_v2/admin/src/shared/examples/PerformanceOptimization.example.jsx",
+      "line": 109,
+      "import": "./pages/Candidates",
+      "type": "import"
+    },
+    {
+      "file": "/home/augustine/Augustine_Projects/worklink_v2/admin/src/shared/examples/PerformanceOptimization.example.jsx",
+      "line": 111,
+      "import": "./pages/Settings",
+      "type": "import"
+    },
+    {
+      "file": "/home/augustine/Augustine_Projects/worklink_v2/admin/src/shared/services/api/migration-example.js",
+      "line": 29,
+      "import": "../services/api",
+      "type": "import"
+    },
+    {
+      "file": "/home/augustine/Augustine_Projects/worklink_v2/routes/api/v1/ai-automation/index.js",
+      "line": 157,
+      "import": "../../../db",
+      "type": "require"
+    },
+    {
+      "file": "/home/augustine/Augustine_Projects/worklink_v2/routes/api/v1/ai-automation/index.js",
+      "line": 195,
+      "import": "../../../utils/claude",
+      "type": "require"
+    },
+    {
+      "file": "/home/augustine/Augustine_Projects/worklink_v2/scripts/complete-database-migration.js",
+      "line": 26,
+      "import": "../../../../db/database",
+      "type": "require"
+    },
+    {
+      "file": "/home/augustine/Augustine_Projects/worklink_v2/scripts/complete-database-migration.js",
+      "line": 27,
+      "import": "../../../../db",
+      "type": "require"
+    },
+    {
+      "file": "/home/augustine/Augustine_Projects/worklink_v2/scripts/complete-database-migration.js",
+      "line": 29,
+      "import": "../../../db/database",
+      "type": "require"
+    },
+    {
+      "file": "/home/augustine/Augustine_Projects/worklink_v2/scripts/complete-database-migration.js",
+      "line": 30,
+      "import": "../../../db",
+      "type": "require"
+    },
+    {
+      "file": "/home/augustine/Augustine_Projects/worklink_v2/scripts/complete-database-migration.js",
+      "line": 32,
+      "import": "../../db/database",
+      "type": "require"
+    },
+    {
+      "file": "/home/augustine/Augustine_Projects/worklink_v2/scripts/complete-database-migration.js",
+      "line": 33,
+      "import": "../../db",
+      "type": "require"
+    },
+    {
+      "file": "/home/augustine/Augustine_Projects/worklink_v2/scripts/complete-database-migration.js",
+      "line": 38,
+      "import": "./db/database",
+      "type": "require"
+    },
+    {
+      "file": "/home/augustine/Augustine_Projects/worklink_v2/scripts/complete-database-migration.js",
+      "line": 39,
+      "import": "./db",
+      "type": "require"
+    },
+    {
+      "file": "/home/augustine/Augustine_Projects/worklink_v2/scripts/debug/debug_database.js",
+      "line": 1,
+      "import": "./db/database.js",
+      "type": "require"
+    },
+    {
+      "file": "/home/augustine/Augustine_Projects/worklink_v2/scripts/debug/demo-llm-features.js",
+      "line": 15,
+      "import": "../utils/claude",
+      "type": "require"
+    },
+    {
+      "file": "/home/augustine/Augustine_Projects/worklink_v2/scripts/testing/run-smart-response-router-validation.js",
+      "line": 17,
+      "import": "./false-promises-elimination-test",
+      "type": "require"
+    },
+    {
+      "file": "/home/augustine/Augustine_Projects/worklink_v2/scripts/testing/run-smart-response-router-validation.js",
+      "line": 18,
+      "import": "./real-data-integration-validation-test",
+      "type": "require"
+    },
+    {
+      "file": "/home/augustine/Augustine_Projects/worklink_v2/scripts/testing/run-smart-response-router-validation.js",
+      "line": 19,
+      "import": "./smart-response-router-comprehensive-test",
+      "type": "require"
+    },
+    {
+      "file": "/home/augustine/Augustine_Projects/worklink_v2/scripts/update-database-imports.js",
+      "line": 49,
+      "import": "../../../db",
+      "type": "require"
+    },
+    {
+      "file": "/home/augustine/Augustine_Projects/worklink_v2/scripts/update-database-imports.js",
+      "line": 50,
+      "import": "../../db",
+      "type": "require"
+    },
+    {
+      "file": "/home/augustine/Augustine_Projects/worklink_v2/scripts/update-database-imports.js",
+      "line": 52,
+      "import": "./db",
+      "type": "require"
+    },
+    {
+      "file": "/home/augustine/Augustine_Projects/worklink_v2/scripts/update-database-imports.js",
+      "line": 53,
+      "import": "../../../db",
+      "type": "require"
+    },
+    {
+      "file": "/home/augustine/Augustine_Projects/worklink_v2/scripts/update-database-imports.js",
+      "line": 54,
+      "import": "../../db",
+      "type": "require"
+    },
+    {
+      "file": "/home/augustine/Augustine_Projects/worklink_v2/scripts/update-database-imports.js",
+      "line": 56,
+      "import": "./db",
+      "type": "require"
+    },
+    {
+      "file": "/home/augustine/Augustine_Projects/worklink_v2/scripts/utilities/fix-database-schema.js",
+      "line": 7,
+      "import": "./db",
+      "type": "require"
+    },
+    {
+      "file": "/home/augustine/Augustine_Projects/worklink_v2/scripts/utilities/reseed-database.js",
+      "line": 102,
+      "import": "./db/connection",
+      "type": "require"
+    },
+    {
+      "file": "/home/augustine/Augustine_Projects/worklink_v2/scripts/utilities/setup-email.js",
+      "line": 8,
+      "import": "./config/email",
+      "type": "require"
+    },
+    {
+      "file": "/home/augustine/Augustine_Projects/worklink_v2/scripts/utilities/setup-email.js",
+      "line": 183,
+      "import": "./services/email",
+      "type": "require"
+    },
+    {
+      "file": "/home/augustine/Augustine_Projects/worklink_v2/scripts/utilities/verify_gamification.js",
+      "line": 13,
+      "import": "./shared/constants",
+      "type": "require"
+    },
+    {
+      "file": "/home/augustine/Augustine_Projects/worklink_v2/tests/run-data-integration-tests.js",
+      "line": 416,
+      "import": "../../db/database",
+      "type": "require"
+    },
+    {
+      "file": "/home/augustine/Augustine_Projects/worklink_v2/tests/run-data-integration-tests.js",
+      "line": 435,
+      "import": "../../db/database",
+      "type": "require"
+    },
+    {
+      "file": "/home/augustine/Augustine_Projects/worklink_v2/tests/run-data-integration-tests.js",
+      "line": 448,
+      "import": "../../services/data-integration/cache-manager",
+      "type": "require"
+    },
+    {
+      "file": "/home/augustine/Augustine_Projects/worklink_v2/utils/internal-slm/setup-guide.js",
+      "line": 9,
+      "import": "./utils/internal-slm/integration",
+      "type": "require"
+    },
+    {
+      "file": "/home/augustine/Augustine_Projects/worklink_v2/utils/internal-slm/setup-guide.js",
+      "line": 28,
+      "import": "./utils/internal-slm/integration",
+      "type": "require"
+    },
+    {
+      "file": "/home/augustine/Augustine_Projects/worklink_v2/utils/internal-slm/setup-guide.js",
+      "line": 35,
+      "import": "./utils/internal-slm/integration",
+      "type": "require"
+    }
+  ],
+  "deletedFileReferences": [],
+  "relativePathIssues": [],
+  "totalFilesScanned": 480
+}

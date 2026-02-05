@@ -12,6 +12,7 @@ import {
   Zap,
   Calendar,
 } from 'lucide-react';
+import { api } from '../shared/services/api';
 import Card from '../components/ui/Card';
 import Badge from '../components/ui/Badge';
 import { clsx } from 'clsx';
@@ -91,8 +92,8 @@ export default function AdOptimization() {
 
   const fetchStats = async () => {
     try {
-      const res = await fetch('/api/v1/ad-ml/stats');
-      const data = await res.json();
+      // TODO: Create adMlService - using raw client for now
+      const data = await api.client.get('/ad-ml/stats');
       if (data.success) setStats(data.data);
     } catch (error) {
       console.error('Failed to fetch stats:', error);
@@ -101,8 +102,8 @@ export default function AdOptimization() {
 
   const fetchVariables = async () => {
     try {
-      const res = await fetch('/api/v1/ad-ml/variables');
-      const data = await res.json();
+      // TODO: Create adMlService - using raw client for now
+      const data = await api.client.get('/ad-ml/variables');
       if (data.success) setVariables(data.data);
     } catch (error) {
       console.error('Failed to fetch variables:', error);
@@ -111,8 +112,8 @@ export default function AdOptimization() {
 
   const fetchTiming = async () => {
     try {
-      const res = await fetch('/api/v1/ad-ml/timing');
-      const data = await res.json();
+      // TODO: Create adMlService - using raw client for now
+      const data = await api.client.get('/ad-ml/timing');
       if (data.success) setTiming(data.data);
     } catch (error) {
       console.error('Failed to fetch timing:', error);
@@ -121,8 +122,8 @@ export default function AdOptimization() {
 
   const fetchTests = async () => {
     try {
-      const res = await fetch('/api/v1/ad-ml/tests');
-      const data = await res.json();
+      // TODO: Create adMlService - using raw client for now
+      const data = await api.client.get('/ad-ml/tests');
       if (data.success) setTests(data.data);
     } catch (error) {
       console.error('Failed to fetch tests:', error);
@@ -131,8 +132,8 @@ export default function AdOptimization() {
 
   const fetchTrainingData = async () => {
     try {
-      const res = await fetch('/api/v1/ad-ml/training-data?limit=20');
-      const data = await res.json();
+      // TODO: Create adMlService - using raw client for now
+      const data = await api.client.get('/ad-ml/training-data', { params: { limit: 20 } });
       if (data.success) setTrainingData(data.data);
     } catch (error) {
       console.error('Failed to fetch training data:', error);
@@ -141,10 +142,8 @@ export default function AdOptimization() {
 
   const evaluateTest = async (jobId) => {
     try {
-      const res = await fetch(`/api/v1/ad-ml/tests/${jobId}/evaluate`, {
-        method: 'POST',
-      });
-      const data = await res.json();
+      // TODO: Create adMlService - using raw client for now
+      const data = await api.client.post(`/ad-ml/tests/${jobId}/evaluate`);
       if (data.success) {
         fetchTests();
         fetchStats();
@@ -156,13 +155,15 @@ export default function AdOptimization() {
 
   const exportTrainingData = async (format) => {
     try {
-      const res = await fetch('/api/v1/ad-ml/training-data/export', {
+      // TODO: Create adMlService - using raw client for now
+      // Note: For blob responses, we need to handle differently
+      const response = await fetch('/api/v1/ad-ml/training-data/export', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ format }),
       });
 
-      const blob = await res.blob();
+      const blob = await response.blob();
       const url = URL.createObjectURL(blob);
       const a = document.createElement('a');
       a.href = url;

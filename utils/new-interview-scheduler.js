@@ -1,538 +1,647 @@
 /**
- * NEW Interview Scheduler - Redesigned from Scratch
- * State-machine based with intelligent fallbacks
- * Handles complex requests like "what about friday"
+ * AGENT 2: IMPLEMENTER - New Interview Scheduler Engine
+ * 
+ * Complete redesign from scratch - no reference to old structure
+ * Philosophy: Conversational Agent (not state machine)
  */
 
-const { db } = require('../db');
+const { callGroqAPI } = require('./internal-slm/groq-fallback');
+const chrono = require('chrono-node');
 
-// State machine states
-const STATES = {
-  GREETING: 'greeting',
-  TIME_PREFERENCE: 'time_preference',
-  SHOWING_SLOTS: 'showing_slots',
-  SLOT_SELECTION: 'slot_selection',
-  CONFIRMED: 'confirmed',
-  ERROR: 'error'
-};
+/**
+ * Component 1: Intent Detector
+ * Analyzes user messages to understand what they want
+ */
+class IntentDetector {
+  async analyze(message, context = {}) {
+    const msg = message.toLowerCase().trim();
+    
+    // Quick pattern matching for common cases (fast path)
+    const patterns = {
+      greeting: /^(hi|hello|hey|start|begin)/i,
+      morning: /morning|am|9|10|11|before noon|早上/i,
+      afternoon: /afternoon|pm|2|3|4|5|6|after lunch|下午/i,
+      slotNumber: /^[1-9]$|^option [1-9]$|^number [1-9]$/i,
+      slotZero: /^0$|^zero$/i,  // FIX #2: Detect slot 0
+      invalidSlotNumber: /^[0-9]{2,}$|^[1-9][0-9]+$/,  // 2+ digits
+      friday: /friday|fri$/i,
+      tomorrow: /tomorrow/i,
+      nextWeek: /next week/i,
+      specificDate: /\d{1,2}[\/\-]\d{1,2}|jan|feb|mar|apr|may|jun|jul|aug|sep|oct|nov|dec/i,
+      changeRequest: /actually|wait|instead|change|different|other/i,
+      question: /\?|when|what|how|can|do you have/i,
+      anytime: /any time|anytime|any slot|whenever|flexible|doesn't matter|don't care/i,
+      typoMorning: /morn(i|in)(n|ng)|moring|mornign/i,
+      typoAfternoon: /after(n|noon)|afternon|afternoo$/i,
+    };
 
-// Time periods
-const TIME_PERIODS = {
-  MORNING: { name: 'morning', start: 9, end: 13, label: '9AM-1PM' },
-  AFTERNOON: { name: 'afternoon', start: 14, end: 18, label: '2PM-6PM' }
-};
+    // FIX #2: Detect slot 0 specifically (invalid)
+    if (patterns.slotZero.test(msg)) {
+      return {
+        intent: 'select_slot',
+        confidence: 0.95,
+        entities: { slotNumber: 0 },
+        reasoning: 'User selected invalid slot 0'
+      };
+    }
 
-class InterviewScheduler {
-  constructor() {
-    this.sessions = new Map(); // Store conversation state per candidate
+    // Detect invalid slot numbers (2+ digits)
+    if (patterns.invalidSlotNumber.test(msg)) {
+      const num = parseInt(msg.replace(/\D/g, ''));
+      return {
+        intent: 'select_slot',
+        confidence: 0.95,
+        entities: { slotNumber: num },
+        reasoning: 'User selected invalid slot number'
+      };
+    }
+
+    // Detect slot selection (highest priority)
+    if (patterns.slotNumber.test(msg)) {
+      const num = parseInt(msg.replace(/\D/g, ''));
+      return {
+        intent: 'select_slot',
+        confidence: 0.95,
+        entities: { slotNumber: num },
+        reasoning: 'User selected slot by number'
+      };
+    }
+
+    // Detect "anytime" / no preference
+    if (patterns.anytime.test(msg)) {
+      return {
+        intent: 'no_preference',
+        confidence: 0.90,
+        entities: { timePreference: 'any' },
+        reasoning: 'User has no time preference'
+      };
+    }
+
+    // Detect specific day request
+    if (patterns.friday.test(msg) || patterns.tomorrow.test(msg) || patterns.nextWeek.test(msg)) {
+      const dateInfo = this.extractDate(msg);
+      return {
+        intent: 'request_specific_day',
+        confidence: 0.90,
+        entities: dateInfo,
+        reasoning: 'User requested specific day'
+      };
+    }
+
+    // FIX #1: Detect change of mind BEFORE time preferences
+    if (patterns.changeRequest.test(msg)) {
+      const entities = this.extractPreferences(msg);
+      return {
+        intent: 'change_preference',
+        confidence: 0.80,
+        entities: entities,
+        reasoning: 'User wants to change preference'
+      };
+    }
+
+    // Detect time preference with typo support (AFTER change detection)
+    if (patterns.morning.test(msg) || patterns.typoMorning.test(msg)) {
+      return {
+        intent: 'time_preference',
+        confidence: 0.85,
+        entities: { timePreference: 'morning' },
+        reasoning: 'User prefers morning'
+      };
+    }
+
+    if (patterns.afternoon.test(msg) || patterns.typoAfternoon.test(msg)) {
+      return {
+        intent: 'time_preference',
+        confidence: 0.85,
+        entities: { timePreference: 'afternoon' },
+        reasoning: 'User prefers afternoon'
+      };
+    }
+
+    // Detect greeting
+    if (patterns.greeting.test(msg) && msg.length < 20) {
+      return {
+        intent: 'greeting',
+        confidence: 0.90,
+        entities: {},
+        reasoning: 'User greeting'
+      };
+    }
+
+    // For complex cases, use LLM (slow path)
+    return await this.analyzeLLM(msg, context);
   }
 
-  /**
-   * Main entry point for handling messages
-   */
-  async handleMessage(candidateId, message) {
+  extractDate(message) {
+    const msg = message.toLowerCase();
+    
+    // Use chrono-node for natural date parsing
+    const parsed = chrono.parseDate(message);
+    
+    if (parsed) {
+      return {
+        date: parsed,
+        dayOfWeek: parsed.toLocaleDateString('en-US', { weekday: 'long' }),
+        formatted: parsed.toLocaleDateString('en-US', { month: 'short', day: 'numeric' })
+      };
+    }
+
+    // Fallback patterns
+    if (/friday|fri$/i.test(msg)) {
+      const now = new Date();
+      const friday = new Date(now);
+      const daysUntilFriday = (5 - now.getDay() + 7) % 7 || 7;
+      friday.setDate(now.getDate() + daysUntilFriday);
+      
+      return {
+        date: friday,
+        dayOfWeek: 'Friday',
+        formatted: friday.toLocaleDateString('en-US', { month: 'short', day: 'numeric' })
+      };
+    }
+
+    if (/tomorrow/i.test(msg)) {
+      const tomorrow = new Date();
+      tomorrow.setDate(tomorrow.getDate() + 1);
+      
+      return {
+        date: tomorrow,
+        dayOfWeek: tomorrow.toLocaleDateString('en-US', { weekday: 'long' }),
+        formatted: tomorrow.toLocaleDateString('en-US', { month: 'short', day: 'numeric' })
+      };
+    }
+
+    return { date: null, dayOfWeek: null, formatted: null };
+  }
+
+  extractPreferences(message) {
+    const prefs = {};
+    
+    if (/morning/i.test(message)) prefs.timePreference = 'morning';
+    if (/afternoon/i.test(message)) prefs.timePreference = 'afternoon';
+    
+    const dateInfo = this.extractDate(message);
+    if (dateInfo.date) {
+      Object.assign(prefs, dateInfo);
+    }
+    
+    return prefs;
+  }
+
+  async analyzeLLM(message, context) {
     try {
-      // Get or create session
-      let session = this.sessions.get(candidateId);
-      if (!session) {
-        session = this.createSession(candidateId);
-        this.sessions.set(candidateId, session);
-      }
+      const prompt = `Analyze this user message in an interview scheduling conversation:
 
-      console.log(`[Scheduler] ${candidateId} in state: ${session.state}, message: "${message}"`);
+Message: "${message}"
 
-      // Process based on current state
-      let response;
-      switch (session.state) {
-        case STATES.GREETING:
-        case STATES.TIME_PREFERENCE:
-          response = await this.handleTimePreference(session, message);
-          break;
-        
-        case STATES.SHOWING_SLOTS:
-        case STATES.SLOT_SELECTION:
-          response = await this.handleSlotSelection(session, message);
-          break;
-        
-        case STATES.CONFIRMED:
-          response = await this.handlePostConfirmation(session, message);
-          break;
-        
-        default:
-          response = await this.handleTimePreference(session, message);
-      }
+Context: ${JSON.stringify(context, null, 2)}
 
-      // Save session state
-      this.sessions.set(candidateId, session);
+Return JSON with:
+{
+  "intent": "greeting" | "time_preference" | "request_specific_day" | "select_slot" | "change_preference" | "question" | "confirmation",
+  "confidence": 0.0-1.0,
+  "entities": {
+    "timePreference": "morning" | "afternoon" | null,
+    "slotNumber": number | null,
+    "date": "YYYY-MM-DD" | null,
+    "dayOfWeek": "Monday" | "Tuesday" | ... | null
+  },
+  "reasoning": "Brief explanation"
+}`;
 
-      return response;
+      const response = await callGroqAPI([
+        { role: 'system', content: 'You are an intent analysis expert. Return ONLY valid JSON.' },
+        { role: 'user', content: prompt }
+      ], 500);
 
+      // Clean response
+      let cleaned = response.replace(/```json\n?/g, '').replace(/```\n?/g, '').trim();
+      return JSON.parse(cleaned);
+      
     } catch (error) {
-      console.error(`[Scheduler] Error:`, error);
+      console.error('LLM intent detection failed:', error);
+      
+      // Fallback: treat as question
       return {
-        message: "I encountered an issue. Let me reset and help you schedule from the beginning! 😊\n\n📅 **When works best for you?**\n- Morning (9AM-1PM)\n- Afternoon (2PM-6PM)",
-        complete: false
+        intent: 'question',
+        confidence: 0.50,
+        entities: {},
+        reasoning: 'LLM failed, treating as question'
       };
     }
-  }
-
-  /**
-   * Create new session for candidate
-   */
-  createSession(candidateId) {
-    return {
-      candidateId,
-      state: STATES.GREETING,
-      preference: null,
-      shownSlots: [],
-      selectedSlot: null,
-      attemptCount: 0,
-      lastShownDay: null,
-      createdAt: new Date()
-    };
-  }
-
-  /**
-   * Handle time preference selection and day-specific requests
-   */
-  async handleTimePreference(session, message) {
-    const normalized = message.toLowerCase().trim();
-    
-    // Check if asking about specific day
-    const dayRequest = this.extractDayRequest(normalized);
-    if (dayRequest) {
-      return await this.showSlotsForDay(session, dayRequest.day, dayRequest.preference || session.preference);
-    }
-
-    // Detect time preference
-    const preference = this.detectTimePreference(normalized);
-    
-    if (preference) {
-      session.preference = preference;
-      session.state = STATES.SHOWING_SLOTS;
-      return await this.showAvailableSlots(session, preference);
-    }
-
-    // First message / greeting
-    if (session.attemptCount === 0) {
-      session.attemptCount++;
-      return {
-        message: "Hi Augustine! 👋\n\nWelcome to WorkLink! Your account is being reviewed by our team.\n\nWhile you wait, I can help speed up the process by scheduling a quick verification interview with our consultant.\n\n📅 **Do you prefer morning (9AM-1PM) or afternoon (2PM-6PM) for your interview?**\n\nThis will help fast-track your approval process!",
-        complete: false
-      };
-    }
-
-    // Didn't understand preference
-    return {
-      message: "I didn't quite catch that! 😅\n\nPlease choose:\n• **Morning** (9AM-1PM)\n• **Afternoon** (2PM-6PM)\n\nOr tell me which day you prefer (e.g., 'friday morning')",
-      complete: false
-    };
-  }
-
-  /**
-   * Handle slot selection with smart parsing
-   */
-  async handleSlotSelection(session, message) {
-    const normalized = message.toLowerCase().trim();
-
-    // Check if asking about different day
-    const dayRequest = this.extractDayRequest(normalized);
-    if (dayRequest) {
-      return await this.showSlotsForDay(session, dayRequest.day, dayRequest.preference || session.preference);
-    }
-
-    // Check if changing time preference
-    const newPreference = this.detectTimePreference(normalized);
-    if (newPreference && newPreference !== session.preference) {
-      session.preference = newPreference;
-      session.state = STATES.SHOWING_SLOTS;
-      return await this.showAvailableSlots(session, newPreference);
-    }
-
-    // Try to parse slot selection
-    const selection = this.parseSlotSelection(normalized, session.shownSlots);
-    
-    if (selection) {
-      // Valid selection!
-      session.selectedSlot = selection;
-      session.state = STATES.CONFIRMED;
-      
-      // Save to database
-      await this.saveInterviewSlot(session.candidateId, selection);
-      
-      return {
-        message: this.generateConfirmationMessage(selection),
-        complete: true,
-        interviewScheduled: true,
-        slot: selection
-      };
-    }
-
-    // Didn't understand selection
-    session.attemptCount++;
-    
-    if (session.attemptCount > 3) {
-      // Too many failed attempts, offer help
-      return {
-        message: "I'm having trouble understanding your selection. 😅\n\nLet me connect you with our admin team who can help you schedule directly.\n\n**Or**, simply reply with the slot number (1, 2, or 3) from the options I showed you!",
-        complete: false
-      };
-    }
-
-    return {
-      message: "Hmm, I didn't catch which slot you want. 🤔\n\nPlease reply with:\n• The number (1, 2, or 3)\n• The time (e.g., '10am' or '2pm')\n• Or ask for a different day (e.g., 'what about friday')",
-      complete: false
-    };
-  }
-
-  /**
-   * Handle messages after booking confirmed
-   */
-  async handlePostConfirmation(session, message) {
-    const normalized = message.toLowerCase();
-    
-    if (normalized.includes('reschedule') || normalized.includes('change')) {
-      // Reset session for rescheduling
-      session.state = STATES.TIME_PREFERENCE;
-      session.selectedSlot = null;
-      session.shownSlots = [];
-      
-      return {
-        message: "No problem! Let's reschedule. 📅\n\nWould you prefer:\n• Morning (9AM-1PM)\n• Afternoon (2PM-6PM)?",
-        complete: false
-      };
-    }
-
-    return {
-      message: "Your interview is already confirmed! ✅\n\nIf you need to reschedule, just say 'reschedule' and I'll help you pick a new time.",
-      complete: true
-    };
-  }
-
-  /**
-   * Detect time preference from message
-   */
-  detectTimePreference(message) {
-    const morningKeywords = ['morning', 'am', '9', '10', '11', '12', 'early'];
-    const afternoonKeywords = ['afternoon', 'pm', '2', '3', '4', '5', '6', 'evening', 'later'];
-    
-    const hasMorning = morningKeywords.some(k => message.includes(k));
-    const hasAfternoon = afternoonKeywords.some(k => message.includes(k));
-    
-    if (hasMorning && !hasAfternoon) return 'morning';
-    if (hasAfternoon && !hasMorning) return 'afternoon';
-    
-    return null;
-  }
-
-  /**
-   * Extract day-specific request (e.g., "what about friday")
-   */
-  extractDayRequest(message) {
-    const days = ['monday', 'tuesday', 'wednesday', 'thursday', 'friday', 'saturday', 'sunday'];
-    const patterns = [
-      /what about (\w+)/i,
-      /how about (\w+)/i,
-      /on (\w+)/i,
-      /(\w+) morning/i,
-      /(\w+) afternoon/i,
-      /next (\w+)/i,
-      /this (\w+)/i
-    ];
-
-    for (const pattern of patterns) {
-      const match = message.match(pattern);
-      if (match) {
-        const dayName = match[1].toLowerCase();
-        if (days.includes(dayName)) {
-          // Detect if they also specified preference in same message
-          const preference = this.detectTimePreference(message);
-          return { day: dayName, preference };
-        }
-      }
-    }
-
-    // Check for standalone day names
-    for (const day of days) {
-      if (message.includes(day)) {
-        const preference = this.detectTimePreference(message);
-        return { day, preference };
-      }
-    }
-
-    return null;
-  }
-
-  /**
-   * Parse slot selection from message
-   */
-  parseSlotSelection(message, shownSlots) {
-    if (!shownSlots || shownSlots.length === 0) return null;
-
-    // Check for numbers (1, 2, 3)
-    const numberMatch = message.match(/\b([123])\b|first|second|third|one|two|three/);
-    if (numberMatch) {
-      let index = 0;
-      if (numberMatch[1]) {
-        index = parseInt(numberMatch[1]) - 1;
-      } else if (message.includes('first') || message.includes('one')) {
-        index = 0;
-      } else if (message.includes('second') || message.includes('two')) {
-        index = 1;
-      } else if (message.includes('third') || message.includes('three')) {
-        index = 2;
-      }
-      
-      if (index >= 0 && index < shownSlots.length) {
-        return shownSlots[index];
-      }
-    }
-
-    // Check for time mentions (10am, 2pm, 14:00)
-    const timeMatch = message.match(/(\d{1,2})\s*(?::(\d{2}))?\s*(am|pm)?/i);
-    if (timeMatch) {
-      let hour = parseInt(timeMatch[1]);
-      const minute = timeMatch[2] ? parseInt(timeMatch[2]) : 0;
-      const meridiem = timeMatch[3]?.toLowerCase();
-      
-      if (meridiem === 'pm' && hour < 12) hour += 12;
-      if (meridiem === 'am' && hour === 12) hour = 0;
-      
-      // Find slot matching this time
-      for (const slot of shownSlots) {
-        const slotHour = parseInt(slot.time.split(':')[0]);
-        const slotMinute = parseInt(slot.time.split(':')[1]);
-        if (slotHour === hour && slotMinute === minute) {
-          return slot;
-        }
-      }
-    }
-
-    return null;
-  }
-
-  /**
-   * Show available slots for a specific day
-   */
-  async showSlotsForDay(session, dayName, preference) {
-    const targetDate = this.getNextDayDate(dayName);
-    const slots = this.generateSlotsForDay(targetDate, preference || 'morning');
-    
-    session.shownSlots = slots.slice(0, 3); // Show top 3
-    session.state = STATES.SLOT_SELECTION;
-    session.lastShownDay = dayName;
-    
-    const dayLabel = this.formatDayLabel(targetDate, dayName);
-    const periodLabel = preference ? TIME_PERIODS[preference.toUpperCase()].label : 'available';
-    
-    return {
-      message: `Great! Here are ${periodLabel} slots for ${dayLabel}:\n\n${this.formatSlotOptions(session.shownSlots)}\n\nSimply reply with the number of your preferred slot (1, 2, or 3)! ⚡`,
-      complete: false
-    };
-  }
-
-  /**
-   * Show available slots based on preference
-   */
-  async showAvailableSlots(session, preference) {
-    const slots = this.generateSlots(preference);
-    session.shownSlots = slots.slice(0, 3); // Show top 3
-    session.state = STATES.SLOT_SELECTION;
-    
-    const period = TIME_PERIODS[preference.toUpperCase()];
-    
-    return {
-      message: `Perfect! Here are the best ${preference} (${period.label}) slots for you:\n\n${this.formatSlotOptions(session.shownSlots)}\n\nSimply reply with the number of your preferred slot (1, 2, or 3), and I'll book it immediately! ⚡`,
-      complete: false
-    };
-  }
-
-  /**
-   * Generate available time slots
-   */
-  generateSlots(preference, count = 10) {
-    const period = TIME_PERIODS[preference.toUpperCase()];
-    const slots = [];
-    const now = new Date();
-    
-    // Start from tomorrow
-    let currentDate = new Date(now);
-    currentDate.setDate(currentDate.getDate() + 1);
-    currentDate.setHours(0, 0, 0, 0);
-    
-    // Generate slots for next 7 days
-    for (let day = 0; day < 7 && slots.length < count; day++) {
-      const checkDate = new Date(currentDate);
-      checkDate.setDate(checkDate.getDate() + day);
-      
-      // Skip weekends for now (can be made configurable)
-      if (checkDate.getDay() === 0 || checkDate.getDay() === 6) continue;
-      
-      // Generate slots for this day
-      for (let hour = period.start; hour < period.end && slots.length < count; hour++) {
-        for (let minute of [0, 30]) {
-          if (hour === period.end - 1 && minute === 30) continue; // Don't go past end time
-          
-          slots.push({
-            date: this.formatDate(checkDate),
-            time: `${String(hour).padStart(2, '0')}:${String(minute).padStart(2, '0')}`,
-            dayName: this.getDayName(checkDate),
-            formatted: this.formatSlot(checkDate, hour, minute)
-          });
-          
-          if (slots.length >= count) break;
-        }
-      }
-    }
-    
-    return slots;
-  }
-
-  /**
-   * Generate slots for a specific day
-   */
-  generateSlotsForDay(date, preference) {
-    const period = TIME_PERIODS[preference.toUpperCase()];
-    const slots = [];
-    
-    for (let hour = period.start; hour < period.end; hour++) {
-      for (let minute of [0, 30]) {
-        if (hour === period.end - 1 && minute === 30) continue;
-        
-        slots.push({
-          date: this.formatDate(date),
-          time: `${String(hour).padStart(2, '0')}:${String(minute).padStart(2, '0')}`,
-          dayName: this.getDayName(date),
-          formatted: this.formatSlot(date, hour, minute)
-        });
-      }
-    }
-    
-    return slots;
-  }
-
-  /**
-   * Get next occurrence of a day name
-   */
-  getNextDayDate(dayName) {
-    const days = ['sunday', 'monday', 'tuesday', 'wednesday', 'thursday', 'friday', 'saturday'];
-    const targetDay = days.indexOf(dayName.toLowerCase());
-    
-    const today = new Date();
-    const currentDay = today.getDay();
-    
-    let daysUntil = targetDay - currentDay;
-    if (daysUntil <= 0) daysUntil += 7; // Next week if already passed
-    
-    const targetDate = new Date(today);
-    targetDate.setDate(today.getDate() + daysUntil);
-    targetDate.setHours(0, 0, 0, 0);
-    
-    return targetDate;
-  }
-
-  /**
-   * Format slot options for display
-   */
-  formatSlotOptions(slots) {
-    return slots.map((slot, index) => 
-      `${index + 1}. ${slot.formatted}`
-    ).join('\n');
-  }
-
-  /**
-   * Format a single slot
-   */
-  formatSlot(date, hour, minute) {
-    const dayName = this.getDayName(date);
-    const monthName = date.toLocaleDateString('en-US', { month: 'long' });
-    const day = date.getDate();
-    
-    const time12 = this.convertTo12Hour(hour, minute);
-    
-    return `${dayName}, ${monthName} ${day} at ${time12}`;
-  }
-
-  /**
-   * Convert 24h to 12h format
-   */
-  convertTo12Hour(hour, minute) {
-    const period = hour >= 12 ? 'PM' : 'AM';
-    const hour12 = hour > 12 ? hour - 12 : (hour === 0 ? 12 : hour);
-    const minuteStr = String(minute).padStart(2, '0');
-    return `${hour12}:${minuteStr} ${period}`;
-  }
-
-  /**
-   * Get day name from date
-   */
-  getDayName(date) {
-    return date.toLocaleDateString('en-US', { weekday: 'long' });
-  }
-
-  /**
-   * Format date as YYYY-MM-DD
-   */
-  formatDate(date) {
-    return date.toISOString().split('T')[0];
-  }
-
-  /**
-   * Format day label for display
-   */
-  formatDayLabel(date, dayName) {
-    const today = new Date();
-    today.setHours(0, 0, 0, 0);
-    
-    const tomorrow = new Date(today);
-    tomorrow.setDate(tomorrow.getDate() + 1);
-    
-    if (date.getTime() === today.getTime()) {
-      return 'today';
-    } else if (date.getTime() === tomorrow.getTime()) {
-      return 'tomorrow';
-    } else {
-      return `${dayName.charAt(0).toUpperCase() + dayName.slice(1)}, ${date.toLocaleDateString('en-US', { month: 'long', day: 'numeric' })}`;
-    }
-  }
-
-  /**
-   * Generate confirmation message
-   */
-  generateConfirmationMessage(slot) {
-    return `✅ **Interview Confirmed!**\n\n📅 **Date:** ${slot.formatted}\n\nYou'll receive a reminder 24 hours before your interview. Our team will review your application and you'll hear back within 48 hours.\n\nSee you then! 🎉`;
-  }
-
-  /**
-   * Save interview slot to database
-   */
-  async saveInterviewSlot(candidateId, slot) {
-    try {
-      const datetime = `${slot.date} ${slot.time}`;
-      
-      db.prepare(`
-        UPDATE candidates 
-        SET interview_scheduled_at = ?, 
-            status = 'interview_scheduled',
-            updated_at = datetime('now')
-        WHERE id = ?
-      `).run(datetime, candidateId);
-      
-      console.log(`[Scheduler] Saved interview for ${candidateId}: ${datetime}`);
-      return true;
-    } catch (error) {
-      console.error('[Scheduler] Error saving interview:', error);
-      return false;
-    }
-  }
-
-  /**
-   * Clear session for candidate
-   */
-  clearSession(candidateId) {
-    this.sessions.delete(candidateId);
   }
 }
 
-// Export singleton instance
-module.exports = new InterviewScheduler();
+/**
+ * Component 2: Slot Generator
+ * Generates available interview slots based on constraints
+ */
+class SlotGenerator {
+  constructor(db) {
+    this.db = db;
+  }
+
+  generate(constraints = {}) {
+    const {
+      date = null,          // Specific date
+      dayOfWeek = null,     // e.g., 'Friday'
+      timePreference = null, // 'morning' or 'afternoon'
+      count = 5,            // How many slots to return
+      startDate = new Date(),
+      endDate = null
+    } = constraints;
+
+    const slots = [];
+    const current = new Date(startDate);
+    current.setHours(9, 0, 0, 0);
+
+    const end = endDate || new Date(current.getTime() + 14 * 24 * 60 * 60 * 1000); // 14 days default
+
+    while (current <= end && slots.length < count) {
+      // Skip weekends
+      if (current.getDay() === 0 || current.getDay() === 6) {
+        current.setDate(current.getDate() + 1);
+        current.setHours(9, 0, 0, 0);
+        continue;
+      }
+
+      // Filter by specific date
+      if (date) {
+        const targetDate = new Date(date);
+        if (current.toDateString() !== targetDate.toDateString()) {
+          current.setDate(current.getDate() + 1);
+          current.setHours(9, 0, 0, 0);
+          continue;
+        }
+      }
+
+      // Filter by day of week
+      if (dayOfWeek) {
+        const currentDay = current.toLocaleDateString('en-US', { weekday: 'long' });
+        if (currentDay.toLowerCase() !== dayOfWeek.toLowerCase()) {
+          current.setDate(current.getDate() + 1);
+          current.setHours(9, 0, 0, 0);
+          continue;
+        }
+      }
+
+      // Generate time slots for this day
+      const daySlots = this.generateDaySlots(new Date(current), timePreference);
+      slots.push(...daySlots);
+
+      current.setDate(current.getDate() + 1);
+      current.setHours(9, 0, 0, 0);
+    }
+
+    return slots.slice(0, count).map((slot, idx) => ({
+      id: idx + 1,
+      datetime: slot.toISOString(),
+      date: slot.toLocaleDateString('en-US', { weekday: 'long', year: 'numeric', month: 'short', day: 'numeric' }),
+      time: slot.toLocaleTimeString('en-US', { hour: 'numeric', minute: '2-digit', hour12: true }),
+      formatted: `${slot.toLocaleDateString('en-US', { weekday: 'short', month: 'short', day: 'numeric' })} at ${slot.toLocaleTimeString('en-US', { hour: 'numeric', minute: '2-digit', hour12: true })}`
+    }));
+  }
+
+  generateDaySlots(date, timePreference) {
+    const slots = [];
+    const morning = [9, 10, 11, 12]; // 9am, 10am, 11am, 12pm
+    const afternoon = [14, 15, 16, 17]; // 2pm, 3pm, 4pm, 5pm
+
+    let hours = [];
+    if (!timePreference) {
+      hours = [...morning, ...afternoon];
+    } else if (timePreference === 'morning') {
+      hours = morning;
+    } else if (timePreference === 'afternoon') {
+      hours = afternoon;
+    }
+
+    hours.forEach(hour => {
+      // Generate 2 slots per hour (on the hour and half-hour)
+      [0, 30].forEach(minute => {
+        const slot = new Date(date);
+        slot.setHours(hour, minute, 0, 0);
+        slots.push(slot);
+      });
+    });
+
+    return slots;
+  }
+
+  checkAvailability(datetime) {
+    // TODO: Check against database for existing bookings
+    // For now, assume all generated slots are available
+    return true;
+  }
+}
+
+/**
+ * Component 3: Conversation Manager
+ * Orchestrates the entire conversation flow
+ */
+class ConversationManager {
+  constructor(candidateId, db) {
+    this.candidateId = candidateId;
+    this.db = db;
+    this.intentDetector = new IntentDetector();
+    this.slotGenerator = new SlotGenerator(db);
+    this.responseGenerator = new ResponseGenerator();
+    
+    this.context = {
+      conversationStarted: false,
+      preferences: {},
+      shownSlots: [],
+      selectedSlot: null,
+      bookingStatus: 'pending'
+    };
+  }
+
+  async handleMessage(message) {
+    try {
+      console.log(`[ConversationManager] Processing: "${message}"`);
+      
+      // Analyze intent
+      const intent = await this.intentDetector.analyze(message, this.context);
+      console.log('[ConversationManager] Intent:', intent);
+
+      // Route to appropriate handler
+      let response;
+      switch (intent.intent) {
+        case 'greeting':
+          response = await this.handleGreeting();
+          break;
+        case 'time_preference':
+          response = await this.handleTimePreference(intent.entities);
+          break;
+        case 'no_preference':
+          response = await this.handleNoPreference(intent.entities);
+          break;
+        case 'request_specific_day':
+          response = await this.handleSpecificDay(intent.entities);
+          break;
+        case 'select_slot':
+          response = await this.handleSlotSelection(intent.entities);
+          break;
+        case 'change_preference':
+          response = await this.handleChangePreference(intent.entities);
+          break;
+        case 'question':
+          response = await this.handleQuestion(message, intent);
+          break;
+        case 'confirmation':
+          response = await this.handleConfirmation();
+          break;
+        default:
+          response = await this.handleUnknown(message);
+      }
+
+      // Update context
+      this.context.lastIntent = intent;
+      this.context.lastMessage = message;
+      this.context.conversationStarted = true;
+
+      return response;
+      
+    } catch (error) {
+      console.error('[ConversationManager] Error:', error);
+      return this.handleError(error);
+    }
+  }
+
+  async handleGreeting() {
+    return this.responseGenerator.generateGreeting(this.candidateId);
+  }
+
+  async handleNoPreference(entities) {
+    // User doesn't care about time - show all available slots
+    const slots = this.slotGenerator.generate({
+      timePreference: null,  // No preference
+      count: 8  // Show more slots since they're flexible
+    });
+    
+    this.context.shownSlots = slots;
+    this.context.preferences.timePreference = 'any';
+    
+    return this.responseGenerator.generateSlotList(slots, 'you - pick any time that works');
+  }
+
+  async handleTimePreference(entities) {
+    this.context.preferences.timePreference = entities.timePreference;
+    
+    const slots = this.slotGenerator.generate({
+      timePreference: entities.timePreference,
+      count: 5
+    });
+    
+    this.context.shownSlots = slots;
+    
+    return this.responseGenerator.generateSlotList(slots, entities.timePreference);
+  }
+
+  async handleSpecificDay(entities) {
+    this.context.preferences.date = entities.date;
+    this.context.preferences.dayOfWeek = entities.dayOfWeek;
+    
+    const slots = this.slotGenerator.generate({
+      date: entities.date,
+      dayOfWeek: entities.dayOfWeek,
+      timePreference: this.context.preferences.timePreference,
+      count: 5
+    });
+    
+    if (slots.length === 0) {
+      return this.responseGenerator.generateNoSlotsAvailable(entities);
+    }
+    
+    this.context.shownSlots = slots;
+    
+    return this.responseGenerator.generateSlotList(slots, entities.dayOfWeek || 'that day');
+  }
+
+  async handleSlotSelection(entities) {
+    const slotNumber = entities.slotNumber;
+    const selectedSlot = this.context.shownSlots[slotNumber - 1];
+    
+    if (!selectedSlot) {
+      return this.responseGenerator.generateInvalidSlot(slotNumber, this.context.shownSlots.length);
+    }
+    
+    // Book the slot
+    const booking = await this.bookInterview(selectedSlot);
+    
+    this.context.selectedSlot = selectedSlot;
+    this.context.bookingStatus = 'confirmed';
+    
+    return this.responseGenerator.generateConfirmation(selectedSlot, booking);
+  }
+
+  async handleChangePreference(entities) {
+    // User wants to change something
+    Object.assign(this.context.preferences, entities);
+    
+    const slots = this.slotGenerator.generate({
+      date: entities.date,
+      dayOfWeek: entities.dayOfWeek,
+      timePreference: entities.timePreference || this.context.preferences.timePreference,
+      count: 5
+    });
+    
+    this.context.shownSlots = slots;
+    
+    return this.responseGenerator.generateSlotList(slots, 'your new preferences');
+  }
+
+  async handleQuestion(message, intent) {
+    // Use LLM to generate helpful response
+    return this.responseGenerator.generateQuestionResponse(message, this.context, intent);
+  }
+
+  async handleConfirmation() {
+    return this.responseGenerator.generateThankYou(this.context.selectedSlot);
+  }
+
+  async handleUnknown(message) {
+    return this.responseGenerator.generateClarification(message, this.context);
+  }
+
+  async handleError(error) {
+    console.error('[ConversationManager] Handling error:', error);
+    return this.responseGenerator.generateError(this.context);
+  }
+
+  async bookInterview(slot) {
+    // Save to interview_queue table
+    const booking = {
+      candidateId: this.candidateId,
+      datetime: slot.datetime,
+      status: 'scheduled',
+      createdAt: new Date()
+    };
+    
+    try {
+      // Insert into interview_queue
+      this.db.prepare(`
+        INSERT INTO interview_queue (
+          candidate_id, 
+          queue_status, 
+          scheduled_for, 
+          added_at,
+          preferred_times,
+          notes
+        ) VALUES (?, ?, ?, ?, ?, ?)
+      `).run(
+        this.candidateId,
+        'scheduled',
+        slot.datetime,
+        booking.createdAt.toISOString(),
+        JSON.stringify([slot.formatted]),
+        `Interview scheduled via chatbot at ${slot.formatted}`
+      );
+      
+      console.log('[ConversationManager] Booking created:', booking);
+    } catch (error) {
+      console.error('[ConversationManager] Database error:', error);
+    }
+    
+    return booking;
+  }
+}
+
+/**
+ * Component 4: Response Generator
+ * Creates natural, helpful responses for every scenario
+ */
+class ResponseGenerator {
+  generateGreeting(candidateId) {
+    return {
+      content: `Hi! 👋 I'm here to schedule your verification interview.\n\nWhen works best for you? You can say things like:\n• "Tomorrow morning"\n• "Friday afternoon"\n• "Next week"\n• "Anytime this week"\n\nOr just tell me your preference! 😊`,
+      type: 'greeting'
+    };
+  }
+
+  generateSlotList(slots, context) {
+    if (slots.length === 0) {
+      return {
+        content: `I don't have any slots available for ${context}. Would you like to see other options?`,
+        type: 'no_slots'
+      };
+    }
+
+    const slotText = slots.map((slot, idx) => 
+      `${idx + 1}. ${slot.formatted}`
+    ).join('\n');
+
+    return {
+      content: `Great! Here are the best times for ${context}:\n\n${slotText}\n\nJust reply with the number (1-${slots.length}) to book! 📅`,
+      type: 'slot_list',
+      slots: slots
+    };
+  }
+
+  generateConfirmation(slot, booking) {
+    return {
+      content: `Perfect! ✅ I've booked you for:\n\n📅 ${slot.date}\n🕐 ${slot.time}\n\nYou'll receive a confirmation email shortly. Need to change this? Just let me know!`,
+      type: 'confirmation',
+      booking: booking
+    };
+  }
+
+  generateNoSlotsAvailable(entities) {
+    const dayText = entities.dayOfWeek || entities.formatted || 'that day';
+    return {
+      content: `I don't have any interviews available on ${dayText}. 😔\n\nWould you like to see:\n• Other days this week?\n• Next week's availability?\n• Any available times?`,
+      type: 'no_slots'
+    };
+  }
+
+  generateInvalidSlot(number, maxSlots) {
+    return {
+      content: `I don't see option ${number}. Please choose from 1-${maxSlots}! 😊`,
+      type: 'error'
+    };
+  }
+
+  async generateQuestionResponse(message, context, intent) {
+    // For complex questions, provide helpful info
+    return {
+      content: `I'm here to help schedule your interview! The process is quick:\n\n1. Tell me when you're available\n2. I'll show you time slots\n3. Pick one and you're booked!\n\nWhat time works for you?`,
+      type: 'help'
+    };
+  }
+
+  generateThankYou(slot) {
+    return {
+      content: `You're all set! Looking forward to meeting you on ${slot.date}! 🎉`,
+      type: 'thank_you'
+    };
+  }
+
+  generateClarification(message, context) {
+    if (context.shownSlots && context.shownSlots.length > 0) {
+      return {
+        content: `I didn't quite understand that. Are you trying to:\n• Select one of the slots I showed? (Reply with 1-${context.shownSlots.length})\n• See different times?\n• Change your preferences?\n\nJust let me know!`,
+        type: 'clarification'
+      };
+    }
+    
+    return {
+      content: `I want to help you schedule your interview! When would you like to meet? You can say things like "tomorrow", "friday morning", or "next week". 😊`,
+      type: 'clarification'
+    };
+  }
+
+  generateError(context) {
+    return {
+      content: `I encountered a small hiccup, but don't worry! 😊\n\nLet me get you connected with our team directly. They'll help you schedule right away.`,
+      type: 'error',
+      action: 'escalate_to_admin'
+    };
+  }
+}
+
+module.exports = {
+  IntentDetector,
+  SlotGenerator,
+  ConversationManager,
+  ResponseGenerator
+};

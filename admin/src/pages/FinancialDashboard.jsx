@@ -1,7 +1,7 @@
 import { useState, useEffect } from 'react';
-import { 
-  DollarSignIcon, 
-  TrendingUpIcon, 
+import {
+  DollarSignIcon,
+  TrendingUpIcon,
   TrendingDownIcon,
   UsersIcon,
   CalendarIcon,
@@ -17,13 +17,13 @@ import {
   GiftIcon,
   CalculatorIcon,
 } from 'lucide-react';
-import { 
-  AreaChart, 
-  Area, 
-  XAxis, 
-  YAxis, 
-  CartesianGrid, 
-  Tooltip, 
+import {
+  AreaChart,
+  Area,
+  XAxis,
+  YAxis,
+  CartesianGrid,
+  Tooltip,
   ResponsiveContainer,
   BarChart,
   Bar,
@@ -34,6 +34,7 @@ import {
   ComposedChart,
   Line,
 } from 'recharts';
+import { api } from '../shared/services/api';
 import Card, { CardHeader, CardTitle, CardContent } from '../components/ui/Card';
 import Badge from '../components/ui/Badge';
 import Button from '../components/ui/Button';
@@ -102,8 +103,7 @@ export default function FinancialDashboard() {
 
   const fetchData = async () => {
     try {
-      const res = await fetch('/api/v1/analytics/financial/dashboard');
-      const result = await res.json();
+      const result = await api.analytics.getFinancialDashboard();
       if (result.success) setData(result.data);
     } catch (error) {
       console.error('Failed to fetch financial data:', error);
@@ -115,19 +115,14 @@ export default function FinancialDashboard() {
   const calculateProfit = async () => {
     try {
       const totalHours = parseFloat(calculator.hours) * parseInt(calculator.days || 1);
-      const res = await fetch('/api/v1/analytics/calculate-job-profit', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({
-          charge_rate: parseFloat(calculator.charge_rate),
-          pay_rate: parseFloat(calculator.pay_rate),
-          hours: totalHours,
-          days: parseInt(calculator.days || 1),
-          headcount: parseInt(calculator.headcount),
-          estimated_incentives: parseFloat(calculator.incentives),
-        }),
+      const result = await api.analytics.calculateJobProfit({
+        charge_rate: parseFloat(calculator.charge_rate),
+        pay_rate: parseFloat(calculator.pay_rate),
+        hours: totalHours,
+        days: parseInt(calculator.days || 1),
+        headcount: parseInt(calculator.headcount),
+        estimated_incentives: parseFloat(calculator.incentives),
       });
-      const result = await res.json();
       if (result.success) setCalcResult({ ...result.data, days: parseInt(calculator.days || 1), hoursPerDay: parseFloat(calculator.hours) });
     } catch (error) {
       console.error('Calculation error:', error);

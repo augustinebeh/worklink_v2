@@ -1,0 +1,1243 @@
+{
+  "databaseImports": [
+    {
+      "file": "agent-2-database-verifier.js",
+      "import": "require(\"../db\") or require(\"./db\")",
+      "type": "db module"
+    },
+    {
+      "file": "agent-2-database-verifier.js",
+      "import": "better-sqlite3",
+      "type": "direct sqlite"
+    },
+    {
+      "file": "agent-3-server-verifier.js",
+      "import": "require(\"./websocket\"), require(\"./db\")",
+      "type": "db module"
+    },
+    {
+      "file": "agent-5-auto-fixer.js",
+      "import": "require('./database')",
+      "type": "database module"
+    },
+    {
+      "file": "agent-5-auto-fixer.js",
+      "import": "require('./database')",
+      "type": "database module"
+    },
+    {
+      "file": "agent-5-duplicate-detector.js",
+      "import": "better-sqlite3",
+      "type": "direct sqlite"
+    },
+    {
+      "file": "check-augustine.js",
+      "import": "require('./db')",
+      "type": "db module"
+    },
+    {
+      "file": "check-data.js",
+      "import": "require('./db')",
+      "type": "db module"
+    },
+    {
+      "file": "config/email.js",
+      "import": "require('../db')",
+      "type": "db module"
+    },
+    {
+      "file": "db/apply-constraints.js",
+      "import": "better-sqlite3",
+      "type": "direct sqlite"
+    },
+    {
+      "file": "db/apply-constraints.js",
+      "import": "new Database(",
+      "type": "database instantiation"
+    },
+    {
+      "file": "db/connection.js",
+      "import": "better-sqlite3",
+      "type": "direct sqlite"
+    },
+    {
+      "file": "db/connection.js",
+      "import": "new Database(",
+      "type": "database instantiation"
+    },
+    {
+      "file": "db/database/config.js",
+      "import": "better-sqlite3",
+      "type": "direct sqlite"
+    },
+    {
+      "file": "db/database/config.js",
+      "import": "new Database(",
+      "type": "database instantiation"
+    },
+    {
+      "file": "db/database.js",
+      "import": "require('./index'); // or require('./db')",
+      "type": "db module"
+    },
+    {
+      "file": "db/migrations/add-scraping-fields.js",
+      "import": "better-sqlite3",
+      "type": "direct sqlite"
+    },
+    {
+      "file": "db/migrations/add-scraping-fields.js",
+      "import": "new Database(",
+      "type": "database instantiation"
+    },
+    {
+      "file": "db/seeds/demo-account.js",
+      "import": "better-sqlite3",
+      "type": "direct sqlite"
+    },
+    {
+      "file": "db/seeds/essential/index.js",
+      "import": "better-sqlite3",
+      "type": "direct sqlite"
+    },
+    {
+      "file": "db/utils/db-helpers.js",
+      "import": "better-sqlite3",
+      "type": "direct sqlite"
+    },
+    {
+      "file": "db/utils/db-helpers.js",
+      "import": "better-sqlite3",
+      "type": "direct sqlite"
+    },
+    {
+      "file": "db/utils/db-helpers.js",
+      "import": "better-sqlite3",
+      "type": "direct sqlite"
+    },
+    {
+      "file": "db/utils/db-helpers.js",
+      "import": "better-sqlite3",
+      "type": "direct sqlite"
+    },
+    {
+      "file": "db/utils/db-helpers.js",
+      "import": "better-sqlite3",
+      "type": "direct sqlite"
+    },
+    {
+      "file": "db/utils/db-helpers.js",
+      "import": "better-sqlite3",
+      "type": "direct sqlite"
+    },
+    {
+      "file": "db/utils/db-helpers.js",
+      "import": "better-sqlite3",
+      "type": "direct sqlite"
+    },
+    {
+      "file": "final-integration-demo.js",
+      "import": "require('./db')",
+      "type": "db module"
+    },
+    {
+      "file": "find-augustine.js",
+      "import": "require('./db')",
+      "type": "db module"
+    },
+    {
+      "file": "fix-augustine-status.js",
+      "import": "require('./db')",
+      "type": "db module"
+    },
+    {
+      "file": "fix-template-schema.js",
+      "import": "better-sqlite3",
+      "type": "direct sqlite"
+    },
+    {
+      "file": "fix-template-schema.js",
+      "import": "new Database(",
+      "type": "database instantiation"
+    },
+    {
+      "file": "middleware/auth.js",
+      "import": "require('../db')",
+      "type": "db module"
+    },
+    {
+      "file": "routes/api/v1/admin-escalation.js",
+      "import": "require('../../../db')",
+      "type": "db module"
+    },
+    {
+      "file": "routes/api/v1/admin-escalation.js",
+      "import": "require('../../../db')",
+      "type": "db module"
+    },
+    {
+      "file": "routes/api/v1/admin.js",
+      "import": "require('../../../db')",
+      "type": "db module"
+    },
+    {
+      "file": "routes/api/v1/ai-automation/analytics/routes.js",
+      "import": "require('../../../../../db')",
+      "type": "db module"
+    },
+    {
+      "file": "routes/api/v1/ai-automation/assistant/routes.js",
+      "import": "require('../../../../../db')",
+      "type": "db module"
+    },
+    {
+      "file": "routes/api/v1/ai-automation/follow-up/routes.js",
+      "import": "require('../../../../../db')",
+      "type": "db module"
+    },
+    {
+      "file": "routes/api/v1/ai-automation/gebiz/routes.js",
+      "import": "require('../../../../../db')",
+      "type": "db module"
+    },
+    {
+      "file": "routes/api/v1/ai-automation/index.js",
+      "import": "require('../../../db')",
+      "type": "db module"
+    },
+    {
+      "file": "routes/api/v1/ai-automation/outreach/routes.js",
+      "import": "require('../../../../../db')",
+      "type": "db module"
+    },
+    {
+      "file": "routes/api/v1/ai-automation/sourcing/routes.js",
+      "import": "require('../../../../../db')",
+      "type": "db module"
+    },
+    {
+      "file": "routes/api/v1/ai-automation/tenders/analysis.routes.js",
+      "import": "require('../../../../../db')",
+      "type": "db module"
+    },
+    {
+      "file": "routes/api/v1/ai-chat.js",
+      "import": "require('../../../db')",
+      "type": "db module"
+    },
+    {
+      "file": "routes/api/v1/analytics.js",
+      "import": "require('../../../db')",
+      "type": "db module"
+    },
+    {
+      "file": "routes/api/v1/auth/helpers/auth-utils.js",
+      "import": "require('../../../../../db')",
+      "type": "db module"
+    },
+    {
+      "file": "routes/api/v1/auth/routes/core.js",
+      "import": "require('../../../../../db')",
+      "type": "db module"
+    },
+    {
+      "file": "routes/api/v1/auth/routes/google.js",
+      "import": "require('../../../../../db')",
+      "type": "db module"
+    },
+    {
+      "file": "routes/api/v1/auth/routes/telegram.js",
+      "import": "require('../../../../../db')",
+      "type": "db module"
+    },
+    {
+      "file": "routes/api/v1/auth/routes/tokens.js",
+      "import": "require('../../../../../db')",
+      "type": "db module"
+    },
+    {
+      "file": "routes/api/v1/auth/routes/worker.js",
+      "import": "require('../../../../../db')",
+      "type": "db module"
+    },
+    {
+      "file": "routes/api/v1/availability.js",
+      "import": "require('../../../db')",
+      "type": "db module"
+    },
+    {
+      "file": "routes/api/v1/bpo/routes/clients.js",
+      "import": "better-sqlite3",
+      "type": "direct sqlite"
+    },
+    {
+      "file": "routes/api/v1/bpo/routes/clients.js",
+      "import": "better-sqlite3",
+      "type": "direct sqlite"
+    },
+    {
+      "file": "routes/api/v1/bpo/routes/clients.js",
+      "import": "better-sqlite3",
+      "type": "direct sqlite"
+    },
+    {
+      "file": "routes/api/v1/bpo/routes/clients.js",
+      "import": "better-sqlite3",
+      "type": "direct sqlite"
+    },
+    {
+      "file": "routes/api/v1/bpo/routes/clients.js",
+      "import": "better-sqlite3",
+      "type": "direct sqlite"
+    },
+    {
+      "file": "routes/api/v1/bpo/routes/clients.js",
+      "import": "new Database(",
+      "type": "database instantiation"
+    },
+    {
+      "file": "routes/api/v1/bpo/routes/clients.js",
+      "import": "new Database(",
+      "type": "database instantiation"
+    },
+    {
+      "file": "routes/api/v1/bpo/routes/clients.js",
+      "import": "new Database(",
+      "type": "database instantiation"
+    },
+    {
+      "file": "routes/api/v1/bpo/routes/clients.js",
+      "import": "new Database(",
+      "type": "database instantiation"
+    },
+    {
+      "file": "routes/api/v1/bpo/routes/clients.js",
+      "import": "new Database(",
+      "type": "database instantiation"
+    },
+    {
+      "file": "routes/api/v1/bpo.js",
+      "import": "better-sqlite3",
+      "type": "direct sqlite"
+    },
+    {
+      "file": "routes/api/v1/bpo.js",
+      "import": "new Database(",
+      "type": "database instantiation"
+    },
+    {
+      "file": "routes/api/v1/candidates/index.js",
+      "import": "require('../../../../db')",
+      "type": "db module"
+    },
+    {
+      "file": "routes/api/v1/candidates/routes/create.js",
+      "import": "require('../../../../../db')",
+      "type": "db module"
+    },
+    {
+      "file": "routes/api/v1/candidates/routes/list.js",
+      "import": "require('../../../../../db')",
+      "type": "db module"
+    },
+    {
+      "file": "routes/api/v1/candidates/routes/profile.js",
+      "import": "require('../../../../../db')",
+      "type": "db module"
+    },
+    {
+      "file": "routes/api/v1/chat/index.js",
+      "import": "require('../../../../db')",
+      "type": "db module"
+    },
+    {
+      "file": "routes/api/v1/chat/routes/conversations.js",
+      "import": "require('../../../../../db')",
+      "type": "db module"
+    },
+    {
+      "file": "routes/api/v1/chat/routes/messages.js",
+      "import": "require('../../../../../db')",
+      "type": "db module"
+    },
+    {
+      "file": "routes/api/v1/clients.js",
+      "import": "require('../../../db')",
+      "type": "db module"
+    },
+    {
+      "file": "routes/api/v1/consultant-performance/analytics/routes.js",
+      "import": "require('../../../../../db')",
+      "type": "db module"
+    },
+    {
+      "file": "routes/api/v1/consultant-performance/capacity/routes.js",
+      "import": "require('../../../../../db')",
+      "type": "db module"
+    },
+    {
+      "file": "routes/api/v1/consultant-performance/dashboard/routes.js",
+      "import": "require('../../../../../db')",
+      "type": "db module"
+    },
+    {
+      "file": "routes/api/v1/consultant-performance/prequalification/routes.js",
+      "import": "require('../../../../../db')",
+      "type": "db module"
+    },
+    {
+      "file": "routes/api/v1/consultant-performance/reliability/routes.js",
+      "import": "require('../../../../../db')",
+      "type": "db module"
+    },
+    {
+      "file": "routes/api/v1/consultant-performance/retention/routes.js",
+      "import": "require('../../../../../db')",
+      "type": "db module"
+    },
+    {
+      "file": "routes/api/v1/consultant-performance/scheduling/routes.js",
+      "import": "require('../../../../../db')",
+      "type": "db module"
+    },
+    {
+      "file": "routes/api/v1/consultant-performance/slm-bridge/routes.js",
+      "import": "require('../../../../../db')",
+      "type": "db module"
+    },
+    {
+      "file": "routes/api/v1/consultant-performance/sourcing/routes.js",
+      "import": "require('../../../../../db')",
+      "type": "db module"
+    },
+    {
+      "file": "routes/api/v1/conversation-enhancement.js",
+      "import": "better-sqlite3",
+      "type": "direct sqlite"
+    },
+    {
+      "file": "routes/api/v1/conversation-enhancement.js",
+      "import": "new Database(",
+      "type": "database instantiation"
+    },
+    {
+      "file": "routes/api/v1/conversations.js",
+      "import": "require('../../../db')",
+      "type": "db module"
+    },
+    {
+      "file": "routes/api/v1/data-integration/helpers/validation-engine.js",
+      "import": "require('../../../../../db')",
+      "type": "db module"
+    },
+    {
+      "file": "routes/api/v1/deployments.js",
+      "import": "require('../../../db')",
+      "type": "db module"
+    },
+    {
+      "file": "routes/api/v1/email-preferences.js",
+      "import": "require('../../../db')",
+      "type": "db module"
+    },
+    {
+      "file": "routes/api/v1/fomo.js",
+      "import": "require('../../../db')",
+      "type": "db module"
+    },
+    {
+      "file": "routes/api/v1/gamification/routes/achievements.js",
+      "import": "require('../../../../../db')",
+      "type": "db module"
+    },
+    {
+      "file": "routes/api/v1/gamification/routes/borders.js",
+      "import": "require('../../../../../db')",
+      "type": "db module"
+    },
+    {
+      "file": "routes/api/v1/gamification/routes/customization.js",
+      "import": "require('../../../../../db')",
+      "type": "db module"
+    },
+    {
+      "file": "routes/api/v1/gamification/routes/leaderboard.js",
+      "import": "require('../../../../../db')",
+      "type": "db module"
+    },
+    {
+      "file": "routes/api/v1/gamification/routes/profile.js",
+      "import": "require('../../../../../db')",
+      "type": "db module"
+    },
+    {
+      "file": "routes/api/v1/gamification/routes/quests.js",
+      "import": "require('../../../../../db')",
+      "type": "db module"
+    },
+    {
+      "file": "routes/api/v1/gamification/routes/rewards.js",
+      "import": "require('../../../../../db')",
+      "type": "db module"
+    },
+    {
+      "file": "routes/api/v1/gamification/routes/xp.js",
+      "import": "require('../../../../../db')",
+      "type": "db module"
+    },
+    {
+      "file": "routes/api/v1/interview-scheduling/helpers/availability-checker.js",
+      "import": "require('../../../../db')",
+      "type": "db module"
+    },
+    {
+      "file": "routes/api/v1/interview-scheduling.js",
+      "import": "require('../../../db')",
+      "type": "db module"
+    },
+    {
+      "file": "routes/api/v1/job-scheduler.js",
+      "import": "require('../../../db')",
+      "type": "db module"
+    },
+    {
+      "file": "routes/api/v1/job-scheduler.js",
+      "import": "require('../../../db')",
+      "type": "db module"
+    },
+    {
+      "file": "routes/api/v1/job-scheduler.js",
+      "import": "require('../../../db')",
+      "type": "db module"
+    },
+    {
+      "file": "routes/api/v1/jobs.js",
+      "import": "require('../../../db')",
+      "type": "db module"
+    },
+    {
+      "file": "routes/api/v1/messaging.js",
+      "import": "require('../../../db')",
+      "type": "db module"
+    },
+    {
+      "file": "routes/api/v1/notifications.js",
+      "import": "require('../../../db')",
+      "type": "db module"
+    },
+    {
+      "file": "routes/api/v1/payments.js",
+      "import": "require('../../../db')",
+      "type": "db module"
+    },
+    {
+      "file": "routes/api/v1/referrals.js",
+      "import": "require('../../../db')",
+      "type": "db module"
+    },
+    {
+      "file": "routes/api/v1/slm-chat.js",
+      "import": "require('../../../db')",
+      "type": "db module"
+    },
+    {
+      "file": "routes/api/v1/telegram-groups.js",
+      "import": "require('../../../db')",
+      "type": "db module"
+    },
+    {
+      "file": "routes/api/v1/tender-monitor.js",
+      "import": "require('../../../db')",
+      "type": "db module"
+    },
+    {
+      "file": "routes/api/v1/tender-monitor.js",
+      "import": "require('../../../db')",
+      "type": "db module"
+    },
+    {
+      "file": "routes/api/v1/tenders.js",
+      "import": "require('../../../db')",
+      "type": "db module"
+    },
+    {
+      "file": "routes/api/v1/training.js",
+      "import": "require('../../../db')",
+      "type": "db module"
+    },
+    {
+      "file": "routes/api/v1/webhooks/telegram.js",
+      "import": "require('../../../../db')",
+      "type": "db module"
+    },
+    {
+      "file": "routes/api/v1/worker-status.js",
+      "import": "require('../../../db')",
+      "type": "db module"
+    },
+    {
+      "file": "routes/calendar.js",
+      "import": "better-sqlite3",
+      "type": "direct sqlite"
+    },
+    {
+      "file": "routes/calendar.js",
+      "import": "new Database(",
+      "type": "database instantiation"
+    },
+    {
+      "file": "scripts/complete-database-migration.js",
+      "import": "require('../../../../db')",
+      "type": "db module"
+    },
+    {
+      "file": "scripts/complete-database-migration.js",
+      "import": "require('../../../../db')",
+      "type": "db module"
+    },
+    {
+      "file": "scripts/complete-database-migration.js",
+      "import": "require('../../../db')",
+      "type": "db module"
+    },
+    {
+      "file": "scripts/complete-database-migration.js",
+      "import": "require('../../../db')",
+      "type": "db module"
+    },
+    {
+      "file": "scripts/complete-database-migration.js",
+      "import": "require('../../db')",
+      "type": "db module"
+    },
+    {
+      "file": "scripts/complete-database-migration.js",
+      "import": "require('../../db')",
+      "type": "db module"
+    },
+    {
+      "file": "scripts/complete-database-migration.js",
+      "import": "require('../db')",
+      "type": "db module"
+    },
+    {
+      "file": "scripts/complete-database-migration.js",
+      "import": "require('../db')",
+      "type": "db module"
+    },
+    {
+      "file": "scripts/complete-database-migration.js",
+      "import": "require('./db')",
+      "type": "db module"
+    },
+    {
+      "file": "scripts/complete-database-migration.js",
+      "import": "require('./db')",
+      "type": "db module"
+    },
+    {
+      "file": "scripts/deploy-smart-response-router.js",
+      "import": "require('../db')",
+      "type": "db module"
+    },
+    {
+      "file": "scripts/deploy-template-system.js",
+      "import": "require('../db')",
+      "type": "db module"
+    },
+    {
+      "file": "scripts/update-database-imports.js",
+      "import": "require('../../../db')",
+      "type": "db module"
+    },
+    {
+      "file": "scripts/update-database-imports.js",
+      "import": "require('../../db')",
+      "type": "db module"
+    },
+    {
+      "file": "scripts/update-database-imports.js",
+      "import": "require('../db')",
+      "type": "db module"
+    },
+    {
+      "file": "scripts/update-database-imports.js",
+      "import": "require('./db')",
+      "type": "db module"
+    },
+    {
+      "file": "scripts/update-database-imports.js",
+      "import": "require('../../../db')",
+      "type": "db module"
+    },
+    {
+      "file": "scripts/update-database-imports.js",
+      "import": "require('../../db')",
+      "type": "db module"
+    },
+    {
+      "file": "scripts/update-database-imports.js",
+      "import": "require('../db')",
+      "type": "db module"
+    },
+    {
+      "file": "scripts/update-database-imports.js",
+      "import": "require('./db')",
+      "type": "db module"
+    },
+    {
+      "file": "scripts/utilities/fix-database-schema.js",
+      "import": "require('./db')",
+      "type": "db module"
+    },
+    {
+      "file": "scripts/utilities/reseed-database.js",
+      "import": "better-sqlite3",
+      "type": "direct sqlite"
+    },
+    {
+      "file": "scripts/utilities/reseed-database.js",
+      "import": "new Database(",
+      "type": "database instantiation"
+    },
+    {
+      "file": "server/alternatives/minimal-server.js",
+      "import": "better-sqlite3",
+      "type": "direct sqlite"
+    },
+    {
+      "file": "server/alternatives/minimal-server.js",
+      "import": "new Database(",
+      "type": "database instantiation"
+    },
+    {
+      "file": "server.js",
+      "import": "require('./db')",
+      "type": "db module"
+    },
+    {
+      "file": "services/ad-ml/ab-testing.js",
+      "import": "require('../../db')",
+      "type": "db module"
+    },
+    {
+      "file": "services/ad-ml/index.js",
+      "import": "require('../../db')",
+      "type": "db module"
+    },
+    {
+      "file": "services/ad-ml/timing.js",
+      "import": "require('../../db')",
+      "type": "db module"
+    },
+    {
+      "file": "services/ad-ml/trainer.js",
+      "import": "require('../../db')",
+      "type": "db module"
+    },
+    {
+      "file": "services/admin-escalation-system.js",
+      "import": "require('../db')",
+      "type": "db module"
+    },
+    {
+      "file": "services/ai-chat/improved-chat-engine.js",
+      "import": "better-sqlite3",
+      "type": "direct sqlite"
+    },
+    {
+      "file": "services/ai-chat/improved-chat-engine.js",
+      "import": "new Database(",
+      "type": "database instantiation"
+    },
+    {
+      "file": "services/ai-chat/index.js",
+      "import": "require('../../db')",
+      "type": "db module"
+    },
+    {
+      "file": "services/ai-chat/interview-scheduler-v2.js",
+      "import": "require('../../db')",
+      "type": "db module"
+    },
+    {
+      "file": "services/ai-chat/tools.js",
+      "import": "require('../../db')",
+      "type": "db module"
+    },
+    {
+      "file": "services/chat-attachments.js",
+      "import": "require('../db')",
+      "type": "db module"
+    },
+    {
+      "file": "services/conversation-manager.js",
+      "import": "require('../db')",
+      "type": "db module"
+    },
+    {
+      "file": "services/data-integration/account-data-service.js",
+      "import": "require('../../db')",
+      "type": "db module"
+    },
+    {
+      "file": "services/data-integration/audit-logger.js",
+      "import": "require('../../db')",
+      "type": "db module"
+    },
+    {
+      "file": "services/data-integration/data-validator.js",
+      "import": "require('../../db')",
+      "type": "db module"
+    },
+    {
+      "file": "services/data-integration/interview-data-service.js",
+      "import": "require('../../db')",
+      "type": "db module"
+    },
+    {
+      "file": "services/data-integration/job-data-service.js",
+      "import": "require('../../db')",
+      "type": "db module"
+    },
+    {
+      "file": "services/data-integration/payment-data-service.js",
+      "import": "require('../../db')",
+      "type": "db module"
+    },
+    {
+      "file": "services/data-integration/withdrawal-data-service.js",
+      "import": "require('../../db')",
+      "type": "db module"
+    },
+    {
+      "file": "services/email/delivery-tracker.js",
+      "import": "require('../../db')",
+      "type": "db module"
+    },
+    {
+      "file": "services/email/index.js",
+      "import": "require('../../db')",
+      "type": "db module"
+    },
+    {
+      "file": "services/email/scheduler.js",
+      "import": "require('../../db')",
+      "type": "db module"
+    },
+    {
+      "file": "services/escalation-analytics.js",
+      "import": "require('../db')",
+      "type": "db module"
+    },
+    {
+      "file": "services/fomo-engine.js",
+      "import": "require('../db')",
+      "type": "db module"
+    },
+    {
+      "file": "services/intent-classifier/integration.js",
+      "import": "require('../../db')",
+      "type": "db module"
+    },
+    {
+      "file": "services/intent-classifier/monitoring.js",
+      "import": "require('../../db')",
+      "type": "db module"
+    },
+    {
+      "file": "services/job-scheduler.js",
+      "import": "require('../db')",
+      "type": "db module"
+    },
+    {
+      "file": "services/messaging/index.js",
+      "import": "require('../../db')",
+      "type": "db module"
+    },
+    {
+      "file": "services/ml/index.js",
+      "import": "require('../../db')",
+      "type": "db module"
+    },
+    {
+      "file": "services/ml/trainer.js",
+      "import": "require('../../db')",
+      "type": "db module"
+    },
+    {
+      "file": "services/quick-replies.js",
+      "import": "require('../db')",
+      "type": "db module"
+    },
+    {
+      "file": "services/retention-notifications.js",
+      "import": "require('../db')",
+      "type": "db module"
+    },
+    {
+      "file": "services/smart-response-router/admin-escalation.js",
+      "import": "require('../../db')",
+      "type": "db module"
+    },
+    {
+      "file": "services/smart-response-router/admin-escalation.js",
+      "import": "require('../../db')",
+      "type": "db module"
+    },
+    {
+      "file": "services/smart-response-router/admin-escalation.js",
+      "import": "require('../../db')",
+      "type": "db module"
+    },
+    {
+      "file": "services/smart-response-router/admin-escalation.js",
+      "import": "require('../../db')",
+      "type": "db module"
+    },
+    {
+      "file": "services/smart-response-router/admin-escalation.js",
+      "import": "require('../../db')",
+      "type": "db module"
+    },
+    {
+      "file": "services/smart-response-router/index.js",
+      "import": "require('../../db')",
+      "type": "db module"
+    },
+    {
+      "file": "services/smart-response-router/index.js",
+      "import": "require('../../db')",
+      "type": "db module"
+    },
+    {
+      "file": "services/smart-response-router/index.js",
+      "import": "require('../../db')",
+      "type": "db module"
+    },
+    {
+      "file": "services/smart-response-router/real-data-access.js",
+      "import": "require('../../db')",
+      "type": "db module"
+    },
+    {
+      "file": "services/streak-protection-system.js",
+      "import": "require('../db')",
+      "type": "db module"
+    },
+    {
+      "file": "services/telegram-posting/index.js",
+      "import": "require('../../db')",
+      "type": "db module"
+    },
+    {
+      "file": "services/template-responses/admin-interface.js",
+      "import": "require('../../db')",
+      "type": "db module"
+    },
+    {
+      "file": "services/template-responses/index.js",
+      "import": "require('../../db')",
+      "type": "db module"
+    },
+    {
+      "file": "services/template-responses/integration-bridge.js",
+      "import": "require('../../db')",
+      "type": "db module"
+    },
+    {
+      "file": "services/template-responses/template-manager.js",
+      "import": "require('../../db')",
+      "type": "db module"
+    },
+    {
+      "file": "setup_scheduler_db.js",
+      "import": "better-sqlite3",
+      "type": "direct sqlite"
+    },
+    {
+      "file": "setup_scheduler_db.js",
+      "import": "new Database(",
+      "type": "database instantiation"
+    },
+    {
+      "file": "test/smart-response-router.test.js",
+      "import": "require('../db')",
+      "type": "db module"
+    },
+    {
+      "file": "test-startup.js",
+      "import": "require('./db')",
+      "type": "db module"
+    },
+    {
+      "file": "test-stats-fix.js",
+      "import": "require('./db')",
+      "type": "db module"
+    },
+    {
+      "file": "tests/data-integration/api-endpoints.test.js",
+      "import": "require('../../db')",
+      "type": "db module"
+    },
+    {
+      "file": "tests/data-integration/integration-layer.test.js",
+      "import": "require('../../db')",
+      "type": "db module"
+    },
+    {
+      "file": "tests/data-integration/security-validation.test.js",
+      "import": "require('../../db')",
+      "type": "db module"
+    },
+    {
+      "file": "tests/interview-scheduling-e2e-test.js",
+      "import": "require('../db')",
+      "type": "db module"
+    },
+    {
+      "file": "tests/run-data-integration-tests.js",
+      "import": "require('../../db')",
+      "type": "db module"
+    },
+    {
+      "file": "tests/run-data-integration-tests.js",
+      "import": "require('../../db')",
+      "type": "db module"
+    },
+    {
+      "file": "tests/template-response-integration.test.js",
+      "import": "require('../db')",
+      "type": "db module"
+    },
+    {
+      "file": "utils/acquisition-analytics.js",
+      "import": "require('../db')",
+      "type": "db module"
+    },
+    {
+      "file": "utils/campaign-analytics.js",
+      "import": "require('../db')",
+      "type": "db module"
+    },
+    {
+      "file": "utils/candidate-outreach.js",
+      "import": "require('../db')",
+      "type": "db module"
+    },
+    {
+      "file": "utils/candidate-prequalification.js",
+      "import": "require('../db')",
+      "type": "db module"
+    },
+    {
+      "file": "utils/candidate-retention-engine.js",
+      "import": "require('../db')",
+      "type": "db module"
+    },
+    {
+      "file": "utils/candidate-sourcing-engine.js",
+      "import": "better-sqlite3",
+      "type": "direct sqlite"
+    },
+    {
+      "file": "utils/candidate-sourcing-engine.js",
+      "import": "new Database(",
+      "type": "database instantiation"
+    },
+    {
+      "file": "utils/capacity-management.js",
+      "import": "require('../db')",
+      "type": "db module"
+    },
+    {
+      "file": "utils/claude.js",
+      "import": "require('../db')",
+      "type": "db module"
+    },
+    {
+      "file": "utils/consultant-analytics-engine.js",
+      "import": "require('../db')",
+      "type": "db module"
+    },
+    {
+      "file": "utils/engagement-tracking.js",
+      "import": "require('../db')",
+      "type": "db module"
+    },
+    {
+      "file": "utils/enhanced-conversation-flows.js",
+      "import": "better-sqlite3",
+      "type": "direct sqlite"
+    },
+    {
+      "file": "utils/enhanced-conversation-flows.js",
+      "import": "new Database(",
+      "type": "database instantiation"
+    },
+    {
+      "file": "utils/follow-up-automation.js",
+      "import": "require('../db')",
+      "type": "db module"
+    },
+    {
+      "file": "utils/follow-up-sequences.js",
+      "import": "require('../db')",
+      "type": "db module"
+    },
+    {
+      "file": "utils/interview-scheduling-engine.js",
+      "import": "require('../db')",
+      "type": "db module"
+    },
+    {
+      "file": "utils/interview-scheduling-engine.js",
+      "import": "better-sqlite3",
+      "type": "direct sqlite"
+    },
+    {
+      "file": "utils/multilingual-conversation-engine.js",
+      "import": "better-sqlite3",
+      "type": "direct sqlite"
+    },
+    {
+      "file": "utils/multilingual-conversation-engine.js",
+      "import": "new Database(",
+      "type": "database instantiation"
+    },
+    {
+      "file": "utils/outreach-automation.js",
+      "import": "require('../db')",
+      "type": "db module"
+    },
+    {
+      "file": "utils/reliability-scoring-system.js",
+      "import": "require('../db')",
+      "type": "db module"
+    },
+    {
+      "file": "utils/run-migrations.js",
+      "import": "require('../db')",
+      "type": "db module"
+    },
+    {
+      "file": "utils/slm-scheduling-bridge.js",
+      "import": "require('../db')",
+      "type": "db module"
+    },
+    {
+      "file": "utils/slm-scheduling-bridge.js",
+      "import": "require('../db')",
+      "type": "db module"
+    },
+    {
+      "file": "utils/slm-training-validation.js",
+      "import": "require('../db')",
+      "type": "db module"
+    },
+    {
+      "file": "utils/smart-router-migration.js",
+      "import": "require('../db')",
+      "type": "db module"
+    },
+    {
+      "file": "utils/worker-status-classifier.js",
+      "import": "require('../db')",
+      "type": "db module"
+    },
+    {
+      "file": "verify-template-schema.js",
+      "import": "better-sqlite3",
+      "type": "direct sqlite"
+    },
+    {
+      "file": "verify-template-schema.js",
+      "import": "new Database(",
+      "type": "database instantiation"
+    },
+    {
+      "file": "websocket/broadcasting/event-notifiers.js",
+      "import": "require('../../db')",
+      "type": "db module"
+    },
+    {
+      "file": "websocket/connection/validator.js",
+      "import": "require('../../db')",
+      "type": "db module"
+    },
+    {
+      "file": "websocket/features/chat-features.js",
+      "import": "require('../../db')",
+      "type": "db module"
+    },
+    {
+      "file": "websocket/features/status-notifications.js",
+      "import": "require('../../db')",
+      "type": "db module"
+    },
+    {
+      "file": "websocket/handlers/admin-handler.js",
+      "import": "require('../../db')",
+      "type": "db module"
+    },
+    {
+      "file": "websocket/handlers/candidate-handler.js",
+      "import": "require('../../db')",
+      "type": "db module"
+    },
+    {
+      "file": "websocket/handlers/interview-handler.js",
+      "import": "require('../../db')",
+      "type": "db module"
+    },
+    {
+      "file": "websocket/handlers/job-handler.js",
+      "import": "require('../../db')",
+      "type": "db module"
+    },
+    {
+      "file": "websocket/handlers/notification-handler.js",
+      "import": "require('../../db')",
+      "type": "db module"
+    },
+    {
+      "file": "websocket/utils/status-manager.js",
+      "import": "require('../../db')",
+      "type": "db module"
+    },
+    {
+      "file": "websocket/utils/typing-handler.js",
+      "import": "require('../../db')",
+      "type": "db module"
+    }
+  ],
+  "databasePaths": {},
+  "potentialIssues": [
+    {
+      "file": "config/index.js",
+      "issue": "Direct database file path (should use db module)",
+      "severity": "medium"
+    },
+    {
+      "file": "db/apply-constraints.js",
+      "issue": "Direct database file path (should use db module)",
+      "severity": "medium"
+    },
+    {
+      "file": "routes/api/v1/bpo/routes/clients.js",
+      "issue": "Multiple database instantiations (5)",
+      "severity": "high"
+    },
+    {
+      "file": "Multiple files",
+      "issue": "Too many different database import paths (9)",
+      "severity": "medium"
+    }
+  ],
+  "duplicateConnections": [],
+  "summary": {
+    "totalImports": 242,
+    "uniquePaths": 9,
+    "issues": 4
+  }
+}

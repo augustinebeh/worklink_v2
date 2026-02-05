@@ -19,7 +19,6 @@ import {
   BellIcon,
   SparklesIcon,
   MessageCircleIcon,
-  BotIcon,
   FileTextIcon,
   SendIcon,
   SearchIcon,
@@ -27,6 +26,7 @@ import {
   ZapIcon,
   TrendingUpIcon,
   Zap as ThunderboltIcon,
+  DatabaseIcon,
 } from 'lucide-react';
 import { clsx } from 'clsx';
 import Logo, { LogoIcon } from '../ui/Logo';
@@ -49,8 +49,9 @@ const navigation = [
     badge: 'BPO',
     children: [
       { name: 'Tender Pipeline', href: '/bpo', icon: FileTextIcon, description: 'View all tenders' },
+      { name: 'Renewal Pipeline', href: '/renewal-pipeline', icon: TrendingUpIcon, highlight: true, description: 'Contract renewals & BD workflow' },
+      { name: 'GeBIZ Intelligence', href: '/gebiz-intelligence', icon: DatabaseIcon, highlight: true, description: 'Historical data & competitor intelligence' },
       { name: 'Tender Alerts', href: '/tender-monitor', icon: BellIcon, highlight: true, description: 'GeBIZ monitoring' },
-      { name: 'Tender AI Tools', href: '/ai-automation', icon: BotIcon, description: 'Scraper & analysis' },
       { name: 'Clients', href: '/clients', icon: Building2Icon, description: 'Client management' },
     ],
   },
@@ -110,9 +111,12 @@ const navigation = [
 
   {
     name: 'Settings',
-    href: '/settings',
     icon: SettingsIcon,
     description: 'Configuration',
+    children: [
+      { name: 'System Settings', href: '/settings', icon: SettingsIcon, description: 'General configuration' },
+      { name: 'Alert Settings', href: '/alert-settings', icon: BellIcon, description: 'Notification preferences' },
+    ],
   },
 ];
 

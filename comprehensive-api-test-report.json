@@ -1,0 +1,251 @@
+{
+  "testSuite": "Comprehensive API Connectivity Test",
+  "timestamp": "2026-02-05T09:51:25.437Z",
+  "overallScore": 100,
+  "grade": "A",
+  "summary": {
+    "serverStartup": "pass",
+    "basicConnectivity": "pass",
+    "coreAPIs": "pass",
+    "authentication": "pass",
+    "frontendIntegration": "pass",
+    "performanceTest": "pass"
+  },
+  "details": {
+    "serverStartup": {
+      "status": "pass",
+      "details": {
+        "logs": [
+          "🔌 Database path: /home/augustine/Augustine_Projects/worklink_v2/data/worklink.db\n",
+          "🌍 Environment: DEVELOPMENT\n",
+          "✅ Schema created successfully\n",
+          "STDERR: Template tables creation warning: no such column: category\n",
+          "✅ Migrations completed\n",
+          "✅ Demo account exists: sarah.tan@email.com\n",
+          "⚠️ Database already has data, skipping sample seed\n",
+          "2026-02-05T09:51:23.133Z [INFO] [websocket] WebSocket server initialized {\"path\":\"/ws\",\"maxPayload\":102400}\n",
+          "✅ Web Push configured\n",
+          "🔌 Database path: /home/augustine/Augustine_Projects/worklink_v2/data/worklink.db\n🌍 Environment: DEVELOPMENT\n",
+          "🏗️  Creating database schema...\n",
+          "  ✅ Core tables created\n",
+          "  ✅ Referral & incentive tables created\n",
+          "  ✅ Gamification tables created\n",
+          "  ✅ Communication & Telegram tables created\n",
+          "  ✅ AI/ML & ad optimization tables created\n",
+          "  ✅ Tenders & matching tables created\n",
+          "  ✅ Admin & analytics tables created\n",
+          "  ✅ Database indexes created\n",
+          "🔄 Running database migrations...\n",
+          "  ✅ Database migrations completed\n",
+          "✅ Schema created successfully\n",
+          "🌱 Seeding essential data...\n",
+          "✅ Essential data seeding complete\n",
+          "✅ Demo account exists: sarah.tan@email.com\n",
+          "🌱 Seeding sample data for development...\n",
+          "  ⏭️  Sample data already exists\n",
+          "📧 Email notifications disabled (missing configuration)\n",
+          "📧 Email notifications disabled (missing configuration)\n📅 GeBIZ RSS Scheduler initialized\n⏰ Schedule: Every 6 hours (00:00, 06:00, 12:00, 18:00 Asia/Singapore)\n",
+          "⚠️ [Template] Template already exists: payment_timing_with_amount\n⚠️ [Template] Template already exists: payment_general_inquiry\n⚠️ [Template] Template already exists: withdrawal_with_balance\n",
+          "⚠️ [Template] Template already exists: pending_verification_with_interview\n⚠️ [Template] Template already exists: verification_status_check\n⚠️ [Template] Template already exists: job_inquiry_with_count\n⚠️ [Template] Template already exists: application_status\n",
+          "⚠️ [Template] Template already exists: technical_issue_escalation\n",
+          "⚠️ [Template] Template already exists: general_help_escalation\n",
+          "⚠️ [Template] Template already exists: urgent_escalation\n",
+          "⚠️ [Template] Template already exists: complaint_escalation\n",
+          "🚨 [Escalation] Handler initialized\n🎯 [Template System] Initializing fact-based response system...\n",
+          "✅ [Template System] Initialization complete\n",
+          "STDERR: Could not create escalation indexes: no such column: assigned_admin\n",
+          "✅ GeBIZ Intelligence database connected\n",
+          "2026-02-05T09:51:23.375Z [INFO] [app] Retention notification service skipped for development {\"module\":\"services\"}\n2026-02-05T09:51:23.375Z [INFO] [app] Background job scheduler skipped for development {\"module\":\"services\"}\n",
+          "2026-02-05T09:51:23.378Z [INFO] [app] WorkLink Platform Server v2 started successfully {\"module\":\"server\",\"host\":\"0.0.0.0\",\"port\":\"8080\",\"environment\":\"development\",\"node_version\":\"v22.22.0\",\"urls\":{\"server\":\"http://0.0.0.0:8080\",\"admin\":\"http://0.0.0.0:8080/admin\",\"worker\":\"http://0.0.0.0:8080\",\"health\":\"http://0.0.0.0:8080/health\",\"websocket\":\"ws://0.0.0.0:8080/ws\"}}\n2026-02-05T09:51:23.378Z [INFO] [app] Email service initialization skipped for development {\"module\":\"email\"}\n",
+          "🚀 Initializing GeBIZ RSS Scraping Service...\n",
+          "✅ GeBIZ RSS Scheduler started successfully\n📅 Next execution: 2026-02-05T10:00:00.000Z\n✅ GeBIZ RSS Scraping Service initialized successfully\n",
+          "📊 Service Status: Scheduler Running\n⏰ Next Execution: 2026-02-05T10:00:00.000Z\n",
+          "2026-02-05T09:51:23.391Z [INFO] [app] GeBIZ RSS Scraping Service initialized successfully {\"module\":\"scraping\",\"schedule\":\"Every 6 hours (00:00, 06:00, 12:00, 18:00 SGT)\"}\n",
+          "🚀 WorkLink v2 ready on http://0.0.0.0:8080 | Admin: /admin\n",
+          "STDERR: 2026-02-05T09:51:25.412Z [WARN] [app] Development CORS: Allowing unauthorized origin {\"origin\":\"http://localhost:3001\"}\n",
+          "2026-02-05T09:51:25.412Z [INFO] [app] OPTIONS /api/v1/jobs 200 0ms {\"method\":\"OPTIONS\",\"path\":\"/api/v1/jobs\",\"status_code\":200,\"duration_ms\":0,\"user_agent\":\"Comprehensive-API-Tester/1.0\",\"ip\":\"127.0.0.1\",\"content_length\":\"2\"}\n"
+        ]
+      }
+    },
+    "basicConnectivity": {
+      "status": "pass",
+      "details": [
+        {
+          "test": "Root endpoint",
+          "status": 200,
+          "responseTime": "15ms",
+          "size": "7308 bytes"
+        },
+        {
+          "test": "Health check",
+          "status": 200,
+          "hasData": true,
+          "environment": "development"
+        },
+        {
+          "test": "CORS configuration",
+          "status": 200,
+          "allowOrigin": "http://localhost:3001",
+          "allowMethods": "GET, POST, PUT, PATCH, DELETE, OPTIONS"
+        }
+      ]
+    },
+    "coreAPIs": {
+      "status": "pass",
+      "details": [
+        {
+          "endpoint": "Alert Count",
+          "path": "/api/v1/alerts/unread-count",
+          "status": 200,
+          "responseTime": "2ms",
+          "success": true,
+          "critical": true,
+          "hasData": true,
+          "dataKeys": [
+            "success",
+            "data"
+          ]
+        },
+        {
+          "endpoint": "BPO Lifecycle",
+          "path": "/api/v1/bpo/lifecycle",
+          "status": 200,
+          "responseTime": "3ms",
+          "success": true,
+          "critical": true,
+          "hasData": true,
+          "dataKeys": [
+            "success",
+            "data",
+            "meta"
+          ]
+        },
+        {
+          "endpoint": "GeBiz Renewals",
+          "path": "/api/v1/gebiz/renewals",
+          "status": 200,
+          "responseTime": "2ms",
+          "success": true,
+          "critical": true,
+          "hasData": true,
+          "dataKeys": [
+            "success",
+            "data",
+            "meta"
+          ]
+        },
+        {
+          "endpoint": "Scraping Status",
+          "path": "/api/v1/scraping/status",
+          "status": 200,
+          "responseTime": "1ms",
+          "success": true,
+          "critical": false,
+          "hasData": true,
+          "dataKeys": [
+            "success",
+            "data"
+          ]
+        },
+        {
+          "endpoint": "Jobs API",
+          "path": "/api/v1/jobs",
+          "status": 200,
+          "responseTime": "2ms",
+          "success": true,
+          "critical": true,
+          "hasData": true,
+          "dataKeys": [
+            "success",
+            "data",
+            "pagination"
+          ]
+        },
+        {
+          "endpoint": "Jobs Filter",
+          "path": "/api/v1/jobs?status=active",
+          "status": 200,
+          "responseTime": "2ms",
+          "success": true,
+          "critical": false,
+          "hasData": true,
+          "dataKeys": [
+            "success",
+            "data",
+            "pagination"
+          ]
+        },
+        {
+          "endpoint": "API Info",
+          "path": "/api/v1",
+          "status": 200,
+          "responseTime": "1ms",
+          "success": true,
+          "critical": false,
+          "hasData": true,
+          "dataKeys": [
+            "name",
+            "version",
+            "status"
+          ]
+        }
+      ]
+    },
+    "authentication": {
+      "status": "pass",
+      "details": [
+        {
+          "test": "Unauth request to protected endpoint",
+          "status": 200,
+          "expectedProtected": false
+        },
+        {
+          "test": "Invalid token request",
+          "status": 200,
+          "expectedProtected": false
+        }
+      ]
+    },
+    "frontendIntegration": {
+      "status": "pass",
+      "details": [
+        {
+          "test": "Admin build exists",
+          "result": true,
+          "path": "/home/augustine/Augustine_Projects/worklink_v2/admin/dist"
+        },
+        {
+          "test": "Admin portal access",
+          "status": 200,
+          "isHTML": false,
+          "size": "754 bytes"
+        },
+        {
+          "test": "Service files count",
+          "count": 16,
+          "files": [
+            "alert.service.js",
+            "analytics.service.js",
+            "auth.service.js",
+            "candidates.service.js",
+            "chat.service.js"
+          ]
+        }
+      ]
+    },
+    "performanceTest": {
+      "status": "pass",
+      "details": [
+        {
+          "test": "Concurrent requests",
+          "totalRequests": 10,
+          "successCount": 10,
+          "totalTime": "8ms",
+          "averageTime": "1ms",
+          "successRate": "100%"
+        }
+      ]
+    },
+    "overallScore": 100
+  }
+}

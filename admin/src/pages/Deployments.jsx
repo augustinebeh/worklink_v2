@@ -1,9 +1,9 @@
 import { useState, useEffect } from 'react';
 import { Link } from 'react-router-dom';
-import { 
-  CalendarIcon, 
-  CheckCircleIcon, 
-  ClockIcon, 
+import {
+  CalendarIcon,
+  CheckCircleIcon,
+  ClockIcon,
   XCircleIcon,
   UserIcon,
   MapPinIcon,
@@ -11,6 +11,7 @@ import {
   FilterIcon,
   SearchIcon,
 } from 'lucide-react';
+import { api } from '../shared/services/api';
 import Card, { CardHeader, CardTitle, CardContent } from '../components/ui/Card';
 import Badge, { StatusBadge } from '../components/ui/Badge';
 import Button from '../components/ui/Button';
@@ -53,11 +54,9 @@ export default function Deployments() {
 
   const fetchDeployments = async () => {
     try {
-      const params = new URLSearchParams();
-      if (statusFilter !== 'all') params.append('status', statusFilter);
-      
-      const res = await fetch(`/api/v1/deployments?${params}`);
-      const data = await res.json();
+      const data = await api.deployments.getAll({
+        status: statusFilter !== 'all' ? statusFilter : undefined
+      });
       if (data.success) setDeployments(data.data);
     } catch (error) {
       console.error('Failed to fetch deployments:', error);

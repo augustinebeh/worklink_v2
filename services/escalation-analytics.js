@@ -5,8 +5,9 @@
  * for the admin escalation and handoff system.
  */
 
-const { db } = require('../db/database');
+const { db } = require('../db');
 const { createLogger } = require('../utils/structured-logger');
+const intervalRegistry = require('../utils/interval-registry');
 
 const logger = createLogger('escalation-analytics');
 

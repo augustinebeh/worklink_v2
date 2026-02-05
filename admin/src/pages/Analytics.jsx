@@ -1,7 +1,7 @@
 import { useState, useEffect } from 'react';
-import { 
-  TrendingUpIcon, 
-  UsersIcon, 
+import {
+  TrendingUpIcon,
+  UsersIcon,
   BriefcaseIcon,
   DollarSignIcon,
   CalendarIcon,
@@ -14,13 +14,13 @@ import {
   AwardIcon,
   AlertCircleIcon,
 } from 'lucide-react';
-import { 
-  AreaChart, 
-  Area, 
-  XAxis, 
-  YAxis, 
-  CartesianGrid, 
-  Tooltip, 
+import {
+  AreaChart,
+  Area,
+  XAxis,
+  YAxis,
+  CartesianGrid,
+  Tooltip,
   ResponsiveContainer,
   BarChart,
   Bar,
@@ -32,6 +32,7 @@ import {
   Line,
   ComposedChart,
 } from 'recharts';
+import { api } from '../shared/services/api';
 import Card, { CardHeader, CardTitle, CardContent } from '../components/ui/Card';
 import Badge from '../components/ui/Badge';
 import Select from '../components/ui/Select';
@@ -92,19 +93,16 @@ export default function Analytics() {
   const fetchData = async () => {
     setLoading(true);
     setError(null);
-    
+
     try {
-      const [analyticsRes, financialRes] = await Promise.all([
-        fetch('/api/v1/analytics/dashboard'),
-        fetch('/api/v1/analytics/financial/dashboard'),
+      const [analytics, financial] = await Promise.all([
+        api.analytics.getDashboard(),
+        api.analytics.getFinancialDashboard(),
       ]);
-      
-      const analytics = await analyticsRes.json();
-      const financial = await financialRes.json();
-      
+
       if (analytics.success) setData(analytics.data);
       if (financial.success) setFinancialData(financial.data);
-      
+
       if (!analytics.success && !financial.success) {
         setError('Failed to load analytics data');
       }

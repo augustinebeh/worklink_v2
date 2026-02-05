@@ -11,7 +11,7 @@
  * - Provide helpful information without commitments
  */
 
-const { db } = require('../../db/database');
+const { db } = require('../../db');
 const DataAccess = require('./data-access');
 const IntentClassifier = require('./intent-classifier');
 const TemplateManager = require('./template-manager');

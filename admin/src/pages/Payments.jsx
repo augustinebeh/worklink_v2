@@ -1,7 +1,7 @@
 import { useState, useEffect } from 'react';
-import { 
-  DollarSignIcon, 
-  ClockIcon, 
+import {
+  DollarSignIcon,
+  ClockIcon,
   CheckCircleIcon,
   XCircleIcon,
   DownloadIcon,
@@ -10,6 +10,7 @@ import {
   BanknoteIcon,
   WalletIcon,
 } from 'lucide-react';
+import { api } from '../shared/services/api';
 import Card, { CardHeader, CardTitle, CardContent } from '../components/ui/Card';
 import Badge, { StatusBadge } from '../components/ui/Badge';
 import Button from '../components/ui/Button';
@@ -64,11 +65,9 @@ export default function Payments() {
 
   const fetchPayments = async () => {
     try {
-      const params = new URLSearchParams();
-      if (statusFilter !== 'all') params.append('status', statusFilter);
-      
-      const res = await fetch(`/api/v1/payments?${params}`);
-      const data = await res.json();
+      const data = await api.payments.getAll({
+        status: statusFilter !== 'all' ? statusFilter : undefined
+      });
       if (data.success) setPayments(data.data);
     } catch (error) {
       console.error('Failed to fetch payments:', error);
@@ -107,12 +106,7 @@ export default function Payments() {
 
   const handleBatchApprove = async () => {
     try {
-      const res = await fetch('/api/v1/payments/batch-approve', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ payment_ids: selectedPayments }),
-      });
-      const data = await res.json();
+      const data = await api.payments.batchApprove(selectedPayments);
       if (data.success) {
         setSelectedPayments([]);
         setShowApproveModal(false);

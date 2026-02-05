@@ -66,7 +66,7 @@ const config = {
 
   // Admin
   admin: {
-    email: process.env.ADMIN_EMAIL || 'admin@talentvis.com',
+    email: process.env.ADMIN_EMAIL || 'admin@worklink.sg',
     password: process.env.ADMIN_PASSWORD,
   },
 

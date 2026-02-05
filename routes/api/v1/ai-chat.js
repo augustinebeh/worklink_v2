@@ -274,7 +274,7 @@ router.post('/feedback/:messageId', async (req, res) => {
       });
     }
 
-    const { db } = require('../../../db/database');
+    const { db } = require('../../../db');
     const ml = require('../../../services/ml');
 
     // Get the message

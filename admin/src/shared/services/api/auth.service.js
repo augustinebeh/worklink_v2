@@ -15,13 +15,17 @@ export const authService = {
   async login(email, password) {
     const response = await apiClient.postJSON('/api/v1/auth/login', {
       email,
-      password
+      password,
+      type: 'admin'  // Required for admin authentication
     });
 
     // Store token and user data if login successful
     if (response.success && response.token) {
       sessionStorage.setItem('admin_token', response.token);
-      sessionStorage.setItem('admin_user', JSON.stringify(response.user));
+      sessionStorage.setItem('admin_user', JSON.stringify(response.data));
+      // Also store in localStorage for persistence
+      localStorage.setItem('admin_token', response.token);
+      localStorage.setItem('admin_user', JSON.stringify(response.data));
     }
 
     return response;
@@ -50,10 +54,10 @@ export const authService = {
    * Clear local authentication data
    */
   clearLocalAuth() {
-    sessionStorage.removeItem('admin_token');
-    sessionStorage.removeItem('admin_user');
-    localStorage.removeItem('admin_token'); // Also clear from localStorage if used
+    localStorage.removeItem('admin_token');
     localStorage.removeItem('admin_user');
+    sessionStorage.removeItem('admin_token'); // Also clear from sessionStorage if used
+    sessionStorage.removeItem('admin_user');
   },
 
   /**
@@ -61,7 +65,7 @@ export const authService = {
    * @returns {Promise<Object>} New token data
    */
   async refreshToken() {
-    const currentToken = sessionStorage.getItem('admin_token');
+    const currentToken = sessionStorage.getItem('admin_token') || localStorage.getItem('admin_token');
     if (!currentToken || currentToken === 'demo-admin-token') {
       throw new Error('No valid token to refresh');
     }
@@ -72,8 +76,10 @@ export const authService = {
 
     if (response.success && response.token) {
       sessionStorage.setItem('admin_token', response.token);
+      localStorage.setItem('admin_token', response.token);
       if (response.user) {
         sessionStorage.setItem('admin_user', JSON.stringify(response.user));
+        localStorage.setItem('admin_user', JSON.stringify(response.user));
       }
     }
 
@@ -85,7 +91,7 @@ export const authService = {
    * @returns {Promise<Object>} Verification result with user data
    */
   async verifyToken() {
-    const token = sessionStorage.getItem('admin_token');
+    const token = sessionStorage.getItem('admin_token') || localStorage.getItem('admin_token');
     if (!token || token === 'demo-admin-token') {
       throw new Error('No token to verify');
     }
@@ -95,6 +101,7 @@ export const authService = {
     // Update stored user data if provided
     if (response.success && response.user) {
       sessionStorage.setItem('admin_user', JSON.stringify(response.user));
+      localStorage.setItem('admin_user', JSON.stringify(response.user));
     }
 
     return response;
@@ -145,6 +152,7 @@ export const authService = {
 
     if (response.success && response.user) {
       sessionStorage.setItem('admin_user', JSON.stringify(response.user));
+      localStorage.setItem('admin_user', JSON.stringify(response.user));
     }
 
     return response;
@@ -159,6 +167,7 @@ export const authService = {
 
     if (response.user) {
       sessionStorage.setItem('admin_user', JSON.stringify(response.user));
+      localStorage.setItem('admin_user', JSON.stringify(response.user));
     }
 
     return response;
@@ -228,8 +237,8 @@ export const authService = {
    * @returns {boolean} Authentication status
    */
   isAuthenticated() {
-    const token = sessionStorage.getItem('admin_token');
-    const user = sessionStorage.getItem('admin_user');
+    const token = sessionStorage.getItem('admin_token') || localStorage.getItem('admin_token');
+    const user = sessionStorage.getItem('admin_user') || localStorage.getItem('admin_user');
     return !!(token && user && token !== 'demo-admin-token');
   },
 
@@ -239,10 +248,12 @@ export const authService = {
    */
   getCurrentUser() {
     try {
-      const userData = sessionStorage.getItem('admin_user');
+      const userData = sessionStorage.getItem('admin_user') || localStorage.getItem('admin_user');
       return userData ? JSON.parse(userData) : null;
     } catch (error) {
       console.error('Error parsing user data from storage:', error);
+      // Clear corrupted data and try to recover
+      this.clearLocalAuth();
       return null;
     }
   },
@@ -252,7 +263,7 @@ export const authService = {
    * @returns {string|null} Current authentication token
    */
   getToken() {
-    return sessionStorage.getItem('admin_token');
+    return sessionStorage.getItem('admin_token') || localStorage.getItem('admin_token');
   }
 };
 

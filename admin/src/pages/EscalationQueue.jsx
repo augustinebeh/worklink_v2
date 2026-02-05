@@ -29,6 +29,7 @@ import {
   BellOff,
   Settings
 } from 'lucide-react';
+import { api } from '../shared/services/api';
 import Card from '../components/ui/Card';
 import Badge from '../components/ui/Badge';
 import Button from '../components/ui/Button';
@@ -387,15 +388,15 @@ export default function EscalationQueue() {
   // Fetch escalations
   const fetchEscalations = useCallback(async () => {
     try {
-      const params = new URLSearchParams();
-      if (filters.status) params.append('status', filters.status);
-      if (filters.priority) params.append('priority', filters.priority);
-      if (filters.assignedAdmin) params.append('assignedAdmin', filters.assignedAdmin);
-      if (filters.unassignedOnly) params.append('unassignedOnly', 'true');
-      if (filters.slaBreachedOnly) params.append('slaBreachedOnly', 'true');
+      const params = {};
+      if (filters.status) params.status = filters.status;
+      if (filters.priority) params.priority = filters.priority;
+      if (filters.assignedAdmin) params.assignedAdmin = filters.assignedAdmin;
+      if (filters.unassignedOnly) params.unassignedOnly = 'true';
+      if (filters.slaBreachedOnly) params.slaBreachedOnly = 'true';
 
-      const res = await fetch(`/api/v1/admin-escalation/queue?${params}`);
-      const data = await res.json();
+      // TODO: Create adminEscalation service - using raw client for now
+      const data = await api.client.get('/admin-escalation/queue', { params });
 
       if (data.success) {
         setEscalations(data.data.escalations);
@@ -412,8 +413,8 @@ export default function EscalationQueue() {
   // Fetch summary
   const fetchSummary = useCallback(async () => {
     try {
-      const res = await fetch('/api/v1/admin-escalation/summary');
-      const data = await res.json();
+      // TODO: Create adminEscalation service - using raw client for now
+      const data = await api.client.get('/admin-escalation/summary');
       if (data.success) {
         setSummary(data.data);
       }
@@ -473,13 +474,8 @@ export default function EscalationQueue() {
   // Handle assignment
   const handleAssign = async (escalation, adminId = null) => {
     try {
-      const res = await fetch(`/api/v1/admin-escalation/assign/${escalation.id}`, {
-        method: 'PUT',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ adminId })
-      });
-
-      const data = await res.json();
+      // TODO: Create adminEscalation service - using raw client for now
+      const data = await api.client.put(`/admin-escalation/assign/${escalation.id}`, { adminId });
       if (data.success) {
         toast.success('Assigned', data.message);
         fetchEscalations();
@@ -492,13 +488,12 @@ export default function EscalationQueue() {
   // Handle status update
   const handleUpdateStatus = async (escalation, status, notes = '') => {
     try {
-      const res = await fetch(`/api/v1/admin-escalation/status/${escalation.id}`, {
-        method: 'PUT',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ status, notes, adminId: 'current-admin' })
+      // TODO: Create adminEscalation service - using raw client for now
+      const data = await api.client.put(`/admin-escalation/status/${escalation.id}`, {
+        status,
+        notes,
+        adminId: 'current-admin'
       });
-
-      const data = await res.json();
       if (data.success) {
         toast.success('Status Updated', data.message);
         fetchEscalations();
@@ -513,16 +508,11 @@ export default function EscalationQueue() {
     if (selectedEscalations.length === 0) return;
 
     try {
-      const res = await fetch('/api/v1/admin-escalation/bulk-assign', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({
-          escalationIds: selectedEscalations,
-          adminId
-        })
+      // TODO: Create adminEscalation service - using raw client for now
+      const data = await api.client.post('/admin-escalation/bulk-assign', {
+        escalationIds: selectedEscalations,
+        adminId
       });
-
-      const data = await res.json();
       if (data.success) {
         toast.success('Bulk Assignment', `${data.data.summary.successful} escalations assigned`);
         setSelectedEscalations([]);

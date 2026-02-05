@@ -17,7 +17,7 @@ function setDb(dbInstance) {
 function getDb() {
   if (!_db) {
     // Only require if not already set (avoids circular dep when called from database.js)
-    _db = require('./database').db;
+    _db = require('./index').db;
   }
   return _db;
 }

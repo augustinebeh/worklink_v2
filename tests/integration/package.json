@@ -1,0 +1,23 @@
+{
+  "name": "worklink-integration-tests",
+  "version": "1.0.0",
+  "description": "Comprehensive integration test suite for WorkLink v2",
+  "scripts": {
+    "test": "jest",
+    "test:watch": "jest --watch",
+    "test:e2e": "jest --testPathPattern=e2e",
+    "test:api": "jest --testPathPattern=api",
+    "test:frontend": "jest --testPathPattern=frontend",
+    "test:all": "npm run test:api && npm run test:frontend && npm run test:e2e"
+  },
+  "devDependencies": {
+    "jest": "^29.7.0",
+    "supertest": "^7.0.0",
+    "@testing-library/react": "^16.0.1",
+    "@testing-library/jest-dom": "^6.4.8",
+    "@testing-library/user-event": "^14.5.2",
+    "puppeteer": "^24.0.0",
+    "better-sqlite3": "^11.0.0",
+    "cross-env": "^7.0.3"
+  }
+}

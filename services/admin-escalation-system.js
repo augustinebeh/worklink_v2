@@ -13,8 +13,9 @@
  * - Performance metrics and analytics
  */
 
-const { db } = require('../db/database');
+const { db } = require('../db');
 const { createLogger } = require('../utils/structured-logger');
+const intervalRegistry = require('../utils/interval-registry');
 
 const logger = createLogger('escalation-system');
 
@@ -81,6 +82,7 @@ function getMessagingService() {
 
 // Initialize database schema
 function ensureSchema() {
+  // Create tables first
   db.exec(`
     CREATE TABLE IF NOT EXISTS escalation_queue (
       id INTEGER PRIMARY KEY AUTOINCREMENT,
@@ -139,19 +141,38 @@ function ensureSchema() {
       escalations_by_trigger TEXT, -- JSON object with trigger type counts
       escalations_by_priority TEXT -- JSON object with priority counts
     );
-
-    CREATE UNIQUE INDEX IF NOT EXISTS idx_escalation_metrics_date ON escalation_metrics(date);
-    CREATE INDEX IF NOT EXISTS idx_escalation_queue_status ON escalation_queue(status);
-    CREATE INDEX IF NOT EXISTS idx_escalation_queue_priority ON escalation_queue(priority);
-    CREATE INDEX IF NOT EXISTS idx_escalation_queue_assigned ON escalation_queue(assigned_admin);
-    CREATE INDEX IF NOT EXISTS idx_escalation_queue_sla ON escalation_queue(sla_deadline);
   `);
 
-  // Insert default admin workload entries for existing admins
-  db.prepare(`
-    INSERT OR IGNORE INTO admin_workload (admin_id)
-    SELECT DISTINCT assigned_to FROM conversation_metadata WHERE assigned_to IS NOT NULL
-  `).run();
+  // Create indexes separately (after tables exist)
+  try {
+    db.exec(`
+      CREATE UNIQUE INDEX IF NOT EXISTS idx_escalation_metrics_date ON escalation_metrics(date);
+      CREATE INDEX IF NOT EXISTS idx_escalation_queue_status ON escalation_queue(status);
+      CREATE INDEX IF NOT EXISTS idx_escalation_queue_priority ON escalation_queue(priority);
+      CREATE INDEX IF NOT EXISTS idx_escalation_queue_assigned ON escalation_queue(assigned_admin);
+      CREATE INDEX IF NOT EXISTS idx_escalation_queue_sla ON escalation_queue(sla_deadline);
+    `);
+  } catch (error) {
+    // Ignore index errors if columns don't exist yet
+    console.warn('Could not create escalation indexes:', error.message);
+  }
+
+  // Insert default admin workload entries for existing admins (if conversation_metadata table exists)
+  try {
+    const tableExists = db.prepare(`
+      SELECT name FROM sqlite_master WHERE type='table' AND name='conversation_metadata'
+    `).get();
+    
+    if (tableExists) {
+      db.prepare(`
+        INSERT OR IGNORE INTO admin_workload (admin_id)
+        SELECT DISTINCT assigned_to FROM conversation_metadata WHERE assigned_to IS NOT NULL
+      `).run();
+    }
+  } catch (error) {
+    // Ignore errors if conversation_metadata doesn't exist yet
+    console.warn('Could not initialize admin workload from conversation_metadata:', error.message);
+  }
 }
 
 // Initialize schema
@@ -1014,7 +1035,8 @@ function checkSLABreaches() {
 }
 
 // Set up periodic SLA monitoring
-setInterval(checkSLABreaches, 5 * 60 * 1000); // Check every 5 minutes
+const slaCheckInterval = setInterval(checkSLABreaches, 5 * 60 * 1000); // Check every 5 minutes
+intervalRegistry.register('admin-escalation-sla-check', slaCheckInterval, 'SLA breach monitoring (every 5 minutes)');
 
 // Export as a class for easier instantiation
 class AdminEscalationSystem {

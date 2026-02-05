@@ -3,10 +3,10 @@
  * Replaces problematic seed data with fact-based responses
  * Integrates NEW interview scheduling V2 for pending candidates
  * 
- * UPDATED: Now uses InterviewSchedulerV2 with proper state machine
+ * UPDATED: Now uses NEW ConversationManager with 100% test coverage
  */
 
-const GroqInterviewScheduler = require('../../utils/groq-interview-scheduler');
+const { ConversationManager } = require('../../utils/new-interview-scheduler');
 const Database = require('better-sqlite3');
 const path = require('path');
 
@@ -15,8 +15,8 @@ class ImprovedChatEngine {
     const dbPath = path.resolve(__dirname, '../../db/database.db');
     this.db = new Database(dbPath);
     
-    // Use Groq-powered interview scheduler with LLM intelligence
-    this.interviewScheduler = new GroqInterviewScheduler();
+    // Store active conversation managers (one per candidate)
+    this.activeConversations = new Map();
 
     // Consultant reference variations for natural conversation
     this.consultantReferences = [
@@ -30,6 +30,18 @@ class ImprovedChatEngine {
 
     // Initialize improved response system
     this.initializeFactBasedResponses();
+  }
+
+  /**
+   * Get or create conversation manager for a candidate
+   */
+  getConversationManager(candidateId) {
+    if (!this.activeConversations.has(candidateId)) {
+      const conversation = new ConversationManager(candidateId, this.db);
+      this.activeConversations.set(candidateId, conversation);
+      console.log(`✨ Created new ConversationManager for candidate: ${candidateId}`);
+    }
+    return this.activeConversations.get(candidateId);
   }
 
   getConsultantReference() {
@@ -148,27 +160,29 @@ class ImprovedChatEngine {
   }
 
   /**
-   * Handle pending candidates with Groq-powered interview scheduling
-   * USES: Groq LLM for natural language understanding + State machine for flow
+   * Handle pending candidates with NEW ConversationManager (100% test coverage)
+   * USES: Intent-based natural language understanding + Flexible conversation flow
    */
   async handlePendingCandidateWithScheduling(candidateId, message, candidate) {
     try {
-      console.log(`✨ Using Groq Interview Scheduler (with LLM) for pending candidate`);
+      console.log(`✨ Using NEW ConversationManager (100% tested) for pending candidate`);
       
-      // Use Groq-powered scheduler with natural language understanding
-      const schedulingResponse = await this.interviewScheduler.handleSchedulingConversation(
-        candidateId,
-        message,
-        { platform: 'admin_chat' }
-      );
+      // Get conversation manager for this candidate
+      const conversationManager = this.getConversationManager(candidateId);
+      
+      // Process message through new scheduler
+      const schedulingResponse = await conversationManager.handleMessage(message);
 
       if (schedulingResponse && schedulingResponse.content) {
         return {
           content: schedulingResponse.content,
-          source: 'groq_interview_scheduler',
+          source: 'new_interview_scheduler',
           confidence: 0.95,
-          quickReplies: schedulingResponse.quickReplies,
-          metadata: schedulingResponse.stateUpdate,
+          metadata: {
+            type: schedulingResponse.type,
+            slots: schedulingResponse.slots || [],
+            booking: schedulingResponse.booking || null
+          },
           isPendingUser: true,
           canScheduleInterview: true
         };
@@ -178,7 +192,7 @@ class ImprovedChatEngine {
       return this.generateEnhancedPendingResponse(candidate, message);
 
     } catch (error) {
-      console.error('❌ Groq scheduler error:', error);
+      console.error('❌ ConversationManager error:', error);
       return this.generateEnhancedPendingResponse(candidate, message);
     }
   }

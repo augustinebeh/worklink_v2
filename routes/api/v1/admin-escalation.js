@@ -465,7 +465,7 @@ router.put('/admin-status/:adminId', (req, res) => {
     }
 
     // Update admin workload table
-    const { db } = require('../../../db/database');
+    const { db } = require('../../../db');
 
     const updates = ['availability_status = ?', 'last_activity = datetime("now")'];
     const params = [availabilityStatus];
@@ -555,7 +555,7 @@ router.post('/bulk-assign', (req, res) => {
  */
 router.get('/health', (req, res) => {
   try {
-    const { db } = require('../../../db/database');
+    const { db } = require('../../../db');
 
     // Check database connectivity
     const dbCheck = db.prepare('SELECT 1 as status').get();

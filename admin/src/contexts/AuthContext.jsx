@@ -26,32 +26,67 @@ export function AuthProvider({ children }) {
       const storedUser = authService.getCurrentUser();
       const token = authService.getToken();
 
-      if (!token || token === 'demo-admin-token' || !storedUser) {
+      console.log('🔍 Auth init - token exists:', !!token);
+      console.log('🔍 Auth init - stored user exists:', !!storedUser);
+
+      if (!token || token === 'demo-admin-token') {
         // No valid token, user needs to log in
+        console.log('⚠️ No valid token found');
         setLoading(false);
         return;
       }
 
-      // Verify token with backend
+      // If we have both token and user, trust them initially
+      if (storedUser) {
+        console.log('✅ Using stored user data:', storedUser.email);
+        setUser(storedUser);
+        setLoading(false);
+        
+        // Verify in background (don't block UI)
+        authService.verifyToken()
+          .then(response => {
+            if (response.success && (response.data || response.user)) {
+              const userData = response.data || response.user;
+              setUser(userData);
+              console.log('✅ Token verified with backend:', userData.email);
+            }
+          })
+          .catch(error => {
+            console.warn('⚠️ Background token verification failed:', error.message);
+            // Don't clear auth - user is already using the app
+          });
+        
+        return;
+      }
+
+      // No stored user, try to verify token
+      console.log('🔄 Verifying token with backend...');
       const response = await authService.verifyToken();
 
-      if (response.success && response.user) {
-        setUser(response.user);
-        console.log('✅ Authentication verified:', response.user.email);
+      if (response.success && (response.data || response.user)) {
+        const userData = response.data || response.user;
+        setUser(userData);
+        console.log('✅ Authentication verified:', userData.email);
       } else {
         // Token is invalid, clear auth data
+        console.log('❌ Token verification failed - clearing auth');
         authService.clearLocalAuth();
-        console.log('❌ Token verification failed');
       }
     } catch (error) {
       console.error('❌ Auth initialization failed:', error.message);
 
-      // Clear invalid auth data
-      authService.clearLocalAuth();
-
-      // Don't show error for common auth failures during initialization
-      if (error.status !== 401 && error.status !== 403) {
-        setError('Failed to verify authentication. Please log in again.');
+      // Only clear auth if it's a definite auth failure (401, 403)
+      if (error.status === 401 || error.status === 403) {
+        console.log('🔴 Auth error - clearing credentials');
+        authService.clearLocalAuth();
+        setUser(null);
+      } else {
+        // For network errors or other issues, keep existing auth
+        console.warn('⚠️ Non-auth error during init - keeping existing session');
+        const storedUser = authService.getCurrentUser();
+        if (storedUser) {
+          setUser(storedUser);
+        }
       }
     } finally {
       setLoading(false);
@@ -68,9 +103,9 @@ export function AuthProvider({ children }) {
 
       const response = await authService.login(email, password);
 
-      if (response.success && response.user) {
-        setUser(response.user);
-        console.log('✅ Login successful:', response.user.email);
+      if (response.success && response.data) {
+        setUser(response.data);
+        console.log('✅ Login successful:', response.data.email);
         return { success: true };
       } else {
         const errorMsg = response.error || 'Login failed';
@@ -99,134 +134,44 @@ export function AuthProvider({ children }) {
 
       setUser(null);
       setError(null);
-      console.log('✅ Logout successful');
 
-      navigate('/login', { replace: true });
+      console.log('✅ Logged out successfully');
+
+      // Navigate to login
+      navigate('/login');
     } catch (error) {
       console.error('❌ Logout error:', error.message);
-
-      // Even if logout API fails, clear local data and redirect
+      // Still clear local state even if API call fails
       setUser(null);
       setError(null);
-      navigate('/login', { replace: true });
+      navigate('/login');
     } finally {
       setLoading(false);
     }
   };
 
   /**
-   * Refresh authentication token
+   * Update user data in context
    */
-  const refreshAuth = async () => {
-    try {
-      const response = await authService.refreshToken();
-
-      if (response.success && response.user) {
-        setUser(response.user);
-        return true;
-      } else {
-        await logout();
-        return false;
-      }
-    } catch (error) {
-      console.error('❌ Token refresh failed:', error.message);
-      await logout();
-      return false;
+  const updateUser = (userData) => {
+    setUser(userData);
+    // Also update in localStorage
+    if (userData) {
+      localStorage.setItem('admin_user', JSON.stringify(userData));
     }
-  };
-
-  /**
-   * Update user profile
-   */
-  const updateProfile = async (profileData) => {
-    try {
-      const response = await authService.updateProfile(profileData);
-
-      if (response.success && response.user) {
-        setUser(response.user);
-        return { success: true };
-      } else {
-        const errorMsg = response.error || 'Profile update failed';
-        return { success: false, error: errorMsg };
-      }
-    } catch (error) {
-      console.error('❌ Profile update failed:', error.message);
-      return { success: false, error: error.message };
-    }
-  };
-
-  /**
-   * Clear authentication error
-   */
-  const clearError = () => {
-    setError(null);
-  };
-
-  /**
-   * Check if user has a specific permission
-   */
-  const hasPermission = (permission) => {
-    if (!user || !user.permissions) return false;
-
-    // Admin users have all permissions
-    if (user.permissions.includes('all') || user.role === 'admin') return true;
-
-    // Check specific permission
-    return user.permissions.includes(permission);
-  };
-
-  /**
-   * Check if user has any of the specified roles
-   */
-  const hasRole = (...roles) => {
-    if (!user || !user.role) return false;
-    return roles.includes(user.role);
-  };
-
-  /**
-   * Check if user can access a specific resource
-   */
-  const canAccess = (resource, action = 'read') => {
-    if (!user) return false;
-
-    // Admin users can access everything
-    if (user.role === 'admin') return true;
-
-    // Check specific permission pattern: resource:action
-    return hasPermission(`${resource}:${action}`) || hasPermission(resource);
   };
 
   const value = {
-    // State
     user,
     loading,
     error,
-    isAuthenticated: !!user,
-
-    // Actions
     login,
     logout,
-    refreshAuth,
-    updateProfile,
-    clearError,
-
-    // Permission checking
-    hasPermission,
-    hasRole,
-    canAccess,
-
-    // Convenience getters
-    isAdmin: user?.role === 'admin',
-    userId: user?.id,
-    userEmail: user?.email,
-    userName: user?.name,
+    updateUser,
+    isAuthenticated: !!user,
   };
 
-  return (
-    <AuthContext.Provider value={value}>
-      {children}
-    </AuthContext.Provider>
-  );
+  return <AuthContext.Provider value={value}>{children}</AuthContext.Provider>;
 }
 
 export function useAuth() {

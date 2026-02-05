@@ -5,7 +5,7 @@
  * pending, scheduled, and completed interviews.
  */
 
-const { db } = require('../../db/database');
+const { db } = require('../../db');
 
 class InterviewDataService {
   /**

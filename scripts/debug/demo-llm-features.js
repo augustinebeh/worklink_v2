@@ -12,7 +12,7 @@ const {
   getLLMStats,
   PROVIDERS,
   API_COSTS,
-} = require('./utils/claude');
+} = require('../utils/claude');
 
 // Demo functions that show the LLM system capabilities
 function demonstrateFallbackLogic() {

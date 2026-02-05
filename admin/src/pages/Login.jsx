@@ -103,7 +103,7 @@ export default function Login() {
               name="email"
               label="Email"
               type="email"
-              placeholder="admin@worklink.com"
+              placeholder="admin@worklink.sg"
               value={email}
               onChange={handleEmailChange}
               onBlur={() => handleBlur('email')}

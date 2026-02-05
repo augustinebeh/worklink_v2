@@ -10,7 +10,7 @@ import Button from '../ui/Button';
 import Input from '../ui/Input';
 import Select from '../ui/Select';
 import { useCreateJob } from '../../shared/hooks/useJobs';
-import { useClients } from '../../shared/hooks/useClients';
+import { useClients } from '../hooks/useClients';
 import { useFormErrorHandler } from '../../shared/hooks/useErrorHandler';
 import { ValidationErrorFallback } from '../../shared/components/ErrorFallbacks';
 

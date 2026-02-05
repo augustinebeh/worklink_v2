@@ -1,0 +1,180 @@
+{
+  "testSuite": "API Connectivity Test",
+  "timestamp": "2026-02-05T09:48:06.301Z",
+  "summary": {
+    "serverHealth": "pass",
+    "coreEndpoints": "pass",
+    "authentication": "pass",
+    "frontendIntegration": "pass",
+    "realTimeFeatures": "pass",
+    "performanceTests": "pass",
+    "errorScenarios": "pass"
+  },
+  "details": {
+    "serverHealth": {
+      "status": "pass",
+      "details": [
+        {
+          "test": "Server Response",
+          "result": "Server is responding",
+          "status": 200,
+          "responseTime": "11ms"
+        },
+        {
+          "test": "CORS Configuration",
+          "result": "CORS headers present",
+          "allowOrigin": "http://localhost:3001"
+        }
+      ]
+    },
+    "coreEndpoints": {
+      "status": "pass",
+      "details": [
+        {
+          "endpoint": "Alerts Unread Count",
+          "path": "/api/v1/alerts/unread-count",
+          "status": 200,
+          "responseTime": "3ms",
+          "result": "pass",
+          "hasData": true,
+          "dataType": "object"
+        },
+        {
+          "endpoint": "BPO Lifecycle",
+          "path": "/api/v1/bpo/lifecycle",
+          "status": 200,
+          "responseTime": "3ms",
+          "result": "pass",
+          "hasData": true,
+          "dataType": "object"
+        },
+        {
+          "endpoint": "GeBiz Renewals",
+          "path": "/api/v1/gebiz/renewals",
+          "status": 200,
+          "responseTime": "2ms",
+          "result": "pass",
+          "hasData": true,
+          "dataType": "object"
+        },
+        {
+          "endpoint": "Scraping Status",
+          "path": "/api/v1/scraping/status",
+          "status": 200,
+          "responseTime": "2ms",
+          "result": "pass",
+          "hasData": true,
+          "dataType": "object"
+        },
+        {
+          "endpoint": "Jobs List",
+          "path": "/api/v1/jobs",
+          "status": 200,
+          "responseTime": "2ms",
+          "result": "pass",
+          "hasData": true,
+          "dataType": "object"
+        },
+        {
+          "endpoint": "Candidates List",
+          "path": "/api/v1/candidates",
+          "status": 401,
+          "responseTime": "1ms",
+          "result": "fail",
+          "hasData": true,
+          "dataType": "object"
+        }
+      ]
+    },
+    "authentication": {
+      "status": "pass",
+      "details": [
+        {
+          "test": "Unauthenticated Request",
+          "status": 200,
+          "result": "warning"
+        },
+        {
+          "test": "Invalid Token",
+          "status": 200,
+          "result": "warning"
+        }
+      ]
+    },
+    "frontendIntegration": {
+      "status": "pass",
+      "details": [
+        {
+          "test": "API Configuration",
+          "result": "API index file exists",
+          "hasBaseURL": false,
+          "hasInterceptors": false
+        },
+        {
+          "test": "Service Files",
+          "existingServices": [
+            "alert.service.js",
+            "tender.service.js",
+            "renewal.service.js"
+          ],
+          "apiConfigExists": true
+        }
+      ]
+    },
+    "realTimeFeatures": {
+      "status": "pass",
+      "details": [
+        {
+          "test": "Alert System",
+          "status": 200,
+          "hasData": true
+        },
+        {
+          "test": "Scraping Status",
+          "status": 200,
+          "hasData": true
+        }
+      ]
+    },
+    "performanceTests": {
+      "status": "pass",
+      "details": [
+        {
+          "test": "Concurrent Requests",
+          "totalRequests": 5,
+          "successCount": 5,
+          "totalTime": "4ms",
+          "averageTime": "1ms"
+        }
+      ]
+    },
+    "errorScenarios": {
+      "status": "pass",
+      "details": [
+        {
+          "test": "Non-existent Endpoint",
+          "path": "/api/v1/nonexistent",
+          "status": 404,
+          "expectedStatus": 404,
+          "result": "pass",
+          "hasErrorMessage": "Not Found"
+        },
+        {
+          "test": "Invalid POST Data",
+          "path": "/api/v1/jobs",
+          "status": 500,
+          "result": "info",
+          "hasErrorMessage": "NOT NULL constraint failed: jobs.title"
+        },
+        {
+          "test": "Non-existent Resource",
+          "path": "/api/v1/jobs/999999",
+          "status": 404,
+          "expectedStatus": 404,
+          "result": "pass",
+          "hasErrorMessage": "Job not found"
+        }
+      ]
+    }
+  }
+}

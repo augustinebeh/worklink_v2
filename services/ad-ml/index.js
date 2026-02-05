@@ -5,7 +5,7 @@
  * Tracks performance, learns optimal variables, and exports training data.
  */
 
-const { db } = require('../../db/database');
+const { db } = require('../../db');
 const { askClaude } = require('../../utils/claude');
 const abTesting = require('./ab-testing');
 const timing = require('./timing');

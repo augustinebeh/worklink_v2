@@ -14,6 +14,7 @@ import {
   TrendingUpIcon,
   CheckCircleIcon,
 } from 'lucide-react';
+import { api } from '../shared/services/api';
 import Card, { CardHeader, CardTitle, CardContent } from '../components/ui/Card';
 import Badge, { StatusBadge } from '../components/ui/Badge';
 import Button from '../components/ui/Button';
@@ -88,18 +89,16 @@ export default function ClientDetail() {
 
   const fetchClientData = async () => {
     try {
-      const [clientRes, jobsRes] = await Promise.all([
-        fetch(`/api/v1/clients/${id}`),
-        fetch(`/api/v1/clients/${id}/jobs`),
+      // TODO: Add getJobs method to clients service - using raw client for jobs endpoint
+      const [clientData, jobsData] = await Promise.all([
+        api.clients.getById(id),
+        api.client.get(`/clients/${id}/jobs`),
       ]);
-
-      const clientData = await clientRes.json();
-      const jobsData = await jobsRes.json();
 
       if (clientData.success) setClient(clientData.data);
       if (jobsData.success) {
         setJobs(jobsData.data || []);
-        
+
         // Calculate stats
         const totalJobs = jobsData.data.length;
         const activeJobs = jobsData.data.filter(j => j.status === 'open').length;
@@ -107,7 +106,7 @@ export default function ClientDetail() {
           const hours = 5; // Approximate
           return sum + (hours * j.charge_rate * j.filled_slots);
         }, 0);
-        
+
         setStats({ totalJobs, totalRevenue, activeJobs });
       }
     } catch (error) {
@@ -120,15 +119,10 @@ export default function ClientDetail() {
   const handleUpdateClient = async () => {
     setSaving(true);
     try {
-      const res = await fetch(`/api/v1/clients/${id}`, {
-        method: 'PUT',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({
-          ...editForm,
-          payment_terms: parseInt(editForm.payment_terms),
-        }),
+      const data = await api.clients.update(id, {
+        ...editForm,
+        payment_terms: parseInt(editForm.payment_terms),
       });
-      const data = await res.json();
       if (data.success) {
         setShowEditModal(false);
         fetchClientData();

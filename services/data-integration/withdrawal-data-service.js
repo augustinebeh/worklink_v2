@@ -5,7 +5,7 @@
  * actual balance, and minimum requirements.
  */
 
-const { db } = require('../../db/database');
+const { db } = require('../../db');
 
 class WithdrawalDataService {
   /**

@@ -1,0 +1,293 @@
+/**
+ * Analytics Routes - Campaign performance analytics and reporting
+ * Advanced analytics, KPIs, dashboards, and data exports
+ * 
+ * @module ai-automation/analytics/routes
+ */
+
+const express = require('express');
+const router = express.Router();
+const { db } = require('../../../../../db');
+
+// Import analytics utilities
+const {
+  generateCampaignAnalytics,
+  generateAcquisitionDashboard,
+  KPI_DEFINITIONS,
+} = require('../../../../../utils/campaign-analytics');
+
+/**
+ * GET /campaign/:campaignId
+ * Get comprehensive campaign analytics
+ */
+router.get('/campaign/:campaignId', (req, res) => {
+  try {
+    const { campaignId } = req.params;
+    const {
+      includeComparisons = 'true',
+      includePredictions = 'false',
+      timeframe = '30_days'
+    } = req.query;
+
+    const analytics = generateCampaignAnalytics(campaignId, {
+      includeComparisons: includeComparisons === 'true',
+      includePredictions: includePredictions === 'true',
+      timeframe,
+    });
+
+    if (!analytics) {
+      return res.status(404).json({
+        success: false,
+        error: 'Campaign not found or no analytics data available'
+      });
+    }
+
+    res.json({
+      success: true,
+      data: analytics
+    });
+  } catch (error) {
+    console.error('Error getting campaign analytics:', error);
+    res.status(500).json({ success: false, error: error.message });
+  }
+});
+
+/**
+ * GET /dashboard
+ * Get acquisition dashboard overview
+ */
+router.get('/dashboard', async (req, res) => {
+  try {
+    const {
+      timeframe = '30_days',
+      includeComparisons = 'true'
+    } = req.query;
+
+    const dashboard = generateAcquisitionDashboard({
+      timeframe,
+      includeComparisons: includeComparisons === 'true',
+    });
+
+    res.json({
+      success: true,
+      data: dashboard
+    });
+  } catch (error) {
+    console.error('Error generating analytics dashboard:', error);
+    res.status(500).json({ success: false, error: error.message });
+  }
+});
+
+/**
+ * GET /compare
+ * Get campaign performance comparison
+ */
+router.get('/compare', (req, res) => {
+  try {
+    const { campaignIds, metrics = 'response_rate,conversion_rate' } = req.query;
+
+    if (!campaignIds) {
+      return res.status(400).json({
+        success: false,
+        error: 'campaignIds query parameter is required'
+      });
+    }
+
+    const ids = campaignIds.split(',').slice(0, 5); // Limit to 5 campaigns
+    const requestedMetrics = metrics.split(',');
+
+    const comparisons = ids.map(campaignId => {
+      try {
+        const analytics = generateCampaignAnalytics(campaignId.trim(), {
+          includeComparisons: false,
+          includePredictions: false,
+        });
+
+        if (!analytics) return null;
+
+        const comparison = {
+          campaignId: analytics.campaign.id,
+          campaignName: analytics.campaign.name,
+          campaignType: analytics.campaign.type,
+        };
+
+        // Add requested metrics
+        if (requestedMetrics.includes('response_rate')) {
+          comparison.responseRate = analytics.coreMetrics.engagement.responseRate;
+        }
+        if (requestedMetrics.includes('conversion_rate')) {
+          comparison.conversionRate = analytics.coreMetrics.conversion.conversionRate;
+        }
+        if (requestedMetrics.includes('reach')) {
+          comparison.reach = analytics.coreMetrics.reach.total;
+        }
+        if (requestedMetrics.includes('cost')) {
+          comparison.totalCost = analytics.costAnalysis?.totalCost || 0;
+          comparison.roi = analytics.costAnalysis?.roi || 0;
+        }
+
+        return comparison;
+      } catch (error) {
+        console.warn(`Failed to get analytics for campaign ${campaignId}:`, error.message);
+        return null;
+      }
+    }).filter(Boolean);
+
+    res.json({
+      success: true,
+      data: {
+        comparisons,
+        metrics: requestedMetrics,
+        totalCampaigns: comparisons.length,
+      }
+    });
+  } catch (error) {
+    console.error('Error comparing campaigns:', error);
+    res.status(500).json({ success: false, error: error.message });
+  }
+});
+
+/**
+ * GET /kpis
+ * Get KPI definitions and benchmarks
+ */
+router.get('/kpis', (req, res) => {
+  try {
+    // Get industry benchmarks (could be from external data or historical averages)
+    const industryBenchmarks = {
+      response_rate: { min: 15, average: 25, good: 35, excellent: 45 },
+      conversion_rate: { min: 2, average: 5, good: 8, excellent: 12 },
+      engagement_rate: { min: 20, average: 35, good: 50, excellent: 70 },
+      cost_per_acquisition: { min: 50, average: 25, good: 15, excellent: 10 },
+      retention_rate: { min: 60, average: 75, good: 85, excellent: 95 },
+    };
+
+    res.json({
+      success: true,
+      data: {
+        definitions: KPI_DEFINITIONS,
+        benchmarks: industryBenchmarks,
+        description: 'Key performance indicators and industry benchmarks for acquisition campaigns'
+      }
+    });
+  } catch (error) {
+    res.status(500).json({ success: false, error: error.message });
+  }
+});
+
+/**
+ * GET /export/:campaignId
+ * Export campaign analytics data
+ */
+router.get('/export/:campaignId', async (req, res) => {
+  try {
+    const { campaignId } = req.params;
+    const { format = 'json' } = req.query;
+
+    const analytics = generateCampaignAnalytics(campaignId, {
+      includeComparisons: true,
+      includePredictions: true,
+    });
+
+    if (!analytics) {
+      return res.status(404).json({
+        success: false,
+        error: 'Campaign not found'
+      });
+    }
+
+    if (format === 'csv') {
+      // Generate CSV format
+      const csvData = [
+        ['Metric', 'Value', 'Description'],
+        ['Campaign Name', analytics.campaign.name, 'Campaign identifier'],
+        ['Total Reach', analytics.coreMetrics.reach.total, 'Total candidates contacted'],
+        ['Response Rate', `${analytics.coreMetrics.engagement.responseRate}%`, 'Percentage who responded'],
+        ['Conversion Rate', `${analytics.coreMetrics.conversion.conversionRate}%`, 'Percentage who accepted jobs'],
+        ['Total Cost', `$${analytics.costAnalysis?.totalCost || 0}`, 'Total campaign cost'],
+        ['ROI', `${analytics.costAnalysis?.roi || 0}%`, 'Return on investment'],
+        ['Quality Score', analytics.qualityMetrics?.averageRating || 'N/A', 'Average candidate rating'],
+      ];
+
+      const csv = csvData.map(row => row.map(cell => `"${cell}"`).join(',')).join('\n');
+
+      res.setHeader('Content-Type', 'text/csv');
+      res.setHeader('Content-Disposition', `attachment; filename="campaign_${campaignId}_analytics.csv"`);
+      res.send(csv);
+    } else {
+      // Return JSON format
+      res.setHeader('Content-Type', 'application/json');
+      res.setHeader('Content-Disposition', `attachment; filename="campaign_${campaignId}_analytics.json"`);
+      res.json({
+        success: true,
+        data: analytics,
+        exportedAt: new Date().toISOString(),
+      });
+    }
+  } catch (error) {
+    console.error('Error exporting analytics:', error);
+    res.status(500).json({ success: false, error: error.message });
+  }
+});
+
+/**
+ * GET /realtime/:campaignId
+ * Get real-time campaign metrics
+ */
+router.get('/realtime/:campaignId', (req, res) => {
+  try {
+    const { campaignId } = req.params;
+
+    // Get real-time metrics from the last hour
+    const realtimeMetrics = db.prepare(`
+      SELECT
+        COUNT(DISTINCT CASE WHEN om.created_at >= datetime('now', '-1 hour') THEN om.candidate_id END) as contacts_last_hour,
+        COUNT(DISTINCT CASE WHEN om.replied_at >= datetime('now', '-1 hour') THEN om.candidate_id END) as responses_last_hour,
+        COUNT(DISTINCT CASE WHEN ce.created_at >= datetime('now', '-1 hour') AND ce.engagement_type = 'JOB_APPLY' THEN ce.candidate_id END) as applications_last_hour,
+        COUNT(DISTINCT om.candidate_id) as total_contacts,
+        COUNT(DISTINCT CASE WHEN om.replied_at IS NOT NULL THEN om.candidate_id END) as total_responses
+      FROM outreach_messages om
+      LEFT JOIN candidate_engagement ce ON om.candidate_id = ce.candidate_id
+        AND ce.created_at >= om.created_at
+      WHERE om.campaign_id = ?
+    `).get(campaignId);
+
+    // Get campaign status
+    const campaign = db.prepare('SELECT status, created_at FROM outreach_campaigns WHERE id = ?').get(campaignId);
+
+    if (!campaign) {
+      return res.status(404).json({
+        success: false,
+        error: 'Campaign not found'
+      });
+    }
+
+    const runningTimeHours = Math.floor((Date.now() - new Date(campaign.created_at)) / (1000 * 60 * 60));
+
+    res.json({
+      success: true,
+      data: {
+        campaignId,
+        status: campaign.status,
+        runningTimeHours,
+        lastHour: {
+          contacts: realtimeMetrics.contacts_last_hour || 0,
+          responses: realtimeMetrics.responses_last_hour || 0,
+          applications: realtimeMetrics.applications_last_hour || 0,
+        },
+        totals: {
+          contacts: realtimeMetrics.total_contacts || 0,
+          responses: realtimeMetrics.total_responses || 0,
+          responseRate: realtimeMetrics.total_contacts > 0 ?
+            Math.round((realtimeMetrics.total_responses / realtimeMetrics.total_contacts) * 10000) / 100 : 0,
+        },
+        timestamp: new Date().toISOString(),
+      }
+    });
+  } catch (error) {
+    console.error('Error getting realtime metrics:', error);
+    res.status(500).json({ success: false, error: error.message });
+  }
+});
+
+module.exports = router;

@@ -12,7 +12,7 @@
  * - Real-time dashboard data
  */
 
-const { db } = require('../db/database');
+const { db } = require('../db');
 
 /**
  * Key performance indicators for acquisition campaigns

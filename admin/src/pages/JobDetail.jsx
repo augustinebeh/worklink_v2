@@ -19,6 +19,7 @@ import {
   MailIcon,
   SearchIcon,
 } from 'lucide-react';
+import { api } from '../shared/services/api';
 import Card, { CardHeader, CardTitle, CardContent } from '../components/ui/Card';
 import Badge, { StatusBadge } from '../components/ui/Badge';
 import Button from '../components/ui/Button';
@@ -158,13 +159,11 @@ export default function JobDetail() {
 
   const fetchJobData = async () => {
     try {
-      const [jobRes, deploymentsRes] = await Promise.all([
-        fetch(`/api/v1/jobs/${id}`),
-        fetch(`/api/v1/jobs/${id}/deployments`),
+      // TODO: Add getDeployments method to jobs service - using raw client for deployments endpoint
+      const [jobData, deploymentsData] = await Promise.all([
+        api.jobs.getById(id),
+        api.client.get(`/jobs/${id}/deployments`),
       ]);
-
-      const jobData = await jobRes.json();
-      const deploymentsData = await deploymentsRes.json();
 
       if (jobData.success) setJob(jobData.data);
       if (deploymentsData.success) setDeployments(deploymentsData.data || []);
@@ -177,11 +176,8 @@ export default function JobDetail() {
 
   const handleStatusChange = async (deploymentId, newStatus) => {
     try {
-      await fetch(`/api/v1/deployments/${deploymentId}`, {
-        method: 'PATCH',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ status: newStatus }),
-      });
+      // TODO: Create deploymentsService - using raw client for now
+      await api.client.patch(`/deployments/${deploymentId}`, { status: newStatus });
       fetchJobData();
     } catch (error) {
       console.error('Failed to update deployment:', error);
@@ -190,8 +186,10 @@ export default function JobDetail() {
 
   const fetchAvailableCandidates = async () => {
     try {
-      const res = await fetch('/api/v1/candidates?status=active&limit=50');
-      const data = await res.json();
+      const data = await api.candidates.getAll({
+        status: 'active',
+        limit: 50
+      });
       if (data.success) {
         // Filter out already assigned candidates
         const assignedIds = deployments.map(d => d.candidate_id);
@@ -211,16 +209,12 @@ export default function JobDetail() {
     if (!selectedCandidate) return;
     setSaving(true);
     try {
-      const res = await fetch('/api/v1/deployments', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({
-          job_id: id,
-          candidate_id: selectedCandidate,
-          status: 'assigned',
-        }),
+      // TODO: Create deploymentsService - using raw client for now
+      const data = await api.client.post('/deployments', {
+        job_id: id,
+        candidate_id: selectedCandidate,
+        status: 'assigned',
       });
-      const data = await res.json();
       if (data.success) {
         setShowAssignModal(false);
         setSelectedCandidate('');
@@ -236,18 +230,13 @@ export default function JobDetail() {
   const handleUpdateJob = async () => {
     setSaving(true);
     try {
-      const res = await fetch(`/api/v1/jobs/${id}`, {
-        method: 'PUT',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({
-          ...editForm,
-          pay_rate: parseFloat(editForm.pay_rate),
-          charge_rate: parseFloat(editForm.charge_rate),
-          total_slots: parseInt(editForm.total_slots),
-          xp_bonus: parseInt(editForm.xp_bonus) || 0,
-        }),
+      const data = await api.jobs.update(id, {
+        ...editForm,
+        pay_rate: parseFloat(editForm.pay_rate),
+        charge_rate: parseFloat(editForm.charge_rate),
+        total_slots: parseInt(editForm.total_slots),
+        xp_bonus: parseInt(editForm.xp_bonus) || 0,
       });
-      const data = await res.json();
       if (data.success) {
         setShowEditModal(false);
         fetchJobData();
@@ -262,12 +251,7 @@ export default function JobDetail() {
   const handleCancelJob = async () => {
     setSaving(true);
     try {
-      const res = await fetch(`/api/v1/jobs/${id}`, {
-        method: 'PUT',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ status: 'cancelled' }),
-      });
-      const data = await res.json();
+      const data = await api.jobs.updateStatus(id, 'cancelled');
       if (data.success) {
         setShowCancelModal(false);
         fetchJobData();

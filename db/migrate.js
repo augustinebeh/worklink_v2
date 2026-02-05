@@ -3,7 +3,7 @@
  * Adds new columns/tables without breaking existing data
  */
 
-const { db } = require('./database');
+const { db } = require('./index');
 
 function runMigrations() {
   console.log('🔄 Running migrations...');

@@ -1,0 +1,26 @@
+/**
+ * Token Management Routes
+ * Handles push-token and other token-related endpoints
+ */
+
+const express = require('express');
+const router = express.Router();
+const { db } = require('../../../../../db');
+
+/**
+ * POST /push-token
+ * Update push token for notifications
+ */
+router.post('/push-token', (req, res) => {
+  try {
+    const { candidateId, pushToken } = req.body;
+
+    db.prepare('UPDATE candidates SET push_token = ? WHERE id = ?').run(pushToken, candidateId);
+
+    res.json({ success: true });
+  } catch (error) {
+    res.status(500).json({ success: false, error: error.message });
+  }
+});
+
+module.exports = router;

@@ -5,7 +5,7 @@
  * with security audit capabilities.
  */
 
-const { db } = require('../../db/database');
+const { db } = require('../../db');
 const fs = require('fs').promises;
 const path = require('path');
 

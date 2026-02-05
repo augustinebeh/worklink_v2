@@ -1509,6 +1509,109 @@ function runMigrations(db) {
       } catch (e) {
         console.warn('SLM conversation settings table creation warning:', e.message);
       }
+    },
+
+    // Add template response system tables if not exist
+    () => {
+      try {
+        // Check if response_templates exists with old schema
+        const tableInfo = db.prepare("PRAGMA table_info(response_templates)").all();
+        const hasOldSchema = tableInfo.some(col => col.name === 'category'); // Old schema has 'category' not 'category_id'
+        
+        if (hasOldSchema) {
+          console.warn('⚠️  Detected old template schema, recreating tables...');
+          // Drop old tables
+          db.exec(`
+            DROP TABLE IF EXISTS template_variables;
+            DROP TABLE IF EXISTS template_usage_log;
+            DROP TABLE IF EXISTS template_escalations;
+            DROP TABLE IF EXISTS response_templates;
+            DROP TABLE IF EXISTS template_categories;
+          `);
+        }
+        
+        // Template categories table
+        db.exec(`
+          CREATE TABLE IF NOT EXISTS template_categories (
+            id INTEGER PRIMARY KEY AUTOINCREMENT,
+            name TEXT NOT NULL UNIQUE,
+            description TEXT,
+            priority INTEGER DEFAULT 0,
+            created_at DATETIME DEFAULT CURRENT_TIMESTAMP
+          )
+        `);
+
+        // Response templates table
+        db.exec(`
+          CREATE TABLE IF NOT EXISTS response_templates (
+            id INTEGER PRIMARY KEY AUTOINCREMENT,
+            category_id INTEGER NOT NULL,
+            name TEXT NOT NULL UNIQUE,
+            trigger_patterns TEXT DEFAULT '[]',
+            template_content TEXT NOT NULL,
+            requires_real_data INTEGER DEFAULT 0,
+            confidence_score REAL DEFAULT 0.8,
+            language TEXT DEFAULT 'en',
+            active INTEGER DEFAULT 1,
+            usage_count INTEGER DEFAULT 0,
+            last_used_at DATETIME,
+            created_at DATETIME DEFAULT CURRENT_TIMESTAMP,
+            updated_at DATETIME DEFAULT CURRENT_TIMESTAMP,
+            FOREIGN KEY (category_id) REFERENCES template_categories(id)
+          )
+        `);
+
+        // Template variables table
+        db.exec(`
+          CREATE TABLE IF NOT EXISTS template_variables (
+            id INTEGER PRIMARY KEY AUTOINCREMENT,
+            template_id INTEGER NOT NULL,
+            variable_name TEXT NOT NULL,
+            data_source TEXT NOT NULL,
+            field_path TEXT NOT NULL,
+            fallback_value TEXT DEFAULT '',
+            format_type TEXT DEFAULT 'text',
+            FOREIGN KEY (template_id) REFERENCES response_templates(id) ON DELETE CASCADE
+          )
+        `);
+
+        // Template usage log table
+        db.exec(`
+          CREATE TABLE IF NOT EXISTS template_usage_log (
+            id INTEGER PRIMARY KEY AUTOINCREMENT,
+            template_id INTEGER,
+            candidate_id TEXT,
+            context TEXT,
+            success INTEGER DEFAULT 1,
+            created_at DATETIME DEFAULT CURRENT_TIMESTAMP
+          )
+        `);
+
+        // Template escalations table
+        db.exec(`
+          CREATE TABLE IF NOT EXISTS template_escalations (
+            id INTEGER PRIMARY KEY AUTOINCREMENT,
+            candidate_id TEXT NOT NULL,
+            reason TEXT,
+            context TEXT,
+            priority TEXT DEFAULT 'normal',
+            status TEXT DEFAULT 'pending',
+            assigned_to TEXT,
+            resolved_at DATETIME,
+            resolution_notes TEXT,
+            created_at DATETIME DEFAULT CURRENT_TIMESTAMP
+          )
+        `);
+
+        // Create indexes for performance
+        db.exec(`CREATE INDEX IF NOT EXISTS idx_response_templates_category ON response_templates(category)`);
+        db.exec(`CREATE INDEX IF NOT EXISTS idx_template_usage_template ON template_usage_log(template_id)`);
+        db.exec(`CREATE INDEX IF NOT EXISTS idx_template_usage_candidate ON template_usage_log(candidate_id)`);
+        db.exec(`CREATE INDEX IF NOT EXISTS idx_template_escalations_candidate ON template_escalations(candidate_id)`);
+        db.exec(`CREATE INDEX IF NOT EXISTS idx_template_escalations_status ON template_escalations(status)`);
+      } catch (e) {
+        console.warn('Template tables creation warning:', e.message);
+      }
     }
   ];
 

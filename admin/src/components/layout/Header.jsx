@@ -1,7 +1,6 @@
 import { useState } from 'react';
 import { 
   MenuIcon, 
-  BellIcon, 
   SearchIcon, 
   SunIcon, 
   MoonIcon,
@@ -15,19 +14,12 @@ import { clsx } from 'clsx';
 import { useTheme } from '../../contexts/ThemeContext';
 import { useAuth } from '../../contexts/AuthContext';
 import Avatar from '../ui/Avatar';
+import { AlertBell } from '../bpo';
 
 export default function Header({ onMenuClick }) {
   const { theme, toggleTheme } = useTheme();
   const { user, logout } = useAuth();
   const [searchQuery, setSearchQuery] = useState('');
-
-  const notifications = [
-    { id: 1, title: 'New tender from GeBIZ', time: '5 min ago', unread: true },
-    { id: 2, title: 'Payment batch approved', time: '1 hour ago', unread: true },
-    { id: 3, title: 'New candidate registered', time: '2 hours ago', unread: false },
-  ];
-
-  const unreadCount = notifications.filter(n => n.unread).length;
 
   return (
     <header className="h-16 bg-white dark:bg-slate-900 border-b border-slate-200 dark:border-slate-800 px-4 flex items-center justify-between sticky top-0 z-30">
@@ -61,57 +53,8 @@ export default function Header({ onMenuClick }) {
           {theme === 'dark' ? <SunIcon className="h-5 w-5" /> : <MoonIcon className="h-5 w-5" />}
         </button>
 
-        <Menu as="div" className="relative">
-          <Menu.Button className="relative p-2 rounded-lg text-slate-400 hover:text-slate-600 hover:bg-slate-100 dark:hover:text-slate-300 dark:hover:bg-slate-800 transition-colors">
-            <BellIcon className="h-5 w-5" />
-            {unreadCount > 0 && (
-              <span className="absolute top-1 right-1 h-4 w-4 flex items-center justify-center bg-red-500 text-white text-2xs font-medium rounded-full">
-                {unreadCount}
-              </span>
-            )}
-          </Menu.Button>
-
-          <Transition
-            as={Fragment}
-            enter="transition ease-out duration-100"
-            enterFrom="transform opacity-0 scale-95"
-            enterTo="transform opacity-100 scale-100"
-            leave="transition ease-in duration-75"
-            leaveFrom="transform opacity-100 scale-100"
-            leaveTo="transform opacity-0 scale-95"
-          >
-            <Menu.Items className="absolute right-0 mt-2 w-80 bg-white dark:bg-slate-900 rounded-xl border border-slate-200 dark:border-slate-800 shadow-lg overflow-hidden focus:outline-none">
-              <div className="px-4 py-3 border-b border-slate-200 dark:border-slate-800">
-                <h3 className="font-semibold text-slate-900 dark:text-white">Notifications</h3>
-              </div>
-              <div className="max-h-96 overflow-y-auto">
-                {notifications.map((notification) => (
-                  <Menu.Item key={notification.id}>
-                    {({ active }) => (
-                      <button
-                        className={clsx(
-                          'w-full px-4 py-3 text-left',
-                          active && 'bg-slate-50 dark:bg-slate-800',
-                          notification.unread && 'bg-primary-50/50 dark:bg-primary-900/10'
-                        )}
-                      >
-                        <div className="flex items-start gap-3">
-                          {notification.unread && (
-                            <span className="mt-1.5 h-2 w-2 rounded-full bg-primary-500 flex-shrink-0" />
-                          )}
-                          <div className={!notification.unread ? 'ml-5' : ''}>
-                            <p className="text-sm text-slate-900 dark:text-white">{notification.title}</p>
-                            <p className="text-xs text-slate-500 dark:text-slate-400 mt-0.5">{notification.time}</p>
-                          </div>
-                        </div>
-                      </button>
-                    )}
-                  </Menu.Item>
-                ))}
-              </div>
-            </Menu.Items>
-          </Transition>
-        </Menu>
+        {/* New AlertBell Component */}
+        <AlertBell />
 
         <Menu as="div" className="relative">
           <Menu.Button className="flex items-center gap-3 p-1.5 rounded-lg hover:bg-slate-100 dark:hover:bg-slate-800 transition-colors">
@@ -134,7 +77,7 @@ export default function Header({ onMenuClick }) {
             <Menu.Items className="absolute right-0 mt-2 w-56 bg-white dark:bg-slate-900 rounded-xl border border-slate-200 dark:border-slate-800 shadow-lg overflow-hidden focus:outline-none">
               <div className="px-4 py-3 border-b border-slate-200 dark:border-slate-800">
                 <p className="text-sm font-medium text-slate-900 dark:text-white">{user?.name || 'Admin'}</p>
-                <p className="text-xs text-slate-500 dark:text-slate-400">{user?.email || 'admin@talentvis.com'}</p>
+                <p className="text-xs text-slate-500 dark:text-slate-400">{user?.email || 'admin@worklink.sg'}</p>
               </div>
               <div className="py-1">
                 <Menu.Item>

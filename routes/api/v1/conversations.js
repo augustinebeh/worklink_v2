@@ -6,7 +6,7 @@
 
 const express = require('express');
 const router = express.Router();
-const { db } = require('../../../db/database');
+const { db } = require('../../../db');
 
 // Lazy load services to avoid circular dependencies
 let conversationManager = null;

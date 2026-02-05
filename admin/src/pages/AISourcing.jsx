@@ -11,6 +11,7 @@ import {
   RefreshCwIcon,
   Loader2Icon,
 } from 'lucide-react';
+import { api } from '../shared/services/api';
 import Card, { CardHeader, CardTitle, CardContent } from '../components/ui/Card';
 import Badge from '../components/ui/Badge';
 import Button from '../components/ui/Button';
@@ -67,8 +68,8 @@ export default function AISourcing() {
 
   const checkAiStatus = async () => {
     try {
-      const res = await fetch('/api/v1/ai/ai-status');
-      const data = await res.json();
+      // TODO: Create aiService - using raw client for now
+      const data = await api.client.get('/ai/ai-status');
       if (data.success) setAiStatus(data.data);
     } catch (error) {
       console.error('Failed to check AI status:', error);
@@ -77,8 +78,10 @@ export default function AISourcing() {
 
   const fetchJobs = async () => {
     try {
-      const res = await fetch('/api/v1/jobs?status=open&limit=20');
-      const data = await res.json();
+      const data = await api.jobs.getAll({
+        status: 'open',
+        limit: 20
+      });
       if (data.success) setJobs(data.data);
     } catch (error) {
       console.error('Failed to fetch jobs:', error);
@@ -88,12 +91,8 @@ export default function AISourcing() {
   const generatePostings = async () => {
     setLoading(true);
     try {
-      const res = await fetch('/api/v1/ai/sourcing/generate-posting', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify(postingForm),
-      });
-      const data = await res.json();
+      // TODO: Create aiService - using raw client for now
+      const data = await api.client.post('/ai/sourcing/generate-posting', postingForm);
       if (data.success) setGeneratedPostings(data.data);
     } catch (error) {
       alert('Generation failed: ' + error.message);
@@ -105,12 +104,8 @@ export default function AISourcing() {
   const generateOutreach = async (jobId) => {
     setLoading(true);
     try {
-      const res = await fetch('/api/v1/ai/sourcing/generate-outreach', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ jobId }),
-      });
-      const data = await res.json();
+      // TODO: Create aiService - using raw client for now
+      const data = await api.client.post('/ai/sourcing/generate-outreach', { jobId });
       if (data.success) setOutreachMessages(data.data);
     } catch (error) {
       alert('Generation failed: ' + error.message);
@@ -121,8 +116,8 @@ export default function AISourcing() {
 
   const fetchRecommendations = async (jobId) => {
     try {
-      const res = await fetch(`/api/v1/ai/sourcing/recommend/${jobId}`);
-      const data = await res.json();
+      // TODO: Create aiService - using raw client for now
+      const data = await api.client.get(`/ai/sourcing/recommend/${jobId}`);
       if (data.success) setRecommendations(data.data);
     } catch (error) {
       console.error('Failed to fetch recommendations:', error);

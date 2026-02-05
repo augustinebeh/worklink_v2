@@ -12,7 +12,7 @@ const jwt = require('jsonwebtoken');
 const DataIntegrationLayer = require('../../services/data-integration');
 const dataIntegrationRouter = require('../../routes/api/v1/data-integration');
 const { generateToken, JWT_SECRET } = require('../../middleware/auth');
-const { db } = require('../../db/database');
+const { db } = require('../../db');
 
 describe('Data Integration Security Validation', () => {
   let app;

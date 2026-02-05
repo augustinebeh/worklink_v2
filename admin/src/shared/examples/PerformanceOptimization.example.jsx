@@ -164,7 +164,7 @@ function useApiCall() {
 function useApiCall() {
   const { data, error } = useSWR('/api/data', fetcher);
 
-  if (process.env.NODE_ENV === 'development') {
+  if (import.meta.env.DEV) {
     console.log('API response:', data);
     console.log('API error:', error);
   }

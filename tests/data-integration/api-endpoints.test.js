@@ -10,7 +10,7 @@ const { describe, test, expect, beforeAll, afterAll, beforeEach } = require('@je
 const express = require('express');
 const dataIntegrationRouter = require('../../routes/api/v1/data-integration');
 const { generateToken } = require('../../middleware/auth');
-const { db } = require('../../db/database');
+const { db } = require('../../db');
 
 describe('Data Integration API Endpoints', () => {
   let app;

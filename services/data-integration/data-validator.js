@@ -5,7 +5,7 @@
  * with GDPR/privacy compliance checks.
  */
 
-const { db } = require('../../db/database');
+const { db } = require('../../db');
 
 class DataValidator {
   constructor() {

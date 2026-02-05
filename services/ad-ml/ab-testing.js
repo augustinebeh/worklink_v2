@@ -4,7 +4,7 @@
  * Handles variable selection, variant assignment, and statistical analysis.
  */
 
-const { db } = require('../../db/database');
+const { db } = require('../../db');
 
 /**
  * Available variables for testing

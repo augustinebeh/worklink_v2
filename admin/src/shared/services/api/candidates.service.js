@@ -129,6 +129,14 @@ export const candidatesService = {
   },
 
   /**
+   * Get candidate statistics for dashboard
+   * @returns {Promise<Object>} Stats data (pending, active, inactive counts)
+   */
+  async getStats() {
+    return apiClient.getJSON('/api/v1/candidates/stats');
+  },
+
+  /**
    * Bulk update candidates
    * @param {Array} candidateIds - Array of candidate IDs
    * @param {Object} updateData - Data to apply to all candidates

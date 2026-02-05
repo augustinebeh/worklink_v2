@@ -1,0 +1,934 @@
+{
+  "timestamp": "2026-02-04T19:29:10.814Z",
+  "monolithicFiles": {
+    "db/database.js": {
+      "replacedBy": "db/database/ (15 modular files)",
+      "size": "1,962 lines",
+      "status": "wrapper_kept",
+      "exists": true,
+      "fullPath": "/home/augustine/Augustine_Projects/worklink_v2/db/database.js"
+    },
+    "routes/api/v1/candidates.js": {
+      "replacedBy": "routes/api/v1/candidates/ (index.js + routes/ + helpers/)",
+      "size": "516 lines",
+      "status": "to_verify",
+      "exists": false,
+      "fullPath": "/home/augustine/Augustine_Projects/worklink_v2/routes/api/v1/candidates.js"
+    },
+    "routes/api/v1/chat.js": {
+      "replacedBy": "routes/api/v1/chat/ (index.js + routes/ + helpers/)",
+      "size": "473 lines",
+      "status": "to_verify",
+      "exists": false,
+      "fullPath": "/home/augustine/Augustine_Projects/worklink_v2/routes/api/v1/chat.js"
+    },
+    "routes/api/v1/gamification.js": {
+      "replacedBy": "routes/api/v1/gamification/ (index.js + routes/ + helpers/)",
+      "size": "1,649 lines",
+      "status": "to_verify",
+      "exists": false,
+      "fullPath": "/home/augustine/Augustine_Projects/worklink_v2/routes/api/v1/gamification.js"
+    },
+    "routes/api/v1/auth.js": {
+      "replacedBy": "routes/api/v1/auth/ (index.js + routes/)",
+      "size": "686 lines",
+      "status": "to_verify",
+      "exists": false,
+      "fullPath": "/home/augustine/Augustine_Projects/worklink_v2/routes/api/v1/auth.js"
+    },
+    "routes/api/v1/smart-response-router.js": {
+      "replacedBy": "routes/api/v1/smart-response-router/ (index.js + routes/ + helpers/)",
+      "size": "527 lines",
+      "status": "to_verify",
+      "exists": false,
+      "fullPath": "/home/augustine/Augustine_Projects/worklink_v2/routes/api/v1/smart-response-router.js"
+    },
+    "routes/api/v1/ai-automation.js": {
+      "replacedBy": "routes/api/v1/ai-automation/ (index.js + 12 modules)",
+      "size": "2,421 lines",
+      "status": "to_verify",
+      "exists": false,
+      "fullPath": "/home/augustine/Augustine_Projects/worklink_v2/routes/api/v1/ai-automation.js"
+    },
+    "websocket.js": {
+      "replacedBy": "websocket/ (modular structure)",
+      "size": "unknown",
+      "status": "to_verify",
+      "exists": false,
+      "fullPath": "/home/augustine/Augustine_Projects/worklink_v2/websocket.js"
+    },
+    "websocket-new.js": {
+      "replacedBy": "websocket/index.js",
+      "size": "unknown",
+      "status": "wrapper_kept",
+      "exists": true,
+      "fullPath": "/home/augustine/Augustine_Projects/worklink_v2/websocket-new.js"
+    },
+    "services/websocket-handlers.js": {
+      "replacedBy": "websocket/ modules",
+      "size": "unknown",
+      "status": "to_verify",
+      "exists": true,
+      "fullPath": "/home/augustine/Augustine_Projects/worklink_v2/services/websocket-handlers.js"
+    },
+    "utils/smart-slm-router.js": {
+      "replacedBy": "utils/smart-slm-router/ (modular)",
+      "size": "unknown",
+      "status": "to_verify",
+      "exists": false,
+      "fullPath": "/home/augustine/Augustine_Projects/worklink_v2/utils/smart-slm-router.js"
+    }
+  },
+  "references": {
+    "db/database.js": [
+      {
+        "file": "db/database.js",
+        "matches": 2,
+        "lines": [
+          {
+            "line": 14,
+            "content": "* const database = require('./database');"
+          },
+          {
+            "line": 22,
+            "content": "module.exports = require('./database/index.js');"
+          }
+        ]
+      },
+      {
+        "file": "db/migrate.js",
+        "matches": 1,
+        "lines": [
+          {
+            "line": 6,
+            "content": "const { db } = require('./database');"
+          }
+        ]
+      },
+      {
+        "file": "db/seed-ad-data.js",
+        "matches": 1,
+        "lines": [
+          {
+            "line": 7,
+            "content": "const { db } = require('./database');"
+          }
+        ]
+      },
+      {
+        "file": "db/seed-slm-data.js",
+        "matches": 1,
+        "lines": [
+          {
+            "line": 20,
+            "content": "_db = require('./database').db;"
+          }
+        ]
+      },
+      {
+        "file": "routes/api/v1/admin-escalation.js",
+        "matches": 2,
+        "lines": [
+          {
+            "line": 468,
+            "content": "const { db } = require('../../../db/database');"
+          },
+          {
+            "line": 558,
+            "content": "const { db } = require('../../../db/database');"
+          }
+        ]
+      },
+      {
+        "file": "routes/api/v1/admin.js",
+        "matches": 1,
+        "lines": [
+          {
+            "line": 3,
+            "content": "const { db, resetToSampleData } = require('../../../db/database');"
+          }
+        ]
+      },
+      {
+        "file": "routes/api/v1/ai-automation/analytics/routes.js",
+        "matches": 1,
+        "lines": [
+          {
+            "line": 10,
+            "content": "const { db } = require('../../../../../db/database');"
+          }
+        ]
+      },
+      {
+        "file": "routes/api/v1/ai-automation/assistant/routes.js",
+        "matches": 1,
+        "lines": [
+          {
+            "line": 10,
+            "content": "const { db } = require('../../../../../db/database');"
+          }
+        ]
+      },
+      {
+        "file": "routes/api/v1/ai-automation/follow-up/routes.js",
+        "matches": 1,
+        "lines": [
+          {
+            "line": 10,
+            "content": "const { db } = require('../../../../../db/database');"
+          }
+        ]
+      },
+      {
+        "file": "routes/api/v1/ai-automation/gebiz/routes.js",
+        "matches": 1,
+        "lines": [
+          {
+            "line": 10,
+            "content": "const { db } = require('../../../../../db/database');"
+          }
+        ]
+      },
+      {
+        "file": "routes/api/v1/ai-automation/outreach/routes.js",
+        "matches": 1,
+        "lines": [
+          {
+            "line": 10,
+            "content": "const { db } = require('../../../../../db/database');"
+          }
+        ]
+      },
+      {
+        "file": "routes/api/v1/ai-automation/sourcing/routes.js",
+        "matches": 1,
+        "lines": [
+          {
+            "line": 10,
+            "content": "const { db } = require('../../../../../db/database');"
+          }
+        ]
+      },
+      {
+        "file": "routes/api/v1/ai-automation/tenders/analysis.routes.js",
+        "matches": 1,
+        "lines": [
+          {
+            "line": 10,
+            "content": "const { db } = require('../../../../../db/database');"
+          }
+        ]
+      },
+      {
+        "file": "routes/api/v1/ai-chat.js",
+        "matches": 1,
+        "lines": [
+          {
+            "line": 277,
+            "content": "const { db } = require('../../../db/database');"
+          }
+        ]
+      },
+      {
+        "file": "routes/api/v1/auth/helpers/auth-utils.js",
+        "matches": 1,
+        "lines": [
+          {
+            "line": 204,
+            "content": "const { db } = require('../../../../../db/database');"
+          }
+        ]
+      },
+      {
+        "file": "routes/api/v1/auth/routes/core.js",
+        "matches": 1,
+        "lines": [
+          {
+            "line": 8,
+            "content": "const { db } = require('../../../../../db/database');"
+          }
+        ]
+      },
+      {
+        "file": "routes/api/v1/auth/routes/google.js",
+        "matches": 1,
+        "lines": [
+          {
+            "line": 8,
+            "content": "const { db } = require('../../../../../db/database');"
+          }
+        ]
+      },
+      {
+        "file": "routes/api/v1/auth/routes/telegram.js",
+        "matches": 1,
+        "lines": [
+          {
+            "line": 8,
+            "content": "const { db } = require('../../../../../db/database');"
+          }
+        ]
+      },
+      {
+        "file": "routes/api/v1/auth/routes/tokens.js",
+        "matches": 1,
+        "lines": [
+          {
+            "line": 8,
+            "content": "const { db } = require('../../../../../db/database');"
+          }
+        ]
+      },
+      {
+        "file": "routes/api/v1/auth/routes/worker.js",
+        "matches": 1,
+        "lines": [
+          {
+            "line": 8,
+            "content": "const { db } = require('../../../../../db/database');"
+          }
+        ]
+      },
+      {
+        "file": "routes/api/v1/availability.js",
+        "matches": 1,
+        "lines": [
+          {
+            "line": 8,
+            "content": "const { db } = require('../../../db/database');"
+          }
+        ]
+      },
+      {
+        "file": "routes/api/v1/candidates/routes/create.js",
+        "matches": 1,
+        "lines": [
+          {
+            "line": 10,
+            "content": "const { createValidationMiddleware } = require('../../../../../middleware/database-validation');"
+          }
+        ]
+      },
+      {
+        "file": "routes/api/v1/conversations.js",
+        "matches": 1,
+        "lines": [
+          {
+            "line": 9,
+            "content": "const { db } = require('../../../db/database');"
+          }
+        ]
+      },
+      {
+        "file": "routes/api/v1/deployments.js",
+        "matches": 1,
+        "lines": [
+          {
+            "line": 3,
+            "content": "const { db } = require('../../../db/database');"
+          }
+        ]
+      },
+      {
+        "file": "routes/api/v1/gamification/routes/achievements.js",
+        "matches": 1,
+        "lines": [
+          {
+            "line": 13,
+            "content": "const { getCandidateAchievements, createXPTransaction, updateCandidateXP } = require('../helpers/database-queries');"
+          }
+        ]
+      },
+      {
+        "file": "routes/api/v1/gamification/routes/borders.js",
+        "matches": 1,
+        "lines": [
+          {
+            "line": 11,
+            "content": "const { getCandidateBorders } = require('../helpers/database-queries');"
+          }
+        ]
+      },
+      {
+        "file": "routes/api/v1/gamification/routes/leaderboard.js",
+        "matches": 1,
+        "lines": [
+          {
+            "line": 11,
+            "content": "const { getLeaderboard } = require('../helpers/database-queries');"
+          }
+        ]
+      },
+      {
+        "file": "routes/api/v1/gamification/routes/profile.js",
+        "matches": 1,
+        "lines": [
+          {
+            "line": 18,
+            "content": "} = require('../helpers/database-queries');"
+          }
+        ]
+      },
+      {
+        "file": "routes/api/v1/gamification/routes/quests.js",
+        "matches": 1,
+        "lines": [
+          {
+            "line": 13,
+            "content": "const { getCandidateQuests, createXPTransaction } = require('../helpers/database-queries');"
+          }
+        ]
+      },
+      {
+        "file": "routes/api/v1/gamification/routes/xp.js",
+        "matches": 1,
+        "lines": [
+          {
+            "line": 13,
+            "content": "const { createXPTransaction, updateCandidateXP } = require('../helpers/database-queries');"
+          }
+        ]
+      },
+      {
+        "file": "routes/api/v1/jobs.js",
+        "matches": 1,
+        "lines": [
+          {
+            "line": 4,
+            "content": "const { createValidationMiddleware } = require('../../../middleware/database-validation');"
+          }
+        ]
+      },
+      {
+        "file": "routes/api/v1/messaging.js",
+        "matches": 1,
+        "lines": [
+          {
+            "line": 8,
+            "content": "const { db } = require('../../../db/database');"
+          }
+        ]
+      },
+      {
+        "file": "routes/api/v1/payments.js",
+        "matches": 1,
+        "lines": [
+          {
+            "line": 5,
+            "content": "const { createValidationMiddleware } = require('../../../middleware/database-validation');"
+          }
+        ]
+      },
+      {
+        "file": "routes/api/v1/telegram-groups.js",
+        "matches": 1,
+        "lines": [
+          {
+            "line": 10,
+            "content": "const { db } = require('../../../db/database');"
+          }
+        ]
+      },
+      {
+        "file": "routes/api/v1/tenders.js",
+        "matches": 1,
+        "lines": [
+          {
+            "line": 3,
+            "content": "const { db } = require('../../../db/database');"
+          }
+        ]
+      },
+      {
+        "file": "routes/api/v1/webhooks/telegram.js",
+        "matches": 1,
+        "lines": [
+          {
+            "line": 8,
+            "content": "const { db } = require('../../../../db/database');"
+          }
+        ]
+      },
+      {
+        "file": "scripts/complete-database-migration.js",
+        "matches": 5,
+        "lines": [
+          {
+            "line": 26,
+            "content": "// Handle require('../../../../db/database') - 4 levels up"
+          },
+          {
+            "line": 29,
+            "content": "// Handle require('../../../db/database') - 3 levels up"
+          },
+          {
+            "line": 32,
+            "content": "// Handle require('../../db/database') - 2 levels up"
+          },
+          {
+            "line": 35,
+            "content": "// Handle require('../db/database') - 1 level up"
+          },
+          {
+            "line": 38,
+            "content": "// Handle require('./db/database') - same level"
+          }
+        ]
+      },
+      {
+        "file": "scripts/debug/debug_database.js",
+        "matches": 1,
+        "lines": [
+          {
+            "line": 1,
+            "content": "const { db } = require('./db/database.js');"
+          }
+        ]
+      },
+      {
+        "file": "scripts/deploy-template-system.js",
+        "matches": 1,
+        "lines": [
+          {
+            "line": 8,
+            "content": "const { db } = require('../db/database');"
+          }
+        ]
+      },
+      {
+        "file": "services/ad-ml/ab-testing.js",
+        "matches": 1,
+        "lines": [
+          {
+            "line": 7,
+            "content": "const { db } = require('../../db/database');"
+          }
+        ]
+      },
+      {
+        "file": "services/ad-ml/index.js",
+        "matches": 1,
+        "lines": [
+          {
+            "line": 8,
+            "content": "const { db } = require('../../db/database');"
+          }
+        ]
+      },
+      {
+        "file": "services/ad-ml/timing.js",
+        "matches": 1,
+        "lines": [
+          {
+            "line": 8,
+            "content": "const { db } = require('../../db/database');"
+          }
+        ]
+      },
+      {
+        "file": "services/ad-ml/trainer.js",
+        "matches": 1,
+        "lines": [
+          {
+            "line": 7,
+            "content": "const { db } = require('../../db/database');"
+          }
+        ]
+      },
+      {
+        "file": "services/admin-escalation-system.js",
+        "matches": 1,
+        "lines": [
+          {
+            "line": 16,
+            "content": "const { db } = require('../db/database');"
+          }
+        ]
+      },
+      {
+        "file": "services/ai-chat/tools.js",
+        "matches": 1,
+        "lines": [
+          {
+            "line": 8,
+            "content": "const { db } = require('../../db/database');"
+          }
+        ]
+      },
+      {
+        "file": "services/chat-attachments.js",
+        "matches": 1,
+        "lines": [
+          {
+            "line": 14,
+            "content": "const { db } = require('../db/database');"
+          }
+        ]
+      },
+      {
+        "file": "services/conversation-manager.js",
+        "matches": 1,
+        "lines": [
+          {
+            "line": 11,
+            "content": "const { db } = require('../db/database');"
+          }
+        ]
+      },
+      {
+        "file": "services/data-integration/account-data-service.js",
+        "matches": 1,
+        "lines": [
+          {
+            "line": 8,
+            "content": "const { db } = require('../../db/database');"
+          }
+        ]
+      },
+      {
+        "file": "services/data-integration/audit-logger.js",
+        "matches": 1,
+        "lines": [
+          {
+            "line": 8,
+            "content": "const { db } = require('../../db/database');"
+          }
+        ]
+      },
+      {
+        "file": "services/data-integration/data-validator.js",
+        "matches": 1,
+        "lines": [
+          {
+            "line": 8,
+            "content": "const { db } = require('../../db/database');"
+          }
+        ]
+      },
+      {
+        "file": "services/data-integration/interview-data-service.js",
+        "matches": 1,
+        "lines": [
+          {
+            "line": 8,
+            "content": "const { db } = require('../../db/database');"
+          }
+        ]
+      },
+      {
+        "file": "services/data-integration/job-data-service.js",
+        "matches": 1,
+        "lines": [
+          {
+            "line": 8,
+            "content": "const { db } = require('../../db/database');"
+          }
+        ]
+      },
+      {
+        "file": "services/data-integration/payment-data-service.js",
+        "matches": 1,
+        "lines": [
+          {
+            "line": 8,
+            "content": "const { db } = require('../../db/database');"
+          }
+        ]
+      },
+      {
+        "file": "services/data-integration/withdrawal-data-service.js",
+        "matches": 1,
+        "lines": [
+          {
+            "line": 8,
+            "content": "const { db } = require('../../db/database');"
+          }
+        ]
+      },
+      {
+        "file": "services/escalation-analytics.js",
+        "matches": 1,
+        "lines": [
+          {
+            "line": 8,
+            "content": "const { db } = require('../db/database');"
+          }
+        ]
+      },
+      {
+        "file": "services/intent-classifier/integration.js",
+        "matches": 1,
+        "lines": [
+          {
+            "line": 9,
+            "content": "const { db } = require('../../db/database');"
+          }
+        ]
+      },
+      {
+        "file": "services/intent-classifier/monitoring.js",
+        "matches": 1,
+        "lines": [
+          {
+            "line": 8,
+            "content": "const { db } = require('../../db/database');"
+          }
+        ]
+      },
+      {
+        "file": "services/ml/index.js",
+        "matches": 1,
+        "lines": [
+          {
+            "line": 15,
+            "content": "const { db } = require('../../db/database');"
+          }
+        ]
+      },
+      {
+        "file": "services/ml/trainer.js",
+        "matches": 1,
+        "lines": [
+          {
+            "line": 8,
+            "content": "const { db } = require('../../db/database');"
+          }
+        ]
+      },
+      {
+        "file": "services/quick-replies.js",
+        "matches": 1,
+        "lines": [
+          {
+            "line": 6,
+            "content": "const { db } = require('../db/database');"
+          }
+        ]
+      },
+      {
+        "file": "services/telegram-posting/index.js",
+        "matches": 1,
+        "lines": [
+          {
+            "line": 8,
+            "content": "const { db } = require('../../db/database');"
+          }
+        ]
+      },
+      {
+        "file": "services/template-responses/admin-interface.js",
+        "matches": 1,
+        "lines": [
+          {
+            "line": 8,
+            "content": "const { db } = require('../../db/database');"
+          }
+        ]
+      },
+      {
+        "file": "services/template-responses/index.js",
+        "matches": 1,
+        "lines": [
+          {
+            "line": 14,
+            "content": "const { db } = require('../../db/database');"
+          }
+        ]
+      },
+      {
+        "file": "services/template-responses/integration-bridge.js",
+        "matches": 1,
+        "lines": [
+          {
+            "line": 9,
+            "content": "const { db } = require('../../db/database');"
+          }
+        ]
+      },
+      {
+        "file": "services/template-responses/template-manager.js",
+        "matches": 1,
+        "lines": [
+          {
+            "line": 8,
+            "content": "const { db } = require('../../db/database');"
+          }
+        ]
+      },
+      {
+        "file": "tests/data-integration/api-endpoints.test.js",
+        "matches": 1,
+        "lines": [
+          {
+            "line": 13,
+            "content": "const { db } = require('../../db/database');"
+          }
+        ]
+      },
+      {
+        "file": "tests/data-integration/integration-layer.test.js",
+        "matches": 1,
+        "lines": [
+          {
+            "line": 10,
+            "content": "const { db } = require('../../db/database');"
+          }
+        ]
+      },
+      {
+        "file": "tests/data-integration/security-validation.test.js",
+        "matches": 1,
+        "lines": [
+          {
+            "line": 15,
+            "content": "const { db } = require('../../db/database');"
+          }
+        ]
+      },
+      {
+        "file": "tests/run-data-integration-tests.js",
+        "matches": 2,
+        "lines": [
+          {
+            "line": 416,
+            "content": "const { db } = require('../../db/database');"
+          },
+          {
+            "line": 435,
+            "content": "const { db } = require('../../db/database');"
+          }
+        ]
+      },
+      {
+        "file": "tests/template-response-integration.test.js",
+        "matches": 1,
+        "lines": [
+          {
+            "line": 9,
+            "content": "const { db } = require('../db/database');"
+          }
+        ]
+      },
+      {
+        "file": "utils/acquisition-analytics.js",
+        "matches": 1,
+        "lines": [
+          {
+            "line": 15,
+            "content": "const { db } = require('../db/database');"
+          }
+        ]
+      },
+      {
+        "file": "utils/campaign-analytics.js",
+        "matches": 1,
+        "lines": [
+          {
+            "line": 15,
+            "content": "const { db } = require('../db/database');"
+          }
+        ]
+      },
+      {
+        "file": "utils/candidate-outreach.js",
+        "matches": 1,
+        "lines": [
+          {
+            "line": 14,
+            "content": "const { db } = require('../db/database');"
+          }
+        ]
+      },
+      {
+        "file": "utils/claude.js",
+        "matches": 1,
+        "lines": [
+          {
+            "line": 16,
+            "content": "const { db } = require('../db/database');"
+          }
+        ]
+      },
+      {
+        "file": "utils/engagement-tracking.js",
+        "matches": 1,
+        "lines": [
+          {
+            "line": 14,
+            "content": "const { db } = require('../db/database');"
+          }
+        ]
+      },
+      {
+        "file": "utils/enhanced-conversation-flows.js",
+        "matches": 1,
+        "lines": [
+          {
+            "line": 507,
+            "content": "const db = new Database(require('path').resolve(__dirname, '../db/database.db'));"
+          }
+        ]
+      },
+      {
+        "file": "utils/follow-up-automation.js",
+        "matches": 1,
+        "lines": [
+          {
+            "line": 14,
+            "content": "const { db } = require('../db/database');"
+          }
+        ]
+      },
+      {
+        "file": "utils/follow-up-sequences.js",
+        "matches": 1,
+        "lines": [
+          {
+            "line": 14,
+            "content": "const { db } = require('../db/database');"
+          }
+        ]
+      },
+      {
+        "file": "utils/multilingual-conversation-engine.js",
+        "matches": 1,
+        "lines": [
+          {
+            "line": 669,
+            "content": "const db = new Database(require('path').resolve(__dirname, '../db/database.db'));"
+          }
+        ]
+      },
+      {
+        "file": "utils/outreach-automation.js",
+        "matches": 1,
+        "lines": [
+          {
+            "line": 14,
+            "content": "const { db } = require('../db/database');"
+          }
+        ]
+      },
+      {
+        "file": "utils/slm-training-validation.js",
+        "matches": 1,
+        "lines": [
+          {
+            "line": 9,
+            "content": "const { db } = require('../db/database');"
+          }
+        ]
+      }
+    ],
+    "websocket-new.js": [],
+    "services/websocket-handlers.js": []
+  },
+  "safeToDelete": [
+    "services/websocket-handlers.js"
+  ],
+  "wrappers": [
+    "db/database.js",
+    "websocket-new.js"
+  ],
+  "needsInvestigation": []
+}

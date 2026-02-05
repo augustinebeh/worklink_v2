@@ -5,7 +5,7 @@
  * These provide actual backend capabilities instead of hallucinating.
  */
 
-const { db } = require('../../db/database');
+const { db } = require('../../db');
 
 /**
  * Get worker's recent job deployments and their statuses

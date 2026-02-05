@@ -1,0 +1,96 @@
+#!/usr/bin/env node
+/**
+ * Quick API Endpoint Tester
+ * Tests if endpoints actually return data
+ */
+
+const http = require('http');
+
+console.log('🧪 Quick API Test\n');
+console.log('Testing if server is running and endpoints work...\n');
+
+function testEndpoint(path, description) {
+  return new Promise((resolve) => {
+    const options = {
+      hostname: 'localhost',
+      port: 8080,
+      path: path,
+      method: 'GET',
+      timeout: 5000
+    };
+    
+    console.log(`📡 ${description}`);
+    console.log(`   URL: http://localhost:8080${path}`);
+    
+    const req = http.request(options, (res) => {
+      let data = '';
+      
+      res.on('data', (chunk) => {
+        data += chunk;
+      });
+      
+      res.on('end', () => {
+        try {
+          const json = JSON.parse(data);
+          console.log(`   Status: ${res.statusCode}`);
+          
+          if (json.data) {
+            if (Array.isArray(json.data)) {
+              console.log(`   Data: Array with ${json.data.length} items`);
+            } else if (typeof json.data === 'object') {
+              console.log(`   Data: ${JSON.stringify(json.data)}`);
+            }
+          }
+          
+          if (json.pagination) {
+            console.log(`   Total: ${json.pagination.total}`);
+          }
+          
+          console.log(`   ✅ Success\n`);
+          resolve(true);
+        } catch (error) {
+          console.log(`   ❌ Invalid JSON\n`);
+          resolve(false);
+        }
+      });
+    });
+    
+    req.on('error', (error) => {
+      console.log(`   ❌ Error: ${error.message}`);
+      if (error.message.includes('ECONNREFUSED')) {
+        console.log(`   💡 Server not running! Start with: npm start\n`);
+      }
+      resolve(false);
+    });
+    
+    req.on('timeout', () => {
+      console.log(`   ❌ Timeout\n`);
+      req.destroy();
+      resolve(false);
+    });
+    
+    req.end();
+  });
+}
+
+async function runTests() {
+  console.log('='.repeat(60) + '\n');
+  
+  // Test candidates
+  await testEndpoint('/api/v1/candidates/stats', '1. Candidates Stats');
+  await testEndpoint('/api/v1/candidates', '2. Candidates List');
+  
+  // Test jobs
+  await testEndpoint('/api/v1/jobs/stats', '3. Jobs Stats');
+  await testEndpoint('/api/v1/jobs', '4. Jobs List (no filter)');
+  await testEndpoint('/api/v1/jobs?status=all', '5. Jobs List (status=all)');
+  await testEndpoint('/api/v1/jobs?status=open', '6. Jobs List (status=open)');
+  
+  console.log('='.repeat(60));
+  console.log('\n💡 If all tests pass but admin still shows 0:');
+  console.log('   → Frontend issue (check browser console)');
+  console.log('   → Check Network tab in DevTools');
+  console.log('   → Verify auth token is being sent\n');
+}
+
+runTests();

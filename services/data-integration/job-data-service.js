@@ -5,7 +5,7 @@
  * and actual data from database.
  */
 
-const { db } = require('../../db/database');
+const { db } = require('../../db');
 
 class JobDataService {
   /**

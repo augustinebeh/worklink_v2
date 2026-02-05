@@ -1,0 +1,19 @@
+{
+  "passed": [],
+  "failed": [
+    {
+      "test": "Test execution",
+      "details": "page.goto: net::ERR_CONNECTION_REFUSED at http://localhost:5173/admin/login\nCall log:\n\u001b[2m  - navigating to \"http://localhost:5173/admin/login\", waiting until \"load\"\u001b[22m\n",
+      "timestamp": "2026-02-04T16:06:09.173Z"
+    }
+  ],
+  "warnings": [],
+  "timestamp": "2026-02-04T16:06:08.736Z",
+  "screenshots": [
+    {
+      "name": "error-state",
+      "filename": "error-state-1770221169173.png",
+      "filepath": "/home/augustine/Augustine_Projects/worklink_v2/admin/test-screenshots/error-state-1770221169173.png"
+    }
+  ]
+}

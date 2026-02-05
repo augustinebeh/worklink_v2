@@ -13,7 +13,7 @@
  * - Response caching for common queries
  */
 
-const { db } = require('../db/database');
+const { db } = require('../db');
 
 // API Configuration
 const CLAUDE_API_URL = 'https://api.anthropic.com/v1/messages';

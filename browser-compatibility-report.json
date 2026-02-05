@@ -1,0 +1,18 @@
+{
+  "timestamp": "2026-02-05T10:27:08.147Z",
+  "summary": "Browser compatibility analysis completed",
+  "issues": {
+    "critical": [
+      "ES modules without legacy fallback",
+      "No IE11 support"
+    ],
+    "warnings": [
+      "Large bundle size",
+      "No polyfills detected"
+    ],
+    "recommendations": [
+      "Add legacy plugin",
+      "Implement error boundaries"
+    ]
+  }
+}

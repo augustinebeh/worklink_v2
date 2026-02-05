@@ -5,7 +5,7 @@
  * pending/approved/rejected status with real reasons.
  */
 
-const { db } = require('../../db/database');
+const { db } = require('../../db');
 
 class AccountDataService {
   /**

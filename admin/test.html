@@ -1,0 +1,219 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Admin Portal Test</title>
+    <style>
+        body {
+            font-family: Arial, sans-serif;
+            margin: 0;
+            padding: 20px;
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            color: white;
+        }
+        .container {
+            max-width: 800px;
+            margin: 0 auto;
+            background: rgba(255, 255, 255, 0.1);
+            padding: 30px;
+            border-radius: 10px;
+            backdrop-filter: blur(10px);
+        }
+        .status-card {
+            background: rgba(255, 255, 255, 0.2);
+            padding: 20px;
+            margin: 10px 0;
+            border-radius: 8px;
+            border-left: 4px solid #4CAF50;
+        }
+        .error-card {
+            background: rgba(255, 0, 0, 0.2);
+            border-left-color: #f44336;
+        }
+        button {
+            background: #4CAF50;
+            color: white;
+            border: none;
+            padding: 10px 20px;
+            border-radius: 5px;
+            cursor: pointer;
+            margin: 5px;
+        }
+        button:hover {
+            background: #45a049;
+        }
+        .nav-link {
+            display: inline-block;
+            margin: 5px 10px;
+            color: white;
+            text-decoration: none;
+            padding: 10px 15px;
+            background: rgba(255, 255, 255, 0.2);
+            border-radius: 5px;
+        }
+        .nav-link:hover {
+            background: rgba(255, 255, 255, 0.3);
+        }
+        #test-results {
+            margin-top: 20px;
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <h1>🚀 WorkLink Admin Portal Test</h1>
+
+        <div class="status-card">
+            <h3>✅ Basic Server Test - PASSING</h3>
+            <p>Static HTML loading successfully at /admin/test</p>
+        </div>
+
+        <div class="status-card">
+            <h3>🔗 Quick Navigation</h3>
+            <a href="/admin/" class="nav-link">Admin Portal (React)</a>
+            <a href="/worker/" class="nav-link">Worker Portal</a>
+            <a href="/admin/test" class="nav-link">This Test Page</a>
+            <a href="/api/v1/status" class="nav-link">API Status</a>
+        </div>
+
+        <div class="status-card">
+            <h3>🔧 Emergency Admin Functions</h3>
+            <button onclick="testAPI()">Test API Connection</button>
+            <button onclick="testAuth()">Test Authentication</button>
+            <button onclick="testDatabase()">Test Database</button>
+            <button onclick="createMockData()">Create Test Data</button>
+        </div>
+
+        <div class="status-card">
+            <h3>📊 Quick Stats</h3>
+            <div id="stats">Loading...</div>
+        </div>
+
+        <div id="test-results"></div>
+
+        <div class="status-card">
+            <h3>🛠️ Emergency Admin Actions</h3>
+            <p>If React portal is not working, you can use these alternatives:</p>
+            <button onclick="window.open('/admin/emergency.html', '_blank')">Emergency Dashboard</button>
+            <button onclick="directDatabaseAccess()">Database Console</button>
+            <button onclick="showSystemStatus()">System Status</button>
+        </div>
+    </div>
+
+    <script>
+        // Test functions
+        async function testAPI() {
+            showResult('Testing API connection...', 'info');
+            try {
+                const response = await fetch('/api/v1/status');
+                if (response.ok) {
+                    const data = await response.json();
+                    showResult('✅ API Connected: ' + JSON.stringify(data), 'success');
+                } else {
+                    showResult('❌ API Error: ' + response.status, 'error');
+                }
+            } catch (error) {
+                showResult('❌ API Connection Failed: ' + error.message, 'error');
+            }
+        }
+
+        async function testAuth() {
+            showResult('Testing authentication...', 'info');
+            try {
+                const response = await fetch('/api/v1/admin/auth/verify', {
+                    credentials: 'include'
+                });
+                if (response.ok) {
+                    showResult('✅ Authentication Working', 'success');
+                } else {
+                    showResult('⚠️ Authentication Required - Status: ' + response.status, 'warning');
+                }
+            } catch (error) {
+                showResult('❌ Auth Test Failed: ' + error.message, 'error');
+            }
+        }
+
+        async function testDatabase() {
+            showResult('Testing database connection...', 'info');
+            try {
+                const response = await fetch('/api/v1/admin/stats/quick');
+                if (response.ok) {
+                    const data = await response.json();
+                    showResult('✅ Database Connected: ' + JSON.stringify(data), 'success');
+                } else {
+                    showResult('❌ Database Error: ' + response.status, 'error');
+                }
+            } catch (error) {
+                showResult('❌ Database Connection Failed: ' + error.message, 'error');
+            }
+        }
+
+        async function createMockData() {
+            showResult('Creating test data...', 'info');
+            try {
+                const response = await fetch('/api/v1/admin/test/create-sample', {
+                    method: 'POST',
+                    credentials: 'include'
+                });
+                if (response.ok) {
+                    showResult('✅ Test data created successfully', 'success');
+                } else {
+                    showResult('❌ Failed to create test data: ' + response.status, 'error');
+                }
+            } catch (error) {
+                showResult('❌ Test data creation failed: ' + error.message, 'error');
+            }
+        }
+
+        function directDatabaseAccess() {
+            showResult('Database console would open here in a real implementation', 'info');
+            // This would typically open a database administration interface
+        }
+
+        function showSystemStatus() {
+            showResult('Showing system status...', 'info');
+            loadStats();
+        }
+
+        function showResult(message, type) {
+            const results = document.getElementById('test-results');
+            const div = document.createElement('div');
+            div.className = 'status-card';
+            if (type === 'error') div.className += ' error-card';
+            div.innerHTML = '<p>' + message + '</p>';
+            results.appendChild(div);
+        }
+
+        async function loadStats() {
+            try {
+                const response = await fetch('/api/v1/admin/stats/dashboard');
+                if (response.ok) {
+                    const stats = await response.json();
+                    document.getElementById('stats').innerHTML =
+                        '<p><strong>Total Jobs:</strong> ' + (stats.totalJobs || 'Unknown') + '</p>' +
+                        '<p><strong>Active Workers:</strong> ' + (stats.activeWorkers || 'Unknown') + '</p>' +
+                        '<p><strong>System Status:</strong> ' + (stats.status || 'Running') + '</p>';
+                } else {
+                    document.getElementById('stats').innerHTML =
+                        '<p style="color: #ffeb3b;">⚠️ Could not load stats - Admin authentication may be required</p>';
+                }
+            } catch (error) {
+                document.getElementById('stats').innerHTML =
+                    '<p style="color: #f44336;">❌ Stats loading error: ' + error.message + '</p>';
+            }
+        }
+
+        // Auto-load stats on page load
+        window.addEventListener('load', loadStats);
+
+        // Auto-test basic functionality
+        window.addEventListener('load', function() {
+            setTimeout(() => {
+                showResult('✅ Page loaded successfully at ' + new Date().toLocaleString(), 'success');
+                showResult('🔍 Click buttons above to test specific functionality', 'info');
+            }, 500);
+        });
+    </script>
+</body>
+</html>

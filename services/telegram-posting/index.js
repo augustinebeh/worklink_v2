@@ -5,7 +5,7 @@
  * with A/B testing and ML optimization integration.
  */
 
-const { db } = require('../../db/database');
+const { db } = require('../../db');
 const telegram = require('../messaging/telegram');
 const adML = require('../ad-ml');
 const abTesting = require('../ad-ml/ab-testing');

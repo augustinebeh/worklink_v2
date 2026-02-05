@@ -1,0 +1,511 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Login Functionality Test</title>
+    <style>
+        body {
+            font-family: Arial, sans-serif;
+            max-width: 800px;
+            margin: 0 auto;
+            padding: 20px;
+            background-color: #f5f5f5;
+        }
+        .container {
+            background: white;
+            padding: 30px;
+            border-radius: 8px;
+            box-shadow: 0 2px 10px rgba(0,0,0,0.1);
+        }
+        .test-section {
+            margin-bottom: 30px;
+            padding: 20px;
+            border: 1px solid #ddd;
+            border-radius: 5px;
+        }
+        .test-section h3 {
+            margin-top: 0;
+            color: #333;
+        }
+        .form-group {
+            margin-bottom: 15px;
+        }
+        label {
+            display: block;
+            margin-bottom: 5px;
+            font-weight: bold;
+        }
+        input, select {
+            width: 100%;
+            padding: 8px;
+            border: 1px solid #ddd;
+            border-radius: 4px;
+            font-size: 14px;
+        }
+        button {
+            background-color: #007bff;
+            color: white;
+            padding: 10px 20px;
+            border: none;
+            border-radius: 4px;
+            cursor: pointer;
+            margin-right: 10px;
+        }
+        button:hover {
+            background-color: #0056b3;
+        }
+        .result {
+            margin-top: 15px;
+            padding: 10px;
+            border-radius: 4px;
+            white-space: pre-wrap;
+            font-family: monospace;
+            font-size: 12px;
+        }
+        .success {
+            background-color: #d4edda;
+            border: 1px solid #c3e6cb;
+            color: #155724;
+        }
+        .error {
+            background-color: #f8d7da;
+            border: 1px solid #f5c6cb;
+            color: #721c24;
+        }
+        .info {
+            background-color: #d1ecf1;
+            border: 1px solid #bee5eb;
+            color: #0c5460;
+        }
+        .storage-display {
+            margin-top: 10px;
+            padding: 10px;
+            background-color: #f8f9fa;
+            border: 1px solid #dee2e6;
+            border-radius: 4px;
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <h1>🔐 WorkLink Admin Login Functionality Test</h1>
+        <p>This page tests the complete login functionality including session management, API calls, and error handling.</p>
+
+        <!-- Test 1: Login Form -->
+        <div class="test-section">
+            <h3>1. Login Test</h3>
+            <div class="form-group">
+                <label for="email">Email:</label>
+                <input type="email" id="email" value="admin@worklink.sg">
+            </div>
+            <div class="form-group">
+                <label for="password">Password:</label>
+                <input type="password" id="password" value="admin123">
+            </div>
+            <div class="form-group">
+                <label for="type">User Type:</label>
+                <select id="type">
+                    <option value="admin">Admin</option>
+                    <option value="candidate">Candidate</option>
+                </select>
+            </div>
+            <button onclick="testLogin()">Login</button>
+            <button onclick="testInvalidLogin()">Test Invalid Login</button>
+            <div id="loginResult" class="result"></div>
+        </div>
+
+        <!-- Test 2: Session Storage -->
+        <div class="test-section">
+            <h3>2. Session Storage Test</h3>
+            <button onclick="checkSessionStorage()">Check Session Storage</button>
+            <button onclick="clearSessionStorage()">Clear Session Storage</button>
+            <div id="storageResult" class="result"></div>
+            <div id="storageDisplay" class="storage-display">
+                <strong>Current Session Storage:</strong>
+                <div id="storageContent"></div>
+            </div>
+        </div>
+
+        <!-- Test 3: Token Verification -->
+        <div class="test-section">
+            <h3>3. Token Verification Test</h3>
+            <button onclick="testTokenVerification()">Test Token (/me)</button>
+            <button onclick="testAuthenticatedRequest()">Test Authenticated Request</button>
+            <div id="tokenResult" class="result"></div>
+        </div>
+
+        <!-- Test 4: Auto-Login on Refresh -->
+        <div class="test-section">
+            <h3>4. Persistence Test</h3>
+            <button onclick="simulateRefresh()">Simulate Page Refresh</button>
+            <button onclick="testAutoAuth()">Test Auto Authentication</button>
+            <div id="refreshResult" class="result"></div>
+        </div>
+
+        <!-- Test 5: Logout -->
+        <div class="test-section">
+            <h3>5. Logout Test</h3>
+            <button onclick="testLogout()">Logout</button>
+            <div id="logoutResult" class="result"></div>
+        </div>
+
+        <!-- Live Storage Monitor -->
+        <div class="test-section">
+            <h3>6. Live Storage Monitor</h3>
+            <p>This section shows real-time session storage contents:</p>
+            <div id="liveStorage" class="storage-display"></div>
+        </div>
+    </div>
+
+    <script>
+        // Base API URL
+        const API_BASE = '/api/v1';
+
+        // Helper function to display results
+        function displayResult(elementId, message, type = 'info') {
+            const element = document.getElementById(elementId);
+            element.className = `result ${type}`;
+            element.textContent = message;
+        }
+
+        // Helper function to display JSON
+        function displayJSON(elementId, data, type = 'info') {
+            const element = document.getElementById(elementId);
+            element.className = `result ${type}`;
+            element.textContent = JSON.stringify(data, null, 2);
+        }
+
+        // Test login functionality
+        async function testLogin() {
+            const email = document.getElementById('email').value;
+            const password = document.getElementById('password').value;
+            const type = document.getElementById('type').value;
+
+            try {
+                displayResult('loginResult', 'Attempting login...', 'info');
+
+                const response = await fetch(`${API_BASE}/auth/login`, {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json',
+                    },
+                    body: JSON.stringify({ email, password, type })
+                });
+
+                const data = await response.json();
+
+                if (response.ok && data.success) {
+                    // Store token and user data
+                    sessionStorage.setItem('admin_token', data.token);
+                    sessionStorage.setItem('admin_user', JSON.stringify(data.data));
+
+                    displayJSON('loginResult', {
+                        status: 'Login Successful',
+                        user: data.data,
+                        tokenLength: data.token.length,
+                        storedInSession: true
+                    }, 'success');
+                } else {
+                    displayJSON('loginResult', {
+                        status: 'Login Failed',
+                        error: data.error || 'Unknown error',
+                        response: data
+                    }, 'error');
+                }
+            } catch (error) {
+                displayResult('loginResult', `Login Error: ${error.message}`, 'error');
+            }
+
+            updateStorageDisplay();
+        }
+
+        // Test invalid login
+        async function testInvalidLogin() {
+            try {
+                displayResult('loginResult', 'Testing invalid credentials...', 'info');
+
+                const response = await fetch(`${API_BASE}/auth/login`, {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json',
+                    },
+                    body: JSON.stringify({
+                        email: 'wrong@email.com',
+                        password: 'wrongpass',
+                        type: 'admin'
+                    })
+                });
+
+                const data = await response.json();
+
+                displayJSON('loginResult', {
+                    status: 'Invalid Login Test',
+                    expectedResult: 'Should fail with 401',
+                    actualStatus: response.status,
+                    actualResponse: data,
+                    testPassed: !response.ok && response.status === 401
+                }, !response.ok ? 'success' : 'error');
+
+            } catch (error) {
+                displayResult('loginResult', `Invalid Login Test Error: ${error.message}`, 'error');
+            }
+        }
+
+        // Check session storage
+        function checkSessionStorage() {
+            const token = sessionStorage.getItem('admin_token');
+            const user = sessionStorage.getItem('admin_user');
+
+            const storageData = {
+                hasToken: !!token,
+                tokenLength: token ? token.length : 0,
+                tokenPreview: token ? token.substring(0, 50) + '...' : null,
+                hasUser: !!user,
+                userData: user ? JSON.parse(user) : null,
+                storageItemCount: sessionStorage.length,
+                allKeys: Object.keys(sessionStorage)
+            };
+
+            displayJSON('storageResult', storageData, token && user ? 'success' : 'info');
+            updateStorageDisplay();
+        }
+
+        // Clear session storage
+        function clearSessionStorage() {
+            sessionStorage.removeItem('admin_token');
+            sessionStorage.removeItem('admin_user');
+            localStorage.removeItem('admin_token'); // Also clear localStorage
+            localStorage.removeItem('admin_user');
+
+            displayResult('storageResult', 'Session storage cleared', 'success');
+            updateStorageDisplay();
+        }
+
+        // Test token verification
+        async function testTokenVerification() {
+            const token = sessionStorage.getItem('admin_token');
+
+            if (!token) {
+                displayResult('tokenResult', 'No token found in session storage', 'error');
+                return;
+            }
+
+            try {
+                displayResult('tokenResult', 'Testing token verification...', 'info');
+
+                const response = await fetch(`${API_BASE}/auth/me`, {
+                    method: 'GET',
+                    headers: {
+                        'Authorization': `Bearer ${token}`,
+                        'Content-Type': 'application/json'
+                    }
+                });
+
+                const data = await response.json();
+
+                displayJSON('tokenResult', {
+                    status: 'Token Verification',
+                    responseStatus: response.status,
+                    success: data.success,
+                    data: data,
+                    tokenValid: response.ok && data.success
+                }, response.ok && data.success ? 'success' : 'error');
+
+            } catch (error) {
+                displayResult('tokenResult', `Token Verification Error: ${error.message}`, 'error');
+            }
+        }
+
+        // Test authenticated request
+        async function testAuthenticatedRequest() {
+            const token = sessionStorage.getItem('admin_token');
+
+            if (!token) {
+                displayResult('tokenResult', 'No token found for authenticated request', 'error');
+                return;
+            }
+
+            try {
+                displayResult('tokenResult', 'Testing authenticated request...', 'info');
+
+                const response = await fetch(`${API_BASE}/auth/health`, {
+                    method: 'GET',
+                    headers: {
+                        'Authorization': `Bearer ${token}`,
+                        'Content-Type': 'application/json'
+                    }
+                });
+
+                const data = await response.json();
+
+                displayJSON('tokenResult', {
+                    status: 'Authenticated Request Test',
+                    endpoint: '/auth/health',
+                    responseStatus: response.status,
+                    success: data.success,
+                    data: data
+                }, response.ok ? 'success' : 'error');
+
+            } catch (error) {
+                displayResult('tokenResult', `Authenticated Request Error: ${error.message}`, 'error');
+            }
+        }
+
+        // Simulate page refresh
+        function simulateRefresh() {
+            displayResult('refreshResult', 'Simulating page refresh...', 'info');
+
+            // Check if authentication persists
+            setTimeout(() => {
+                const token = sessionStorage.getItem('admin_token');
+                const user = sessionStorage.getItem('admin_user');
+
+                displayJSON('refreshResult', {
+                    status: 'Page Refresh Simulation',
+                    tokenPersisted: !!token,
+                    userPersisted: !!user,
+                    authenticationMaintained: !!(token && user),
+                    userData: user ? JSON.parse(user) : null
+                }, (token && user) ? 'success' : 'error');
+            }, 500);
+        }
+
+        // Test auto-authentication
+        async function testAutoAuth() {
+            const token = sessionStorage.getItem('admin_token');
+            const user = sessionStorage.getItem('admin_user');
+
+            if (!token || !user) {
+                displayResult('refreshResult', 'No stored authentication data found', 'error');
+                return;
+            }
+
+            try {
+                displayResult('refreshResult', 'Testing auto-authentication...', 'info');
+
+                // Simulate what the app would do on load
+                const response = await fetch(`${API_BASE}/auth/me`, {
+                    method: 'GET',
+                    headers: {
+                        'Authorization': `Bearer ${token}`,
+                        'Content-Type': 'application/json'
+                    }
+                });
+
+                const data = await response.json();
+
+                displayJSON('refreshResult', {
+                    status: 'Auto-Authentication Test',
+                    storedToken: !!token,
+                    storedUser: JSON.parse(user),
+                    verificationResult: data,
+                    autoAuthSuccessful: response.ok && data.success,
+                    readyToRedirectToDashboard: response.ok && data.success
+                }, response.ok && data.success ? 'success' : 'error');
+
+            } catch (error) {
+                displayResult('refreshResult', `Auto-Auth Error: ${error.message}`, 'error');
+            }
+        }
+
+        // Test logout
+        async function testLogout() {
+            const token = sessionStorage.getItem('admin_token');
+
+            try {
+                displayResult('logoutResult', 'Testing logout...', 'info');
+
+                // First try to call logout endpoint if token exists
+                if (token) {
+                    try {
+                        const response = await fetch(`${API_BASE}/auth/logout`, {
+                            method: 'POST',
+                            headers: {
+                                'Authorization': `Bearer ${token}`,
+                                'Content-Type': 'application/json'
+                            }
+                        });
+
+                        const data = await response.json();
+
+                        displayJSON('logoutResult', {
+                            status: 'Logout API Call',
+                            responseStatus: response.status,
+                            data: data,
+                            apiCallSuccessful: response.ok
+                        }, response.ok ? 'success' : 'info');
+
+                    } catch (error) {
+                        displayResult('logoutResult', `Logout API Error (continuing with local cleanup): ${error.message}`, 'info');
+                    }
+                }
+
+                // Always clear local storage (as the auth service does)
+                sessionStorage.removeItem('admin_token');
+                sessionStorage.removeItem('admin_user');
+                localStorage.removeItem('admin_token');
+                localStorage.removeItem('admin_user');
+
+                setTimeout(() => {
+                    const remainingToken = sessionStorage.getItem('admin_token');
+                    const remainingUser = sessionStorage.getItem('admin_user');
+
+                    displayJSON('logoutResult', {
+                        status: 'Logout Complete',
+                        localDataCleared: !remainingToken && !remainingUser,
+                        tokenRemoved: !remainingToken,
+                        userRemoved: !remainingUser,
+                        readyForNewLogin: true
+                    }, !remainingToken && !remainingUser ? 'success' : 'error');
+
+                    updateStorageDisplay();
+                }, 100);
+
+            } catch (error) {
+                displayResult('logoutResult', `Logout Error: ${error.message}`, 'error');
+            }
+        }
+
+        // Update storage display
+        function updateStorageDisplay() {
+            const storageContent = document.getElementById('storageContent');
+            const liveStorage = document.getElementById('liveStorage');
+
+            const sessionData = {
+                admin_token: sessionStorage.getItem('admin_token') ?
+                    sessionStorage.getItem('admin_token').substring(0, 50) + '...' : null,
+                admin_user: sessionStorage.getItem('admin_user') ?
+                    JSON.parse(sessionStorage.getItem('admin_user')) : null,
+                localStorage_token: localStorage.getItem('admin_token') ? 'Present' : null,
+                localStorage_user: localStorage.getItem('admin_user') ? 'Present' : null
+            };
+
+            const displayText = JSON.stringify(sessionData, null, 2);
+            storageContent.textContent = displayText;
+            liveStorage.innerHTML = '<pre>' + displayText + '</pre>';
+        }
+
+        // Initialize page
+        document.addEventListener('DOMContentLoaded', function() {
+            updateStorageDisplay();
+
+            // Set up live storage monitoring
+            setInterval(updateStorageDisplay, 1000);
+
+            // Check initial auth state
+            const token = sessionStorage.getItem('admin_token');
+            const user = sessionStorage.getItem('admin_user');
+
+            if (token && user) {
+                displayJSON('storageResult', {
+                    status: 'Existing Session Detected',
+                    user: JSON.parse(user),
+                    tokenLength: token.length,
+                    authenticated: true
+                }, 'success');
+            }
+        });
+    </script>
+</body>
+</html>

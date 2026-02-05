@@ -1,9 +1,9 @@
 import { useState, useEffect } from 'react';
 import { Link } from 'react-router-dom';
-import { 
-  UsersIcon, 
-  BriefcaseIcon, 
-  DollarSignIcon, 
+import {
+  UsersIcon,
+  BriefcaseIcon,
+  DollarSignIcon,
   TrendingUpIcon,
   CalendarIcon,
   ClockIcon,
@@ -24,18 +24,19 @@ import {
   BookOpenIcon,
   HelpCircleIcon,
 } from 'lucide-react';
-import { 
-  AreaChart, 
-  Area, 
-  XAxis, 
-  YAxis, 
-  CartesianGrid, 
-  Tooltip, 
+import {
+  AreaChart,
+  Area,
+  XAxis,
+  YAxis,
+  CartesianGrid,
+  Tooltip,
   ResponsiveContainer,
   ComposedChart,
   Bar,
   Legend,
 } from 'recharts';
+import { api } from '../shared/services/api';
 import Card, { CardHeader, CardTitle, CardContent } from '../components/ui/Card';
 import Badge from '../components/ui/Badge';
 import Button from '../components/ui/Button';
@@ -245,17 +246,14 @@ export default function Dashboard() {
 
   const fetchData = async () => {
     try {
-      const [analyticsRes, financialRes] = await Promise.all([
-        fetch('/api/v1/analytics/dashboard'),
-        fetch('/api/v1/analytics/financial/dashboard'),
+      const [analyticsData, finData] = await Promise.all([
+        api.analytics.getDashboard(),
+        api.analytics.getFinancialDashboard(),
       ]);
-      
-      const analyticsData = await analyticsRes.json();
-      const finData = await financialRes.json();
-      
+
       if (analyticsData.success) setData(analyticsData.data);
       if (finData.success) setFinancialData(finData.data);
-      
+
       // Auto-complete onboarding steps based on data
       const autoComplete = ['welcome'];
       if (analyticsData.data?.clients?.total > 0) autoComplete.push('add_client');

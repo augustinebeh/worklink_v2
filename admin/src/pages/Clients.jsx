@@ -1,13 +1,14 @@
 import { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
-import { 
-  PlusIcon, 
-  SearchIcon, 
+import {
+  PlusIcon,
+  SearchIcon,
   BuildingIcon,
   PhoneIcon,
   MailIcon,
   BriefcaseIcon,
 } from 'lucide-react';
+import { api } from '../shared/services/api';
 import Card from '../components/ui/Card';
 import Badge, { StatusBadge } from '../components/ui/Badge';
 import Button from '../components/ui/Button';
@@ -39,8 +40,7 @@ export default function Clients() {
 
   const fetchClients = async () => {
     try {
-      const res = await fetch('/api/v1/clients');
-      const data = await res.json();
+      const data = await api.clients.getAll();
       if (data.success) {
         setClients(data.data);
       }
@@ -53,12 +53,7 @@ export default function Clients() {
 
   const handleCreateClient = async () => {
     try {
-      const res = await fetch('/api/v1/clients', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify(formData),
-      });
-      const data = await res.json();
+      const data = await api.clients.create(formData);
       if (data.success) {
         setShowAddModal(false);
         setFormData({

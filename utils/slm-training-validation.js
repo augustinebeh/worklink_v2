@@ -6,7 +6,7 @@
  * and other problematic patterns.
  */
 
-const { db } = require('../db/database');
+const { db } = require('../db');
 
 /**
  * Validate training data entry for problematic content

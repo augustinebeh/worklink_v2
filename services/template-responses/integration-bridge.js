@@ -6,7 +6,7 @@
  */
 
 const FactBasedTemplateSystem = require('./index');
-const { db } = require('../../db/database');
+const { db } = require('../../db');
 
 class TemplateIntegrationBridge {
   constructor() {

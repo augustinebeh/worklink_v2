@@ -1,0 +1,1307 @@
+{
+  "routes": [
+    {
+      "file": "routes/api/v1/ad-ml.js",
+      "refactoredModules": [],
+      "oldModules": [],
+      "imports": [
+        "express",
+        "../../../services/ad-ml",
+        "../../../services/ad-ml/ab-testing",
+        "../../../services/ad-ml/timing",
+        "../../../services/ad-ml/trainer"
+      ]
+    },
+    {
+      "file": "routes/api/v1/admin-escalation.js",
+      "refactoredModules": [],
+      "oldModules": [],
+      "imports": [
+        "express",
+        "../../../services/admin-escalation-system",
+        "../../../utils/structured-logger",
+        "../../../db",
+        "../../../db"
+      ]
+    },
+    {
+      "file": "routes/api/v1/admin.js",
+      "refactoredModules": [],
+      "oldModules": [],
+      "imports": [
+        "express",
+        "../../../db"
+      ]
+    },
+    {
+      "file": "routes/api/v1/ai-automation/analytics/routes.js",
+      "refactoredModules": [],
+      "oldModules": [],
+      "imports": [
+        "express",
+        "../../../../../db",
+        "../../../../../utils/campaign-analytics"
+      ]
+    },
+    {
+      "file": "routes/api/v1/ai-automation/assistant/routes.js",
+      "refactoredModules": [],
+      "oldModules": [],
+      "imports": [
+        "express",
+        "../../../../../db",
+        "../../../../../utils/claude"
+      ]
+    },
+    {
+      "file": "routes/api/v1/ai-automation/engagement/routes.js",
+      "refactoredModules": [],
+      "oldModules": [],
+      "imports": [
+        "express",
+        "../../../../../utils/engagement-tracking"
+      ]
+    },
+    {
+      "file": "routes/api/v1/ai-automation/follow-up/routes.js",
+      "refactoredModules": [],
+      "oldModules": [],
+      "imports": [
+        "express",
+        "../../../../../db",
+        "../../../../../utils/follow-up-automation"
+      ]
+    },
+    {
+      "file": "routes/api/v1/ai-automation/gebiz/routes.js",
+      "refactoredModules": [],
+      "oldModules": [],
+      "imports": [
+        "express",
+        "../../../../../db",
+        "../utils/scraping-helpers",
+        "../../../../../utils/scraping/gebiz-scraper",
+        "../../../../../utils/scraping/scraping-monitor",
+        "../../../../../utils/scraping/data-validator"
+      ]
+    },
+    {
+      "file": "routes/api/v1/ai-automation/index.js",
+      "refactoredModules": [],
+      "oldModules": [],
+      "imports": [
+        "express",
+        "./gebiz/routes",
+        "./tenders/analysis.routes",
+        "./sourcing/routes",
+        "./assistant/routes",
+        "./outreach/routes",
+        "./engagement/routes",
+        "./follow-up/routes",
+        "./analytics/routes",
+        "../../../db",
+        "../../../utils/claude"
+      ]
+    },
+    {
+      "file": "routes/api/v1/ai-automation/outreach/routes.js",
+      "refactoredModules": [],
+      "oldModules": [],
+      "imports": [
+        "express",
+        "../../../../../db",
+        "../../../../../utils/outreach-automation"
+      ]
+    },
+    {
+      "file": "routes/api/v1/ai-automation/sourcing/routes.js",
+      "refactoredModules": [],
+      "oldModules": [],
+      "imports": [
+        "express",
+        "../../../../../db",
+        "../../../../../utils/claude",
+        "../../../../../utils/candidate-matching",
+        "../utils/posting-generators",
+        "../utils/message-templates"
+      ]
+    },
+    {
+      "file": "routes/api/v1/ai-automation/tenders/analysis.routes.js",
+      "refactoredModules": [],
+      "oldModules": [],
+      "imports": [
+        "express",
+        "../../../../../db",
+        "../../../../../utils/claude",
+        "../utils/scraping-helpers"
+      ]
+    },
+    {
+      "file": "routes/api/v1/ai-automation/utils/message-templates.js",
+      "refactoredModules": [],
+      "oldModules": [],
+      "imports": [
+        "../../../../../shared/constants"
+      ]
+    },
+    {
+      "file": "routes/api/v1/ai-automation/utils/posting-generators.js",
+      "refactoredModules": [],
+      "oldModules": [],
+      "imports": []
+    },
+    {
+      "file": "routes/api/v1/ai-automation/utils/scraping-helpers.js",
+      "refactoredModules": [],
+      "oldModules": [],
+      "imports": []
+    },
+    {
+      "file": "routes/api/v1/ai-automation-wrapper.js",
+      "refactoredModules": [],
+      "oldModules": [],
+      "imports": [
+        "./ai-automation",
+        "./ai-automation"
+      ]
+    },
+    {
+      "file": "routes/api/v1/ai-chat.js",
+      "refactoredModules": [],
+      "oldModules": [],
+      "imports": [
+        "express",
+        "../../../services/ai-chat",
+        "../../../db",
+        "../../../services/ml"
+      ]
+    },
+    {
+      "file": "routes/api/v1/analytics.js",
+      "refactoredModules": [],
+      "oldModules": [],
+      "imports": [
+        "express",
+        "../../../db",
+        "../../../shared/constants"
+      ]
+    },
+    {
+      "file": "routes/api/v1/auth/helpers/auth-utils.js",
+      "refactoredModules": [],
+      "oldModules": [],
+      "imports": [
+        "crypto",
+        "axios",
+        "../../../../../utils/logger",
+        "../../../../../db"
+      ]
+    },
+    {
+      "file": "routes/api/v1/auth/helpers/token-manager.js",
+      "refactoredModules": [],
+      "oldModules": [],
+      "imports": [
+        "../../../../../middleware/auth"
+      ]
+    },
+    {
+      "file": "routes/api/v1/auth/helpers/validation.js",
+      "refactoredModules": [],
+      "oldModules": [],
+      "imports": [
+        "../../../../../middleware/validation"
+      ]
+    },
+    {
+      "file": "routes/api/v1/auth/index.js",
+      "refactoredModules": [],
+      "oldModules": [],
+      "imports": [
+        "express",
+        "./routes/core",
+        "./routes/worker",
+        "./routes/telegram",
+        "./routes/google",
+        "./routes/tokens"
+      ]
+    },
+    {
+      "file": "routes/api/v1/auth/routes/core.js",
+      "refactoredModules": [],
+      "oldModules": [],
+      "imports": [
+        "express",
+        "../../../../../db",
+        "../helpers/validation",
+        "../helpers/token-manager",
+        "../../../../../utils/logger"
+      ]
+    },
+    {
+      "file": "routes/api/v1/auth/routes/google.js",
+      "refactoredModules": [],
+      "oldModules": [],
+      "imports": [
+        "express",
+        "../../../../../db",
+        "../helpers/auth-utils",
+        "../helpers/token-manager",
+        "../../../../../utils/logger"
+      ]
+    },
+    {
+      "file": "routes/api/v1/auth/routes/telegram.js",
+      "refactoredModules": [],
+      "oldModules": [],
+      "imports": [
+        "express",
+        "../../../../../db",
+        "../helpers/auth-utils",
+        "../helpers/token-manager",
+        "../../../../../utils/logger"
+      ]
+    },
+    {
+      "file": "routes/api/v1/auth/routes/tokens.js",
+      "refactoredModules": [],
+      "oldModules": [],
+      "imports": [
+        "express",
+        "../../../../../db"
+      ]
+    },
+    {
+      "file": "routes/api/v1/auth/routes/worker.js",
+      "refactoredModules": [],
+      "oldModules": [],
+      "imports": [
+        "express",
+        "../../../../../db",
+        "../helpers/token-manager",
+        "../../../../../utils/logger"
+      ]
+    },
+    {
+      "file": "routes/api/v1/availability.js",
+      "refactoredModules": [],
+      "oldModules": [],
+      "imports": [
+        "express",
+        "../../../db",
+        "../../../shared/constants"
+      ]
+    },
+    {
+      "file": "routes/api/v1/bpo/helpers/metrics-calculator.js",
+      "refactoredModules": [],
+      "oldModules": [],
+      "imports": []
+    },
+    {
+      "file": "routes/api/v1/bpo/helpers/project-validator.js",
+      "refactoredModules": [],
+      "oldModules": [],
+      "imports": []
+    },
+    {
+      "file": "routes/api/v1/bpo/helpers/resource-optimizer.js",
+      "refactoredModules": [],
+      "oldModules": [],
+      "imports": []
+    },
+    {
+      "file": "routes/api/v1/bpo/routes/clients.js",
+      "refactoredModules": [],
+      "oldModules": [],
+      "imports": [
+        "express",
+        "../helpers/metrics-calculator",
+        "better-sqlite3",
+        "path",
+        "better-sqlite3",
+        "path",
+        "better-sqlite3",
+        "path",
+        "better-sqlite3",
+        "path",
+        "better-sqlite3",
+        "path"
+      ]
+    },
+    {
+      "file": "routes/api/v1/bpo.js",
+      "refactoredModules": [],
+      "oldModules": [],
+      "imports": [
+        "express",
+        "better-sqlite3",
+        "path",
+        "winston"
+      ]
+    },
+    {
+      "file": "routes/api/v1/candidates/helpers/avatar-utils.js",
+      "refactoredModules": [],
+      "oldModules": [],
+      "imports": []
+    },
+    {
+      "file": "routes/api/v1/candidates/helpers/query-builder.js",
+      "refactoredModules": [],
+      "oldModules": [],
+      "imports": []
+    },
+    {
+      "file": "routes/api/v1/candidates/index.js",
+      "refactoredModules": [],
+      "oldModules": [],
+      "imports": [
+        "express",
+        "./routes/list",
+        "./routes/profile",
+        "./routes/create",
+        "../../../../db"
+      ]
+    },
+    {
+      "file": "routes/api/v1/candidates/routes/create.js",
+      "refactoredModules": [],
+      "oldModules": [],
+      "imports": [
+        "express",
+        "../../../../../db",
+        "../../../../../middleware/auth",
+        "../../../../../middleware/database-validation",
+        "../helpers/avatar-utils"
+      ]
+    },
+    {
+      "file": "routes/api/v1/candidates/routes/list.js",
+      "refactoredModules": [],
+      "oldModules": [],
+      "imports": [
+        "express",
+        "../../../../../db",
+        "../../../../../middleware/auth",
+        "../helpers/avatar-utils",
+        "../helpers/query-builder"
+      ]
+    },
+    {
+      "file": "routes/api/v1/candidates/routes/profile.js",
+      "refactoredModules": [],
+      "oldModules": [],
+      "imports": [
+        "express",
+        "../../../../../db",
+        "../../../../../middleware/auth",
+        "../helpers/avatar-utils"
+      ]
+    },
+    {
+      "file": "routes/api/v1/chat/helpers/ai-replies.js",
+      "refactoredModules": [],
+      "oldModules": [],
+      "imports": [
+        "../../../../../utils/logger"
+      ]
+    },
+    {
+      "file": "routes/api/v1/chat/helpers/websocket-integration.js",
+      "refactoredModules": [],
+      "oldModules": [],
+      "imports": [
+        "../../../../../utils/logger",
+        "../../../../../websocket"
+      ]
+    },
+    {
+      "file": "routes/api/v1/chat/index.js",
+      "refactoredModules": [],
+      "oldModules": [],
+      "imports": [
+        "express",
+        "./routes/messages",
+        "./routes/conversations",
+        "../../../../db",
+        "./helpers/websocket-integration"
+      ]
+    },
+    {
+      "file": "routes/api/v1/chat/routes/conversations.js",
+      "refactoredModules": [],
+      "oldModules": [],
+      "imports": [
+        "express",
+        "../../../../../db",
+        "../../../../../middleware/auth",
+        "../helpers/websocket-integration",
+        "../../../../../utils/logger"
+      ]
+    },
+    {
+      "file": "routes/api/v1/chat/routes/messages.js",
+      "refactoredModules": [],
+      "oldModules": [],
+      "imports": [
+        "express",
+        "../../../../../db",
+        "../../../../../middleware/auth",
+        "../helpers/websocket-integration",
+        "../helpers/ai-replies",
+        "../../../../../services/messaging",
+        "../../../../../utils/logger"
+      ]
+    },
+    {
+      "file": "routes/api/v1/chat-attachments.js",
+      "refactoredModules": [],
+      "oldModules": [],
+      "imports": [
+        "express",
+        "../../../services/chat-attachments"
+      ]
+    },
+    {
+      "file": "routes/api/v1/clients.js",
+      "refactoredModules": [],
+      "oldModules": [],
+      "imports": [
+        "express",
+        "../../../db"
+      ]
+    },
+    {
+      "file": "routes/api/v1/consultant-performance/analytics/routes.js",
+      "refactoredModules": [],
+      "oldModules": [],
+      "imports": [
+        "express",
+        "../../../../../db",
+        "../../../../../utils/consultant-analytics-engine",
+        "../utils/helpers"
+      ]
+    },
+    {
+      "file": "routes/api/v1/consultant-performance/capacity/routes.js",
+      "refactoredModules": [],
+      "oldModules": [],
+      "imports": [
+        "express",
+        "../../../../../db",
+        "../../../../../utils/capacity-management"
+      ]
+    },
+    {
+      "file": "routes/api/v1/consultant-performance/dashboard/routes.js",
+      "refactoredModules": [],
+      "oldModules": [],
+      "imports": [
+        "express",
+        "../../../../../db",
+        "../../../../../utils/capacity-management",
+        "../../../../../utils/candidate-prequalification",
+        "../../../../../utils/candidate-retention-engine",
+        "../../../../../utils/reliability-scoring-system",
+        "../utils/helpers"
+      ]
+    },
+    {
+      "file": "routes/api/v1/consultant-performance/index.js",
+      "refactoredModules": [],
+      "oldModules": [],
+      "imports": [
+        "express",
+        "./capacity/routes",
+        "./prequalification/routes",
+        "./retention/routes",
+        "./reliability/routes",
+        "./sourcing/routes",
+        "./scheduling/routes",
+        "./slm-bridge/routes",
+        "./analytics/routes",
+        "./dashboard/routes"
+      ]
+    },
+    {
+      "file": "routes/api/v1/consultant-performance/prequalification/routes.js",
+      "refactoredModules": [],
+      "oldModules": [],
+      "imports": [
+        "express",
+        "../../../../../db",
+        "../../../../../utils/candidate-prequalification"
+      ]
+    },
+    {
+      "file": "routes/api/v1/consultant-performance/reliability/routes.js",
+      "refactoredModules": [],
+      "oldModules": [],
+      "imports": [
+        "express",
+        "../../../../../db",
+        "../../../../../utils/reliability-scoring-system"
+      ]
+    },
+    {
+      "file": "routes/api/v1/consultant-performance/retention/routes.js",
+      "refactoredModules": [],
+      "oldModules": [],
+      "imports": [
+        "express",
+        "../../../../../db",
+        "../../../../../utils/candidate-retention-engine"
+      ]
+    },
+    {
+      "file": "routes/api/v1/consultant-performance/scheduling/routes.js",
+      "refactoredModules": [],
+      "oldModules": [],
+      "imports": [
+        "express",
+        "../../../../../db",
+        "../../../../../utils/interview-scheduling-engine"
+      ]
+    },
+    {
+      "file": "routes/api/v1/consultant-performance/slm-bridge/routes.js",
+      "refactoredModules": [],
+      "oldModules": [],
+      "imports": [
+        "express",
+        "../../../../../db",
+        "../../../../../utils/slm-scheduling-bridge"
+      ]
+    },
+    {
+      "file": "routes/api/v1/consultant-performance/sourcing/routes.js",
+      "refactoredModules": [],
+      "oldModules": [],
+      "imports": [
+        "express",
+        "../../../../../db",
+        "../../../../../utils/candidate-sourcing-engine"
+      ]
+    },
+    {
+      "file": "routes/api/v1/consultant-performance/utils/helpers.js",
+      "refactoredModules": [],
+      "oldModules": [],
+      "imports": []
+    },
+    {
+      "file": "routes/api/v1/conversation-enhancement.js",
+      "refactoredModules": [],
+      "oldModules": [],
+      "imports": [
+        "express",
+        "better-sqlite3",
+        "path",
+        "../../../utils/conversation-ab-testing",
+        "../../../utils/slm-conversion-analytics",
+        "../../../utils/enhanced-conversation-flows",
+        "../../../utils/multilingual-conversation-engine"
+      ]
+    },
+    {
+      "file": "routes/api/v1/conversations.js",
+      "refactoredModules": [],
+      "oldModules": [],
+      "imports": [
+        "express",
+        "../../../db",
+        "../../../services/conversation-manager"
+      ]
+    },
+    {
+      "file": "routes/api/v1/data-integration/helpers/cache-manager.js",
+      "refactoredModules": [],
+      "oldModules": [],
+      "imports": []
+    },
+    {
+      "file": "routes/api/v1/data-integration/helpers/data-transformer.js",
+      "refactoredModules": [],
+      "oldModules": [],
+      "imports": []
+    },
+    {
+      "file": "routes/api/v1/data-integration/helpers/validation-engine.js",
+      "refactoredModules": [],
+      "oldModules": [],
+      "imports": [
+        "../../../../../db"
+      ]
+    },
+    {
+      "file": "routes/api/v1/data-integration/index.js",
+      "refactoredModules": [],
+      "oldModules": [],
+      "imports": [
+        "express",
+        "express-rate-limit",
+        "../../../../middleware/auth",
+        "./routes/candidates",
+        "./routes/payments",
+        "./routes/jobs",
+        "./routes/analytics",
+        "./routes/health"
+      ]
+    },
+    {
+      "file": "routes/api/v1/data-integration/routes/analytics.js",
+      "refactoredModules": [],
+      "oldModules": [],
+      "imports": [
+        "express",
+        "express-validator",
+        "../../../../../services/data-integration",
+        "../helpers/data-transformer",
+        "../helpers/cache-manager",
+        "../helpers/validation-engine"
+      ]
+    },
+    {
+      "file": "routes/api/v1/data-integration/routes/candidates.js",
+      "refactoredModules": [],
+      "oldModules": [],
+      "imports": [
+        "express",
+        "express-validator",
+        "../../../../../services/data-integration",
+        "../helpers/data-transformer",
+        "../helpers/cache-manager",
+        "../helpers/validation-engine"
+      ]
+    },
+    {
+      "file": "routes/api/v1/data-integration/routes/health.js",
+      "refactoredModules": [],
+      "oldModules": [],
+      "imports": [
+        "express",
+        "../../../../../services/data-integration",
+        "../helpers/cache-manager",
+        "../helpers/validation-engine",
+        "../helpers/data-transformer"
+      ]
+    },
+    {
+      "file": "routes/api/v1/data-integration/routes/jobs.js",
+      "refactoredModules": [],
+      "oldModules": [],
+      "imports": [
+        "express",
+        "express-validator",
+        "../../../../../services/data-integration",
+        "../helpers/data-transformer",
+        "../helpers/cache-manager",
+        "../helpers/validation-engine"
+      ]
+    },
+    {
+      "file": "routes/api/v1/data-integration/routes/payments.js",
+      "refactoredModules": [],
+      "oldModules": [],
+      "imports": [
+        "express",
+        "express-validator",
+        "../../../../../services/data-integration",
+        "../helpers/data-transformer",
+        "../helpers/cache-manager",
+        "../helpers/validation-engine"
+      ]
+    },
+    {
+      "file": "routes/api/v1/data-integration.js",
+      "refactoredModules": [],
+      "oldModules": [],
+      "imports": [
+        "express",
+        "./data-integration"
+      ]
+    },
+    {
+      "file": "routes/api/v1/deployments.js",
+      "refactoredModules": [],
+      "oldModules": [],
+      "imports": [
+        "express",
+        "../../../db"
+      ]
+    },
+    {
+      "file": "routes/api/v1/email-config.js",
+      "refactoredModules": [],
+      "oldModules": [],
+      "imports": [
+        "express",
+        "../../../config/email",
+        "../../../services/email",
+        "../../../services/email",
+        "../../../services/email/delivery-tracker",
+        "../../../services/email/templates",
+        "../../../services/email/templates",
+        "../../../config/email"
+      ]
+    },
+    {
+      "file": "routes/api/v1/email-preferences.js",
+      "refactoredModules": [],
+      "oldModules": [],
+      "imports": [
+        "express",
+        "../../../db",
+        "../../../services/email/delivery-tracker",
+        "../../../services/email"
+      ]
+    },
+    {
+      "file": "routes/api/v1/escalation-analytics.js",
+      "refactoredModules": [],
+      "oldModules": [],
+      "imports": [
+        "express",
+        "../../../services/escalation-analytics",
+        "../../../utils/structured-logger"
+      ]
+    },
+    {
+      "file": "routes/api/v1/fomo.js",
+      "refactoredModules": [],
+      "oldModules": [],
+      "imports": [
+        "express",
+        "express-validator",
+        "../../../db",
+        "../../../middleware/auth",
+        "../../../utils/structured-logger",
+        "../../../websocket",
+        "../../../services/fomo-engine",
+        "../../../services/streak-protection-system"
+      ]
+    },
+    {
+      "file": "routes/api/v1/gamification/helpers/achievement-checker.js",
+      "refactoredModules": [],
+      "oldModules": [],
+      "imports": [
+        "../../../../../utils/structured-logger"
+      ]
+    },
+    {
+      "file": "routes/api/v1/gamification/helpers/database-queries.js",
+      "refactoredModules": [],
+      "oldModules": [],
+      "imports": []
+    },
+    {
+      "file": "routes/api/v1/gamification/helpers/quest-processor.js",
+      "refactoredModules": [],
+      "oldModules": [],
+      "imports": [
+        "../../../../../utils/structured-logger",
+        "../../../../../shared/constants"
+      ]
+    },
+    {
+      "file": "routes/api/v1/gamification/helpers/xp-calculator.js",
+      "refactoredModules": [],
+      "oldModules": [],
+      "imports": [
+        "../../../../../shared/constants"
+      ]
+    },
+    {
+      "file": "routes/api/v1/gamification/index.js",
+      "refactoredModules": [],
+      "oldModules": [],
+      "imports": [
+        "express",
+        "./routes/profile",
+        "./routes/xp",
+        "./routes/achievements",
+        "./routes/quests",
+        "./routes/leaderboard",
+        "./routes/borders",
+        "./routes/rewards",
+        "./routes/customization"
+      ]
+    },
+    {
+      "file": "routes/api/v1/gamification/routes/achievements.js",
+      "refactoredModules": [],
+      "oldModules": [],
+      "imports": [
+        "express",
+        "../../../../../db",
+        "../../../../../utils/structured-logger",
+        "../helpers/xp-calculator",
+        "../helpers/achievement-checker",
+        "../helpers/database-queries"
+      ]
+    },
+    {
+      "file": "routes/api/v1/gamification/routes/borders.js",
+      "refactoredModules": [],
+      "oldModules": [],
+      "imports": [
+        "express",
+        "../../../../../db",
+        "../../../../../utils/structured-logger",
+        "../helpers/database-queries"
+      ]
+    },
+    {
+      "file": "routes/api/v1/gamification/routes/customization.js",
+      "refactoredModules": [],
+      "oldModules": [],
+      "imports": [
+        "express",
+        "../../../../../db",
+        "../../../../../utils/structured-logger"
+      ]
+    },
+    {
+      "file": "routes/api/v1/gamification/routes/leaderboard.js",
+      "refactoredModules": [],
+      "oldModules": [],
+      "imports": [
+        "express",
+        "../../../../../db",
+        "../../../../../utils/structured-logger",
+        "../helpers/database-queries"
+      ]
+    },
+    {
+      "file": "routes/api/v1/gamification/routes/profile.js",
+      "refactoredModules": [],
+      "oldModules": [],
+      "imports": [
+        "express",
+        "../../../../../db",
+        "../../../../../utils/structured-logger",
+        "../helpers/xp-calculator",
+        "../helpers/quest-processor",
+        "../helpers/database-queries"
+      ]
+    },
+    {
+      "file": "routes/api/v1/gamification/routes/quests.js",
+      "refactoredModules": [],
+      "oldModules": [],
+      "imports": [
+        "express",
+        "../../../../../db",
+        "../../../../../utils/structured-logger",
+        "../helpers/quest-processor",
+        "../helpers/xp-calculator",
+        "../helpers/database-queries"
+      ]
+    },
+    {
+      "file": "routes/api/v1/gamification/routes/rewards.js",
+      "refactoredModules": [],
+      "oldModules": [],
+      "imports": [
+        "express",
+        "../../../../../db",
+        "../../../../../utils/structured-logger"
+      ]
+    },
+    {
+      "file": "routes/api/v1/gamification/routes/xp.js",
+      "refactoredModules": [],
+      "oldModules": [],
+      "imports": [
+        "express",
+        "../../../../../db",
+        "../../../../../utils/structured-logger",
+        "../helpers/xp-calculator",
+        "../helpers/quest-processor",
+        "../helpers/database-queries"
+      ]
+    },
+    {
+      "file": "routes/api/v1/index.js",
+      "refactoredModules": [],
+      "oldModules": [],
+      "imports": [
+        "express",
+        "./auth",
+        "./candidates",
+        "./jobs",
+        "./deployments",
+        "./payments",
+        "./clients",
+        "./tenders",
+        "./bpo",
+        "./training",
+        "./gamification",
+        "./chat",
+        "./analytics",
+        "./admin",
+        "./ai-automation",
+        "./referrals",
+        "./availability",
+        "./notifications",
+        "./tender-monitor",
+        "./email-preferences",
+        "./email-config",
+        "./webhooks/telegram",
+        "./messaging",
+        "./ai-chat",
+        "./slm-chat",
+        "./ml",
+        "./ad-ml",
+        "./telegram-groups",
+        "./llm-config",
+        "./conversations",
+        "./chat-attachments",
+        "./quick-replies",
+        "./job-scheduler",
+        "./consultant-performance",
+        "./template-responses",
+        "./admin-escalation",
+        "./escalation-analytics",
+        "./smart-response-router",
+        "./interview-scheduling",
+        "./conversation-enhancement",
+        "./worker-status"
+      ]
+    },
+    {
+      "file": "routes/api/v1/intent-classifier.js",
+      "refactoredModules": [],
+      "oldModules": [],
+      "imports": [
+        "express",
+        "../../../services/intent-classifier",
+        "../../../services/intent-classifier/integration",
+        "../../../services/intent-classifier/test-classifier"
+      ]
+    },
+    {
+      "file": "routes/api/v1/intent-monitoring.js",
+      "refactoredModules": [],
+      "oldModules": [],
+      "imports": [
+        "express",
+        "../../../services/intent-classifier/monitoring"
+      ]
+    },
+    {
+      "file": "routes/api/v1/interview-scheduling/helpers/availability-checker.js",
+      "refactoredModules": [],
+      "oldModules": [],
+      "imports": [
+        "../../../../db",
+        "./time-utils"
+      ]
+    },
+    {
+      "file": "routes/api/v1/interview-scheduling/helpers/time-utils.js",
+      "refactoredModules": [],
+      "oldModules": [],
+      "imports": []
+    },
+    {
+      "file": "routes/api/v1/interview-scheduling.js",
+      "refactoredModules": [],
+      "oldModules": [],
+      "imports": [
+        "express",
+        "../../../db"
+      ]
+    },
+    {
+      "file": "routes/api/v1/job-scheduler.js",
+      "refactoredModules": [],
+      "oldModules": [],
+      "imports": [
+        "express",
+        "../../../services/job-scheduler",
+        "../../../utils/structured-logger",
+        "../../../db",
+        "../../../db",
+        "../../../db"
+      ]
+    },
+    {
+      "file": "routes/api/v1/jobs.js",
+      "refactoredModules": [],
+      "oldModules": [],
+      "imports": [
+        "express",
+        "../../../db",
+        "../../../middleware/database-validation",
+        "../../../middleware/input-validation",
+        "../../../services/telegram-posting"
+      ]
+    },
+    {
+      "file": "routes/api/v1/llm-config.js",
+      "refactoredModules": [],
+      "oldModules": [],
+      "imports": [
+        "express",
+        "../../../utils/claude",
+        "../../../utils/claude"
+      ]
+    },
+    {
+      "file": "routes/api/v1/messaging.js",
+      "refactoredModules": [],
+      "oldModules": [],
+      "imports": [
+        "express",
+        "../../../db",
+        "../../../services/messaging"
+      ]
+    },
+    {
+      "file": "routes/api/v1/ml.js",
+      "refactoredModules": [],
+      "oldModules": [],
+      "imports": [
+        "express",
+        "../../../services/ml",
+        "../../../services/ml/trainer"
+      ]
+    },
+    {
+      "file": "routes/api/v1/notifications.js",
+      "refactoredModules": [],
+      "oldModules": [],
+      "imports": [
+        "express",
+        "../../../db",
+        "../../../shared/constants",
+        "../../../services/retention-notifications",
+        "web-push"
+      ]
+    },
+    {
+      "file": "routes/api/v1/payments.js",
+      "refactoredModules": [],
+      "oldModules": [],
+      "imports": [
+        "express",
+        "../../../db",
+        "../../../middleware/auth",
+        "../../../middleware/database-validation"
+      ]
+    },
+    {
+      "file": "routes/api/v1/quick-replies.js",
+      "refactoredModules": [],
+      "oldModules": [],
+      "imports": [
+        "express",
+        "../../../services/quick-replies"
+      ]
+    },
+    {
+      "file": "routes/api/v1/referrals.js",
+      "refactoredModules": [],
+      "oldModules": [],
+      "imports": [
+        "express",
+        "../../../db",
+        "../../../middleware/validation"
+      ]
+    },
+    {
+      "file": "routes/api/v1/slm-chat.js",
+      "refactoredModules": [],
+      "oldModules": [],
+      "imports": [
+        "express",
+        "../../../db",
+        "../../../utils/slm-scheduling-bridge",
+        "../../../utils/slm-scheduling-bridge",
+        "../../../utils/smart-slm-router",
+        "../../../utils/worker-status-classifier",
+        "../../../utils/worker-status-classifier",
+        "../../../utils/worker-status-classifier",
+        "../../../utils/worker-status-classifier",
+        "../../../utils/smart-slm-router"
+      ]
+    },
+    {
+      "file": "routes/api/v1/smart-response-router/helpers/analytics.js",
+      "refactoredModules": [],
+      "oldModules": [],
+      "imports": [
+        "../../../../../utils/logger"
+      ]
+    },
+    {
+      "file": "routes/api/v1/smart-response-router/helpers/migration.js",
+      "refactoredModules": [],
+      "oldModules": [],
+      "imports": [
+        "../../../../../utils/logger"
+      ]
+    },
+    {
+      "file": "routes/api/v1/smart-response-router/index.js",
+      "refactoredModules": [],
+      "oldModules": [],
+      "imports": [
+        "express",
+        "./routes/admin",
+        "./routes/routing",
+        "./helpers/migration",
+        "./helpers/analytics"
+      ]
+    },
+    {
+      "file": "routes/api/v1/smart-response-router/routes/admin.js",
+      "refactoredModules": [],
+      "oldModules": [],
+      "imports": [
+        "express",
+        "../../../../../middleware/auth",
+        "../helpers/migration",
+        "../helpers/analytics",
+        "../../../../../utils/logger"
+      ]
+    },
+    {
+      "file": "routes/api/v1/smart-response-router/routes/routing.js",
+      "refactoredModules": [],
+      "oldModules": [],
+      "imports": [
+        "express",
+        "../../../../../middleware/auth",
+        "../helpers/analytics",
+        "../../../../../utils/logger"
+      ]
+    },
+    {
+      "file": "routes/api/v1/telegram-groups.js",
+      "refactoredModules": [],
+      "oldModules": [],
+      "imports": [
+        "express",
+        "../../../services/telegram-posting",
+        "../../../db",
+        "../../../services/ad-ml"
+      ]
+    },
+    {
+      "file": "routes/api/v1/template-responses.js",
+      "refactoredModules": [],
+      "oldModules": [],
+      "imports": [
+        "express",
+        "../../../services/template-responses"
+      ]
+    },
+    {
+      "file": "routes/api/v1/tender-monitor.js",
+      "refactoredModules": [],
+      "oldModules": [],
+      "imports": [
+        "express",
+        "../../../db",
+        "rss-parser",
+        "../../../services/email",
+        "../../../db"
+      ]
+    },
+    {
+      "file": "routes/api/v1/tenders.js",
+      "refactoredModules": [],
+      "oldModules": [],
+      "imports": [
+        "express",
+        "../../../db"
+      ]
+    },
+    {
+      "file": "routes/api/v1/training.js",
+      "refactoredModules": [],
+      "oldModules": [],
+      "imports": [
+        "express",
+        "../../../db"
+      ]
+    },
+    {
+      "file": "routes/api/v1/webhooks/telegram.js",
+      "refactoredModules": [],
+      "oldModules": [],
+      "imports": [
+        "express",
+        "../../../../db",
+        "../../../../services/messaging",
+        "../../../../services/messaging/telegram",
+        "../../../../utils/logger"
+      ]
+    },
+    {
+      "file": "routes/api/v1/worker-status.js",
+      "refactoredModules": [],
+      "oldModules": [],
+      "imports": [
+        "express",
+        "../../../db",
+        "../../../utils/worker-status-classifier",
+        "../../../utils/smart-slm-router"
+      ]
+    },
+    {
+      "file": "routes/calendar.js",
+      "refactoredModules": [],
+      "oldModules": [],
+      "imports": [
+        "express",
+        "better-sqlite3",
+        "path"
+      ]
+    }
+  ],
+  "refactoredModules": [
+    {
+      "name": "websocket",
+      "path": "./websocket",
+      "exists": true
+    },
+    {
+      "name": "database",
+      "path": "./db",
+      "exists": true
+    },
+    {
+      "name": "candidates",
+      "path": "./routes/api/v1/candidates",
+      "exists": true
+    },
+    {
+      "name": "chat",
+      "path": "./routes/api/v1/chat",
+      "exists": true
+    },
+    {
+      "name": "gamification",
+      "path": "./routes/api/v1/gamification",
+      "exists": true
+    },
+    {
+      "name": "auth",
+      "path": "./routes/api/v1/auth",
+      "exists": true
+    }
+  ],
+  "issues": [],
+  "moduleUsage": {},
+  "summary": {
+    "totalRoutes": 116,
+    "usingRefactored": 0,
+    "notUsingRefactored": 0
+  }
+}

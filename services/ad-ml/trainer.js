@@ -4,7 +4,7 @@
  * Handles exporting training data for fine-tuning an ad-generation SLM.
  */
 
-const { db } = require('../../db/database');
+const { db } = require('../../db');
 const fs = require('fs');
 const path = require('path');
 

@@ -65,7 +65,7 @@ function verifyToken(token) {
   try {
     // Handle legacy demo tokens
     if (token === 'demo-admin-token') {
-      return { id: 'ADM_DEV', role: 'admin', name: 'Demo Admin', email: 'admin@talentvis.com' };
+      return { id: 'ADM_DEV', role: 'admin', name: 'Demo Admin', email: 'admin@worklink.sg' };
     }
 
     // If JWT_SECRET is not configured, allow access (no JWT security)
@@ -128,7 +128,7 @@ function getUserFromDatabase(userId, userType = 'candidate') {
     } else if (userType === 'admin' || userType === 'support') {
       // In a real implementation, you'd have admin/support tables
       // For now, we'll simulate based on ID patterns
-      if (userId.startsWith('ADM_')) {
+      if (userId.startsWith('ADM_') || userId === 'ADMIN001') {
         user = {
           id: userId,
           name: 'Admin User',
@@ -386,7 +386,7 @@ function legacyAuth(req, res, next) {
   if (token === 'demo-admin-token') {
     req.user = {
       id: 'ADMIN001',
-      email: 'admin@talentvis.com',
+      email: 'admin@worklink.sg',
       name: 'Admin',
       role: 'admin'
     };

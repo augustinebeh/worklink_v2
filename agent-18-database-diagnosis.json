@@ -1,0 +1,16 @@
+{
+  "databasesFound": 2,
+  "databases": [
+    {
+      "path": "data/worklink.db",
+      "size": 954368,
+      "modified": "2/5/2026, 5:00:57 AM"
+    },
+    {
+      "path": "db/database.db",
+      "size": 24576,
+      "modified": "2/5/2026, 2:10:15 AM"
+    }
+  ],
+  "configuredPath": "See console output"
+}

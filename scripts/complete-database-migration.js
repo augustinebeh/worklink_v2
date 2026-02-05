@@ -23,19 +23,19 @@ function updateFile(filePath) {
 
     // More comprehensive replacement patterns
     let updatedContent = content
-      // Handle require('../../../../db/database') - 4 levels up
+      // Handle require('../../../../db') - 4 levels up
       .replace(/require\(['"`]\.\.\/\.\.\/\.\.\/\.\.\/db\/database['"`]\)/g, "require('../../../../db')")
 
-      // Handle require('../../../db/database') - 3 levels up
+      // Handle require('../../../db') - 3 levels up
       .replace(/require\(['"`]\.\.\/\.\.\/\.\.\/db\/database['"`]\)/g, "require('../../../db')")
 
-      // Handle require('../../db/database') - 2 levels up
+      // Handle require('../../db') - 2 levels up
       .replace(/require\(['"`]\.\.\/\.\.\/db\/database['"`]\)/g, "require('../../db')")
 
-      // Handle require('../db/database') - 1 level up
+      // Handle require('../db') - 1 level up
       .replace(/require\(['"`]\.\.\/db\/database['"`]\)/g, "require('../db')")
 
-      // Handle require('./db/database') - same level
+      // Handle require('./db') - same level
       .replace(/require\(['"`]\.\/db\/database['"`]\)/g, "require('./db')")
 
       // Handle destructuring imports with additional exports

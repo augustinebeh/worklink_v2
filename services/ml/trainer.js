@@ -5,7 +5,7 @@
  * Supports multiple export formats for different training frameworks.
  */
 
-const { db } = require('../../db/database');
+const { db } = require('../../db');
 const fs = require('fs');
 const path = require('path');
 

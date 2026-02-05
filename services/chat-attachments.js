@@ -11,7 +11,7 @@ const path = require('path');
 const fs = require('fs');
 const { v4: uuidv4 } = require('uuid');
 const sharp = require('sharp');
-const { db } = require('../db/database');
+const { db } = require('../db');
 
 // Configuration
 const UPLOAD_DIR = path.join(__dirname, '..', 'public', 'uploads', 'chat');

@@ -198,6 +198,15 @@ export const analyticsService = {
    */
   async getSystemHealth() {
     return apiClient.getJSON('/api/v1/analytics/system-health');
+  },
+
+  /**
+   * Calculate job profit based on rates and parameters
+   * @param {Object} params - Job calculation parameters
+   * @returns {Promise<Object>} Profit calculation results
+   */
+  async calculateJobProfit(params) {
+    return apiClient.postJSON('/api/v1/analytics/calculate-job-profit', params);
   }
 };
 

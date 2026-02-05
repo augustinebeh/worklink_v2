@@ -25,6 +25,8 @@ import Table from '../components/ui/Table';
 import Input from '../components/ui/Input';
 import Select from '../components/ui/Select';
 import { clsx } from 'clsx';
+import { tenderService } from '../shared/services/api';
+import { useToast } from '../components/ui/Toast';
 
 function BPOKPICard({ title, value, subtitle, icon: Icon, color = 'primary' }) {
   const colorClasses = {
@@ -154,6 +156,7 @@ export default function BPODashboard() {
   const [statusFilter, setStatusFilter] = useState('all');
   const [activeTab, setActiveTab] = useState('pipeline');
   const [portalTab, setPortalTab] = useState('government');
+  const toast = useToast();
 
   useEffect(() => {
     fetchData();
@@ -161,24 +164,26 @@ export default function BPODashboard() {
 
   const fetchData = async () => {
     try {
-      const params = new URLSearchParams();
-      if (statusFilter !== 'all') params.append('status', statusFilter);
-      
+      const params = {};
+      if (statusFilter !== 'all') params.status = statusFilter;
+
       const [tendersRes, statsRes, recsRes] = await Promise.all([
-        fetch(`/api/v1/tenders?${params}`),
-        fetch('/api/v1/tenders/stats/overview'),
-        fetch('/api/v1/tenders/recommendations/acquisition'),
+        tenderService.getAll(params),
+        tenderService.getStats(),
+        tenderService.getRecommendations(),
       ]);
 
-      const tendersData = await tendersRes.json();
-      const statsData = await statsRes.json();
-      const recsData = await recsRes.json();
+      if (tendersRes.success) setTenders(tendersRes.data);
+      if (statsRes.success) setStats(statsRes.data);
+      if (recsRes.success) setRecommendations(recsRes.data);
 
-      if (tendersData.success) setTenders(tendersData.data);
-      if (statsData.success) setStats(statsData.data);
-      if (recsData.success) setRecommendations(recsData.data);
+      // Show success toast only if we have data
+      if (tendersRes.success || statsRes.success || recsRes.success) {
+        toast.success('Data Loaded', 'BPO dashboard updated successfully');
+      }
     } catch (error) {
       console.error('Failed to fetch data:', error);
+      toast.error('Loading Failed', 'Unable to fetch BPO dashboard data');
     } finally {
       setLoading(false);
     }

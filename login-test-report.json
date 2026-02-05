@@ -1,0 +1,158 @@
+{
+  "timestamp": "2026-02-04T16:06:04.214Z",
+  "tests": [
+    {
+      "test": "Server Health Check",
+      "status": "PASS",
+      "details": {
+        "message": "Server is responding correctly",
+        "data": {
+          "status": "ok",
+          "timestamp": "2026-02-04T16:06:04.228Z",
+          "environment": "production",
+          "uptime": 626.084269536
+        }
+      },
+      "timestamp": "2026-02-04T16:06:04.231Z"
+    },
+    {
+      "test": "Admin Page Access",
+      "status": "PASS",
+      "details": {
+        "message": "Admin page loads correctly with React root element",
+        "contentLength": 754
+      },
+      "timestamp": "2026-02-04T16:06:04.234Z"
+    },
+    {
+      "test": "Auth API Health",
+      "status": "PASS",
+      "details": {
+        "message": "Auth API is healthy and responding",
+        "data": {
+          "success": true,
+          "status": "healthy",
+          "timestamp": "2026-02-04T16:06:04.235Z",
+          "module": "auth",
+          "version": "2.0.0",
+          "architecture": "modular"
+        }
+      },
+      "timestamp": "2026-02-04T16:06:04.236Z"
+    },
+    {
+      "test": "Environment Configuration",
+      "status": "PASS",
+      "details": {
+        "message": "Auth module configuration appears correct",
+        "version": "2.0.0",
+        "architecture": "modular",
+        "features": 10
+      },
+      "timestamp": "2026-02-04T16:06:04.240Z"
+    },
+    {
+      "test": "Valid Admin Login",
+      "status": "PASS",
+      "details": {
+        "message": "Admin login successful with correct token and user data",
+        "userId": "ADMIN001",
+        "role": "admin",
+        "hasToken": true
+      },
+      "timestamp": "2026-02-04T16:06:04.243Z"
+    },
+    {
+      "test": "Invalid Login Test - Invalid email",
+      "status": "PASS",
+      "details": {
+        "message": "Login correctly rejected invalid credentials",
+        "status": 401,
+        "credentials": "Invalid email"
+      },
+      "timestamp": "2026-02-04T16:06:04.246Z"
+    },
+    {
+      "test": "Invalid Login Test - Invalid password",
+      "status": "PASS",
+      "details": {
+        "message": "Login correctly rejected invalid credentials",
+        "status": 401,
+        "credentials": "Invalid password"
+      },
+      "timestamp": "2026-02-04T16:06:04.248Z"
+    },
+    {
+      "test": "Invalid Login Test - Missing email",
+      "status": "PASS",
+      "details": {
+        "message": "Login correctly rejected invalid credentials",
+        "status": 401,
+        "credentials": "Missing email"
+      },
+      "timestamp": "2026-02-04T16:06:04.249Z"
+    },
+    {
+      "test": "Invalid Login Test - Missing password",
+      "status": "PASS",
+      "details": {
+        "message": "Login correctly rejected invalid credentials",
+        "status": 401,
+        "credentials": "Missing password"
+      },
+      "timestamp": "2026-02-04T16:06:04.252Z"
+    },
+    {
+      "test": "Invalid Login Test - Missing type",
+      "status": "PASS",
+      "details": {
+        "message": "Login correctly rejected invalid credentials",
+        "status": 401,
+        "credentials": "Missing type"
+      },
+      "timestamp": "2026-02-04T16:06:04.253Z"
+    },
+    {
+      "test": "Token Verification",
+      "status": "PASS",
+      "details": {
+        "message": "Token verification successful",
+        "userData": {
+          "id": "ADMIN001",
+          "name": "Admin User",
+          "email": "admin@worklink.sg",
+          "role": "admin"
+        }
+      },
+      "timestamp": "2026-02-04T16:06:04.255Z"
+    },
+    {
+      "test": "CORS Headers Check",
+      "status": "PASS",
+      "details": {
+        "message": "CORS preflight request completed",
+        "headers": {
+          "access-control-allow-origin": "http://localhost:3000",
+          "access-control-allow-methods": "GET, POST, PUT, PATCH, DELETE, OPTIONS",
+          "access-control-allow-headers": "Origin, X-Requested-With, Content-Type, Accept, Authorization"
+        }
+      },
+      "timestamp": "2026-02-04T16:06:04.256Z"
+    },
+    {
+      "test": "Rate Limiting",
+      "status": "WARNING",
+      "details": {
+        "message": "Rate limiting not detected (may be configured differently)",
+        "totalRequests": 10
+      },
+      "timestamp": "2026-02-04T16:06:04.268Z"
+    }
+  ],
+  "summary": {
+    "total": 13,
+    "passed": 12,
+    "failed": 0,
+    "warnings": 1
+  }
+}

@@ -10,10 +10,11 @@ import {
   ListIcon,
   SparklesIcon,
   ChevronRightIcon,
-  HelpCircleIcon,
   UserPlusIcon,
   BriefcaseIcon,
+  UsersIcon,
 } from 'lucide-react';
+import { api } from '../shared/services/api';
 import Card, { CardHeader, CardTitle, CardContent } from '../components/ui/Card';
 import Badge, { StatusBadge } from '../components/ui/Badge';
 import Button from '../components/ui/Button';
@@ -29,14 +30,6 @@ const getAvatarUrl = (candidate) => {
   if (candidate.profile_photo) return candidate.profile_photo;
   return `https://api.dicebear.com/7.x/avataaars/svg?seed=${encodeURIComponent(candidate.name)}`;
 };
-
-// Tips for managing candidates
-const candidateTips = [
-  { title: '🎯 Quality First', content: '10 reliable workers beat 50 flaky ones. Focus on retention.' },
-  { title: '💰 Fair Pay', content: 'Pay 5-10% above market to attract and keep the best.' },
-  { title: '📱 Stay Connected', content: 'Workers with WhatsApp opt-in have 3x better response rates.' },
-  { title: '⭐ Level System', content: 'Higher level workers = more reliable. Prioritize Lv.5+ for important jobs.' },
-];
 
 function CandidateCard({ candidate, onClick }) {
   const xpProgress = candidate.level < 10 
@@ -144,6 +137,13 @@ function PipelineCard({ status, count, color, onClick, active }) {
     slate: 'from-slate-400 to-slate-500',
   };
 
+  const descriptions = {
+    total: 'All candidates',
+    pending: 'Awaiting verification',
+    active: 'Ready to deploy',
+    inactive: 'Not available',
+  };
+
   return (
     <button
       onClick={onClick}
@@ -158,29 +158,18 @@ function PipelineCard({ status, count, color, onClick, active }) {
         {count}
       </div>
       <p className="font-medium text-slate-900 dark:text-white capitalize">{status}</p>
-      <p className="text-xs text-slate-500 mt-0.5">
-        {status === 'active' ? 'Ready to deploy' :
-         status === 'pending' ? 'Awaiting verification' :
-         status === 'inactive' ? 'Not available' : 'Click to filter'}
-      </p>
+      <p className="text-xs text-slate-500 mt-0.5">{descriptions[status] || 'Click to filter'}</p>
     </button>
   );
 }
 
 export default function Candidates() {
   const navigate = useNavigate();
-  const [candidates, setCandidates] = useState([]);
+  const [allCandidates, setAllCandidates] = useState([]); // Store ALL candidates for stats
   const [loading, setLoading] = useState(true);
   const [view, setView] = useState('grid');
   const [statusFilter, setStatusFilter] = useState('all');
   const [searchQuery, setSearchQuery] = useState('');
-  const [showTips, setShowTips] = useState(true);
-  const [currentTip, setCurrentTip] = useState(0);
-  const [pipelineStats, setPipelineStats] = useState({
-    pending: 0,
-    active: 0,
-    inactive: 0,
-  });
 
   // Add Candidate Modal State
   const [showAddModal, setShowAddModal] = useState(false);
@@ -202,16 +191,7 @@ export default function Candidates() {
 
     setAddingCandidate(true);
     try {
-      const token = sessionStorage.getItem('admin_token');
-      const res = await fetch('/api/v1/candidates', {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-          'Authorization': `Bearer ${token}`
-        },
-        body: JSON.stringify(newCandidate),
-      });
-      const data = await res.json();
+      const data = await api.candidates.create(newCandidate);
 
       if (data.success) {
         setShowAddModal(false);
@@ -223,8 +203,7 @@ export default function Candidates() {
           source: 'direct',
           status: 'lead',
         });
-        fetchCandidates();
-        fetchPipelineStats();
+        fetchCandidates(); // Re-fetch all candidates to update stats
       } else {
         alert(data.error || 'Failed to add candidate');
       }
@@ -238,36 +217,17 @@ export default function Candidates() {
 
   useEffect(() => {
     fetchCandidates();
-    fetchPipelineStats();
-  }, [statusFilter, searchQuery]);
-
-  useEffect(() => {
-    const timer = setInterval(() => {
-      setCurrentTip((prev) => (prev + 1) % candidateTips.length);
-    }, 6000);
-    return () => clearInterval(timer);
-  }, []);
+  }, []); // Fetch once on mount, no dependencies
 
   const fetchCandidates = async () => {
     try {
       setLoading(true);
-      const params = new URLSearchParams();
-      if (statusFilter !== 'all') params.append('status', statusFilter);
-      if (searchQuery) params.append('search', searchQuery);
-
-      // Get the authentication token
-      const token = sessionStorage.getItem('admin_token');
-
-      const res = await fetch(`/api/v1/candidates?${params}`, {
-        headers: {
-          'Authorization': `Bearer ${token}`,
-          'Content-Type': 'application/json',
-        },
-      });
-      const data = await res.json();
+      
+      // Fetch ALL candidates (no status filter)
+      const data = await api.candidates.getAll();
 
       if (data.success) {
-        setCandidates(data.data.map(c => ({
+        setAllCandidates(data.data.map(c => ({
           ...c,
           certifications: typeof c.certifications === 'string' ? JSON.parse(c.certifications || '[]') : (c.certifications || []),
         })));
@@ -281,22 +241,32 @@ export default function Candidates() {
     }
   };
 
-  const fetchPipelineStats = async () => {
-    try {
-      const token = sessionStorage.getItem('admin_token');
-      const res = await fetch('/api/v1/candidates/stats/pipeline', {
-        headers: {
-          'Authorization': `Bearer ${token}`,
-          'Content-Type': 'application/json',
-        },
-      });
-      const data = await res.json();
-      if (data.success) {
-        setPipelineStats(data.data);
-      }
-    } catch (error) {
-      console.error('Failed to fetch pipeline stats:', error);
+  // Remove fetchPipelineStats - we'll compute stats from allCandidates directly
+
+  // Client-side filtering for status and search
+  const candidates = allCandidates.filter(candidate => {
+    // Filter by status
+    if (statusFilter !== 'all' && candidate.status !== statusFilter) {
+      return false;
     }
+    // Filter by search query
+    if (searchQuery) {
+      const query = searchQuery.toLowerCase();
+      return (
+        candidate.name?.toLowerCase().includes(query) ||
+        candidate.email?.toLowerCase().includes(query) ||
+        candidate.phone?.toLowerCase().includes(query)
+      );
+    }
+    return true;
+  });
+
+  // Compute stats from ALL candidates (not filtered)
+  const pipelineStats = {
+    total: allCandidates.length,
+    pending: allCandidates.filter(c => c.status === 'pending').length,
+    active: allCandidates.filter(c => c.status === 'active').length,
+    inactive: allCandidates.filter(c => c.status === 'inactive').length,
   };
 
   const handleExport = () => {
@@ -401,8 +371,6 @@ export default function Candidates() {
     },
   ];
 
-  const totalCandidates = Object.values(pipelineStats).reduce((a, b) => a + b, 0);
-
   return (
     <div className="space-y-6">
       {/* Header */}
@@ -413,7 +381,7 @@ export default function Candidates() {
             Candidates
           </h1>
           <p className="text-slate-500 dark:text-slate-400 mt-1">
-            {totalCandidates} workers in your talent pool
+            {pipelineStats.total} workers in your talent pool
           </p>
         </div>
         <div className="flex items-center gap-3">
@@ -422,37 +390,15 @@ export default function Candidates() {
         </div>
       </div>
 
-      {/* Tips Banner */}
-      {showTips && (
-        <Card className="bg-gradient-to-r from-primary-50 to-blue-50 dark:from-primary-900/20 dark:to-blue-900/20 border-primary-100 dark:border-primary-800">
-          <div className="flex items-start justify-between">
-            <div className="flex items-start gap-3">
-              <div className="p-2 rounded-lg bg-primary-100 dark:bg-primary-900/50">
-                <HelpCircleIcon className="h-5 w-5 text-primary-600" />
-              </div>
-              <div>
-                <h4 className="font-semibold text-slate-900 dark:text-white">{candidateTips[currentTip].title}</h4>
-                <p className="text-sm text-slate-600 dark:text-slate-400 mt-0.5">{candidateTips[currentTip].content}</p>
-              </div>
-            </div>
-            <div className="flex items-center gap-2">
-              {candidateTips.map((_, i) => (
-                <button
-                  key={i}
-                  onClick={() => setCurrentTip(i)}
-                  className={clsx(
-                    'w-2 h-2 rounded-full transition-colors',
-                    i === currentTip ? 'bg-primary-500' : 'bg-slate-300'
-                  )}
-                />
-              ))}
-            </div>
-          </div>
-        </Card>
-      )}
-
       {/* Pipeline Stats */}
-      <div className="grid grid-cols-3 gap-3">
+      <div className="grid grid-cols-4 gap-3">
+        <PipelineCard
+          status="total"
+          count={pipelineStats.total || 0}
+          color="slate"
+          active={statusFilter === 'all'}
+          onClick={() => setStatusFilter('all')}
+        />
         <PipelineCard
           status="pending"
           count={pipelineStats.pending || 0}
@@ -659,10 +605,3 @@ export default function Candidates() {
     </div>
   );
 }
-
-// Add missing UsersIcon import alias
-const UsersIcon = ({ className }) => (
-  <svg className={className} fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
-    <path strokeLinecap="round" strokeLinejoin="round" d="M12 4.354a4 4 0 110 5.292M15 21H3v-1a6 6 0 0112 0v1zm0 0h6v-1a6 6 0 00-9-5.197M13 7a4 4 0 11-8 0 4 4 0 018 0z" />
-  </svg>
-);

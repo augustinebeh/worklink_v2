@@ -370,6 +370,25 @@ server.listen(PORT, HOST, async () => {
     });
   }
 
+  // Initialize GeBIZ RSS Scraping Service
+  try {
+    const { initialize: initializeScrapingService } = require('./services/scraping');
+
+    await initializeScrapingService({
+      autoStartScheduler: true // Start scheduler automatically
+    });
+
+    logger.info('GeBIZ RSS Scraping Service initialized successfully', {
+      module: 'scraping',
+      schedule: 'Every 6 hours (00:00, 06:00, 12:00, 18:00 SGT)'
+    });
+  } catch (error) {
+    logger.warn('GeBIZ RSS Scraping Service initialization failed - continuing without scraping features', {
+      module: 'scraping',
+      error: error.message
+    });
+  }
+
   // Enhanced console output for all environments
   const adminBuilt = fs.existsSync(path.join(__dirname, 'admin', 'dist'));
   const workerBuilt = fs.existsSync(path.join(__dirname, 'worker', 'dist'));
@@ -385,16 +404,36 @@ server.listen(PORT, HOST, async () => {
   console.log(`🚀 WorkLink v2 ready on http://${HOST}:${PORT} | Admin: /admin`);
 });
 
-// Graceful shutdown handling
-process.on('SIGINT', () => {
-  logger.info('Received SIGINT, shutting down gracefully...', { module: 'server' });
+// Graceful shutdown handling with timeout
+function gracefulShutdown(signal) {
+  logger.info(`Received ${signal}, shutting down gracefully...`, { module: 'server' });
 
-  // Skip email scheduler since it's disabled
-  logger.info('Email scheduler not running (disabled)', { module: 'email' });
+  // Set a timeout to force exit if graceful shutdown takes too long
+  const forceExitTimeout = setTimeout(() => {
+    logger.warn('Forcing shutdown after timeout', { module: 'server' });
+    process.exit(1);
+  }, 5000); // 5 second timeout
 
-  // Close server
+  // Close WebSocket server first
+  if (wss) {
+    logger.info('Closing WebSocket connections...', { module: 'websocket' });
+    wss.clients.forEach(client => {
+      try {
+        client.terminate();
+      } catch (error) {
+        logger.warn('Error terminating WebSocket client', { error: error.message });
+      }
+    });
+    wss.close(() => {
+      logger.info('WebSocket server closed', { module: 'websocket' });
+    });
+  }
+
+  // Close HTTP server
   server.close(() => {
-    logger.info('Server closed', { module: 'server' });
+    logger.info('HTTP server closed', { module: 'server' });
+    
+    // Close database
     if (db) {
       try {
         db.close();
@@ -403,29 +442,17 @@ process.on('SIGINT', () => {
         logger.warn('Error closing database', { module: 'database', error: error.message });
       }
     }
+    
+    clearTimeout(forceExitTimeout);
+    logger.info('Graceful shutdown complete', { module: 'server' });
     process.exit(0);
   });
-});
 
-process.on('SIGTERM', () => {
-  logger.info('Received SIGTERM, shutting down gracefully...', { module: 'server' });
+  // If no active connections, server.close() callback fires immediately
+  // Otherwise, wait for active connections to finish (up to timeout)
+}
 
-  // Skip email scheduler since it's disabled
-  logger.info('Email scheduler not running (disabled)', { module: 'email' });
-
-  // Close server
-  server.close(() => {
-    logger.info('Server closed', { module: 'server' });
-    if (db) {
-      try {
-        db.close();
-        logger.info('Database connection closed', { module: 'database' });
-      } catch (error) {
-        logger.warn('Error closing database', { module: 'database', error: error.message });
-      }
-    }
-    process.exit(0);
-  });
-});
+process.on('SIGINT', () => gracefulShutdown('SIGINT'));
+process.on('SIGTERM', () => gracefulShutdown('SIGTERM'));
 
 module.exports = { app, server, wss };

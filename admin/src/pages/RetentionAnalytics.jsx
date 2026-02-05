@@ -16,6 +16,7 @@ import {
   MessageSquareIcon,
   CalendarIcon
 } from 'lucide-react';
+import { api } from '../shared/services/api';
 
 const COLORS = ['#10b981', '#f59e0b', '#ef4444', '#8b5cf6', '#06b6d4', '#f97316'];
 
@@ -171,13 +172,11 @@ export default function RetentionAnalytics() {
     try {
       setData(prev => ({ ...prev, loading: true }));
 
-      const [overviewRes, churnRiskRes] = await Promise.all([
-        fetch('/api/v1/analytics/retention/overview'),
-        fetch('/api/v1/analytics/retention/churn-risk')
+      // TODO: Add retention methods to analytics service - using raw client for now
+      const [overview, churnRisk] = await Promise.all([
+        api.client.get('/analytics/retention/overview'),
+        api.client.get('/analytics/retention/churn-risk')
       ]);
-
-      const overview = await overviewRes.json();
-      const churnRisk = await churnRiskRes.json();
 
       setData({
         overview: overview.success ? overview.data : null,

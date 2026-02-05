@@ -22,6 +22,7 @@ import {
   SendIcon,
   MoreVerticalIcon,
 } from 'lucide-react';
+import { api } from '../shared/services/api';
 import Card, { CardHeader, CardTitle, CardContent } from '../components/ui/Card';
 import Badge, { StatusBadge } from '../components/ui/Badge';
 import Button from '../components/ui/Button';
@@ -145,9 +146,8 @@ export default function CandidateProfile() {
   const fetchCandidate = async () => {
     try {
       setLoading(true);
-      const res = await fetch(`/api/v1/candidates/${id}`);
-      const data = await res.json();
-      
+      const data = await api.candidates.getById(id);
+
       if (data.success) {
         setCandidate(data.data);
         setEditForm({
@@ -168,12 +168,7 @@ export default function CandidateProfile() {
 
   const handleUpdateCandidate = async () => {
     try {
-      const res = await fetch(`/api/v1/candidates/${id}`, {
-        method: 'PUT',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify(editForm),
-      });
-      const data = await res.json();
+      const data = await api.candidates.update(id, editForm);
       if (data.success) {
         setCandidate({ ...candidate, ...data.data });
         setShowEditModal(false);

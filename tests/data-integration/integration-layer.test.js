@@ -7,7 +7,7 @@
 
 const { describe, test, expect, beforeAll, afterAll, beforeEach } = require('@jest/globals');
 const DataIntegrationLayer = require('../../services/data-integration');
-const { db } = require('../../db/database');
+const { db } = require('../../db');
 
 describe('Data Integration Layer', () => {
   let dataIntegration;

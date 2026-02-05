@@ -5,7 +5,7 @@
  * Tracks performance, accuracy, and system health.
  */
 
-const { db } = require('../../db/database');
+const { db } = require('../../db');
 const EventEmitter = require('events');
 
 class IntentClassifierMonitor extends EventEmitter {

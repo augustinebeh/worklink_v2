@@ -7,7 +7,7 @@
 const express = require('express');
 const router = express.Router();
 const telegramPosting = require('../../../services/telegram-posting');
-const { db } = require('../../../db/database');
+const { db } = require('../../../db');
 
 // =====================================================
 // GROUPS MANAGEMENT

@@ -8,7 +8,7 @@
  * sentiment analysis, and admin response times.
  */
 
-const { db } = require('../db/database');
+const { db } = require('../db');
 
 // Ensure conversation metadata table exists
 function ensureSchema() {

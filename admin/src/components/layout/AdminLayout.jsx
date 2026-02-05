@@ -82,4 +82,4 @@ function getPageTitle(pathname) {
 
   return routes[pathname] || 'WorkLink Admin';
 }
-}
+

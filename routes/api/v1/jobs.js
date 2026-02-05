@@ -17,9 +17,101 @@ function getTelegramPosting() {
   return telegramPostingService;
 }
 
+/**
+ * Auto-complete jobs that are past their end time
+ * Updates status from 'open' or 'filled' to 'completed'
+ */
+function autoCompleteExpiredJobs() {
+  try {
+    // Get current date and time
+    const now = new Date();
+    const currentDate = now.toISOString().split('T')[0]; // YYYY-MM-DD
+    const currentTime = now.toTimeString().split(' ')[0].substring(0, 5); // HH:MM
+
+    // Update jobs where:
+    // 1. Status is 'open' or 'filled'
+    // 2. job_date is before today OR (job_date is today AND end_time has passed)
+    const result = db.prepare(`
+      UPDATE jobs 
+      SET status = 'completed'
+      WHERE (status = 'open' OR status = 'filled')
+      AND (
+        job_date < ?
+        OR (job_date = ? AND end_time <= ?)
+      )
+    `).run(currentDate, currentDate, currentTime);
+
+    if (result.changes > 0) {
+      console.log(`✅ Auto-completed ${result.changes} expired job(s)`);
+    }
+  } catch (error) {
+    console.error('Error auto-completing expired jobs:', error);
+    // Don't throw - this is a background operation
+  }
+}
+
+
+// Get job statistics
+router.get('/stats', (req, res) => {
+  try {
+    // Get status counts for frontend pipeline cards
+    const statusStats = db.prepare(`
+      SELECT status, COUNT(*) as count
+      FROM jobs
+      GROUP BY status
+    `).all();
+
+    // Convert array to object format
+    const stats = {
+      open: 0,
+      filled: 0,
+      completed: 0
+    };
+
+    statusStats.forEach(stat => {
+      if (stat.status === 'open') stats.open = stat.count;
+      else if (stat.status === 'filled') stats.filled = stat.count;
+      else if (stat.status === 'completed') stats.completed = stat.count;
+    });
+
+    // Get total count
+    const totalJobs = db.prepare('SELECT COUNT(*) as count FROM jobs').get().count;
+
+    // Recent job postings
+    const recentPostings = db.prepare(`
+      SELECT DATE(created_at) as date, COUNT(*) as count
+      FROM jobs
+      WHERE created_at >= DATE('now', '-30 days')
+      GROUP BY DATE(created_at)
+      ORDER BY date DESC
+    `).all();
+
+    res.json({
+      success: true,
+      data: stats,
+      meta: {
+        total: totalJobs,
+        recent_postings: recentPostings
+      },
+      generated_at: new Date().toISOString()
+    });
+
+  } catch (error) {
+    console.error('Error fetching job stats:', error);
+    res.status(500).json({
+      success: false,
+      error: 'Failed to retrieve job statistics',
+      details: error.message
+    });
+  }
+});
+
 // Get all jobs
 router.get('/', (req, res) => {
   try {
+    // Auto-complete jobs that are past their end time
+    autoCompleteExpiredJobs();
+
     const { status, client_id, featured, page = 1, limit = 20 } = req.query;
     const offset = (page - 1) * limit;
 
@@ -169,9 +261,14 @@ router.post('/',
 // Update job
 router.put('/:id', (req, res) => {
   try {
+    console.log('🔧 PUT /jobs/:id - Request received:', { 
+      id: req.params.id, 
+      body: req.body 
+    });
+
     const allowedFields = [
       'title', 'description', 'job_date', 'start_time', 'end_time',
-      'location', 'address', 'pay_rate', 'total_slots', 'required_certifications',
+      'location', 'pay_rate', 'charge_rate', 'total_slots', 'required_certifications',
       'xp_bonus', 'featured', 'status'
     ];
 
@@ -191,11 +288,19 @@ router.put('/:id', (req, res) => {
     updates.push('updated_at = CURRENT_TIMESTAMP');
     values.push(req.params.id);
 
+    console.log('🔧 SQL Update:', { 
+      sql: `UPDATE jobs SET ${updates.join(', ')} WHERE id = ?`,
+      values: values
+    });
+
     db.prepare(`UPDATE jobs SET ${updates.join(', ')} WHERE id = ?`).run(...values);
     
     const job = db.prepare('SELECT * FROM jobs WHERE id = ?').get(req.params.id);
+    console.log('✅ Job updated successfully:', job);
+    
     res.json({ success: true, data: job });
   } catch (error) {
+    console.error('❌ Error updating job:', error);
     res.status(500).json({ success: false, error: error.message });
   }
 });
@@ -245,7 +350,42 @@ router.post('/:id/accept', (req, res) => {
     // Update job filled slots
     db.prepare('UPDATE jobs SET filled_slots = filled_slots + 1 WHERE id = ?').run(job_id);
 
+    // Check if job is now fully booked and update status
+    const updatedJob = db.prepare('SELECT filled_slots, total_slots FROM jobs WHERE id = ?').get(job_id);
+    if (updatedJob.filled_slots >= updatedJob.total_slots) {
+      db.prepare('UPDATE jobs SET status = ? WHERE id = ?').run('filled', job_id);
+    }
+
     res.json({ success: true, data: { deployment_id } });
+  } catch (error) {
+    res.status(500).json({ success: false, error: error.message });
+  }
+});
+
+// Update job status
+router.patch('/:id/status', (req, res) => {
+  try {
+    const { status } = req.body;
+    const job_id = req.params.id;
+
+    if (!status) {
+      return res.status(400).json({ success: false, error: 'Status is required' });
+    }
+
+    const validStatuses = ['open', 'filled', 'completed', 'cancelled'];
+    if (!validStatuses.includes(status)) {
+      return res.status(400).json({ success: false, error: `Invalid status. Must be one of: ${validStatuses.join(', ')}` });
+    }
+
+    const job = db.prepare('SELECT * FROM jobs WHERE id = ?').get(job_id);
+    if (!job) {
+      return res.status(404).json({ success: false, error: 'Job not found' });
+    }
+
+    db.prepare('UPDATE jobs SET status = ? WHERE id = ?').run(status, job_id);
+
+    const updatedJob = db.prepare('SELECT * FROM jobs WHERE id = ?').get(job_id);
+    res.json({ success: true, data: updatedJob });
   } catch (error) {
     res.status(500).json({ success: false, error: error.message });
   }

@@ -11,7 +11,7 @@
  * - Predictive engagement modeling
  */
 
-const { db } = require('../db/database');
+const { db } = require('../db');
 
 /**
  * Engagement types and their default scores

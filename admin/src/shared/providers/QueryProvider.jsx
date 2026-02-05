@@ -250,7 +250,7 @@ export function QueryProvider({ children }) {
     <QueryClientProvider client={queryClient}>
       {children}
       {/* Development tools */}
-      {process.env.NODE_ENV === 'development' && (
+      {import.meta.env.DEV && (
         <ReactQueryDevtools
           initialIsOpen={false}
           position="bottom-right"

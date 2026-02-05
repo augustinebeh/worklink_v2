@@ -277,7 +277,7 @@ function Pagination({ currentPage, totalPages, onPageChange }) {
 }
 
 export default function Jobs() {
-  const { user } = useAuth();
+  const { user, refreshUser } = useAuth();
   const [jobs, setJobs] = useState([]);
   const [myJobs, setMyJobs] = useState([]);
   const [loading, setLoading] = useState(true);
@@ -286,12 +286,16 @@ export default function Jobs() {
   const [currentPage, setCurrentPage] = useState(1);
   const jobsPerPage = 10;
 
-  // Check if user is pending
-  const isPending = user?.status === 'pending' || user?.status === 'lead';
+  // Check if user is pending (excluding 'lead' status)
+  const isPending = user?.status === 'pending';
 
   useEffect(() => {
+    // Refresh user data to get latest status from server
+    if (user) {
+      refreshUser();
+    }
     fetchJobs();
-  }, [user]);
+  }, []);
 
   const fetchJobs = async () => {
     try {

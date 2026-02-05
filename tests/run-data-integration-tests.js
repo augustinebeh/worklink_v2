@@ -413,7 +413,7 @@ class TestRunner {
   async setupTestDatabase() {
     try {
       // Import database module to ensure tables are created
-      const { db } = require('../../db/database');
+      const { db } = require('../../db');
 
       // Verify database connection
       const testQuery = db.prepare('SELECT 1 as test').get();
@@ -432,7 +432,7 @@ class TestRunner {
    */
   checkDatabaseConnection() {
     try {
-      const { db } = require('../../db/database');
+      const { db } = require('../../db');
       const testQuery = db.prepare('SELECT 1 as test').get();
       return testQuery && testQuery.test === 1;
     } catch (error) {

@@ -1,0 +1,27 @@
+{
+  "filesScanned": 482,
+  "brokenImports": [
+    {
+      "file": "find-broken-imports.js",
+      "line": 152,
+      "pattern": "websocket.js require",
+      "match": "require('./websocket.js') or require('../websocket.js')",
+      "context": "e websocket.js imports:`);\n  console.log(`   OLD: require('./websocket.js') or require('../websocket.js')`);\n  console.log(`   NEW: require('./websocket')"
+    },
+    {
+      "file": "find-broken-imports.js",
+      "line": 164,
+      "pattern": "smart-slm-router.js require",
+      "match": "require('./utils/smart-slm-router.js')",
+      "context": "-slm-router.js imports:`);\n  console.log(`   OLD: require('./utils/smart-slm-router.js')`);\n  console.log(`   NEW: require('./utils/smart-"
+    }
+  ],
+  "filesByPattern": {
+    "websocket.js require": [
+      "find-broken-imports.js"
+    ],
+    "smart-slm-router.js require": [
+      "find-broken-imports.js"
+    ]
+  }
+}

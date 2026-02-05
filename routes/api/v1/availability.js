@@ -5,7 +5,7 @@
 
 const express = require('express');
 const router = express.Router();
-const { db } = require('../../../db/database');
+const { db } = require('../../../db');
 const { getSGDateString } = require('../../../shared/constants');
 
 // Get candidate availability for a date range

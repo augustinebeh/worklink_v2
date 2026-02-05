@@ -1,0 +1,57 @@
+{
+  "refactoredModules": [
+    {
+      "name": "websocket",
+      "path": "websocket/index.js",
+      "exists": true
+    },
+    {
+      "name": "database",
+      "path": "db/index.js",
+      "exists": true
+    },
+    {
+      "name": "candidates-routes",
+      "path": "routes/api/v1/candidates/index.js",
+      "exists": true
+    },
+    {
+      "name": "chat-routes",
+      "path": "routes/api/v1/chat/index.js",
+      "exists": true
+    },
+    {
+      "name": "gamification-routes",
+      "path": "routes/api/v1/gamification/index.js",
+      "exists": true
+    },
+    {
+      "name": "auth-routes",
+      "path": "routes/api/v1/auth/index.js",
+      "exists": true
+    },
+    {
+      "name": "ai-automation-routes",
+      "path": "routes/api/v1/ai-automation/index.js",
+      "exists": true
+    },
+    {
+      "name": "smart-response-router",
+      "path": "routes/api/v1/smart-response-router/index.js",
+      "exists": true
+    },
+    {
+      "name": "consultant-performance",
+      "path": "routes/api/v1/consultant-performance/index.js",
+      "exists": true
+    }
+  ],
+  "brokenImports": [],
+  "missingFiles": [],
+  "circularDeps": [],
+  "summary": {
+    "totalModules": 9,
+    "workingModules": 9,
+    "issues": 0
+  }
+}

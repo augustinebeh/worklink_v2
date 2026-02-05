@@ -5,7 +5,7 @@
  * without making false promises about timing or processes
  */
 
-const { db } = require('../../db/database');
+const { db } = require('../../db');
 
 class TemplateManager {
   constructor() {
@@ -13,23 +13,27 @@ class TemplateManager {
   }
 
   initializeDefaultTemplates() {
-    // Ensure template tables exist
-    this.createTemplateTables();
+    // Ensure default template categories exist
+    this.ensureDefaultCategories();
 
     // Load default fact-based templates
     this.loadFactBasedTemplates();
   }
 
-  createTemplateTables() {
-    // Categories for organizing templates
-    db.exec(`
-      INSERT OR IGNORE INTO template_categories (name, description, priority) VALUES
-      ('payment_responses', 'Payment and earnings related responses', 1),
-      ('verification_responses', 'Account verification and approval responses', 2),
-      ('job_responses', 'Job availability and application responses', 3),
-      ('support_responses', 'General support and help responses', 4),
-      ('escalation_responses', 'Escalation and admin handoff responses', 5)
-    `);
+  ensureDefaultCategories() {
+    // Insert default categories (tables are created by migrations)
+    try {
+      db.exec(`
+        INSERT OR IGNORE INTO template_categories (name, description, priority) VALUES
+        ('payment_responses', 'Payment and earnings related responses', 1),
+        ('verification_responses', 'Account verification and approval responses', 2),
+        ('job_responses', 'Job availability and application responses', 3),
+        ('support_responses', 'General support and help responses', 4),
+        ('escalation_responses', 'Escalation and admin handoff responses', 5)
+      `);
+    } catch (error) {
+      console.warn('Warning: Could not insert default categories:', error.message);
+    }
   }
 
   loadFactBasedTemplates() {
@@ -39,7 +43,7 @@ class TemplateManager {
         category: 'payment_responses',
         name: 'payment_timing_with_amount',
         triggers: ['payment', 'when', 'receive'],
-        content: `I can see you have ${{pending_earnings}} in pending earnings. Payment timing depends on {{job_completion_status}} and client approval. I'll have the admin team check your specific situation and provide accurate timing.`,
+        content: 'I can see you have ${{pending_earnings}} in pending earnings. Payment timing depends on {{job_completion_status}} and client approval. I\'ll have the admin team check your specific situation and provide accurate timing.',
         requires_real_data: 1,
         variables: [
           { name: 'pending_earnings', source: 'payment', field: 'pending_earnings', format: 'currency' },
@@ -51,7 +55,7 @@ class TemplateManager {
         category: 'payment_responses',
         name: 'payment_general_inquiry',
         triggers: ['payment', 'money', 'salary'],
-        content: `Hi {{first_name}}! Payment timing varies by job type and client approval process. I'll flag this for the admin team to check your specific payment status and provide you with accurate information.`,
+        content: 'Hi {{first_name}}! Payment timing varies by job type and client approval process. I\'ll flag this for the admin team to check your specific payment status and provide you with accurate information.',
         requires_real_data: 0,
         variables: [
           { name: 'first_name', source: 'candidate', field: 'name', format: 'first_name' }
@@ -62,7 +66,7 @@ class TemplateManager {
         category: 'payment_responses',
         name: 'withdrawal_with_balance',
         triggers: ['withdraw', 'withdrawal', 'cash out'],
-        content: `You have ${{available_earnings}} available for withdrawal. The admin team handles withdrawal processing - I'll flag your request for priority review to get you the current process and timeline.`,
+        content: 'You have ${{available_earnings}} available for withdrawal. The admin team handles withdrawal processing - I\'ll flag your request for priority review to get you the current process and timeline.',
         requires_real_data: 1,
         variables: [
           { name: 'available_earnings', source: 'payment', field: 'available_for_withdrawal', format: 'currency' }
@@ -74,7 +78,7 @@ class TemplateManager {
         category: 'verification_responses',
         name: 'pending_verification_with_interview',
         triggers: ['verify', 'verification', 'pending'],
-        content: `Hi {{first_name}}! Your account is under review. I can help speed up the process by scheduling a verification interview with our recruitment consultant. This often helps with faster approval. Would you like me to check available times?`,
+        content: 'Hi {{first_name}}! Your account is under review. I can help speed up the process by scheduling a verification interview with our recruitment consultant. This often helps with faster approval. Would you like me to check available times?',
         requires_real_data: 0,
         variables: [
           { name: 'first_name', source: 'candidate', field: 'name', format: 'first_name' }
@@ -85,7 +89,7 @@ class TemplateManager {
         category: 'verification_responses',
         name: 'verification_status_check',
         triggers: ['status', 'approved', 'when'],
-        content: `Account verification is handled by our admin team. I'll check with them about your current status and next steps. They'll provide you with accurate timeline information.`,
+        content: 'Account verification is handled by our admin team. I\'ll check with them about your current status and next steps. They\'ll provide you with accurate timeline information.',
         requires_real_data: 0
       },
 
@@ -94,7 +98,7 @@ class TemplateManager {
         category: 'job_responses',
         name: 'job_inquiry_with_count',
         triggers: ['job', 'work', 'available'],
-        content: `{{#if upcoming_jobs_count}}You have {{upcoming_jobs_count}} upcoming job(s) scheduled. Check your Jobs tab for details.{{else}}I'll have the admin team check for current job opportunities that match your profile and location.{{/if}}`,
+        content: '{{#if upcoming_jobs_count}}You have {{upcoming_jobs_count}} upcoming job(s) scheduled. Check your Jobs tab for details.{{else}}I\'ll have the admin team check for current job opportunities that match your profile and location.{{/if}}',
         requires_real_data: 1,
         variables: [
           { name: 'upcoming_jobs_count', source: 'jobs', field: 'upcoming_jobs.length', format: 'number' }
@@ -105,7 +109,7 @@ class TemplateManager {
         category: 'job_responses',
         name: 'application_status',
         triggers: ['application', 'applied', 'status'],
-        content: `{{#if pending_applications_count}}You have {{pending_applications_count}} application(s) under review. The admin team will update you once employers make their decisions.{{else}}I don't see any pending applications. The admin team can help you find suitable opportunities.{{/if}}`,
+        content: '{{#if pending_applications_count}}You have {{pending_applications_count}} application(s) under review. The admin team will update you once employers make their decisions.{{else}}I don\'t see any pending applications. The admin team can help you find suitable opportunities.{{/if}}',
         requires_real_data: 1,
         variables: [
           { name: 'pending_applications_count', source: 'jobs', field: 'pending_applications.length', format: 'number' }
@@ -117,7 +121,7 @@ class TemplateManager {
         category: 'support_responses',
         name: 'technical_issue_escalation',
         triggers: ['error', 'bug', 'not working', 'problem'],
-        content: `Hi {{first_name}}! I've flagged this technical issue for immediate admin attention. Please describe any additional details about what you're experiencing so they can assist you properly.`,
+        content: 'Hi {{first_name}}! I\'ve flagged this technical issue for immediate admin attention. Please describe any additional details about what you\'re experiencing so they can assist you properly.',
         requires_real_data: 0,
         variables: [
           { name: 'first_name', source: 'candidate', field: 'name', format: 'first_name' }
@@ -128,7 +132,7 @@ class TemplateManager {
         category: 'support_responses',
         name: 'general_help_escalation',
         triggers: ['help', 'question', 'information'],
-        content: `Thanks for your message! I'll make sure the right admin team member assists with your specific question. They'll get back to you with accurate information and next steps.`,
+        content: 'Thanks for your message! I\'ll make sure the right admin team member assists with your specific question. They\'ll get back to you with accurate information and next steps.',
         requires_real_data: 0
       },
 
@@ -137,7 +141,7 @@ class TemplateManager {
         category: 'escalation_responses',
         name: 'urgent_escalation',
         triggers: ['urgent', 'emergency', 'asap'],
-        content: `Hi {{first_name}}, I understand this is urgent. I've flagged your message for immediate admin attention and they'll respond personally within the next few hours. Thank you for your patience.`,
+        content: 'Hi {{first_name}}, I understand this is urgent. I\'ve flagged your message for immediate admin attention and they\'ll respond personally within the next few hours. Thank you for your patience.',
         requires_real_data: 0,
         variables: [
           { name: 'first_name', source: 'candidate', field: 'name', format: 'first_name' }
@@ -148,7 +152,7 @@ class TemplateManager {
         category: 'escalation_responses',
         name: 'complaint_escalation',
         triggers: ['complaint', 'angry', 'frustrated'],
-        content: `Hi {{first_name}}, I understand your concern and I want to make sure this gets the attention it deserves. I've escalated this to our admin team for immediate review and they'll reach out to resolve this properly.`,
+        content: 'Hi {{first_name}}, I understand your concern and I want to make sure this gets the attention it deserves. I\'ve escalated this to our admin team for immediate review and they\'ll reach out to resolve this properly.',
         requires_real_data: 0,
         variables: [
           { name: 'first_name', source: 'candidate', field: 'name', format: 'first_name' }

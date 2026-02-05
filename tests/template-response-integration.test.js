@@ -6,7 +6,7 @@
 
 const request = require('supertest');
 const { app } = require('../server'); // Assuming server exports app
-const { db } = require('../db/database');
+const { db } = require('../db');
 const FactBasedTemplateSystem = require('../services/template-responses');
 const TemplateIntegrationBridge = require('../services/template-responses/integration-bridge');
 

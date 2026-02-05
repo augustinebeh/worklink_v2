@@ -3,7 +3,7 @@
  * Generates context-aware quick reply suggestions for workers
  */
 
-const { db } = require('../db/database');
+const { db } = require('../db');
 
 // Context keywords for detection
 const CONTEXT_KEYWORDS = {

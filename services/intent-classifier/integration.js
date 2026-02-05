@@ -6,7 +6,7 @@
  */
 
 const intentClassifier = require('./index');
-const { db } = require('../../db/database');
+const { db } = require('../../db');
 const monitor = require('./monitoring');
 
 /**

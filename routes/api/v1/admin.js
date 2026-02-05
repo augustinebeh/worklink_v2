@@ -1,6 +1,6 @@
 const express = require('express');
 const router = express.Router();
-const { db, resetToSampleData } = require('../../../db/database');
+const { db, resetToSampleData } = require('../../../db');
 
 // Reset database to sample data
 router.post('/reset-to-sample', (req, res) => {

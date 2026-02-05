@@ -4,7 +4,7 @@
  * Run with: node db/seed-ad-data.js
  */
 
-const { db } = require('./database');
+const { db } = require('./index');
 
 console.log('Cleaning up duplicate ad data...');
 

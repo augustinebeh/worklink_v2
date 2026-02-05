@@ -12,7 +12,15 @@ export const jobsService = {
    * @returns {Promise<Object>} Jobs data with pagination info
    */
   async getAll(params = {}) {
-    const searchParams = new URLSearchParams(params).toString();
+    // Filter out undefined values to prevent "status=undefined" in URL
+    const filteredParams = Object.entries(params).reduce((acc, [key, value]) => {
+      if (value !== undefined && value !== null && value !== '') {
+        acc[key] = value;
+      }
+      return acc;
+    }, {});
+    
+    const searchParams = new URLSearchParams(filteredParams).toString();
     const url = `/api/v1/jobs${searchParams ? `?${searchParams}` : ''}`;
     return apiClient.getJSON(url);
   },

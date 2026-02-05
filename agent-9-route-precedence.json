@@ -1,0 +1,773 @@
+{
+  "summary": {
+    "modulesAnalyzed": 9,
+    "modulesWithIssues": 5,
+    "shadowedRoutes": 5
+  },
+  "modules": [
+    {
+      "name": "candidates",
+      "type": "modular",
+      "routes": [
+        {
+          "line": 26,
+          "type": "use",
+          "path": "/",
+          "code": "router.use('/', listRoutes);          // GET / (list), GET /search"
+        },
+        {
+          "line": 27,
+          "type": "use",
+          "path": "/",
+          "code": "router.use('/', profileRoutes);       // GET /:id, PUT /:id, DELETE /:id, GET /:id/jobs, POST /:id/status"
+        },
+        {
+          "line": 28,
+          "type": "use",
+          "path": "/",
+          "code": "router.use('/', createRoutes);        // POST /, POST /bulk, POST /:id/notes"
+        },
+        {
+          "line": 34,
+          "type": "method",
+          "method": "GET",
+          "path": "/health",
+          "code": "router.get('/health', (req, res) => {"
+        },
+        {
+          "line": 49,
+          "type": "method",
+          "method": "GET",
+          "path": "/stats",
+          "code": "router.get('/stats', (req, res) => {"
+        }
+      ],
+      "issues": [
+        {
+          "type": "route_shadowing",
+          "severity": "high",
+          "message": "3 root routes registered - last one shadows others",
+          "routes": [
+            {
+              "line": 26,
+              "type": "use",
+              "path": "/",
+              "code": "router.use('/', listRoutes);          // GET / (list), GET /search"
+            },
+            {
+              "line": 27,
+              "type": "use",
+              "path": "/",
+              "code": "router.use('/', profileRoutes);       // GET /:id, PUT /:id, DELETE /:id, GET /:id/jobs, POST /:id/status"
+            },
+            {
+              "line": 28,
+              "type": "use",
+              "path": "/",
+              "code": "router.use('/', createRoutes);        // POST /, POST /bulk, POST /:id/notes"
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "name": "jobs",
+      "type": "monolithic",
+      "routes": [
+        {
+          "line": 21,
+          "type": "method",
+          "method": "GET",
+          "path": "/",
+          "code": "router.get('/', (req, res) => {"
+        },
+        {
+          "line": 75,
+          "type": "method",
+          "method": "GET",
+          "path": "/:id",
+          "code": "router.get('/:id', (req, res) => {"
+        },
+        {
+          "line": 97,
+          "type": "method",
+          "method": "GET",
+          "path": "/:id/deployments",
+          "code": "router.get('/:id/deployments', (req, res) => {"
+        },
+        {
+          "line": 115,
+          "type": "method",
+          "method": "POST",
+          "path": "/",
+          "code": "router.post('/',"
+        },
+        {
+          "line": 170,
+          "type": "method",
+          "method": "PUT",
+          "path": "/:id",
+          "code": "router.put('/:id', (req, res) => {"
+        },
+        {
+          "line": 204,
+          "type": "method",
+          "method": "POST",
+          "path": "/:id/accept",
+          "code": "router.post('/:id/accept', (req, res) => {"
+        }
+      ],
+      "issues": [
+        {
+          "type": "route_shadowing",
+          "severity": "high",
+          "message": "2 root routes registered - last one shadows others",
+          "routes": [
+            {
+              "line": 21,
+              "type": "method",
+              "method": "GET",
+              "path": "/",
+              "code": "router.get('/', (req, res) => {"
+            },
+            {
+              "line": 115,
+              "type": "method",
+              "method": "POST",
+              "path": "/",
+              "code": "router.post('/',"
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "name": "chat",
+      "type": "modular",
+      "routes": [
+        {
+          "line": 24,
+          "type": "use",
+          "path": "/messages",
+          "code": "router.use('/messages', messagesRoutes);        // Message CRUD operations"
+        },
+        {
+          "line": 25,
+          "type": "use",
+          "path": "/conversations",
+          "code": "router.use('/conversations', conversationsRoutes);  // Conversation management"
+        },
+        {
+          "line": 31,
+          "type": "method",
+          "method": "GET",
+          "path": "/health",
+          "code": "router.get('/health', (req, res) => {"
+        },
+        {
+          "line": 46,
+          "type": "method",
+          "method": "GET",
+          "path": "/stats",
+          "code": "router.get('/stats', (req, res) => {"
+        },
+        {
+          "line": 141,
+          "type": "method",
+          "method": "GET",
+          "path": "/",
+          "code": "router.get('/', (req, res) => {"
+        }
+      ],
+      "issues": []
+    },
+    {
+      "name": "gamification",
+      "type": "modular",
+      "routes": [
+        {
+          "line": 32,
+          "type": "use",
+          "path": "/",
+          "code": "router.use('/', profileRoutes);           // GET /profile/:candidateId"
+        },
+        {
+          "line": 33,
+          "type": "use",
+          "path": "/",
+          "code": "router.use('/', xpRoutes);               // POST /xp/award, /xp/job-complete, /xp/penalty, /streak/update"
+        },
+        {
+          "line": 34,
+          "type": "use",
+          "path": "/",
+          "code": "router.use('/', achievementRoutes);      // GET /achievements, /achievements/user/:candidateId, POST /achievements/unlock, /achievements/:id/claim, /achievements/check/:candidateId"
+        },
+        {
+          "line": 35,
+          "type": "use",
+          "path": "/",
+          "code": "router.use('/', questRoutes);            // GET /quests, /quests/user/:candidateId, POST /quests/:id/start, /quests/:id/progress, /quests/:id/complete, /quests/:id/claim"
+        },
+        {
+          "line": 36,
+          "type": "use",
+          "path": "/",
+          "code": "router.use('/', leaderboardRoutes);      // GET /leaderboard, /leaderboard/rank/:candidateId"
+        },
+        {
+          "line": 37,
+          "type": "use",
+          "path": "/",
+          "code": "router.use('/', borderRoutes);           // GET /borders/:candidateId, POST /borders/:candidateId/select"
+        },
+        {
+          "line": 38,
+          "type": "use",
+          "path": "/",
+          "code": "router.use('/', rewardRoutes);           // GET /rewards, /rewards/user/:candidateId, POST /rewards/:id/purchase"
+        },
+        {
+          "line": 39,
+          "type": "use",
+          "path": "/",
+          "code": "router.use('/', customizationRoutes);    // GET/POST /flair/:candidateId, GET/POST /theme/:candidateId, GET /themes"
+        },
+        {
+          "line": 45,
+          "type": "method",
+          "method": "GET",
+          "path": "/health",
+          "code": "router.get('/health', (req, res) => {"
+        },
+        {
+          "line": 60,
+          "type": "method",
+          "method": "GET",
+          "path": "/",
+          "code": "router.get('/', (req, res) => {"
+        }
+      ],
+      "issues": [
+        {
+          "type": "route_shadowing",
+          "severity": "high",
+          "message": "9 root routes registered - last one shadows others",
+          "routes": [
+            {
+              "line": 32,
+              "type": "use",
+              "path": "/",
+              "code": "router.use('/', profileRoutes);           // GET /profile/:candidateId"
+            },
+            {
+              "line": 33,
+              "type": "use",
+              "path": "/",
+              "code": "router.use('/', xpRoutes);               // POST /xp/award, /xp/job-complete, /xp/penalty, /streak/update"
+            },
+            {
+              "line": 34,
+              "type": "use",
+              "path": "/",
+              "code": "router.use('/', achievementRoutes);      // GET /achievements, /achievements/user/:candidateId, POST /achievements/unlock, /achievements/:id/claim, /achievements/check/:candidateId"
+            },
+            {
+              "line": 35,
+              "type": "use",
+              "path": "/",
+              "code": "router.use('/', questRoutes);            // GET /quests, /quests/user/:candidateId, POST /quests/:id/start, /quests/:id/progress, /quests/:id/complete, /quests/:id/claim"
+            },
+            {
+              "line": 36,
+              "type": "use",
+              "path": "/",
+              "code": "router.use('/', leaderboardRoutes);      // GET /leaderboard, /leaderboard/rank/:candidateId"
+            },
+            {
+              "line": 37,
+              "type": "use",
+              "path": "/",
+              "code": "router.use('/', borderRoutes);           // GET /borders/:candidateId, POST /borders/:candidateId/select"
+            },
+            {
+              "line": 38,
+              "type": "use",
+              "path": "/",
+              "code": "router.use('/', rewardRoutes);           // GET /rewards, /rewards/user/:candidateId, POST /rewards/:id/purchase"
+            },
+            {
+              "line": 39,
+              "type": "use",
+              "path": "/",
+              "code": "router.use('/', customizationRoutes);    // GET/POST /flair/:candidateId, GET/POST /theme/:candidateId, GET /themes"
+            },
+            {
+              "line": 60,
+              "type": "method",
+              "method": "GET",
+              "path": "/",
+              "code": "router.get('/', (req, res) => {"
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "name": "auth",
+      "type": "modular",
+      "routes": [
+        {
+          "line": 27,
+          "type": "use",
+          "path": "/",
+          "code": "router.use('/', coreRoutes);           // POST /login, POST /register, GET /me"
+        },
+        {
+          "line": 28,
+          "type": "use",
+          "path": "/",
+          "code": "router.use('/', workerRoutes);         // POST /worker/login"
+        },
+        {
+          "line": 29,
+          "type": "use",
+          "path": "/",
+          "code": "router.use('/', telegramRoutes);       // POST /telegram/login, GET /telegram/config, POST /telegram/debug"
+        },
+        {
+          "line": 30,
+          "type": "use",
+          "path": "/",
+          "code": "router.use('/', googleRoutes);         // POST /google/login, GET /google/config"
+        },
+        {
+          "line": 31,
+          "type": "use",
+          "path": "/",
+          "code": "router.use('/', tokensRoutes);         // POST /push-token"
+        },
+        {
+          "line": 37,
+          "type": "method",
+          "method": "GET",
+          "path": "/health",
+          "code": "router.get('/health', (req, res) => {"
+        },
+        {
+          "line": 52,
+          "type": "method",
+          "method": "GET",
+          "path": "/",
+          "code": "router.get('/', (req, res) => {"
+        }
+      ],
+      "issues": [
+        {
+          "type": "route_shadowing",
+          "severity": "high",
+          "message": "6 root routes registered - last one shadows others",
+          "routes": [
+            {
+              "line": 27,
+              "type": "use",
+              "path": "/",
+              "code": "router.use('/', coreRoutes);           // POST /login, POST /register, GET /me"
+            },
+            {
+              "line": 28,
+              "type": "use",
+              "path": "/",
+              "code": "router.use('/', workerRoutes);         // POST /worker/login"
+            },
+            {
+              "line": 29,
+              "type": "use",
+              "path": "/",
+              "code": "router.use('/', telegramRoutes);       // POST /telegram/login, GET /telegram/config, POST /telegram/debug"
+            },
+            {
+              "line": 30,
+              "type": "use",
+              "path": "/",
+              "code": "router.use('/', googleRoutes);         // POST /google/login, GET /google/config"
+            },
+            {
+              "line": 31,
+              "type": "use",
+              "path": "/",
+              "code": "router.use('/', tokensRoutes);         // POST /push-token"
+            },
+            {
+              "line": 52,
+              "type": "method",
+              "method": "GET",
+              "path": "/",
+              "code": "router.get('/', (req, res) => {"
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "name": "deployments",
+      "type": "monolithic",
+      "routes": [
+        {
+          "line": 6,
+          "type": "method",
+          "method": "GET",
+          "path": "/",
+          "code": "router.get('/', (req, res) => {"
+        },
+        {
+          "line": 62,
+          "type": "method",
+          "method": "GET",
+          "path": "/:id",
+          "code": "router.get('/:id', (req, res) => {"
+        },
+        {
+          "line": 96,
+          "type": "method",
+          "method": "PATCH",
+          "path": "/:id",
+          "code": "router.patch('/:id', (req, res) => {"
+        },
+        {
+          "line": 153,
+          "type": "method",
+          "method": "GET",
+          "path": "/stats/overview",
+          "code": "router.get('/stats/overview', (req, res) => {"
+        }
+      ],
+      "issues": []
+    },
+    {
+      "name": "payments",
+      "type": "monolithic",
+      "routes": [
+        {
+          "line": 8,
+          "type": "method",
+          "method": "GET",
+          "path": "/",
+          "code": "router.get('/', authenticateAdmin, (req, res) => {"
+        },
+        {
+          "line": 57,
+          "type": "method",
+          "method": "GET",
+          "path": "/stats",
+          "code": "router.get('/stats', authenticateAdmin, (req, res) => {"
+        },
+        {
+          "line": 75,
+          "type": "method",
+          "method": "PATCH",
+          "path": "/:id",
+          "code": "router.patch('/:id', authenticateAdmin, createValidationMiddleware('payment'), (req, res) => {"
+        },
+        {
+          "line": 119,
+          "type": "method",
+          "method": "POST",
+          "path": "/batch-approve",
+          "code": "router.post('/batch-approve', (req, res) => {"
+        },
+        {
+          "line": 138,
+          "type": "method",
+          "method": "POST",
+          "path": "/batch-paid",
+          "code": "router.post('/batch-paid', (req, res) => {"
+        },
+        {
+          "line": 183,
+          "type": "method",
+          "method": "POST",
+          "path": "/:id/request-withdrawal",
+          "code": "router.post('/:id/request-withdrawal', (req, res) => {"
+        }
+      ],
+      "issues": []
+    },
+    {
+      "name": "clients",
+      "type": "monolithic",
+      "routes": [
+        {
+          "line": 6,
+          "type": "method",
+          "method": "GET",
+          "path": "/",
+          "code": "router.get('/', (req, res) => {"
+        },
+        {
+          "line": 47,
+          "type": "method",
+          "method": "GET",
+          "path": "/:id",
+          "code": "router.get('/:id', (req, res) => {"
+        },
+        {
+          "line": 61,
+          "type": "method",
+          "method": "GET",
+          "path": "/:id/jobs",
+          "code": "router.get('/:id/jobs', (req, res) => {"
+        },
+        {
+          "line": 74,
+          "type": "method",
+          "method": "POST",
+          "path": "/",
+          "code": "router.post('/', (req, res) => {"
+        },
+        {
+          "line": 92,
+          "type": "method",
+          "method": "PUT",
+          "path": "/:id",
+          "code": "router.put('/:id', (req, res) => {"
+        }
+      ],
+      "issues": [
+        {
+          "type": "route_shadowing",
+          "severity": "high",
+          "message": "2 root routes registered - last one shadows others",
+          "routes": [
+            {
+              "line": 6,
+              "type": "method",
+              "method": "GET",
+              "path": "/",
+              "code": "router.get('/', (req, res) => {"
+            },
+            {
+              "line": 74,
+              "type": "method",
+              "method": "POST",
+              "path": "/",
+              "code": "router.post('/', (req, res) => {"
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "name": "tenders",
+      "type": "monolithic",
+      "routes": [
+        {
+          "line": 6,
+          "type": "method",
+          "method": "GET",
+          "path": "/",
+          "code": "router.get('/', (req, res) => {"
+        },
+        {
+          "line": 46,
+          "type": "method",
+          "method": "GET",
+          "path": "/:id",
+          "code": "router.get('/:id', (req, res) => {"
+        },
+        {
+          "line": 59,
+          "type": "method",
+          "method": "PATCH",
+          "path": "/:id",
+          "code": "router.patch('/:id', (req, res) => {"
+        },
+        {
+          "line": 84,
+          "type": "method",
+          "method": "GET",
+          "path": "/stats/overview",
+          "code": "router.get('/stats/overview', (req, res) => {"
+        },
+        {
+          "line": 105,
+          "type": "method",
+          "method": "GET",
+          "path": "/recommendations/acquisition",
+          "code": "router.get('/recommendations/acquisition', (req, res) => {"
+        }
+      ],
+      "issues": []
+    }
+  ],
+  "shadowedRoutes": [
+    {
+      "module": "candidates",
+      "count": 3,
+      "routes": [
+        {
+          "line": 26,
+          "type": "use",
+          "path": "/",
+          "code": "router.use('/', listRoutes);          // GET / (list), GET /search"
+        },
+        {
+          "line": 27,
+          "type": "use",
+          "path": "/",
+          "code": "router.use('/', profileRoutes);       // GET /:id, PUT /:id, DELETE /:id, GET /:id/jobs, POST /:id/status"
+        },
+        {
+          "line": 28,
+          "type": "use",
+          "path": "/",
+          "code": "router.use('/', createRoutes);        // POST /, POST /bulk, POST /:id/notes"
+        }
+      ]
+    },
+    {
+      "module": "jobs",
+      "count": 2,
+      "routes": [
+        {
+          "line": 21,
+          "type": "method",
+          "method": "GET",
+          "path": "/",
+          "code": "router.get('/', (req, res) => {"
+        },
+        {
+          "line": 115,
+          "type": "method",
+          "method": "POST",
+          "path": "/",
+          "code": "router.post('/',"
+        }
+      ]
+    },
+    {
+      "module": "gamification",
+      "count": 9,
+      "routes": [
+        {
+          "line": 32,
+          "type": "use",
+          "path": "/",
+          "code": "router.use('/', profileRoutes);           // GET /profile/:candidateId"
+        },
+        {
+          "line": 33,
+          "type": "use",
+          "path": "/",
+          "code": "router.use('/', xpRoutes);               // POST /xp/award, /xp/job-complete, /xp/penalty, /streak/update"
+        },
+        {
+          "line": 34,
+          "type": "use",
+          "path": "/",
+          "code": "router.use('/', achievementRoutes);      // GET /achievements, /achievements/user/:candidateId, POST /achievements/unlock, /achievements/:id/claim, /achievements/check/:candidateId"
+        },
+        {
+          "line": 35,
+          "type": "use",
+          "path": "/",
+          "code": "router.use('/', questRoutes);            // GET /quests, /quests/user/:candidateId, POST /quests/:id/start, /quests/:id/progress, /quests/:id/complete, /quests/:id/claim"
+        },
+        {
+          "line": 36,
+          "type": "use",
+          "path": "/",
+          "code": "router.use('/', leaderboardRoutes);      // GET /leaderboard, /leaderboard/rank/:candidateId"
+        },
+        {
+          "line": 37,
+          "type": "use",
+          "path": "/",
+          "code": "router.use('/', borderRoutes);           // GET /borders/:candidateId, POST /borders/:candidateId/select"
+        },
+        {
+          "line": 38,
+          "type": "use",
+          "path": "/",
+          "code": "router.use('/', rewardRoutes);           // GET /rewards, /rewards/user/:candidateId, POST /rewards/:id/purchase"
+        },
+        {
+          "line": 39,
+          "type": "use",
+          "path": "/",
+          "code": "router.use('/', customizationRoutes);    // GET/POST /flair/:candidateId, GET/POST /theme/:candidateId, GET /themes"
+        },
+        {
+          "line": 60,
+          "type": "method",
+          "method": "GET",
+          "path": "/",
+          "code": "router.get('/', (req, res) => {"
+        }
+      ]
+    },
+    {
+      "module": "auth",
+      "count": 6,
+      "routes": [
+        {
+          "line": 27,
+          "type": "use",
+          "path": "/",
+          "code": "router.use('/', coreRoutes);           // POST /login, POST /register, GET /me"
+        },
+        {
+          "line": 28,
+          "type": "use",
+          "path": "/",
+          "code": "router.use('/', workerRoutes);         // POST /worker/login"
+        },
+        {
+          "line": 29,
+          "type": "use",
+          "path": "/",
+          "code": "router.use('/', telegramRoutes);       // POST /telegram/login, GET /telegram/config, POST /telegram/debug"
+        },
+        {
+          "line": 30,
+          "type": "use",
+          "path": "/",
+          "code": "router.use('/', googleRoutes);         // POST /google/login, GET /google/config"
+        },
+        {
+          "line": 31,
+          "type": "use",
+          "path": "/",
+          "code": "router.use('/', tokensRoutes);         // POST /push-token"
+        },
+        {
+          "line": 52,
+          "type": "method",
+          "method": "GET",
+          "path": "/",
+          "code": "router.get('/', (req, res) => {"
+        }
+      ]
+    },
+    {
+      "module": "clients",
+      "count": 2,
+      "routes": [
+        {
+          "line": 6,
+          "type": "method",
+          "method": "GET",
+          "path": "/",
+          "code": "router.get('/', (req, res) => {"
+        },
+        {
+          "line": 74,
+          "type": "method",
+          "method": "POST",
+          "path": "/",
+          "code": "router.post('/', (req, res) => {"
+        }
+      ]
+    }
+  ]
+}

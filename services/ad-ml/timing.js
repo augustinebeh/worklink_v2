@@ -5,7 +5,7 @@
  * Uses Singapore timezone (UTC+8).
  */
 
-const { db } = require('../../db/database');
+const { db } = require('../../db');
 
 /**
  * Get Singapore time

@@ -1,0 +1,1317 @@
+{
+  "timestamp": "2026-02-04T19:24:40.688Z",
+  "summary": {
+    "totalFiles": 548,
+    "refactoredCount": 171,
+    "byType": {
+      ".js": 171
+    },
+    "modules": [
+      "ai-automation",
+      "ai-automation/analytics/routes",
+      "ai-automation/assistant/routes",
+      "ai-automation/engagement/routes",
+      "ai-automation/follow-up/routes",
+      "ai-automation/gebiz/routes",
+      "ai-automation/outreach/routes",
+      "ai-automation/sourcing/routes",
+      "ai-automation/tenders/analysis.routes",
+      "ai-automation/utils/message-templates",
+      "ai-automation/utils/posting-generators",
+      "ai-automation/utils/scraping-helpers",
+      "candidates/helpers/avatar-utils",
+      "candidates/helpers/query-builder",
+      "candidates/routes/create",
+      "candidates/routes/list",
+      "candidates/routes/profile",
+      "chat/helpers/ai-replies",
+      "chat/helpers/websocket-integration",
+      "chat/routes/conversations",
+      "chat/routes/messages",
+      "consultant-performance",
+      "consultant-performance/analytics/routes",
+      "consultant-performance/capacity/routes",
+      "consultant-performance/dashboard/routes",
+      "consultant-performance/prequalification/routes",
+      "consultant-performance/reliability/routes",
+      "consultant-performance/retention/routes",
+      "consultant-performance/scheduling/routes",
+      "consultant-performance/slm-bridge/routes",
+      "consultant-performance/sourcing/routes",
+      "consultant-performance/utils/helpers",
+      "database/config",
+      "database/migrations",
+      "database/schema/admin",
+      "database/schema/ai-ml",
+      "database/schema/communication",
+      "database/schema/core",
+      "database/schema/gamification",
+      "database/schema/indexes",
+      "database/schema/referrals",
+      "database/schema/tenders",
+      "database/seeds/demo",
+      "database/seeds/essential",
+      "database/seeds/sample",
+      "database/utils",
+      "db",
+      "db/seeds/demo-account",
+      "db/seeds/essential-data",
+      "db/utils/avatar-generator",
+      "db/utils/db-helpers",
+      "gamification/helpers/achievement-checker",
+      "gamification/helpers/database-queries",
+      "gamification/helpers/quest-processor",
+      "gamification/helpers/xp-calculator",
+      "gamification/routes/achievements",
+      "gamification/routes/borders",
+      "gamification/routes/customization",
+      "gamification/routes/leaderboard",
+      "gamification/routes/profile",
+      "gamification/routes/quests",
+      "gamification/routes/rewards",
+      "gamification/routes/xp",
+      "services",
+      "smart-response-router/helpers/analytics",
+      "smart-response-router/helpers/migration",
+      "smart-response-router/routes/admin",
+      "smart-response-router/routes/routing",
+      "smart-slm-router",
+      "unknown",
+      "utils",
+      "websocket",
+      "websocket/broadcasting/broadcast-service",
+      "websocket/broadcasting/event-notifiers",
+      "websocket/config/constants",
+      "websocket/config/event-types",
+      "websocket/connection/admin-handler",
+      "websocket/connection/candidate-handler",
+      "websocket/connection/tracker",
+      "websocket/connection/validator",
+      "websocket/features/chat-features",
+      "websocket/features/status-notifications",
+      "websocket/messaging/message-router",
+      "websocket/utils/client-store",
+      "websocket/utils/lazy-loaders"
+    ]
+  },
+  "files": [
+    {
+      "path": "db/database/config.js",
+      "module": "database/config",
+      "reasons": [
+        "Module documentation: database/config"
+      ]
+    },
+    {
+      "path": "db/database/index.js",
+      "module": "unknown",
+      "reasons": [
+        "Contains keyword: \"monolithic file\""
+      ]
+    },
+    {
+      "path": "db/database/migrations.js",
+      "module": "database/migrations",
+      "reasons": [
+        "Module documentation: database/migrations"
+      ]
+    },
+    {
+      "path": "db/database/schema/admin.js",
+      "module": "database/schema/admin",
+      "reasons": [
+        "Module documentation: database/schema/admin"
+      ]
+    },
+    {
+      "path": "db/database/schema/ai-ml.js",
+      "module": "database/schema/ai-ml",
+      "reasons": [
+        "Module documentation: database/schema/ai-ml"
+      ]
+    },
+    {
+      "path": "db/database/schema/communication.js",
+      "module": "database/schema/communication",
+      "reasons": [
+        "Module documentation: database/schema/communication"
+      ]
+    },
+    {
+      "path": "db/database/schema/core.js",
+      "module": "database/schema/core",
+      "reasons": [
+        "Module documentation: database/schema/core"
+      ]
+    },
+    {
+      "path": "db/database/schema/gamification.js",
+      "module": "database/schema/gamification",
+      "reasons": [
+        "Module documentation: database/schema/gamification"
+      ]
+    },
+    {
+      "path": "db/database/schema/indexes.js",
+      "module": "database/schema/indexes",
+      "reasons": [
+        "Module documentation: database/schema/indexes"
+      ]
+    },
+    {
+      "path": "db/database/schema/referrals.js",
+      "module": "database/schema/referrals",
+      "reasons": [
+        "Module documentation: database/schema/referrals"
+      ]
+    },
+    {
+      "path": "db/database/schema/tenders.js",
+      "module": "database/schema/tenders",
+      "reasons": [
+        "Module documentation: database/schema/tenders"
+      ]
+    },
+    {
+      "path": "db/database/seeds/demo.js",
+      "module": "database/seeds/demo",
+      "reasons": [
+        "Module documentation: database/seeds/demo"
+      ]
+    },
+    {
+      "path": "db/database/seeds/essential.js",
+      "module": "database/seeds/essential",
+      "reasons": [
+        "Module documentation: database/seeds/essential"
+      ]
+    },
+    {
+      "path": "db/database/seeds/sample.js",
+      "module": "database/seeds/sample",
+      "reasons": [
+        "Module documentation: database/seeds/sample"
+      ]
+    },
+    {
+      "path": "db/database/utils.js",
+      "module": "database/utils",
+      "reasons": [
+        "Module documentation: database/utils"
+      ]
+    },
+    {
+      "path": "db/database.js",
+      "module": "unknown",
+      "reasons": [
+        "Contains keyword: \"monolithic file\""
+      ]
+    },
+    {
+      "path": "db/migrations/add-scraping-fields.js",
+      "module": "db",
+      "reasons": [
+        "Located in modular directory: db/migrations"
+      ]
+    },
+    {
+      "path": "db/seed-ad-data.js",
+      "module": "db",
+      "reasons": [
+        "Located in modular directory: db/seed"
+      ]
+    },
+    {
+      "path": "db/seed-slm-data.js",
+      "module": "db",
+      "reasons": [
+        "Located in modular directory: db/seed"
+      ]
+    },
+    {
+      "path": "db/seeders/essential.js",
+      "module": "db",
+      "reasons": [
+        "Located in modular directory: db/seed"
+      ]
+    },
+    {
+      "path": "db/seeders/sample.js",
+      "module": "db",
+      "reasons": [
+        "Located in modular directory: db/seed"
+      ]
+    },
+    {
+      "path": "db/seeds/demo-account.js",
+      "module": "db/seeds/demo-account",
+      "reasons": [
+        "Module documentation: db/seeds/demo-account",
+        "Located in modular directory: db/seed"
+      ]
+    },
+    {
+      "path": "db/seeds/essential/index.js",
+      "module": "db/seeds/essential-data",
+      "reasons": [
+        "Module documentation: db/seeds/essential-data",
+        "Located in modular directory: db/seed"
+      ]
+    },
+    {
+      "path": "db/utils/avatar-generator.js",
+      "module": "db/utils/avatar-generator",
+      "reasons": [
+        "Module documentation: db/utils/avatar-generator"
+      ]
+    },
+    {
+      "path": "db/utils/db-helpers.js",
+      "module": "db/utils/db-helpers",
+      "reasons": [
+        "Module documentation: db/utils/db-helpers"
+      ]
+    },
+    {
+      "path": "detect-refactored-files.js",
+      "module": "unknown",
+      "reasons": [
+        "Contains keyword: \"modular implementation\""
+      ]
+    },
+    {
+      "path": "routes/api/v1/ai-automation/analytics/routes.js",
+      "module": "ai-automation/analytics/routes",
+      "reasons": [
+        "Module documentation: ai-automation/analytics/routes"
+      ]
+    },
+    {
+      "path": "routes/api/v1/ai-automation/assistant/routes.js",
+      "module": "ai-automation/assistant/routes",
+      "reasons": [
+        "Module documentation: ai-automation/assistant/routes"
+      ]
+    },
+    {
+      "path": "routes/api/v1/ai-automation/engagement/routes.js",
+      "module": "ai-automation/engagement/routes",
+      "reasons": [
+        "Module documentation: ai-automation/engagement/routes"
+      ]
+    },
+    {
+      "path": "routes/api/v1/ai-automation/follow-up/routes.js",
+      "module": "ai-automation/follow-up/routes",
+      "reasons": [
+        "Module documentation: ai-automation/follow-up/routes"
+      ]
+    },
+    {
+      "path": "routes/api/v1/ai-automation/gebiz/routes.js",
+      "module": "ai-automation/gebiz/routes",
+      "reasons": [
+        "Module documentation: ai-automation/gebiz/routes"
+      ]
+    },
+    {
+      "path": "routes/api/v1/ai-automation/index.js",
+      "module": "ai-automation",
+      "reasons": [
+        "Module documentation: ai-automation"
+      ]
+    },
+    {
+      "path": "routes/api/v1/ai-automation/outreach/routes.js",
+      "module": "ai-automation/outreach/routes",
+      "reasons": [
+        "Module documentation: ai-automation/outreach/routes"
+      ]
+    },
+    {
+      "path": "routes/api/v1/ai-automation/sourcing/routes.js",
+      "module": "ai-automation/sourcing/routes",
+      "reasons": [
+        "Module documentation: ai-automation/sourcing/routes"
+      ]
+    },
+    {
+      "path": "routes/api/v1/ai-automation/tenders/analysis.routes.js",
+      "module": "ai-automation/tenders/analysis.routes",
+      "reasons": [
+        "Module documentation: ai-automation/tenders/analysis.routes"
+      ]
+    },
+    {
+      "path": "routes/api/v1/ai-automation/utils/message-templates.js",
+      "module": "ai-automation/utils/message-templates",
+      "reasons": [
+        "Module documentation: ai-automation/utils/message-templates"
+      ]
+    },
+    {
+      "path": "routes/api/v1/ai-automation/utils/posting-generators.js",
+      "module": "ai-automation/utils/posting-generators",
+      "reasons": [
+        "Module documentation: ai-automation/utils/posting-generators"
+      ]
+    },
+    {
+      "path": "routes/api/v1/ai-automation/utils/scraping-helpers.js",
+      "module": "ai-automation/utils/scraping-helpers",
+      "reasons": [
+        "Module documentation: ai-automation/utils/scraping-helpers"
+      ]
+    },
+    {
+      "path": "routes/api/v1/ai-automation-wrapper.js",
+      "module": "unknown",
+      "reasons": [
+        "Contains keyword: \"monolithic file\""
+      ]
+    },
+    {
+      "path": "routes/api/v1/auth/index.js",
+      "module": "unknown",
+      "reasons": [
+        "Contains keyword: \"modular implementation\""
+      ]
+    },
+    {
+      "path": "routes/api/v1/candidates/helpers/avatar-utils.js",
+      "module": "candidates/helpers/avatar-utils",
+      "reasons": [
+        "Module documentation: candidates/helpers/avatar-utils",
+        "Located in modular directory: routes/api/v1/candidates/helpers"
+      ]
+    },
+    {
+      "path": "routes/api/v1/candidates/helpers/query-builder.js",
+      "module": "candidates/helpers/query-builder",
+      "reasons": [
+        "Module documentation: candidates/helpers/query-builder",
+        "Located in modular directory: routes/api/v1/candidates/helpers"
+      ]
+    },
+    {
+      "path": "routes/api/v1/candidates/index.js",
+      "module": "unknown",
+      "reasons": [
+        "Contains keyword: \"modular implementation\""
+      ]
+    },
+    {
+      "path": "routes/api/v1/candidates/routes/create.js",
+      "module": "candidates/routes/create",
+      "reasons": [
+        "Module documentation: candidates/routes/create",
+        "Located in modular directory: routes/api/v1/candidates/routes"
+      ]
+    },
+    {
+      "path": "routes/api/v1/candidates/routes/list.js",
+      "module": "candidates/routes/list",
+      "reasons": [
+        "Module documentation: candidates/routes/list",
+        "Located in modular directory: routes/api/v1/candidates/routes"
+      ]
+    },
+    {
+      "path": "routes/api/v1/candidates/routes/profile.js",
+      "module": "candidates/routes/profile",
+      "reasons": [
+        "Module documentation: candidates/routes/profile",
+        "Located in modular directory: routes/api/v1/candidates/routes"
+      ]
+    },
+    {
+      "path": "routes/api/v1/chat/helpers/ai-replies.js",
+      "module": "chat/helpers/ai-replies",
+      "reasons": [
+        "Module documentation: chat/helpers/ai-replies"
+      ]
+    },
+    {
+      "path": "routes/api/v1/chat/helpers/websocket-integration.js",
+      "module": "chat/helpers/websocket-integration",
+      "reasons": [
+        "Module documentation: chat/helpers/websocket-integration"
+      ]
+    },
+    {
+      "path": "routes/api/v1/chat/index.js",
+      "module": "unknown",
+      "reasons": [
+        "Contains keyword: \"modular implementation\""
+      ]
+    },
+    {
+      "path": "routes/api/v1/chat/routes/conversations.js",
+      "module": "chat/routes/conversations",
+      "reasons": [
+        "Module documentation: chat/routes/conversations"
+      ]
+    },
+    {
+      "path": "routes/api/v1/chat/routes/messages.js",
+      "module": "chat/routes/messages",
+      "reasons": [
+        "Module documentation: chat/routes/messages"
+      ]
+    },
+    {
+      "path": "routes/api/v1/consultant-performance/analytics/routes.js",
+      "module": "consultant-performance/analytics/routes",
+      "reasons": [
+        "Module documentation: consultant-performance/analytics/routes"
+      ]
+    },
+    {
+      "path": "routes/api/v1/consultant-performance/capacity/routes.js",
+      "module": "consultant-performance/capacity/routes",
+      "reasons": [
+        "Module documentation: consultant-performance/capacity/routes"
+      ]
+    },
+    {
+      "path": "routes/api/v1/consultant-performance/dashboard/routes.js",
+      "module": "consultant-performance/dashboard/routes",
+      "reasons": [
+        "Module documentation: consultant-performance/dashboard/routes"
+      ]
+    },
+    {
+      "path": "routes/api/v1/consultant-performance/index.js",
+      "module": "consultant-performance",
+      "reasons": [
+        "Module documentation: consultant-performance"
+      ]
+    },
+    {
+      "path": "routes/api/v1/consultant-performance/prequalification/routes.js",
+      "module": "consultant-performance/prequalification/routes",
+      "reasons": [
+        "Module documentation: consultant-performance/prequalification/routes"
+      ]
+    },
+    {
+      "path": "routes/api/v1/consultant-performance/reliability/routes.js",
+      "module": "consultant-performance/reliability/routes",
+      "reasons": [
+        "Module documentation: consultant-performance/reliability/routes"
+      ]
+    },
+    {
+      "path": "routes/api/v1/consultant-performance/retention/routes.js",
+      "module": "consultant-performance/retention/routes",
+      "reasons": [
+        "Module documentation: consultant-performance/retention/routes"
+      ]
+    },
+    {
+      "path": "routes/api/v1/consultant-performance/scheduling/routes.js",
+      "module": "consultant-performance/scheduling/routes",
+      "reasons": [
+        "Module documentation: consultant-performance/scheduling/routes"
+      ]
+    },
+    {
+      "path": "routes/api/v1/consultant-performance/slm-bridge/routes.js",
+      "module": "consultant-performance/slm-bridge/routes",
+      "reasons": [
+        "Module documentation: consultant-performance/slm-bridge/routes"
+      ]
+    },
+    {
+      "path": "routes/api/v1/consultant-performance/sourcing/routes.js",
+      "module": "consultant-performance/sourcing/routes",
+      "reasons": [
+        "Module documentation: consultant-performance/sourcing/routes"
+      ]
+    },
+    {
+      "path": "routes/api/v1/consultant-performance/utils/helpers.js",
+      "module": "consultant-performance/utils/helpers",
+      "reasons": [
+        "Module documentation: consultant-performance/utils/helpers"
+      ]
+    },
+    {
+      "path": "routes/api/v1/gamification/helpers/achievement-checker.js",
+      "module": "gamification/helpers/achievement-checker",
+      "reasons": [
+        "Module documentation: gamification/helpers/achievement-checker"
+      ]
+    },
+    {
+      "path": "routes/api/v1/gamification/helpers/database-queries.js",
+      "module": "gamification/helpers/database-queries",
+      "reasons": [
+        "Module documentation: gamification/helpers/database-queries"
+      ]
+    },
+    {
+      "path": "routes/api/v1/gamification/helpers/quest-processor.js",
+      "module": "gamification/helpers/quest-processor",
+      "reasons": [
+        "Module documentation: gamification/helpers/quest-processor"
+      ]
+    },
+    {
+      "path": "routes/api/v1/gamification/helpers/xp-calculator.js",
+      "module": "gamification/helpers/xp-calculator",
+      "reasons": [
+        "Module documentation: gamification/helpers/xp-calculator"
+      ]
+    },
+    {
+      "path": "routes/api/v1/gamification/index.js",
+      "module": "unknown",
+      "reasons": [
+        "Contains keyword: \"modular implementation\""
+      ]
+    },
+    {
+      "path": "routes/api/v1/gamification/routes/achievements.js",
+      "module": "gamification/routes/achievements",
+      "reasons": [
+        "Module documentation: gamification/routes/achievements"
+      ]
+    },
+    {
+      "path": "routes/api/v1/gamification/routes/borders.js",
+      "module": "gamification/routes/borders",
+      "reasons": [
+        "Module documentation: gamification/routes/borders"
+      ]
+    },
+    {
+      "path": "routes/api/v1/gamification/routes/customization.js",
+      "module": "gamification/routes/customization",
+      "reasons": [
+        "Module documentation: gamification/routes/customization"
+      ]
+    },
+    {
+      "path": "routes/api/v1/gamification/routes/leaderboard.js",
+      "module": "gamification/routes/leaderboard",
+      "reasons": [
+        "Module documentation: gamification/routes/leaderboard"
+      ]
+    },
+    {
+      "path": "routes/api/v1/gamification/routes/profile.js",
+      "module": "gamification/routes/profile",
+      "reasons": [
+        "Module documentation: gamification/routes/profile"
+      ]
+    },
+    {
+      "path": "routes/api/v1/gamification/routes/quests.js",
+      "module": "gamification/routes/quests",
+      "reasons": [
+        "Module documentation: gamification/routes/quests"
+      ]
+    },
+    {
+      "path": "routes/api/v1/gamification/routes/rewards.js",
+      "module": "gamification/routes/rewards",
+      "reasons": [
+        "Module documentation: gamification/routes/rewards"
+      ]
+    },
+    {
+      "path": "routes/api/v1/gamification/routes/xp.js",
+      "module": "gamification/routes/xp",
+      "reasons": [
+        "Module documentation: gamification/routes/xp"
+      ]
+    },
+    {
+      "path": "routes/api/v1/smart-response-router/helpers/analytics.js",
+      "module": "smart-response-router/helpers/analytics",
+      "reasons": [
+        "Module documentation: smart-response-router/helpers/analytics"
+      ]
+    },
+    {
+      "path": "routes/api/v1/smart-response-router/helpers/migration.js",
+      "module": "smart-response-router/helpers/migration",
+      "reasons": [
+        "Module documentation: smart-response-router/helpers/migration"
+      ]
+    },
+    {
+      "path": "routes/api/v1/smart-response-router/index.js",
+      "module": "unknown",
+      "reasons": [
+        "Contains keyword: \"modular implementation\""
+      ]
+    },
+    {
+      "path": "routes/api/v1/smart-response-router/routes/admin.js",
+      "module": "smart-response-router/routes/admin",
+      "reasons": [
+        "Module documentation: smart-response-router/routes/admin"
+      ]
+    },
+    {
+      "path": "routes/api/v1/smart-response-router/routes/routing.js",
+      "module": "smart-response-router/routes/routing",
+      "reasons": [
+        "Module documentation: smart-response-router/routes/routing"
+      ]
+    },
+    {
+      "path": "scripts/check-modular-status.js",
+      "module": "unknown",
+      "reasons": [
+        "Contains keyword: \"monolithic file\""
+      ]
+    },
+    {
+      "path": "scripts/update-database-imports.js",
+      "module": "unknown",
+      "reasons": [
+        "Contains keyword: \"new modular structure\""
+      ]
+    },
+    {
+      "path": "services/ad-ml/ab-testing.js",
+      "module": "services",
+      "reasons": [
+        "Located in modular directory: services/ad-ml"
+      ]
+    },
+    {
+      "path": "services/ad-ml/index.js",
+      "module": "services",
+      "reasons": [
+        "Located in modular directory: services/ad-ml"
+      ]
+    },
+    {
+      "path": "services/ad-ml/timing.js",
+      "module": "services",
+      "reasons": [
+        "Located in modular directory: services/ad-ml"
+      ]
+    },
+    {
+      "path": "services/ad-ml/trainer.js",
+      "module": "services",
+      "reasons": [
+        "Located in modular directory: services/ad-ml"
+      ]
+    },
+    {
+      "path": "services/ai-chat/improved-chat-engine.js",
+      "module": "services",
+      "reasons": [
+        "Located in modular directory: services/ai-chat"
+      ]
+    },
+    {
+      "path": "services/ai-chat/index.js",
+      "module": "services",
+      "reasons": [
+        "Located in modular directory: services/ai-chat"
+      ]
+    },
+    {
+      "path": "services/ai-chat/interview-scheduler-v2.js",
+      "module": "services",
+      "reasons": [
+        "Located in modular directory: services/ai-chat"
+      ]
+    },
+    {
+      "path": "services/ai-chat/prompts.js",
+      "module": "services",
+      "reasons": [
+        "Located in modular directory: services/ai-chat"
+      ]
+    },
+    {
+      "path": "services/ai-chat/smart-router-integration.js",
+      "module": "services",
+      "reasons": [
+        "Located in modular directory: services/ai-chat"
+      ]
+    },
+    {
+      "path": "services/ai-chat/tools.js",
+      "module": "services",
+      "reasons": [
+        "Located in modular directory: services/ai-chat"
+      ]
+    },
+    {
+      "path": "services/data-integration/account-data-service.js",
+      "module": "services",
+      "reasons": [
+        "Located in modular directory: services/data-integration"
+      ]
+    },
+    {
+      "path": "services/data-integration/audit-logger.js",
+      "module": "services",
+      "reasons": [
+        "Located in modular directory: services/data-integration"
+      ]
+    },
+    {
+      "path": "services/data-integration/cache-manager.js",
+      "module": "services",
+      "reasons": [
+        "Located in modular directory: services/data-integration"
+      ]
+    },
+    {
+      "path": "services/data-integration/data-validator.js",
+      "module": "services",
+      "reasons": [
+        "Located in modular directory: services/data-integration"
+      ]
+    },
+    {
+      "path": "services/data-integration/fallback-manager.js",
+      "module": "services",
+      "reasons": [
+        "Located in modular directory: services/data-integration"
+      ]
+    },
+    {
+      "path": "services/data-integration/index.js",
+      "module": "services",
+      "reasons": [
+        "Located in modular directory: services/data-integration"
+      ]
+    },
+    {
+      "path": "services/data-integration/interview-data-service.js",
+      "module": "services",
+      "reasons": [
+        "Located in modular directory: services/data-integration"
+      ]
+    },
+    {
+      "path": "services/data-integration/job-data-service.js",
+      "module": "services",
+      "reasons": [
+        "Located in modular directory: services/data-integration"
+      ]
+    },
+    {
+      "path": "services/data-integration/payment-data-service.js",
+      "module": "services",
+      "reasons": [
+        "Located in modular directory: services/data-integration"
+      ]
+    },
+    {
+      "path": "services/data-integration/response-formatter.js",
+      "module": "services",
+      "reasons": [
+        "Located in modular directory: services/data-integration"
+      ]
+    },
+    {
+      "path": "services/data-integration/template-engine.js",
+      "module": "services",
+      "reasons": [
+        "Located in modular directory: services/data-integration"
+      ]
+    },
+    {
+      "path": "services/data-integration/withdrawal-data-service.js",
+      "module": "services",
+      "reasons": [
+        "Located in modular directory: services/data-integration"
+      ]
+    },
+    {
+      "path": "services/email/delivery-tracker.js",
+      "module": "services",
+      "reasons": [
+        "Located in modular directory: services/email"
+      ]
+    },
+    {
+      "path": "services/email/index.js",
+      "module": "services",
+      "reasons": [
+        "Located in modular directory: services/email"
+      ]
+    },
+    {
+      "path": "services/email/scheduler.js",
+      "module": "services",
+      "reasons": [
+        "Located in modular directory: services/email"
+      ]
+    },
+    {
+      "path": "services/email/templates.js",
+      "module": "services",
+      "reasons": [
+        "Located in modular directory: services/email"
+      ]
+    },
+    {
+      "path": "services/intent-classifier/confidence-calculator.js",
+      "module": "services",
+      "reasons": [
+        "Located in modular directory: services/intent-classifier"
+      ]
+    },
+    {
+      "path": "services/intent-classifier/context-analyzer.js",
+      "module": "services",
+      "reasons": [
+        "Located in modular directory: services/intent-classifier"
+      ]
+    },
+    {
+      "path": "services/intent-classifier/examples.js",
+      "module": "services",
+      "reasons": [
+        "Located in modular directory: services/intent-classifier"
+      ]
+    },
+    {
+      "path": "services/intent-classifier/index.js",
+      "module": "services",
+      "reasons": [
+        "Located in modular directory: services/intent-classifier"
+      ]
+    },
+    {
+      "path": "services/intent-classifier/integration.js",
+      "module": "services",
+      "reasons": [
+        "Located in modular directory: services/intent-classifier"
+      ]
+    },
+    {
+      "path": "services/intent-classifier/monitoring.js",
+      "module": "services",
+      "reasons": [
+        "Located in modular directory: services/intent-classifier"
+      ]
+    },
+    {
+      "path": "services/intent-classifier/patterns/general-patterns.js",
+      "module": "services",
+      "reasons": [
+        "Located in modular directory: services/intent-classifier"
+      ]
+    },
+    {
+      "path": "services/intent-classifier/patterns/index.js",
+      "module": "services",
+      "reasons": [
+        "Located in modular directory: services/intent-classifier"
+      ]
+    },
+    {
+      "path": "services/intent-classifier/patterns/interview-patterns.js",
+      "module": "services",
+      "reasons": [
+        "Located in modular directory: services/intent-classifier"
+      ]
+    },
+    {
+      "path": "services/intent-classifier/patterns/job-patterns.js",
+      "module": "services",
+      "reasons": [
+        "Located in modular directory: services/intent-classifier"
+      ]
+    },
+    {
+      "path": "services/intent-classifier/patterns/payment-patterns.js",
+      "module": "services",
+      "reasons": [
+        "Located in modular directory: services/intent-classifier"
+      ]
+    },
+    {
+      "path": "services/intent-classifier/patterns/technical-patterns.js",
+      "module": "services",
+      "reasons": [
+        "Located in modular directory: services/intent-classifier"
+      ]
+    },
+    {
+      "path": "services/intent-classifier/patterns/urgent-patterns.js",
+      "module": "services",
+      "reasons": [
+        "Located in modular directory: services/intent-classifier"
+      ]
+    },
+    {
+      "path": "services/intent-classifier/patterns/verification-patterns.js",
+      "module": "services",
+      "reasons": [
+        "Located in modular directory: services/intent-classifier"
+      ]
+    },
+    {
+      "path": "services/intent-classifier/singlish-processor.js",
+      "module": "services",
+      "reasons": [
+        "Located in modular directory: services/intent-classifier"
+      ]
+    },
+    {
+      "path": "services/intent-classifier/test-classifier.js",
+      "module": "services",
+      "reasons": [
+        "Located in modular directory: services/intent-classifier"
+      ]
+    },
+    {
+      "path": "services/ml/embeddings.js",
+      "module": "services",
+      "reasons": [
+        "Located in modular directory: services/ml"
+      ]
+    },
+    {
+      "path": "services/ml/index.js",
+      "module": "services",
+      "reasons": [
+        "Located in modular directory: services/ml"
+      ]
+    },
+    {
+      "path": "services/ml/trainer.js",
+      "module": "services",
+      "reasons": [
+        "Located in modular directory: services/ml"
+      ]
+    },
+    {
+      "path": "services/smart-response-router/admin-escalation.js",
+      "module": "services",
+      "reasons": [
+        "Located in modular directory: services/smart-response-router"
+      ]
+    },
+    {
+      "path": "services/smart-response-router/fact-based-templates.js",
+      "module": "services",
+      "reasons": [
+        "Located in modular directory: services/smart-response-router"
+      ]
+    },
+    {
+      "path": "services/smart-response-router/index.js",
+      "module": "services",
+      "reasons": [
+        "Located in modular directory: services/smart-response-router"
+      ]
+    },
+    {
+      "path": "services/smart-response-router/intent-classification.js",
+      "module": "services",
+      "reasons": [
+        "Located in modular directory: services/smart-response-router"
+      ]
+    },
+    {
+      "path": "services/smart-response-router/real-data-access.js",
+      "module": "services",
+      "reasons": [
+        "Located in modular directory: services/smart-response-router"
+      ]
+    },
+    {
+      "path": "services/telegram-posting/index.js",
+      "module": "services",
+      "reasons": [
+        "Located in modular directory: services/telegram-posting"
+      ]
+    },
+    {
+      "path": "services/template-responses/admin-interface.js",
+      "module": "services",
+      "reasons": [
+        "Located in modular directory: services/template-responses"
+      ]
+    },
+    {
+      "path": "services/template-responses/data-access.js",
+      "module": "services",
+      "reasons": [
+        "Located in modular directory: services/template-responses"
+      ]
+    },
+    {
+      "path": "services/template-responses/escalation-handler.js",
+      "module": "services",
+      "reasons": [
+        "Located in modular directory: services/template-responses"
+      ]
+    },
+    {
+      "path": "services/template-responses/index.js",
+      "module": "services",
+      "reasons": [
+        "Located in modular directory: services/template-responses"
+      ]
+    },
+    {
+      "path": "services/template-responses/integration-bridge.js",
+      "module": "services",
+      "reasons": [
+        "Located in modular directory: services/template-responses"
+      ]
+    },
+    {
+      "path": "services/template-responses/intent-classifier.js",
+      "module": "services",
+      "reasons": [
+        "Located in modular directory: services/template-responses"
+      ]
+    },
+    {
+      "path": "services/template-responses/template-manager.js",
+      "module": "services",
+      "reasons": [
+        "Located in modular directory: services/template-responses"
+      ]
+    },
+    {
+      "path": "utils/internal-slm/conversation-flow-manager.js",
+      "module": "utils",
+      "reasons": [
+        "Located in modular directory: utils/internal-slm"
+      ]
+    },
+    {
+      "path": "utils/internal-slm/groq-fallback.js",
+      "module": "utils",
+      "reasons": [
+        "Located in modular directory: utils/internal-slm"
+      ]
+    },
+    {
+      "path": "utils/internal-slm/index.js",
+      "module": "utils",
+      "reasons": [
+        "Located in modular directory: utils/internal-slm"
+      ]
+    },
+    {
+      "path": "utils/internal-slm/integration.js",
+      "module": "utils",
+      "reasons": [
+        "Located in modular directory: utils/internal-slm"
+      ]
+    },
+    {
+      "path": "utils/internal-slm/intent-analyzer.js",
+      "module": "utils",
+      "reasons": [
+        "Located in modular directory: utils/internal-slm"
+      ]
+    },
+    {
+      "path": "utils/internal-slm/response-generator.js",
+      "module": "utils",
+      "reasons": [
+        "Located in modular directory: utils/internal-slm"
+      ]
+    },
+    {
+      "path": "utils/internal-slm/response-validator.js",
+      "module": "utils",
+      "reasons": [
+        "Located in modular directory: utils/internal-slm"
+      ]
+    },
+    {
+      "path": "utils/internal-slm/setup-guide.js",
+      "module": "utils",
+      "reasons": [
+        "Located in modular directory: utils/internal-slm"
+      ]
+    },
+    {
+      "path": "utils/smart-slm-router/index.js",
+      "module": "smart-slm-router",
+      "reasons": [
+        "Module documentation: smart-slm-router",
+        "Located in modular directory: utils/smart-slm-router"
+      ]
+    },
+    {
+      "path": "websocket/broadcasting/broadcast-service.js",
+      "module": "websocket/broadcasting/broadcast-service",
+      "reasons": [
+        "Module documentation: websocket/broadcasting/broadcast-service",
+        "Located in modular directory: websocket/broadcasting"
+      ]
+    },
+    {
+      "path": "websocket/broadcasting/event-notifiers.js",
+      "module": "websocket/broadcasting/event-notifiers",
+      "reasons": [
+        "Module documentation: websocket/broadcasting/event-notifiers",
+        "Located in modular directory: websocket/broadcasting"
+      ]
+    },
+    {
+      "path": "websocket/config/constants.js",
+      "module": "websocket/config/constants",
+      "reasons": [
+        "Module documentation: websocket/config/constants",
+        "Located in modular directory: websocket/config"
+      ]
+    },
+    {
+      "path": "websocket/config/event-types.js",
+      "module": "websocket/config/event-types",
+      "reasons": [
+        "Module documentation: websocket/config/event-types",
+        "Located in modular directory: websocket/config"
+      ]
+    },
+    {
+      "path": "websocket/connection/admin-handler.js",
+      "module": "websocket/connection/admin-handler",
+      "reasons": [
+        "Module documentation: websocket/connection/admin-handler",
+        "Located in modular directory: websocket/connection"
+      ]
+    },
+    {
+      "path": "websocket/connection/candidate-handler.js",
+      "module": "websocket/connection/candidate-handler",
+      "reasons": [
+        "Module documentation: websocket/connection/candidate-handler",
+        "Located in modular directory: websocket/connection"
+      ]
+    },
+    {
+      "path": "websocket/connection/tracker.js",
+      "module": "websocket/connection/tracker",
+      "reasons": [
+        "Module documentation: websocket/connection/tracker",
+        "Located in modular directory: websocket/connection"
+      ]
+    },
+    {
+      "path": "websocket/connection/validator.js",
+      "module": "websocket/connection/validator",
+      "reasons": [
+        "Module documentation: websocket/connection/validator",
+        "Located in modular directory: websocket/connection"
+      ]
+    },
+    {
+      "path": "websocket/features/chat-features.js",
+      "module": "websocket/features/chat-features",
+      "reasons": [
+        "Module documentation: websocket/features/chat-features",
+        "Located in modular directory: websocket/features"
+      ]
+    },
+    {
+      "path": "websocket/features/status-notifications.js",
+      "module": "websocket/features/status-notifications",
+      "reasons": [
+        "Module documentation: websocket/features/status-notifications",
+        "Located in modular directory: websocket/features"
+      ]
+    },
+    {
+      "path": "websocket/handlers/admin-handler.js",
+      "module": "websocket",
+      "reasons": [
+        "Located in modular directory: websocket/handlers"
+      ]
+    },
+    {
+      "path": "websocket/handlers/candidate-handler.js",
+      "module": "websocket",
+      "reasons": [
+        "Located in modular directory: websocket/handlers"
+      ]
+    },
+    {
+      "path": "websocket/handlers/interview-handler.js",
+      "module": "websocket",
+      "reasons": [
+        "Located in modular directory: websocket/handlers"
+      ]
+    },
+    {
+      "path": "websocket/handlers/job-handler.js",
+      "module": "websocket",
+      "reasons": [
+        "Located in modular directory: websocket/handlers"
+      ]
+    },
+    {
+      "path": "websocket/handlers/notification-handler.js",
+      "module": "websocket",
+      "reasons": [
+        "Located in modular directory: websocket/handlers"
+      ]
+    },
+    {
+      "path": "websocket/index.js",
+      "module": "websocket",
+      "reasons": [
+        "Module documentation: websocket"
+      ]
+    },
+    {
+      "path": "websocket/messaging/message-router.js",
+      "module": "websocket/messaging/message-router",
+      "reasons": [
+        "Module documentation: websocket/messaging/message-router",
+        "Located in modular directory: websocket/messaging"
+      ]
+    },
+    {
+      "path": "websocket/utils/client-store.js",
+      "module": "websocket/utils/client-store",
+      "reasons": [
+        "Module documentation: websocket/utils/client-store",
+        "Located in modular directory: websocket/utils"
+      ]
+    },
+    {
+      "path": "websocket/utils/lazy-loaders.js",
+      "module": "websocket/utils/lazy-loaders",
+      "reasons": [
+        "Module documentation: websocket/utils/lazy-loaders",
+        "Located in modular directory: websocket/utils"
+      ]
+    },
+    {
+      "path": "websocket/utils/status-manager.js",
+      "module": "websocket",
+      "reasons": [
+        "Located in modular directory: websocket/utils"
+      ]
+    },
+    {
+      "path": "websocket/utils/typing-handler.js",
+      "module": "websocket",
+      "reasons": [
+        "Located in modular directory: websocket/utils"
+      ]
+    },
+    {
+      "path": "websocket-new.js",
+      "module": "unknown",
+      "reasons": [
+        "Contains keyword: \"modular implementation\""
+      ]
+    }
+  ]
+}

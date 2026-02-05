@@ -35,7 +35,7 @@ class ErrorBoundary extends React.Component {
     });
 
     // Log to console in development
-    if (process.env.NODE_ENV === 'development') {
+    if (import.meta.env.DEV) {
       console.group('🔥 Error Boundary Caught Error');
       console.error('Error:', error);
       console.error('Error Info:', errorInfo);
@@ -61,7 +61,7 @@ class ErrorBoundary extends React.Component {
       };
 
       // In development, just log to console
-      if (process.env.NODE_ENV === 'development') {
+      if (import.meta.env.DEV) {
         console.log('📊 Error Report:', errorReport);
         return;
       }
@@ -124,7 +124,7 @@ class ErrorBoundary extends React.Component {
                 <p className="text-sm text-red-700 dark:text-red-300 mt-1">
                   This component encountered an error and couldn't be displayed.
                 </p>
-                {process.env.NODE_ENV === 'development' && this.state.error && (
+                {import.meta.env.DEV && this.state.error && (
                   <details className="mt-2">
                     <summary className="text-xs text-red-600 dark:text-red-400 cursor-pointer">
                       Error Details
@@ -176,7 +176,7 @@ class ErrorBoundary extends React.Component {
               </div>
             )}
 
-            {process.env.NODE_ENV === 'development' && this.state.error && (
+            {import.meta.env.DEV && this.state.error && (
               <details className="text-left mb-6 bg-gray-100 dark:bg-gray-700 rounded-lg p-3">
                 <summary className="text-sm font-medium text-gray-700 dark:text-gray-300 cursor-pointer mb-2">
                   <BugIcon className="inline h-4 w-4 mr-1" />
