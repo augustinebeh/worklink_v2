@@ -217,15 +217,15 @@ export default function GeBizIntelligence() {
       {/* Header */}
       <div className="flex items-center justify-between">
         <div>
-          <h1 className="text-2xl font-bold text-gray-900">GeBIZ Intelligence</h1>
-          <p className="text-gray-600 mt-1">Historical tender data & competitive intelligence</p>
+          <h1 className="text-2xl font-bold text-slate-900 dark:text-white">GeBIZ Intelligence</h1>
+          <p className="text-slate-600 dark:text-slate-400 mt-1">Historical tender data & competitive intelligence</p>
         </div>
         <div className="flex items-center space-x-3">
           {activeTab !== 'renewals' && (
             <>
               <button
                 onClick={exportToCSV}
-                className="px-4 py-2 text-sm font-medium text-gray-700 bg-white border border-gray-300 rounded-lg hover:bg-gray-50 flex items-center space-x-2"
+                className="px-4 py-2 text-sm font-medium text-slate-700 dark:text-slate-300 bg-white dark:bg-slate-800 border border-slate-300 dark:border-slate-600 rounded-lg hover:bg-slate-50 dark:hover:bg-slate-700 flex items-center space-x-2"
               >
                 <DownloadIcon className="h-4 w-4" />
                 <span>Export CSV</span>
@@ -233,7 +233,7 @@ export default function GeBizIntelligence() {
               <button
                 onClick={handleSync}
                 disabled={loading}
-                className="px-4 py-2 text-sm font-medium text-white bg-indigo-600 rounded-lg hover:bg-indigo-700 flex items-center space-x-2 disabled:opacity-50"
+                className="px-4 py-2 text-sm font-medium text-white bg-indigo-600 dark:bg-indigo-500 rounded-lg hover:bg-indigo-700 dark:hover:bg-indigo-600 flex items-center space-x-2 disabled:opacity-50"
               >
                 <RefreshCwIcon className={`h-4 w-4 ${loading ? 'animate-spin' : ''}`} />
                 <span>Sync Data</span>
@@ -245,51 +245,51 @@ export default function GeBizIntelligence() {
 
       {/* Stats Cards */}
       <div className="grid grid-cols-1 md:grid-cols-4 gap-4">
-        <div className="bg-white rounded-lg border border-gray-200 p-4">
+        <div className="bg-white dark:bg-slate-800 rounded-lg border border-slate-200 dark:border-slate-700 p-4">
           <div className="flex items-center justify-between">
             <div>
-              <p className="text-sm text-gray-600">Total Tenders</p>
-              <p className="text-2xl font-bold text-gray-900">{stats.totalTenders.toLocaleString()}</p>
+              <p className="text-sm text-slate-600 dark:text-slate-400">Total Tenders</p>
+              <p className="text-2xl font-bold text-slate-900 dark:text-white">{stats.totalTenders.toLocaleString()}</p>
             </div>
-            <DatabaseIcon className="h-8 w-8 text-indigo-600" />
+            <DatabaseIcon className="h-8 w-8 text-indigo-600 dark:text-indigo-400" />
           </div>
         </div>
-        
-        <div className="bg-white rounded-lg border border-gray-200 p-4">
+
+        <div className="bg-white dark:bg-slate-800 rounded-lg border border-slate-200 dark:border-slate-700 p-4">
           <div className="flex items-center justify-between">
             <div>
-              <p className="text-sm text-gray-600">Total Value</p>
-              <p className="text-2xl font-bold text-gray-900">
+              <p className="text-sm text-slate-600 dark:text-slate-400">Total Value</p>
+              <p className="text-2xl font-bold text-slate-900 dark:text-white">
                 ${(stats.totalValue / 1000000000).toFixed(1)}B
               </p>
             </div>
-            <DollarSignIcon className="h-8 w-8 text-green-600" />
+            <DollarSignIcon className="h-8 w-8 text-green-600 dark:text-green-400" />
           </div>
         </div>
-        
-        <div className="bg-white rounded-lg border border-gray-200 p-4">
+
+        <div className="bg-white dark:bg-slate-800 rounded-lg border border-slate-200 dark:border-slate-700 p-4">
           <div className="flex items-center justify-between">
             <div>
-              <p className="text-sm text-gray-600">Suppliers</p>
-              <p className="text-2xl font-bold text-gray-900">{stats.totalSuppliers.toLocaleString()}</p>
+              <p className="text-sm text-slate-600 dark:text-slate-400">Suppliers</p>
+              <p className="text-2xl font-bold text-slate-900 dark:text-white">{stats.totalSuppliers.toLocaleString()}</p>
             </div>
-            <UsersIcon className="h-8 w-8 text-blue-600" />
+            <UsersIcon className="h-8 w-8 text-blue-600 dark:text-blue-400" />
           </div>
         </div>
-        
-        <div className="bg-white rounded-lg border border-gray-200 p-4">
+
+        <div className="bg-white dark:bg-slate-800 rounded-lg border border-slate-200 dark:border-slate-700 p-4">
           <div className="flex items-center justify-between">
             <div>
-              <p className="text-sm text-gray-600">Recent Activity</p>
-              <p className="text-2xl font-bold text-gray-900">{stats.recentActivity}</p>
+              <p className="text-sm text-slate-600 dark:text-slate-400">Recent Activity</p>
+              <p className="text-2xl font-bold text-slate-900 dark:text-white">{stats.recentActivity}</p>
             </div>
-            <ActivityIcon className="h-8 w-8 text-orange-600" />
+            <ActivityIcon className="h-8 w-8 text-orange-600 dark:text-orange-400" />
           </div>
         </div>
       </div>
 
       {/* Tabs */}
-      <div className="border-b border-gray-200">
+      <div className="border-b border-slate-200 dark:border-slate-700">
         <nav className="-mb-px flex space-x-8">
           {tabs.map((tab) => {
             const Icon = tab.icon;
@@ -300,8 +300,8 @@ export default function GeBizIntelligence() {
                 className={`
                   flex items-center space-x-2 py-4 px-1 border-b-2 font-medium text-sm
                   ${activeTab === tab.id
-                    ? 'border-indigo-500 text-indigo-600'
-                    : 'border-transparent text-gray-500 hover:text-gray-700 hover:border-gray-300'}
+                    ? 'border-indigo-500 dark:border-indigo-400 text-indigo-600 dark:text-indigo-400'
+                    : 'border-transparent text-slate-500 dark:text-slate-400 hover:text-slate-700 dark:hover:text-slate-300 hover:border-slate-300 dark:hover:border-slate-600'}
                 `}
               >
                 <Icon className="h-5 w-5" />
@@ -316,9 +316,9 @@ export default function GeBizIntelligence() {
       <div>
         {/* Dashboard Tab */}
         {activeTab === 'dashboard' && (
-          <div className="bg-white rounded-lg border border-gray-200 p-6">
-            <h3 className="text-lg font-semibold text-gray-900 mb-4">Dashboard Overview</h3>
-            <p className="text-gray-600">
+          <div className="bg-white dark:bg-slate-800 rounded-lg border border-slate-200 dark:border-slate-700 p-6">
+            <h3 className="text-lg font-semibold text-slate-900 dark:text-white mb-4">Dashboard Overview</h3>
+            <p className="text-slate-600 dark:text-slate-400">
               Welcome to GeBIZ Intelligence. Use the tabs above to explore competitors, historical tenders, and renewal opportunities.
             </p>
           </div>
@@ -332,7 +332,7 @@ export default function GeBizIntelligence() {
                 <select
                   value={competitorsPeriod}
                   onChange={(e) => setCompetitorsPeriod(e.target.value)}
-                  className="px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500"
+                  className="px-3 py-2 border border-slate-300 dark:border-slate-600 bg-white dark:bg-slate-800 text-slate-900 dark:text-white rounded-lg focus:ring-2 focus:ring-indigo-500 dark:focus:ring-indigo-400 focus:border-indigo-500 dark:focus:border-indigo-400"
                 >
                   <option value="3">Last 3 months</option>
                   <option value="6">Last 6 months</option>
@@ -342,56 +342,56 @@ export default function GeBizIntelligence() {
               </div>
             </div>
 
-            <div className="bg-white rounded-lg border border-gray-200 overflow-hidden">
-              <table className="min-w-full divide-y divide-gray-200">
-                <thead className="bg-gray-50">
+            <div className="bg-white dark:bg-slate-800 rounded-lg border border-slate-200 dark:border-slate-700 overflow-hidden">
+              <table className="min-w-full divide-y divide-slate-200 dark:divide-slate-700">
+                <thead className="bg-slate-50 dark:bg-slate-900">
                   <tr>
-                    <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                    <th className="px-6 py-3 text-left text-xs font-medium text-slate-500 dark:text-slate-400 uppercase tracking-wider">
                       Supplier
                     </th>
-                    <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                    <th className="px-6 py-3 text-left text-xs font-medium text-slate-500 dark:text-slate-400 uppercase tracking-wider">
                       Tender Count
                     </th>
-                    <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                    <th className="px-6 py-3 text-left text-xs font-medium text-slate-500 dark:text-slate-400 uppercase tracking-wider">
                       Total Value
                     </th>
-                    <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                    <th className="px-6 py-3 text-left text-xs font-medium text-slate-500 dark:text-slate-400 uppercase tracking-wider">
                       Avg Value
                     </th>
-                    <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                    <th className="px-6 py-3 text-left text-xs font-medium text-slate-500 dark:text-slate-400 uppercase tracking-wider">
                       Latest Win
                     </th>
                   </tr>
                 </thead>
-                <tbody className="bg-white divide-y divide-gray-200">
+                <tbody className="bg-white dark:bg-slate-800 divide-y divide-slate-200 dark:divide-slate-700">
                   {loading ? (
                     <tr>
-                      <td colSpan="5" className="px-6 py-4 text-center text-gray-500">
+                      <td colSpan="5" className="px-6 py-4 text-center text-slate-500 dark:text-slate-400">
                         Loading...
                       </td>
                     </tr>
                   ) : competitors.length === 0 ? (
                     <tr>
-                      <td colSpan="5" className="px-6 py-4 text-center text-gray-500">
+                      <td colSpan="5" className="px-6 py-4 text-center text-slate-500 dark:text-slate-400">
                         No competitors found
                       </td>
                     </tr>
                   ) : (
                     competitors.map((comp, idx) => (
-                      <tr key={idx} className="hover:bg-gray-50">
-                        <td className="px-6 py-4 whitespace-nowrap text-sm font-medium text-gray-900">
+                      <tr key={idx} className="hover:bg-slate-50 dark:hover:bg-slate-700">
+                        <td className="px-6 py-4 whitespace-nowrap text-sm font-medium text-slate-900 dark:text-white">
                           {comp.supplier_name}
                         </td>
-                        <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500">
+                        <td className="px-6 py-4 whitespace-nowrap text-sm text-slate-500 dark:text-slate-400">
                           {comp.tender_count}
                         </td>
-                        <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500">
+                        <td className="px-6 py-4 whitespace-nowrap text-sm text-slate-500 dark:text-slate-400">
                           ${comp.total_value.toLocaleString()}
                         </td>
-                        <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500">
+                        <td className="px-6 py-4 whitespace-nowrap text-sm text-slate-500 dark:text-slate-400">
                           ${comp.avg_value.toLocaleString()}
                         </td>
-                        <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500">
+                        <td className="px-6 py-4 whitespace-nowrap text-sm text-slate-500 dark:text-slate-400">
                           {comp.latest_win}
                         </td>
                       </tr>
@@ -409,68 +409,68 @@ export default function GeBizIntelligence() {
             <div className="flex items-center space-x-4">
               <div className="flex-1">
                 <div className="relative">
-                  <SearchIcon className="absolute left-3 top-1/2 transform -translate-y-1/2 h-5 w-5 text-gray-400" />
+                  <SearchIcon className="absolute left-3 top-1/2 transform -translate-y-1/2 h-5 w-5 text-slate-400 dark:text-slate-500" />
                   <input
                     type="text"
                     value={tendersSearch}
                     onChange={(e) => setTendersSearch(e.target.value)}
                     placeholder="Search tenders..."
-                    className="w-full pl-10 pr-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500"
+                    className="w-full pl-10 pr-4 py-2 border border-slate-300 dark:border-slate-600 bg-white dark:bg-slate-800 text-slate-900 dark:text-white placeholder:text-slate-400 dark:placeholder:text-slate-500 rounded-lg focus:ring-2 focus:ring-indigo-500 dark:focus:ring-indigo-400 focus:border-indigo-500 dark:focus:border-indigo-400"
                   />
                 </div>
               </div>
             </div>
 
-            <div className="bg-white rounded-lg border border-gray-200 overflow-hidden">
-              <table className="min-w-full divide-y divide-gray-200">
-                <thead className="bg-gray-50">
+            <div className="bg-white dark:bg-slate-800 rounded-lg border border-slate-200 dark:border-slate-700 overflow-hidden">
+              <table className="min-w-full divide-y divide-slate-200 dark:divide-slate-700">
+                <thead className="bg-slate-50 dark:bg-slate-900">
                   <tr>
-                    <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                    <th className="px-6 py-3 text-left text-xs font-medium text-slate-500 dark:text-slate-400 uppercase tracking-wider">
                       Tender No
                     </th>
-                    <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                    <th className="px-6 py-3 text-left text-xs font-medium text-slate-500 dark:text-slate-400 uppercase tracking-wider">
                       Description
                     </th>
-                    <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                    <th className="px-6 py-3 text-left text-xs font-medium text-slate-500 dark:text-slate-400 uppercase tracking-wider">
                       Supplier
                     </th>
-                    <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                    <th className="px-6 py-3 text-left text-xs font-medium text-slate-500 dark:text-slate-400 uppercase tracking-wider">
                       Value
                     </th>
-                    <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                    <th className="px-6 py-3 text-left text-xs font-medium text-slate-500 dark:text-slate-400 uppercase tracking-wider">
                       Award Date
                     </th>
                   </tr>
                 </thead>
-                <tbody className="bg-white divide-y divide-gray-200">
+                <tbody className="bg-white dark:bg-slate-800 divide-y divide-slate-200 dark:divide-slate-700">
                   {loading ? (
                     <tr>
-                      <td colSpan="5" className="px-6 py-4 text-center text-gray-500">
+                      <td colSpan="5" className="px-6 py-4 text-center text-slate-500 dark:text-slate-400">
                         Loading...
                       </td>
                     </tr>
                   ) : tenders.length === 0 ? (
                     <tr>
-                      <td colSpan="5" className="px-6 py-4 text-center text-gray-500">
+                      <td colSpan="5" className="px-6 py-4 text-center text-slate-500 dark:text-slate-400">
                         No tenders found
                       </td>
                     </tr>
                   ) : (
                     tenders.map((tender, idx) => (
-                      <tr key={idx} className="hover:bg-gray-50">
-                        <td className="px-6 py-4 whitespace-nowrap text-sm font-medium text-gray-900">
+                      <tr key={idx} className="hover:bg-slate-50 dark:hover:bg-slate-700">
+                        <td className="px-6 py-4 whitespace-nowrap text-sm font-medium text-slate-900 dark:text-white">
                           {tender.tender_no}
                         </td>
-                        <td className="px-6 py-4 text-sm text-gray-500 max-w-md truncate">
+                        <td className="px-6 py-4 text-sm text-slate-500 dark:text-slate-400 max-w-md truncate">
                           {tender.description}
                         </td>
-                        <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500">
+                        <td className="px-6 py-4 whitespace-nowrap text-sm text-slate-500 dark:text-slate-400">
                           {tender.supplier_name}
                         </td>
-                        <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500">
+                        <td className="px-6 py-4 whitespace-nowrap text-sm text-slate-500 dark:text-slate-400">
                           ${tender.awarded_amount?.toLocaleString() || 'N/A'}
                         </td>
-                        <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500">
+                        <td className="px-6 py-4 whitespace-nowrap text-sm text-slate-500 dark:text-slate-400">
                           {tender.award_date}
                         </td>
                       </tr>
@@ -481,21 +481,21 @@ export default function GeBizIntelligence() {
 
               {/* Pagination */}
               {tendersTotalPages > 1 && (
-                <div className="px-6 py-4 border-t border-gray-200 flex items-center justify-between">
+                <div className="px-6 py-4 border-t border-slate-200 dark:border-slate-700 flex items-center justify-between">
                   <button
                     onClick={() => setTendersPage(Math.max(1, tendersPage - 1))}
                     disabled={tendersPage === 1}
-                    className="px-4 py-2 text-sm font-medium text-gray-700 bg-white border border-gray-300 rounded-lg hover:bg-gray-50 disabled:opacity-50 disabled:cursor-not-allowed"
+                    className="px-4 py-2 text-sm font-medium text-slate-700 dark:text-slate-300 bg-white dark:bg-slate-800 border border-slate-300 dark:border-slate-600 rounded-lg hover:bg-slate-50 dark:hover:bg-slate-700 disabled:opacity-50 disabled:cursor-not-allowed"
                   >
                     Previous
                   </button>
-                  <span className="text-sm text-gray-700">
+                  <span className="text-sm text-slate-700 dark:text-slate-300">
                     Page {tendersPage} of {tendersTotalPages}
                   </span>
                   <button
                     onClick={() => setTendersPage(Math.min(tendersTotalPages, tendersPage + 1))}
                     disabled={tendersPage === tendersTotalPages}
-                    className="px-4 py-2 text-sm font-medium text-gray-700 bg-white border border-gray-300 rounded-lg hover:bg-gray-50 disabled:opacity-50 disabled:cursor-not-allowed"
+                    className="px-4 py-2 text-sm font-medium text-slate-700 dark:text-slate-300 bg-white dark:bg-slate-800 border border-slate-300 dark:border-slate-600 rounded-lg hover:bg-slate-50 dark:hover:bg-slate-700 disabled:opacity-50 disabled:cursor-not-allowed"
                   >
                     Next
                   </button>

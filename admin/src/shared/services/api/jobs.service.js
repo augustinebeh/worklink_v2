@@ -5,7 +5,7 @@
 
 import apiClient from './ApiClient.js';
 
-export const jobsService = {
+const jobsService = {
   /**
    * Get all jobs with optional filtering
    * @param {Object} params - Query parameters for filtering/pagination

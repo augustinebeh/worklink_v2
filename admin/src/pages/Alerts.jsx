@@ -9,7 +9,7 @@ import {
   EyeOffIcon,
   TrashIcon
 } from 'lucide-react';
-import { alertService } from '../shared/services/api/alert.service';
+import alertService from '../shared/services/api/alert.service';
 import AlertCard from '../components/alerts/AlertCard';
 
 /**

@@ -3,9 +3,7 @@
  * Handles contract renewal predictions, engagement tracking, and pipeline management
  */
 
-import ApiClient from './ApiClient.js';
-
-const client = new ApiClient();
+import { apiClient as client } from './ApiClient.js';
 
 // Mock data for development/testing
 const MOCK_RENEWAL = {
@@ -164,7 +162,7 @@ const MOCK_TIMELINE = {
   }
 };
 
-export const renewalService = {
+const renewalService = {
   /**
    * Get list of contract renewals with filtering
    * @param {Object} params - Query parameters
@@ -179,7 +177,8 @@ export const renewalService = {
   async getRenewals(params = {}) {
     const queryString = new URLSearchParams(params).toString();
     const url = `/api/v1/gebiz/renewals${queryString ? `?${queryString}` : ''}`;
-    return client.get(url);
+    const response = await client.get(url);
+    return response.json();
   },
 
   /**
@@ -209,7 +208,8 @@ export const renewalService = {
    * @param {Object} data - Renewal data
    */
   async createRenewal(data) {
-    return client.post('/api/v1/gebiz/renewals', data);
+    const response = await client.post('/api/v1/gebiz/renewals', data);
+    return response.json();
   },
 
   /**
@@ -218,7 +218,8 @@ export const renewalService = {
    * @param {Object} data - Fields to update
    */
   async updateRenewal(id, data) {
-    return client.patch(`/api/v1/gebiz/renewals/${id}`, data);
+    const response = await client.patch(`/api/v1/gebiz/renewals/${id}`, data);
+    return response.json();
   },
 
   /**
@@ -226,7 +227,8 @@ export const renewalService = {
    * @param {number} id - Renewal ID
    */
   async deleteRenewal(id) {
-    return client.delete(`/api/v1/gebiz/renewals/${id}`);
+    const response = await client.delete(`/api/v1/gebiz/renewals/${id}`);
+    return response.json();
   },
 
   /**
@@ -274,7 +276,8 @@ export const renewalService = {
    * Get dashboard statistics
    */
   async getDashboardStats() {
-    return client.get('/api/v1/gebiz/renewals/dashboard/stats');
+    const response = await client.get('/api/v1/gebiz/renewals/dashboard/stats');
+    return response.json();
   },
 
   /**
@@ -282,7 +285,8 @@ export const renewalService = {
    * @param {Object} data - Contract data for prediction
    */
   async predictRenewal(data) {
-    return client.post('/api/v1/gebiz/renewals/predict', data);
+    const response = await client.post('/api/v1/gebiz/renewals/predict', data);
+    return response.json();
   }
 };
 

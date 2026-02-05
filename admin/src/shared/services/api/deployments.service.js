@@ -5,7 +5,7 @@
 
 import apiClient from './ApiClient.js';
 
-export const deploymentsService = {
+const deploymentsService = {
   /**
    * Get all deployments with optional filtering
    * @param {Object} params - Query parameters (status, date range, etc.)

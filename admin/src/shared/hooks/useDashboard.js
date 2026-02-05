@@ -4,7 +4,7 @@
  */
 
 import { useQuery, useQueries } from '@tanstack/react-query';
-import { analyticsService } from '../services/api';
+import { analyticsService } from "../services/api";
 import { queryKeys } from '../providers/QueryProvider';
 
 /**

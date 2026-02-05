@@ -26,7 +26,7 @@ import DateTimePicker, { TimePicker } from '../components/ui/DateTimePicker';
 import { useToast } from '../components/ui/Toast';
 
 // Services
-import { alertService } from '../shared/services/api/alert.service';
+import alertService from '../shared/services/api/alert.service';
 import { useAuth } from '../contexts/AuthContext';
 
 // Timezone options

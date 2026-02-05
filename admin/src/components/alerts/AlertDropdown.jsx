@@ -6,7 +6,7 @@ import {
   EyeIcon,
   SettingsIcon
 } from 'lucide-react';
-import { alertService } from '../../shared/services/api';
+import { alertService } from "../../shared/services/api";
 import AlertCard from './AlertCard';
 import { useNavigate } from 'react-router-dom';
 

@@ -5,7 +5,7 @@
 
 import apiClient from './ApiClient.js';
 
-export const tenderService = {
+const tenderService = {
   /**
    * Get all tenders
    * @param {Object} params - Query parameters for filtering

@@ -3,11 +3,9 @@
  * Handles alert rules, notifications, and user preferences
  */
 
-import ApiClient from './ApiClient.js';
+import { apiClient as client } from './ApiClient.js';
 
-const client = new ApiClient();
-
-export const alertService = {
+const alertService = {
   // ========== ALERT RULES ==========
   
   /**
@@ -17,7 +15,8 @@ export const alertService = {
   async getAlertRules(params = {}) {
     const queryString = new URLSearchParams(params).toString();
     const url = `/api/v1/alerts/rules${queryString ? `?${queryString}` : ''}`;
-    return client.get(url);
+    const response = await client.get(url);
+    return response.json();
   },
 
   /**
@@ -25,7 +24,8 @@ export const alertService = {
    * @param {Object} data - Rule data
    */
   async createAlertRule(data) {
-    return client.post('/api/v1/alerts/rules', data);
+    const response = await client.post('/api/v1/alerts/rules', data);
+    return response.json();
   },
 
   /**
@@ -34,7 +34,8 @@ export const alertService = {
    * @param {Object} data - Fields to update
    */
   async updateAlertRule(id, data) {
-    return client.patch(`/api/v1/alerts/rules/${id}`, data);
+    const response = await client.patch(`/api/v1/alerts/rules/${id}`, data);
+    return response.json();
   },
 
   /**
@@ -42,7 +43,8 @@ export const alertService = {
    * @param {number} id - Rule ID
    */
   async deleteAlertRule(id) {
-    return client.delete(`/api/v1/alerts/rules/${id}`);
+    const response = await client.delete(`/api/v1/alerts/rules/${id}`);
+    return response.json();
   },
 
   // ========== ALERT HISTORY ==========
@@ -59,7 +61,8 @@ export const alertService = {
   async getAlertHistory(params = {}) {
     const queryString = new URLSearchParams(params).toString();
     const url = `/api/v1/alerts/history${queryString ? `?${queryString}` : ''}`;
-    return client.get(url);
+    const response = await client.get(url);
+    return response.json();
   },
 
   /**
@@ -68,7 +71,8 @@ export const alertService = {
    * @param {Object} data - Acknowledgment data
    */
   async acknowledgeAlert(id, data = {}) {
-    return client.post(`/api/v1/alerts/history/${id}/acknowledge`, data);
+    const response = await client.post(`/api/v1/alerts/history/${id}/acknowledge`, data);
+    return response.json();
   },
 
   /**
@@ -76,14 +80,16 @@ export const alertService = {
    * @param {Object} data - Optional filters
    */
   async markAllRead(data = {}) {
-    return client.post('/api/v1/alerts/history/mark-all-read', data);
+    const response = await client.post('/api/v1/alerts/history/mark-all-read', data);
+    return response.json();
   },
 
   /**
    * Get unread alert count
    */
   async getUnreadCount() {
-    return client.get('/api/v1/alerts/unread-count');
+    const response = await client.get('/api/v1/alerts/unread-count');
+    return response.json();
   },
 
   // ========== ALERT ENGINE ==========
@@ -93,7 +99,8 @@ export const alertService = {
    * @param {Object} data - Trigger context
    */
   async triggerAlerts(data) {
-    return client.post('/api/v1/alerts/trigger', data);
+    const response = await client.post('/api/v1/alerts/trigger', data);
+    return response.json();
   },
 
   // ========== USER PREFERENCES ==========
@@ -104,7 +111,8 @@ export const alertService = {
    */
   async getPreferences(userId) {
     const queryString = userId ? `?user_id=${encodeURIComponent(userId)}` : '';
-    return client.get(`/api/v1/alerts/preferences${queryString}`);
+    const response = await client.get(`/api/v1/alerts/preferences${queryString}`);
+    return response.json();
   },
 
   /**
@@ -112,7 +120,8 @@ export const alertService = {
    * @param {Object} data - Preference settings
    */
   async updatePreferences(data) {
-    return client.patch('/api/v1/alerts/preferences', data);
+    const response = await client.patch('/api/v1/alerts/preferences', data);
+    return response.json();
   }
 };
 

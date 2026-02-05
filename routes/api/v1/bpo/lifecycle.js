@@ -485,19 +485,27 @@ router.post('/:id/decision', (req, res) => {
 router.get('/dashboard/stats', (req, res) => {
   try {
     const db = new Database(DB_PATH, { readonly: true });
-    
-    // Overall stats
+
+    // Overall stats with _count suffix for frontend compatibility
     const stats = db.prepare(`
-      SELECT 
+      SELECT
         COUNT(*) as total_tenders,
         SUM(CASE WHEN stage = 'renewal_watch' THEN 1 ELSE 0 END) as renewal_watch,
+        SUM(CASE WHEN stage = 'renewal_watch' THEN 1 ELSE 0 END) as renewal_watch_count,
         SUM(CASE WHEN stage = 'new_opportunity' THEN 1 ELSE 0 END) as new_opportunity,
+        SUM(CASE WHEN stage = 'new_opportunity' THEN 1 ELSE 0 END) as new_opportunity_count,
         SUM(CASE WHEN stage = 'review' THEN 1 ELSE 0 END) as review,
+        SUM(CASE WHEN stage = 'review' THEN 1 ELSE 0 END) as review_count,
         SUM(CASE WHEN stage = 'bidding' THEN 1 ELSE 0 END) as bidding,
+        SUM(CASE WHEN stage = 'bidding' THEN 1 ELSE 0 END) as bidding_count,
         SUM(CASE WHEN stage = 'internal_approval' THEN 1 ELSE 0 END) as internal_approval,
+        SUM(CASE WHEN stage = 'internal_approval' THEN 1 ELSE 0 END) as internal_approval_count,
         SUM(CASE WHEN stage = 'submitted' THEN 1 ELSE 0 END) as submitted,
+        SUM(CASE WHEN stage = 'submitted' THEN 1 ELSE 0 END) as submitted_count,
         SUM(CASE WHEN outcome = 'won' THEN 1 ELSE 0 END) as won,
+        SUM(CASE WHEN outcome = 'won' THEN 1 ELSE 0 END) as awarded_count,
         SUM(CASE WHEN outcome = 'lost' THEN 1 ELSE 0 END) as lost,
+        SUM(CASE WHEN outcome = 'lost' THEN 1 ELSE 0 END) as lost_count,
         SUM(CASE WHEN is_urgent = 1 THEN 1 ELSE 0 END) as urgent,
         SUM(CASE WHEN is_renewal = 1 THEN 1 ELSE 0 END) as renewals,
         SUM(estimated_value) as total_pipeline_value,

@@ -5,7 +5,7 @@
 
 import apiClient from './ApiClient.js';
 
-export const paymentsService = {
+const paymentsService = {
   /**
    * Get all payments with optional filtering
    * @param {Object} params - Query parameters (status, etc.)

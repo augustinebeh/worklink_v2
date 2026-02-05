@@ -1,6 +1,6 @@
 import React, { useState, useEffect, useRef } from 'react';
 import { BellIcon } from 'lucide-react';
-import { alertService } from '../../shared/services/api';
+import { alertService } from "../../shared/services/api";
 import AlertDropdown from '../alerts/AlertDropdown';
 
 /**

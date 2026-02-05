@@ -5,7 +5,7 @@
 
 import apiClient from './ApiClient.js';
 
-export const analyticsService = {
+const analyticsService = {
   /**
    * Get dashboard analytics data
    * @param {Object} params - Date range and filters

@@ -5,7 +5,7 @@
 
 import apiClient from './ApiClient.js';
 
-export const notificationService = {
+const notificationService = {
   /**
    * Get all notifications for current user
    * @param {Object} params - Query parameters for filtering

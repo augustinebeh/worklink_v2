@@ -5,7 +5,7 @@
 
 import apiClient from './ApiClient.js';
 
-export const gamificationService = {
+const gamificationService = {
   /**
    * Get all achievements
    * @returns {Promise<Object>} Achievements data

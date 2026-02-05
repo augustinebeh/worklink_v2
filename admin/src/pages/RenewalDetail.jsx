@@ -31,7 +31,7 @@ import Badge from '../components/ui/Badge';
 import Button from '../components/ui/Button';
 import Input, { Textarea } from '../components/ui/Input';
 import Modal from '../components/ui/Modal';
-import { renewalService } from '../shared/services/api/renewal.service';
+import renewalService from '../shared/services/api/renewal.service';
 import { clsx } from 'clsx';
 
 const formatCurrency = (value) => {

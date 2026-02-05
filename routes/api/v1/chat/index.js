@@ -24,6 +24,10 @@ const conversationsRoutes = require('./routes/conversations');
 router.use('/messages', messagesRoutes);        // Message CRUD operations
 router.use('/conversations', conversationsRoutes);  // Conversation management
 
+// Legacy admin routes (for backward compatibility)
+router.use('/admin/conversations', conversationsRoutes);  // Admin conversations endpoint
+router.use('/admin/candidates', conversationsRoutes);     // Admin candidates endpoint
+
 /**
  * GET /health
  * Health check endpoint

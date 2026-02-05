@@ -5,7 +5,7 @@
 
 import apiClient from './ApiClient.js';
 
-export const escalationService = {
+const escalationService = {
   /**
    * Get escalation queue
    * @param {Object} params - Query parameters for filtering

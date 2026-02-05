@@ -4,7 +4,7 @@
  */
 
 import { useQuery, useMutation } from '@tanstack/react-query';
-import { jobsService } from '../services/api';
+import { jobsService } from "../services/api";
 import { queryKeys, queryInvalidations } from '../providers/QueryProvider';
 
 /**

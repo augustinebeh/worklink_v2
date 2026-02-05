@@ -5,7 +5,7 @@
 
 import apiClient from './ApiClient.js';
 
-export const chatService = {
+const chatService = {
   /**
    * Get all conversations for admin
    * @returns {Promise<Object>} List of conversations

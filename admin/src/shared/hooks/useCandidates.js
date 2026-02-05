@@ -4,7 +4,7 @@
  */
 
 import { useQuery, useMutation, useInfiniteQuery } from '@tanstack/react-query';
-import { candidatesService } from '../services/api';
+import { candidatesService } from "../services/api";
 import { queryKeys, queryInvalidations, optimisticUpdates } from '../providers/QueryProvider';
 
 /**

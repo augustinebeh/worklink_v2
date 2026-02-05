@@ -5,7 +5,7 @@
 
 import apiClient from './ApiClient.js';
 
-export const authService = {
+const authService = {
   /**
    * Login user with credentials
    * @param {string} email - User email

@@ -5,7 +5,7 @@
 
 import apiClient from './ApiClient.js';
 
-export const clientsService = {
+const clientsService = {
   /**
    * Get all clients with optional filtering
    * @param {Object} params - Query parameters for filtering/pagination

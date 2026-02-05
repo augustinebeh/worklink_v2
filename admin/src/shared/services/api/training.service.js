@@ -5,7 +5,7 @@
 
 import apiClient from './ApiClient.js';
 
-export const trainingService = {
+const trainingService = {
   /**
    * Get all training modules
    * @param {Object} params - Query parameters for filtering

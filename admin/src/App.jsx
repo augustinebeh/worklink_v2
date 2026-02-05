@@ -1,99 +1,260 @@
 import React from 'react';
+import { BrowserRouter, Routes, Route, Navigate } from 'react-router-dom';
+import { ThemeProvider } from './contexts/ThemeContext';
+import { AuthProvider } from './contexts/AuthContext';
+import { WebSocketProvider } from './contexts/WebSocketContext';
+import { ToastProvider } from './components/ui/Toast';
+import AdminLayout from './components/layout/AdminLayout';
+import ProtectedRoute from './components/auth/ProtectedRoute';
+import ErrorBoundary from './shared/components/ErrorBoundary';
+import { setupGlobalErrorHandling } from './shared/hooks/useErrorHandler';
+import QueryProvider from './shared/providers/QueryProvider';
+
+// Import only the essential, working pages
+import Login from './pages/Login';
+import Dashboard from './pages/Dashboard';
+import Candidates from './pages/Candidates';
+import CandidateProfile from './pages/CandidateProfile';
+import Jobs from './pages/Jobs';
+import JobDetail from './pages/JobDetail';
+import Clients from './pages/Clients';
+import ClientDetail from './pages/ClientDetail';
+import Settings from './pages/Settings';
+import FinancialDashboard from './pages/FinancialDashboard';
+import Deployments from './pages/Deployments';
+import Payments from './pages/Payments';
+import Chat from './pages/Chat';
+import EscalationQueue from './pages/EscalationQueue';
+
+// Import new working pages
+import Alerts from './pages/Alerts';
+import AlertSettings from './pages/AlertSettings';
+
+// Import BPO Intelligence System pages
+import BPODashboard from './pages/BPODashboard';
+import BPOTenderLifecycle from './pages/BPOTenderLifecycle';
+import GeBizIntelligence from './pages/GeBizIntelligence';
+import RenewalPipeline from './pages/RenewalPipeline';
+import RenewalDetail from './pages/RenewalDetail';
+
+function AppRoutes() {
+  return (
+    <Routes>
+      {/* Public routes */}
+      <Route
+        path="login"
+        element={
+          <ErrorBoundary level="page">
+            <Login />
+          </ErrorBoundary>
+        }
+      />
+
+      {/* Protected routes */}
+      <Route
+        path="/"
+        element={
+          <ProtectedRoute>
+            <ErrorBoundary level="app">
+              <AdminLayout />
+            </ErrorBoundary>
+          </ProtectedRoute>
+        }
+      >
+        {/* Dashboard - main entry point */}
+        <Route
+          index
+          element={
+            <ErrorBoundary level="page">
+              <Dashboard />
+            </ErrorBoundary>
+          }
+        />
+
+        {/* Core Operations */}
+        <Route
+          path="candidates"
+          element={
+            <ErrorBoundary level="page">
+              <Candidates />
+            </ErrorBoundary>
+          }
+        />
+        <Route
+          path="candidates/:id"
+          element={
+            <ErrorBoundary level="page">
+              <CandidateProfile />
+            </ErrorBoundary>
+          }
+        />
+        <Route
+          path="jobs"
+          element={
+            <ErrorBoundary level="page">
+              <Jobs />
+            </ErrorBoundary>
+          }
+        />
+        <Route
+          path="jobs/:id"
+          element={
+            <ErrorBoundary level="page">
+              <JobDetail />
+            </ErrorBoundary>
+          }
+        />
+        <Route
+          path="deployments"
+          element={
+            <ErrorBoundary level="page">
+              <Deployments />
+            </ErrorBoundary>
+          }
+        />
+        <Route
+          path="payments"
+          element={
+            <ErrorBoundary level="page">
+              <Payments />
+            </ErrorBoundary>
+          }
+        />
+
+        {/* Client Management */}
+        <Route path="clients" element={<Clients />} />
+        <Route path="clients/:id" element={<ClientDetail />} />
+
+        {/* Financial */}
+        <Route path="financials" element={<FinancialDashboard />} />
+
+        {/* Communication */}
+        <Route path="chat" element={<Chat />} />
+        <Route path="escalation-queue" element={<EscalationQueue />} />
+
+        {/* Alerts System */}
+        <Route
+          path="alert-settings"
+          element={
+            <ErrorBoundary level="page">
+              <AlertSettings />
+            </ErrorBoundary>
+          }
+        />
+        <Route
+          path="alerts"
+          element={
+            <ErrorBoundary level="page">
+              <Alerts />
+            </ErrorBoundary>
+          }
+        />
+
+        {/* Settings - Admin only */}
+        <Route
+          path="settings"
+          element={
+            <ProtectedRoute requireRole="admin">
+              <Settings />
+            </ProtectedRoute>
+          }
+        />
+
+        {/* Emergency Routes */}
+        <Route
+          path="emergency"
+          element={
+            <div style={{padding: '20px'}}>
+              <h1>🚨 Emergency Access</h1>
+              <p>React portal is working! Use navigation above.</p>
+              <a href="/admin/emergency.html">Backup Dashboard</a>
+            </div>
+          }
+        />
+
+        {/* BPO Intelligence System */}
+        <Route
+          path="bpo"
+          element={
+            <ErrorBoundary level="page">
+              <BPOTenderLifecycle />
+            </ErrorBoundary>
+          }
+        />
+        <Route
+          path="gebiz-intelligence"
+          element={
+            <ErrorBoundary level="page">
+              <GeBizIntelligence />
+            </ErrorBoundary>
+          }
+        />
+        <Route
+          path="tender-lifecycle"
+          element={
+            <ErrorBoundary level="page">
+              <BPOTenderLifecycle />
+            </ErrorBoundary>
+          }
+        />
+        <Route
+          path="renewal-pipeline"
+          element={
+            <ErrorBoundary level="page">
+              <RenewalPipeline />
+            </ErrorBoundary>
+          }
+        />
+        <Route
+          path="renewal/:id"
+          element={
+            <ErrorBoundary level="page">
+              <RenewalDetail />
+            </ErrorBoundary>
+          }
+        />
+
+        {/* Redirects for removed/problematic pages */}
+        <Route path="analytics" element={<Navigate to="financials" replace />} />
+        <Route path="tender-monitor" element={<Navigate to="tender-lifecycle" replace />} />
+        <Route path="retention-analytics" element={<Navigate to="financials" replace />} />
+        <Route path="gamification" element={<Navigate to="deployments" replace />} />
+        <Route path="training" element={<Navigate to="deployments" replace />} />
+        <Route path="ai-sourcing" element={<Navigate to="candidates" replace />} />
+        <Route path="consultant-performance" element={<Navigate to="deployments" replace />} />
+        <Route path="interview-scheduling" element={<Navigate to="candidates" replace />} />
+        <Route path="ml-dashboard" element={<Navigate to="financials" replace />} />
+        <Route path="telegram-groups" element={<Navigate to="chat" replace />} />
+        <Route path="ad-optimization" element={<Navigate to="financials" replace />} />
+      </Route>
+
+      {/* Catch all */}
+      <Route path="*" element={<Navigate to="/" replace />} />
+    </Routes>
+  );
+}
 
 export default function App() {
+  // Setup global error handling
+  React.useEffect(() => {
+    setupGlobalErrorHandling();
+  }, []);
+
   return (
-    <div style={{ padding: '20px', fontFamily: 'Arial, sans-serif' }}>
-      <h1 style={{ color: '#1e40af' }}>🚀 WorkLink Admin Portal - Minimal Version</h1>
-      <div style={{
-        background: 'linear-gradient(135deg, #667eea 0%, #764ba2 100%)',
-        color: 'white',
-        padding: '20px',
-        borderRadius: '10px',
-        margin: '20px 0'
-      }}>
-        <h2>✅ React App is Working!</h2>
-        <p>This minimal version loads successfully. We can now add components one by one.</p>
-
-        <div style={{ margin: '20px 0' }}>
-          <h3>Navigation Test:</h3>
-          <button
-            onClick={() => alert('Button works!')}
-            style={{
-              background: '#4CAF50',
-              color: 'white',
-              border: 'none',
-              padding: '10px 20px',
-              borderRadius: '5px',
-              cursor: 'pointer',
-              margin: '5px'
-            }}
-          >
-            Test Button
-          </button>
-          <a
-            href="/admin/test.html"
-            style={{
-              background: '#2196F3',
-              color: 'white',
-              textDecoration: 'none',
-              padding: '10px 20px',
-              borderRadius: '5px',
-              margin: '5px',
-              display: 'inline-block'
-            }}
-          >
-            Go to Test Page
-          </a>
-          <a
-            href="/admin/emergency.html"
-            style={{
-              background: '#ff9800',
-              color: 'white',
-              textDecoration: 'none',
-              padding: '10px 20px',
-              borderRadius: '5px',
-              margin: '5px',
-              display: 'inline-block'
-            }}
-          >
-            Emergency Dashboard
-          </a>
-        </div>
-
-        <div style={{ margin: '20px 0' }}>
-          <h3>Component Testing Order:</h3>
-          <ul>
-            <li>✅ Basic React App - Working</li>
-            <li>⏳ Add Router (next test)</li>
-            <li>⏳ Add Auth Context</li>
-            <li>⏳ Add Basic Layout</li>
-            <li>⏳ Add One Page at a time</li>
-          </ul>
-        </div>
-
-        <div style={{ margin: '20px 0' }}>
-          <h3>Current Status:</h3>
-          <p><strong>Time:</strong> {new Date().toLocaleString()}</p>
-          <p><strong>Location:</strong> {window.location.pathname}</p>
-          <p><strong>User Agent:</strong> {navigator.userAgent.includes('Mobile') ? 'Mobile' : 'Desktop'}</p>
-        </div>
-      </div>
-
-      <div style={{
-        background: '#f5f5f5',
-        padding: '20px',
-        borderRadius: '10px',
-        border: '2px solid #4CAF50'
-      }}>
-        <h3>🔧 Next Steps:</h3>
-        <ol>
-          <li>Backup this working version</li>
-          <li>Add React Router gradually</li>
-          <li>Test each component addition</li>
-          <li>Identify the problematic component</li>
-          <li>Fix the issue</li>
-        </ol>
-      </div>
-    </div>
+    <ErrorBoundary level="app">
+      <BrowserRouter basename="/admin">
+        <ThemeProvider>
+          <QueryProvider>
+            <AuthProvider>
+              <WebSocketProvider>
+                <ToastProvider>
+                  <AppRoutes />
+                </ToastProvider>
+              </WebSocketProvider>
+            </AuthProvider>
+          </QueryProvider>
+        </ThemeProvider>
+      </BrowserRouter>
+    </ErrorBoundary>
   );
 }

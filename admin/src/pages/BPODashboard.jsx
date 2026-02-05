@@ -25,7 +25,7 @@ import Table from '../components/ui/Table';
 import Input from '../components/ui/Input';
 import Select from '../components/ui/Select';
 import { clsx } from 'clsx';
-import { tenderService } from '../shared/services/api';
+import { tenderService } from "../shared/services/api";
 import { useToast } from '../components/ui/Toast';
 
 function BPOKPICard({ title, value, subtitle, icon: Icon, color = 'primary' }) {

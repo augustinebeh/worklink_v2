@@ -24,7 +24,7 @@ if [ -z "$STAGED_FILES" ]; then
   exit 0
 fi
 
-echo "📋 Checking ${#STAGED_FILES[@]} JavaScript files..."
+echo "📋 Checking JavaScript files..."
 echo ""
 
 # Check file sizes

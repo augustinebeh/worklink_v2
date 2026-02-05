@@ -3,11 +3,9 @@
  * Handles 7-stage tender pipeline management
  */
 
-import ApiClient from './ApiClient.js';
+import { apiClient as client } from './ApiClient.js';
 
-const client = new ApiClient();
-
-export const lifecycleService = {
+const lifecycleService = {
   /**
    * Get all tenders in pipeline
    * @param {Object} params - Query parameters
@@ -23,7 +21,8 @@ export const lifecycleService = {
   async getTenders(params = {}) {
     const queryString = new URLSearchParams(params).toString();
     const url = `/api/v1/bpo/lifecycle${queryString ? `?${queryString}` : ''}`;
-    return client.get(url);
+    const response = await client.get(url);
+    return response.json();
   },
 
   /**
@@ -31,7 +30,8 @@ export const lifecycleService = {
    * @param {number} id - Tender ID
    */
   async getTenderById(id) {
-    return client.get(`/api/v1/bpo/lifecycle/${id}`);
+    const response = await client.get(`/api/v1/bpo/lifecycle/${id}`);
+    return response.json();
   },
 
   /**
@@ -39,7 +39,8 @@ export const lifecycleService = {
    * @param {Object} data - Tender data
    */
   async createTender(data) {
-    return client.post('/api/v1/bpo/lifecycle', data);
+    const response = await client.post('/api/v1/bpo/lifecycle', data);
+    return response.json();
   },
 
   /**
@@ -48,7 +49,8 @@ export const lifecycleService = {
    * @param {Object} data - Fields to update
    */
   async updateTender(id, data) {
-    return client.patch(`/api/v1/bpo/lifecycle/${id}`, data);
+    const response = await client.patch(`/api/v1/bpo/lifecycle/${id}`, data);
+    return response.json();
   },
 
   /**
@@ -57,7 +59,8 @@ export const lifecycleService = {
    * @param {Object} data - Stage movement data
    */
   async moveTender(id, data) {
-    return client.post(`/api/v1/bpo/lifecycle/${id}/move`, data);
+    const response = await client.post(`/api/v1/bpo/lifecycle/${id}/move`, data);
+    return response.json();
   },
 
   /**
@@ -66,14 +69,16 @@ export const lifecycleService = {
    * @param {Object} data - Decision data
    */
   async recordDecision(id, data) {
-    return client.post(`/api/v1/bpo/lifecycle/${id}/decision`, data);
+    const response = await client.post(`/api/v1/bpo/lifecycle/${id}/decision`, data);
+    return response.json();
   },
 
   /**
    * Get pipeline statistics
    */
   async getPipelineStats() {
-    return client.get('/api/v1/bpo/lifecycle/dashboard/stats');
+    const response = await client.get('/api/v1/bpo/lifecycle/dashboard/stats');
+    return response.json();
   },
 
   /**
@@ -81,7 +86,8 @@ export const lifecycleService = {
    * @param {number} days - Days threshold (default 7)
    */
   async getClosingDeadlines(days = 7) {
-    return client.get(`/api/v1/bpo/lifecycle/dashboard/deadlines?days=${days}`);
+    const response = await client.get(`/api/v1/bpo/lifecycle/dashboard/deadlines?days=${days}`);
+    return response.json();
   },
 
   /**
@@ -89,7 +95,8 @@ export const lifecycleService = {
    * @param {number} renewalId - Renewal ID
    */
   async moveRenewalToOpportunity(renewalId) {
-    return client.post(`/api/v1/bpo/lifecycle/renewal/${renewalId}/move`);
+    const response = await client.post(`/api/v1/bpo/lifecycle/renewal/${renewalId}/move`);
+    return response.json();
   },
 
   /**
@@ -97,7 +104,8 @@ export const lifecycleService = {
    * @param {number} id - Tender ID
    */
   async deleteTender(id) {
-    return client.delete(`/api/v1/bpo/lifecycle/${id}`);
+    const response = await client.delete(`/api/v1/bpo/lifecycle/${id}`);
+    return response.json();
   }
 };
 

@@ -10,7 +10,7 @@ import {
   UserIcon,
   EyeIcon
 } from 'lucide-react';
-import { renewalService } from '../../shared/services/api/renewal.service';
+import renewalService from '../../shared/services/api/renewal.service';
 import { formatCurrency, formatDate } from '../../shared/utils/formatters';
 
 export default function RenewalTimeline({ renewals = [], onRenewalUpdate, loading }) {
