@@ -7,31 +7,10 @@
 const express = require('express');
 const router = express.Router();
 const Database = require('better-sqlite3');
-const path = require('path');
 const { v4: uuidv4 } = require('uuid');
-const fs = require('fs');
 
-// Railway-compatible database path configuration
-const getDbPath = () => {
-  // Try GeBIZ intelligence database first (local development)
-  const gebizDbPath = path.join(__dirname, '../../../../database/gebiz_intelligence.db');
-
-  // If GeBIZ database exists, use it
-  if (fs.existsSync(gebizDbPath)) {
-    return gebizDbPath;
-  }
-
-  // Fallback to main database for Railway deployment
-  const mainDbPath = path.join(__dirname, '../../../../data/worklink.db');
-  if (fs.existsSync(mainDbPath)) {
-    return mainDbPath;
-  }
-
-  // Final fallback for Railway with different structure
-  return process.env.DATABASE_URL || '/opt/render/project/src/data/worklink.db';
-};
-
-const DB_PATH = getDbPath();
+// Use the same database path as the main WorkLink system and GeBIZ scraper
+const { DB_PATH } = require('../../../db/database/config');
 
 // ============================================================================
 // GET /api/v1/bpo/lifecycle - List all tenders in pipeline
@@ -174,6 +153,17 @@ router.post('/', (req, res) => {
   try {
     const db = new Database(DB_PATH);
 
+    // Check if bpo_tender_lifecycle table exists (Railway compatibility)
+    const tableCheck = db.prepare("SELECT name FROM sqlite_master WHERE type='table' AND name='bpo_tender_lifecycle'").get();
+    if (!tableCheck) {
+      db.close();
+      return res.status(503).json({
+        success: false,
+        error: 'BPO lifecycle system not available on this deployment',
+        message: 'Tender creation requires database table setup'
+      });
+    }
+
     const {
       source_type,
       source_id,
@@ -259,7 +249,18 @@ router.post('/', (req, res) => {
 router.patch('/:id', (req, res) => {
   try {
     const db = new Database(DB_PATH);
-    
+
+    // Check if bpo_tender_lifecycle table exists (Railway compatibility)
+    const tableCheck = db.prepare("SELECT name FROM sqlite_master WHERE type='table' AND name='bpo_tender_lifecycle'").get();
+    if (!tableCheck) {
+      db.close();
+      return res.status(503).json({
+        success: false,
+        error: 'BPO lifecycle system not available on this deployment',
+        message: 'Tender updates require database table setup'
+      });
+    }
+
     const updates = [];
     const params = [];
     
@@ -322,6 +323,20 @@ router.patch('/:id', (req, res) => {
 router.post('/renewal/:renewalId/move', (req, res) => {
   try {
     const db = new Database(DB_PATH);
+
+    // Check if required tables exist (Railway compatibility)
+    const tenderTableCheck = db.prepare("SELECT name FROM sqlite_master WHERE type='table' AND name='bpo_tender_lifecycle'").get();
+    const renewalTableCheck = db.prepare("SELECT name FROM sqlite_master WHERE type='table' AND name='contract_renewals'").get();
+
+    if (!tenderTableCheck || !renewalTableCheck) {
+      db.close();
+      return res.status(503).json({
+        success: false,
+        error: 'Required systems not available on this deployment',
+        message: 'Renewal move requires both lifecycle and renewal table setup'
+      });
+    }
+
     const renewalId = req.params.renewalId;
 
     // Get renewal details
@@ -387,7 +402,18 @@ router.post('/renewal/:renewalId/move', (req, res) => {
 router.post('/:id/move', (req, res) => {
   try {
     const db = new Database(DB_PATH);
-    
+
+    // Check if bpo_tender_lifecycle table exists (Railway compatibility)
+    const tableCheck = db.prepare("SELECT name FROM sqlite_master WHERE type='table' AND name='bpo_tender_lifecycle'").get();
+    if (!tableCheck) {
+      db.close();
+      return res.status(503).json({
+        success: false,
+        error: 'BPO lifecycle system not available on this deployment',
+        message: 'Tender stage moves require database table setup'
+      });
+    }
+
     const { new_stage, user_id } = req.body;
     
     if (!new_stage) {
@@ -451,7 +477,18 @@ router.post('/:id/move', (req, res) => {
 router.post('/:id/decision', (req, res) => {
   try {
     const db = new Database(DB_PATH);
-    
+
+    // Check if bpo_tender_lifecycle table exists (Railway compatibility)
+    const tableCheck = db.prepare("SELECT name FROM sqlite_master WHERE type='table' AND name='bpo_tender_lifecycle'").get();
+    if (!tableCheck) {
+      db.close();
+      return res.status(503).json({
+        success: false,
+        error: 'BPO lifecycle system not available on this deployment',
+        message: 'Decision recording requires database table setup'
+      });
+    }
+
     const {
       decision, // 'go', 'no-go', 'maybe'
       decision_reasoning,
@@ -666,7 +703,18 @@ router.get('/dashboard/deadlines', (req, res) => {
 router.delete('/:id', (req, res) => {
   try {
     const db = new Database(DB_PATH);
-    
+
+    // Check if bpo_tender_lifecycle table exists (Railway compatibility)
+    const tableCheck = db.prepare("SELECT name FROM sqlite_master WHERE type='table' AND name='bpo_tender_lifecycle'").get();
+    if (!tableCheck) {
+      db.close();
+      return res.status(503).json({
+        success: false,
+        error: 'BPO lifecycle system not available on this deployment',
+        message: 'Tender deletion requires database table setup'
+      });
+    }
+
     const result = db.prepare('DELETE FROM bpo_tender_lifecycle WHERE id = ?').run(req.params.id);
     
     db.close();
