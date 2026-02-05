@@ -9,8 +9,29 @@ const router = express.Router();
 const Database = require('better-sqlite3');
 const path = require('path');
 const { v4: uuidv4 } = require('uuid');
+const fs = require('fs');
 
-const DB_PATH = path.join(__dirname, '../../../../database/gebiz_intelligence.db');
+// Railway-compatible database path configuration
+const getDbPath = () => {
+  // Try GeBIZ intelligence database first (local development)
+  const gebizDbPath = path.join(__dirname, '../../../../database/gebiz_intelligence.db');
+
+  // If GeBIZ database exists, use it
+  if (fs.existsSync(gebizDbPath)) {
+    return gebizDbPath;
+  }
+
+  // Fallback to main database for Railway deployment
+  const mainDbPath = path.join(__dirname, '../../../../data/worklink.db');
+  if (fs.existsSync(mainDbPath)) {
+    return mainDbPath;
+  }
+
+  // Final fallback for Railway with different structure
+  return process.env.DATABASE_URL || '/opt/render/project/src/data/worklink.db';
+};
+
+const DB_PATH = getDbPath();
 
 // ============================================================================
 // GET /api/v1/bpo/lifecycle - List all tenders in pipeline
@@ -18,7 +39,37 @@ const DB_PATH = path.join(__dirname, '../../../../database/gebiz_intelligence.db
 router.get('/', (req, res) => {
   try {
     const db = new Database(DB_PATH, { readonly: true });
-    
+
+    // Check if bpo_tender_lifecycle table exists (Railway compatibility)
+    const tableCheck = db.prepare("SELECT name FROM sqlite_master WHERE type='table' AND name='bpo_tender_lifecycle'").get();
+    if (!tableCheck) {
+      db.close();
+      return res.json({
+        success: true,
+        data: {
+          tenders: [],
+          stages: {
+            renewal_watch: [],
+            new_opportunity: [],
+            review: [],
+            bidding: [],
+            internal_approval: [],
+            submitted: [],
+            awarded: [],
+            lost: []
+          },
+          summary: {
+            total: 0,
+            by_stage: {},
+            by_priority: { critical: 0, high: 0, medium: 0, low: 0 },
+            urgent_count: 0,
+            renewal_count: 0
+          }
+        },
+        message: 'BPO lifecycle system not available on this deployment'
+      });
+    }
+
     const {
       stage,
       priority,
@@ -29,7 +80,7 @@ router.get('/', (req, res) => {
       limit = 100,
       offset = 0
     } = req.query;
-    
+
     let query = 'SELECT * FROM bpo_tender_lifecycle WHERE 1=1';
     const params = [];
     
