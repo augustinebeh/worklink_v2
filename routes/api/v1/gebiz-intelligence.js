@@ -36,6 +36,26 @@ router.get('/dashboard', (req, res) => {
       });
     }
 
+    // Check if gebiz_historical_tenders table exists (Railway compatibility)
+    const tableCheck = gebizDb.prepare("SELECT name FROM sqlite_master WHERE type='table' AND name='gebiz_historical_tenders'").get();
+
+    if (!tableCheck) {
+      // Return empty stats if table doesn't exist
+      const stats = {
+        total_tenders: 0,
+        total_suppliers: 0,
+        total_value: 0,
+        recent_tenders: 0,
+        active_tenders: 0,
+        pending_alerts: 0
+      };
+      return res.json({
+        success: true,
+        stats,
+        message: 'Historical tenders table not available on this deployment'
+      });
+    }
+
     const stats = {
       // Total historical tenders
       total_tenders: gebizDb.prepare(`
@@ -44,20 +64,20 @@ router.get('/dashboard', (req, res) => {
 
       // Unique suppliers tracked
       total_suppliers: gebizDb.prepare(`
-        SELECT COUNT(DISTINCT supplier_name) as count 
+        SELECT COUNT(DISTINCT supplier_name) as count
         FROM gebiz_historical_tenders
       `).get().count,
 
       // Total contract value
       total_value: gebizDb.prepare(`
-        SELECT COALESCE(SUM(awarded_amount), 0) as sum 
+        SELECT COALESCE(SUM(awarded_amount), 0) as sum
         FROM gebiz_historical_tenders
       `).get().sum,
 
       // Recent tenders (last 30 days)
       recent_tenders: gebizDb.prepare(`
-        SELECT COUNT(*) as count 
-        FROM gebiz_historical_tenders 
+        SELECT COUNT(*) as count
+        FROM gebiz_historical_tenders
         WHERE award_date >= date('now', '-30 days')
       `).get().count,
 
@@ -86,6 +106,18 @@ router.get('/competitors', (req, res) => {
       return res.status(503).json({
         success: false,
         error: 'GeBIZ database not initialized'
+      });
+    }
+
+    // Check if gebiz_historical_tenders table exists (Railway compatibility)
+    const tableCheck = gebizDb.prepare("SELECT name FROM sqlite_master WHERE type='table' AND name='gebiz_historical_tenders'").get();
+
+    if (!tableCheck) {
+      // Return empty competitors if table doesn't exist
+      return res.json({
+        success: true,
+        competitors: [],
+        message: 'Historical tenders table not available on this deployment'
       });
     }
 
@@ -378,6 +410,25 @@ router.get('/stats', (req, res) => {
       return res.status(503).json({
         success: false,
         error: 'GeBIZ database not initialized'
+      });
+    }
+
+    // Check if gebiz_historical_tenders table exists (Railway compatibility)
+    const tableCheck = gebizDb.prepare("SELECT name FROM sqlite_master WHERE type='table' AND name='gebiz_historical_tenders'").get();
+
+    if (!tableCheck) {
+      // Return empty stats if table doesn't exist
+      const stats = {
+        tenders: 0,
+        suppliers: 0,
+        agencies: 0,
+        total_value: 0,
+        date_range: { min: null, max: null }
+      };
+      return res.json({
+        success: true,
+        stats,
+        message: 'Historical tenders table not available on this deployment'
       });
     }
 

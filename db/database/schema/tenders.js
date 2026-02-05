@@ -100,6 +100,70 @@ function createTendersTables() {
       actual_costs REAL,
       actual_profit REAL
     );
+
+    -- =====================================================
+    -- GEBIZ INTELLIGENCE SYSTEM
+    -- =====================================================
+
+    -- GeBIZ Historical Tenders (from Data.gov.sg API)
+    CREATE TABLE IF NOT EXISTS gebiz_historical_tenders (
+      id INTEGER PRIMARY KEY AUTOINCREMENT,
+      tender_no TEXT UNIQUE NOT NULL,
+      description TEXT,
+      awarded_amount REAL,
+      supplier_name TEXT,
+      award_date DATE,
+      agency TEXT,
+      category TEXT,
+      contract_period_start DATE,
+      contract_period_end DATE,
+      raw_data TEXT,
+      imported_at DATETIME,
+      created_at DATETIME DEFAULT CURRENT_TIMESTAMP,
+      updated_at DATETIME DEFAULT CURRENT_TIMESTAMP
+    );
+
+    -- GeBIZ Active Tenders (real-time scraping)
+    CREATE TABLE IF NOT EXISTS gebiz_active_tenders (
+      id INTEGER PRIMARY KEY AUTOINCREMENT,
+      tender_no TEXT UNIQUE NOT NULL,
+      title TEXT NOT NULL,
+      agency TEXT,
+      closing_date DATE,
+      published_date DATE,
+      category TEXT,
+      estimated_value REAL,
+      url TEXT,
+      details TEXT,
+      has_details BOOLEAN DEFAULT 0,
+      status TEXT DEFAULT 'open',
+      scraped_at DATETIME,
+      created_at DATETIME DEFAULT CURRENT_TIMESTAMP,
+      updated_at DATETIME DEFAULT CURRENT_TIMESTAMP
+    );
+
+    -- Audit Log (for tender lifecycle tracking)
+    CREATE TABLE IF NOT EXISTS audit_log (
+      id TEXT PRIMARY KEY,
+      event_type TEXT NOT NULL,
+      event_action TEXT NOT NULL,
+      resource_type TEXT NOT NULL,
+      resource_id TEXT NOT NULL,
+      user_id TEXT,
+      old_value TEXT,
+      new_value TEXT,
+      timestamp DATETIME DEFAULT CURRENT_TIMESTAMP,
+      created_at DATETIME DEFAULT CURRENT_TIMESTAMP
+    );
+
+    -- Create indexes for GeBIZ tables
+    CREATE INDEX IF NOT EXISTS idx_gebiz_hist_supplier ON gebiz_historical_tenders(supplier_name);
+    CREATE INDEX IF NOT EXISTS idx_gebiz_hist_award_date ON gebiz_historical_tenders(award_date);
+    CREATE INDEX IF NOT EXISTS idx_gebiz_hist_category ON gebiz_historical_tenders(category);
+    CREATE INDEX IF NOT EXISTS idx_gebiz_hist_agency ON gebiz_historical_tenders(agency);
+    CREATE INDEX IF NOT EXISTS idx_gebiz_active_tender_no ON gebiz_active_tenders(tender_no);
+    CREATE INDEX IF NOT EXISTS idx_gebiz_active_closing ON gebiz_active_tenders(closing_date);
+    CREATE INDEX IF NOT EXISTS idx_audit_log_resource ON audit_log(resource_type, resource_id);
   `);
 
   console.log('  ✅ Tenders & matching tables created');
