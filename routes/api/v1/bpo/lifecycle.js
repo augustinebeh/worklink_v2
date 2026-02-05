@@ -10,6 +10,7 @@ const Database = require('better-sqlite3');
 const path = require('path');
 const { v4: uuidv4 } = require('uuid');
 const fs = require('fs');
+const { ensureTableExistsWithFallback } = require('../../../db/database/utils/table-creator');
 
 // Railway-compatible database path configuration that matches main system
 const getDbPath = () => {
@@ -167,14 +168,13 @@ router.post('/', (req, res) => {
   try {
     const db = new Database(DB_PATH);
 
-    // Check if bpo_tender_lifecycle table exists (Railway compatibility)
-    const tableCheck = db.prepare("SELECT name FROM sqlite_master WHERE type='table' AND name='bpo_tender_lifecycle'").get();
-    if (!tableCheck) {
+    // Ensure BPO lifecycle table exists (if !table then create table pattern)
+    if (!ensureTableExistsWithFallback('bpo_tender_lifecycle')) {
       db.close();
       return res.status(503).json({
         success: false,
-        error: 'BPO lifecycle system not available on this deployment',
-        message: 'Tender creation requires database table setup'
+        error: 'Failed to initialize BPO lifecycle tables',
+        message: 'Database setup required for tender creation'
       });
     }
 

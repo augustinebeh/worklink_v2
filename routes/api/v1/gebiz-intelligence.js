@@ -7,6 +7,7 @@ const express = require('express');
 const router = express.Router();
 const path = require('path');
 const Database = require('better-sqlite3');
+const { ensureTableExistsWithFallback, ensureGebizTables } = require('../../../db/database/utils/table-creator');
 
 // Database connection
 const gebizDbPath = path.join(__dirname, '../../../database/gebiz_intelligence.db');
@@ -36,23 +37,12 @@ router.get('/dashboard', (req, res) => {
       });
     }
 
-    // Check if gebiz_historical_tenders table exists (Railway compatibility)
-    const tableCheck = gebizDb.prepare("SELECT name FROM sqlite_master WHERE type='table' AND name='gebiz_historical_tenders'").get();
-
-    if (!tableCheck) {
-      // Return empty stats if table doesn't exist
-      const stats = {
-        total_tenders: 0,
-        total_suppliers: 0,
-        total_value: 0,
-        recent_tenders: 0,
-        active_tenders: 0,
-        pending_alerts: 0
-      };
-      return res.json({
-        success: true,
-        stats,
-        message: 'Historical tenders table not available on this deployment'
+    // Ensure GeBIZ tables exist (if !table then create table pattern)
+    if (!ensureTableExistsWithFallback('gebiz_historical_tenders')) {
+      return res.status(503).json({
+        success: false,
+        error: 'Failed to initialize GeBIZ intelligence tables',
+        message: 'Database setup required'
       });
     }
 
@@ -109,15 +99,12 @@ router.get('/competitors', (req, res) => {
       });
     }
 
-    // Check if gebiz_historical_tenders table exists (Railway compatibility)
-    const tableCheck = gebizDb.prepare("SELECT name FROM sqlite_master WHERE type='table' AND name='gebiz_historical_tenders'").get();
-
-    if (!tableCheck) {
-      // Return empty competitors if table doesn't exist
-      return res.json({
-        success: true,
-        competitors: [],
-        message: 'Historical tenders table not available on this deployment'
+    // Ensure GeBIZ tables exist (if !table then create table pattern)
+    if (!ensureTableExistsWithFallback('gebiz_historical_tenders')) {
+      return res.status(503).json({
+        success: false,
+        error: 'Failed to initialize GeBIZ intelligence tables',
+        message: 'Database setup required'
       });
     }
 
@@ -413,22 +400,12 @@ router.get('/stats', (req, res) => {
       });
     }
 
-    // Check if gebiz_historical_tenders table exists (Railway compatibility)
-    const tableCheck = gebizDb.prepare("SELECT name FROM sqlite_master WHERE type='table' AND name='gebiz_historical_tenders'").get();
-
-    if (!tableCheck) {
-      // Return empty stats if table doesn't exist
-      const stats = {
-        tenders: 0,
-        suppliers: 0,
-        agencies: 0,
-        total_value: 0,
-        date_range: { min: null, max: null }
-      };
-      return res.json({
-        success: true,
-        stats,
-        message: 'Historical tenders table not available on this deployment'
+    // Ensure GeBIZ tables exist (if !table then create table pattern)
+    if (!ensureTableExistsWithFallback('gebiz_historical_tenders')) {
+      return res.status(503).json({
+        success: false,
+        error: 'Failed to initialize GeBIZ intelligence tables',
+        message: 'Database setup required'
       });
     }
 
