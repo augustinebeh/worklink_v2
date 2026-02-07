@@ -1,5 +1,0 @@
-{
-  "issue": "Frontend expects avatar_url, DB has profile_photo",
-  "fix": "Map profile_photo to avatar_url in parseJSONFields",
-  "file": "avatar-utils.js"
-}

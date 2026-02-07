@@ -19,7 +19,7 @@ async function initializeRailwayGeBIZ() {
 
   try {
     // Determine Railway-compatible paths
-    const IS_RAILWAY = process.env.RAILWAY_ENVIRONMENT || process.env.NODE_ENV === 'production';
+    const IS_RAILWAY = !!process.env.RAILWAY_ENVIRONMENT; // Only true on actual Railway
     const DB_DIR = IS_RAILWAY
       ? (process.env.RAILWAY_VOLUME_MOUNT_PATH || '/app/data')
       : path.join(__dirname, '../database');
@@ -176,7 +176,7 @@ async function initializeRailwayGeBIZ() {
  */
 function testGeBIZDatabase() {
   try {
-    const IS_RAILWAY = process.env.RAILWAY_ENVIRONMENT || process.env.NODE_ENV === 'production';
+    const IS_RAILWAY = !!process.env.RAILWAY_ENVIRONMENT; // Only true on actual Railway
     const DB_DIR = IS_RAILWAY
       ? (process.env.RAILWAY_VOLUME_MOUNT_PATH || '/app/data')
       : path.join(__dirname, '../database');

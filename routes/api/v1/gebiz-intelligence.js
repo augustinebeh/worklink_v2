@@ -194,7 +194,7 @@ class GeBIZTableManager {
 }
 
 // Database connection with Railway-compatible path handling
-const IS_RAILWAY = process.env.RAILWAY_ENVIRONMENT || process.env.NODE_ENV === 'production';
+const IS_RAILWAY = !!process.env.RAILWAY_ENVIRONMENT; // Only true on actual Railway
 const DB_DIR = IS_RAILWAY
   ? (process.env.RAILWAY_VOLUME_MOUNT_PATH || '/app/data')
   : path.join(__dirname, '../../../database');
@@ -554,6 +554,23 @@ router.get('/agencies', ensureGeBIZTablesMiddleware, (req, res) => {
   } catch (error) {
     console.error('Agencies error:', error);
     res.status(500).json({ success: false, error: error.message });
+  }
+});
+
+/**
+ * GET /api/v1/gebiz/sync/status
+ * Get current sync status (for polling)
+ */
+router.get('/sync/status', (req, res) => {
+  try {
+    const syncServicePath = path.join(__dirname, '../../../services/gebiz-scraping/historical-sync.js');
+    if (!fs.existsSync(syncServicePath)) {
+      return res.json({ success: true, data: { is_running: false, stage: 'idle', progress: 0 } });
+    }
+    const historicalSync = require(syncServicePath);
+    res.json({ success: true, data: historicalSync.getStatus() });
+  } catch (error) {
+    res.json({ success: true, data: { is_running: false, stage: 'idle', progress: 0 } });
   }
 });
 

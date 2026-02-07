@@ -78,6 +78,27 @@ class GeBIZRSSOrchestrator {
     this.isRunning = true;
 
     try {
+      // Check if GeBIZ portal is enabled before scraping
+      try {
+        const portal = db.prepare(
+          'SELECT enabled FROM scraping_portals WHERE portal_key = ?'
+        ).get('gebiz');
+
+        if (portal && !portal.enabled) {
+          console.log('⏸️  GeBIZ portal is disabled by admin, skipping scrape');
+          this.isRunning = false;
+          return {
+            runId,
+            skipped: true,
+            reason: 'GeBIZ portal disabled by admin',
+            startTime: new Date().toISOString()
+          };
+        }
+      } catch (portalError) {
+        // Table may not exist yet on older databases — continue anyway
+        console.warn('Portal check skipped:', portalError.message);
+      }
+
       // Log the start of the run
       const runLogId = await this.logScrapingJobStart(runId);
 
@@ -97,7 +118,7 @@ class GeBIZRSSOrchestrator {
           newTenders: 0,
           duplicates: 0,
           errors: 0,
-          lifecycleCardsCreated: 0
+          stagingRecordsCreated: 0
         },
         errors: []
       };
@@ -121,18 +142,18 @@ class GeBIZRSSOrchestrator {
         throw error;
       }
 
-      // Stage 2: Create Lifecycle Cards
+      // Stage 2: Insert into Staging Table (gebiz_active_tenders)
       if (pipelineResult.stages.parsing.validatedTenders?.length > 0) {
-        console.log('📝 Stage 2: Creating Lifecycle Cards...');
+        console.log('📝 Stage 2: Inserting into staging table...');
         try {
-          const lifecycleResult = await this.lifecycleManager.createLifecycleCards(
+          const lifecycleResult = await this.lifecycleManager.insertToStagingTable(
             pipelineResult.stages.parsing.validatedTenders
           );
           pipelineResult.stages.lifecycle = lifecycleResult;
-          pipelineResult.summary.lifecycleCardsCreated = lifecycleResult.created;
+          pipelineResult.summary.stagingRecordsCreated = lifecycleResult.created;
           pipelineResult.summary.errors += lifecycleResult.errors;
 
-          console.log(`✅ Lifecycle creation complete: ${lifecycleResult.created} cards created`);
+          console.log(`✅ Staging complete: ${lifecycleResult.created} tenders added to feed`);
 
         } catch (error) {
           pipelineResult.errors.push(`Lifecycle stage failed: ${error.message}`);
@@ -140,7 +161,7 @@ class GeBIZRSSOrchestrator {
           throw error;
         }
       } else {
-        console.log('⏭️  No new tenders to process for lifecycle creation');
+        console.log('⏭️  No new tenders to add to staging');
         pipelineResult.stages.lifecycle = {
           success: true,
           message: 'No new tenders to process',
@@ -171,6 +192,16 @@ class GeBIZRSSOrchestrator {
       // Log the completion
       await this.logScrapingJobComplete(runLogId, pipelineResult);
 
+      // Update portal last_scraped_at timestamp
+      try {
+        db.prepare(`
+          UPDATE scraping_portals SET last_scraped_at = CURRENT_TIMESTAMP
+          WHERE portal_key = 'gebiz'
+        `).run();
+      } catch (_) {
+        // Ignore if scraping_portals table doesn't exist yet
+      }
+
       // Store in run history
       this.runHistory.unshift(pipelineResult);
       if (this.runHistory.length > 50) {
@@ -179,7 +210,7 @@ class GeBIZRSSOrchestrator {
 
       this.lastRun = pipelineResult;
 
-      console.log(`🏁 Pipeline complete (${pipelineResult.duration}ms): ${pipelineResult.summary.newTenders} new tenders processed`);
+      console.log(`🏁 Pipeline complete (${pipelineResult.duration}ms): ${pipelineResult.summary.stagingRecordsCreated} tenders added to feed`);
 
       return pipelineResult;
 

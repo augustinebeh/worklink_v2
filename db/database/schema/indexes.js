@@ -67,6 +67,39 @@ function createIndexes() {
     CREATE INDEX IF NOT EXISTS idx_ad_performance_job ON ad_performance(job_id);
     CREATE INDEX IF NOT EXISTS idx_ad_variable_scores_variable ON ad_variable_scores(variable_name, variable_value);
     CREATE INDEX IF NOT EXISTS idx_ad_timing_scores_hour ON ad_timing_scores(hour, day_of_week);
+
+    -- =====================================================
+    -- COMPOSITE & MISSING FK INDEXES
+    -- =====================================================
+
+    -- Composite index for deployment lookups (candidate + job pairs)
+    CREATE INDEX IF NOT EXISTS idx_deployments_candidate_job ON deployments(candidate_id, job_id);
+    CREATE INDEX IF NOT EXISTS idx_deployments_status ON deployments(status);
+
+    -- Jobs FK column (client lookups / joins)
+    CREATE INDEX IF NOT EXISTS idx_jobs_client ON jobs(client_id);
+
+    -- Referrals: referred_id for reverse lookups
+    CREATE INDEX IF NOT EXISTS idx_referrals_referred ON referrals(referred_id);
+
+    -- Messages: unread filtering
+    CREATE INDEX IF NOT EXISTS idx_messages_read ON messages(read);
+
+    -- Reward purchases: candidate lookups
+    CREATE INDEX IF NOT EXISTS idx_reward_purchases_candidate ON reward_purchases(candidate_id);
+
+    -- Candidate borders: candidate lookups
+    CREATE INDEX IF NOT EXISTS idx_candidate_borders_candidate ON candidate_borders(candidate_id);
+
+    -- Notification log: candidate lookups
+    CREATE INDEX IF NOT EXISTS idx_notification_log_candidate ON notification_log(candidate_id);
+
+    -- Streak protection: candidate lookups
+    CREATE INDEX IF NOT EXISTS idx_streak_protection_candidate ON streak_protection(candidate_id);
+
+    -- Push queue: status for processing pending notifications
+    CREATE INDEX IF NOT EXISTS idx_push_queue_status ON push_queue(status);
+    CREATE INDEX IF NOT EXISTS idx_push_queue_candidate ON push_queue(candidate_id);
   `);
 
   console.log('  ✅ Database indexes created');

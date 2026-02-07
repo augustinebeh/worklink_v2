@@ -3,20 +3,17 @@ import { useNavigate } from 'react-router-dom';
 import {
   SendIcon,
   SmileIcon,
-  CheckIcon,
-  CheckCheckIcon,
   ChevronLeftIcon,
   PaperclipIcon,
   FileTextIcon,
   XIcon,
-  DownloadIcon,
 } from 'lucide-react';
 import { useAuth } from '../contexts/AuthContext';
 import { useWebSocket } from '../contexts/WebSocketContext';
 import { clsx } from 'clsx';
 import EmojiPicker from 'emoji-picker-react';
 import { LogoIcon } from '../components/ui/Logo';
-import { DEFAULT_LOCALE, TIMEZONE, getSGDateString, MS_PER_DAY } from '../utils/constants';
+import { getSGDateString } from '../utils/constants';
 import {
   InterviewOfferCard,
   AvailabilitySelector,
@@ -24,149 +21,7 @@ import {
   SchedulingStatusIndicator,
   useInterviewScheduling
 } from '../components/chat/InterviewSchedulingComponents';
-
-// Parse DB timestamp (stored as UTC without timezone indicator)
-function parseUTCTimestamp(timestamp) {
-  if (!timestamp) return new Date();
-  const utcTimestamp = timestamp.endsWith('Z') ? timestamp : timestamp.replace(' ', 'T') + 'Z';
-  return new Date(utcTimestamp);
-}
-
-// Attachment display component
-function MessageAttachment({ attachment, isOwn }) {
-  const isImage = attachment.type === 'image' || attachment.mime_type?.startsWith('image/');
-
-  if (isImage) {
-    return (
-      <a href={attachment.url || attachment.file_url} target="_blank" rel="noopener noreferrer" className="block mb-2">
-        <img
-          src={attachment.thumbnail_url || attachment.url || attachment.file_url}
-          alt={attachment.name || attachment.original_name || 'Image'}
-          className="max-w-full rounded-lg max-h-48 object-cover"
-        />
-      </a>
-    );
-  }
-
-  return (
-    <a
-      href={attachment.url || attachment.file_url}
-      target="_blank"
-      rel="noopener noreferrer"
-      className={clsx('flex items-center gap-2 p-2 rounded-lg mb-2', isOwn ? 'bg-white/10' : 'bg-white/5')}
-    >
-      <FileTextIcon className="h-5 w-5 flex-shrink-0" />
-      <span className="flex-1 truncate text-sm">{attachment.name || attachment.original_name || 'Document'}</span>
-      <DownloadIcon className="h-4 w-4 flex-shrink-0" />
-    </a>
-  );
-}
-
-function MessageBubble({ message, isOwn }) {
-  const time = parseUTCTimestamp(message.created_at).toLocaleTimeString(DEFAULT_LOCALE, {
-    hour: '2-digit',
-    minute: '2-digit',
-    hour12: true,
-    timeZone: TIMEZONE
-  });
-
-  const attachments = message.attachments
-    ? (typeof message.attachments === 'string' ? JSON.parse(message.attachments) : message.attachments)
-    : [];
-
-  const hasInlineAttachment = message.attachment_url && message.attachment_type;
-
-  const readAt = message.read_at
-    ? parseUTCTimestamp(message.read_at).toLocaleTimeString(DEFAULT_LOCALE, {
-        hour: '2-digit',
-        minute: '2-digit',
-        hour12: true,
-        timeZone: TIMEZONE
-      })
-    : null;
-
-  return (
-    <div className={clsx('flex', isOwn ? 'justify-end' : 'justify-start')}>
-      <div className={clsx(
-        'max-w-[80%] px-4 py-2.5 rounded-2xl relative',
-        isOwn
-          ? 'bg-gradient-to-r from-emerald-500 to-cyan-500 text-white rounded-br-md'
-          : 'bg-[#0a1628] text-white rounded-bl-md border border-white/[0.05]'
-      )}>
-        {hasInlineAttachment && (
-          <MessageAttachment
-            attachment={{ url: message.attachment_url, type: message.attachment_type, name: message.attachment_name }}
-            isOwn={isOwn}
-          />
-        )}
-
-        {attachments.map((att, idx) => (
-          <MessageAttachment key={idx} attachment={att} isOwn={isOwn} />
-        ))}
-
-        {message.content && <p className="whitespace-pre-wrap break-words">{message.content}</p>}
-
-        <div className={clsx('flex items-center gap-1 mt-1', isOwn ? 'justify-end' : 'justify-start')}>
-          <span className={clsx('text-xs', isOwn ? 'text-white/60' : 'text-white/40')}>{time}</span>
-          {isOwn && (
-            message.read ? (
-              <div className="flex items-center gap-0.5">
-                <CheckCheckIcon className="h-3 w-3 text-cyan-300" />
-                {readAt && <span className="text-[10px] text-white/50">Seen {readAt}</span>}
-              </div>
-            ) : (
-              <CheckIcon className="h-3 w-3 text-white/60" />
-            )
-          )}
-        </div>
-      </div>
-    </div>
-  );
-}
-
-function DateDivider({ date }) {
-  const todaySG = getSGDateString();
-  const yesterdaySG = getSGDateString(new Date(Date.now() - MS_PER_DAY));
-  const msgDateSG = getSGDateString(parseUTCTimestamp(date));
-
-  let label;
-  if (msgDateSG === todaySG) label = 'Today';
-  else if (msgDateSG === yesterdaySG) label = 'Yesterday';
-  else label = parseUTCTimestamp(date).toLocaleDateString(DEFAULT_LOCALE, { day: 'numeric', month: 'short', year: 'numeric', timeZone: TIMEZONE });
-
-  return (
-    <div className="flex items-center justify-center my-4">
-      <span className="px-3 py-1 rounded-full bg-white/[0.05] text-white/40 text-xs border border-white/[0.05]">
-        {label}
-      </span>
-    </div>
-  );
-}
-
-function TypingIndicator() {
-  return (
-    <div className="flex justify-start">
-      <div className="bg-[#0a1628] px-4 py-3 rounded-2xl rounded-bl-md border border-white/[0.05]">
-        <div className="flex gap-1 items-center">
-          <span className="w-2 h-2 bg-white/30 rounded-full animate-bounce" style={{ animationDelay: '0ms' }} />
-          <span className="w-2 h-2 bg-white/30 rounded-full animate-bounce" style={{ animationDelay: '150ms' }} />
-          <span className="w-2 h-2 bg-white/30 rounded-full animate-bounce" style={{ animationDelay: '300ms' }} />
-        </div>
-      </div>
-    </div>
-  );
-}
-
-function QuickReplyChip({ text, onClick }) {
-  return (
-    <button
-      onClick={() => onClick(text)}
-      className="px-4 py-2 rounded-xl bg-[#0a1628] border border-white/[0.08] text-sm text-white/70 hover:bg-white/5 hover:text-white transition-all whitespace-nowrap"
-    >
-      {text}
-    </button>
-  );
-}
+import { MessageBubble, DateDivider, TypingIndicator, QuickReplyChip, parseUTCTimestamp } from '../components/chat';
 
 export default function Chat() {
   const { user } = useAuth();

@@ -23,7 +23,7 @@ import { clsx } from 'clsx';
 import KanbanColumn, { KanbanColumnSkeleton } from './KanbanColumn';
 import TenderCard from './TenderCard';
 import { useKanbanDnd } from '../../hooks/useKanbanDnd';
-import { lifecycleService } from '../../shared/services/api';
+import { pipelineService } from '../../shared/services/api';
 
 /**
  * Stage configuration for the 8-stage tender lifecycle
@@ -141,7 +141,7 @@ export default function KanbanBoard({
       setLoading(true);
       setError(null);
 
-      const response = await lifecycleService.getTenders();
+      const response = await pipelineService.getTenders();
 
       if (response.success) {
         setTenders(response.data || []);

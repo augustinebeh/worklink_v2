@@ -17,7 +17,7 @@ import Button from '../ui/Button';
 import Input from '../ui/Input';
 import Select from '../ui/Select';
 import { useToast } from '../ui/Toast';
-import { lifecycleService } from '../../shared/services/api';
+import { pipelineService } from '../../shared/services/api';
 
 const STAGE_OPTIONS = [
   { value: 'renewal_watch', label: 'Renewal Watch' },
@@ -141,7 +141,7 @@ export default function CreateTenderModal({ isOpen, onClose, onSuccess }) {
       console.log('🚀 Creating tender with data:', tenderData);
 
       // Call actual API to create tender
-      const response = await lifecycleService.createTender(tenderData);
+      const response = await pipelineService.createTender(tenderData);
 
       console.log('📥 API Response:', response);
 

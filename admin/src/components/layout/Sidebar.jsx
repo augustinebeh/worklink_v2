@@ -1,4 +1,4 @@
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import { NavLink, useLocation } from 'react-router-dom';
 import {
   LayoutDashboardIcon,
@@ -48,10 +48,9 @@ const navigation = [
     description: 'Tender acquisition',
     badge: 'BPO',
     children: [
-      { name: 'Tender Pipeline', href: '/bpo', icon: FileTextIcon, description: 'View all tenders' },
-      { name: 'Renewal Pipeline', href: '/renewal-pipeline', icon: TrendingUpIcon, highlight: true, description: 'Contract renewals & BD workflow' },
-      { name: 'GeBIZ Intelligence', href: '/gebiz-intelligence', icon: DatabaseIcon, highlight: true, description: 'Historical data & competitor intelligence' },
-      { name: 'Tender Alerts', href: '/tender-monitor', icon: BellIcon, highlight: true, description: 'GeBIZ monitoring' },
+      { name: 'Tender Pipeline', href: '/tender-pipeline', icon: FileTextIcon, description: 'Active deals & kanban board' },
+      { name: 'Live Feed Scanner', href: '/tender-scanner', icon: SearchIcon, showFeedBadge: true, description: 'Discover tenders & manage alerts' },
+      { name: 'GeBIZ Intelligence', href: '/gebiz-intelligence', icon: DatabaseIcon, description: 'History, competitors & renewals' },
       { name: 'Clients', href: '/clients', icon: Building2Icon, description: 'Client management' },
     ],
   },
@@ -120,7 +119,7 @@ const navigation = [
   },
 ];
 
-function NavItem({ item, collapsed, unreadTotal = 0, onExpand }) {
+function NavItem({ item, collapsed, unreadTotal = 0, feedCount = 0, onExpand }) {
   const location = useLocation();
   const [isOpen, setIsOpen] = useState(true);
   const hasChildren = item.children && item.children.length > 0;
@@ -221,7 +220,12 @@ function NavItem({ item, collapsed, unreadTotal = 0, onExpand }) {
                     {unreadTotal > 99 ? '99+' : unreadTotal}
                   </span>
                 )}
-                {child.highlight && !child.showUnreadBadge && (
+                {child.showFeedBadge && feedCount > 0 && (
+                  <span className="px-2 py-0.5 text-2xs font-bold bg-amber-500 text-white rounded-full min-w-[20px] text-center">
+                    {feedCount > 99 ? '99+' : feedCount}
+                  </span>
+                )}
+                {child.highlight && !child.showUnreadBadge && !child.showFeedBadge && (
                   <span className="px-1.5 py-0.5 text-2xs font-medium bg-emerald-100 dark:bg-emerald-900/30 text-emerald-600 dark:text-emerald-400 rounded-full" aria-label="New feature">
                     NEW
                   </span>
@@ -268,7 +272,26 @@ function NavItem({ item, collapsed, unreadTotal = 0, onExpand }) {
 
 export default function Sidebar({ collapsed, onCollapse, mobileOpen, onMobileClose }) {
   const { unreadTotal } = useAdminWebSocket();
+  const [feedCount, setFeedCount] = useState(0);
   const isMobile = mobileOpen !== undefined;
+
+  // Poll scanner feed count every 60 seconds
+  useEffect(() => {
+    const fetchFeedCount = async () => {
+      try {
+        const res = await fetch('/api/v1/scanner/feed/stats');
+        const data = await res.json();
+        if (data.success) {
+          setFeedCount(data.data?.open || 0);
+        }
+      } catch (e) {
+        // Silently fail - badge is non-critical
+      }
+    };
+    fetchFeedCount();
+    const interval = setInterval(fetchFeedCount, 60000);
+    return () => clearInterval(interval);
+  }, []);
 
   return (
     <aside
@@ -315,6 +338,7 @@ export default function Sidebar({ collapsed, onCollapse, mobileOpen, onMobileClo
             item={item}
             collapsed={collapsed}
             unreadTotal={unreadTotal}
+            feedCount={feedCount}
             onExpand={() => onCollapse?.(false)}
           />
         ))}

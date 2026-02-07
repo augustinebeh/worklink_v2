@@ -36,6 +36,7 @@ import BPOTenderLifecycle from './pages/BPOTenderLifecycle';
 import GeBizIntelligence from './pages/GeBizIntelligence';
 import RenewalPipeline from './pages/RenewalPipeline';
 import RenewalDetail from './pages/RenewalDetail';
+import TenderScanner from './pages/TenderScanner';
 
 function AppRoutes() {
   return (
@@ -172,12 +173,20 @@ function AppRoutes() {
           }
         />
 
-        {/* BPO Intelligence System */}
+        {/* BPO & Tenders System (Reorganized Feb 2026) */}
         <Route
-          path="bpo"
+          path="tender-pipeline"
           element={
             <ErrorBoundary level="page">
               <BPOTenderLifecycle />
+            </ErrorBoundary>
+          }
+        />
+        <Route
+          path="tender-scanner"
+          element={
+            <ErrorBoundary level="page">
+              <TenderScanner />
             </ErrorBoundary>
           }
         />
@@ -186,22 +195,6 @@ function AppRoutes() {
           element={
             <ErrorBoundary level="page">
               <GeBizIntelligence />
-            </ErrorBoundary>
-          }
-        />
-        <Route
-          path="tender-lifecycle"
-          element={
-            <ErrorBoundary level="page">
-              <BPOTenderLifecycle />
-            </ErrorBoundary>
-          }
-        />
-        <Route
-          path="renewal-pipeline"
-          element={
-            <ErrorBoundary level="page">
-              <RenewalPipeline />
             </ErrorBoundary>
           }
         />
@@ -216,7 +209,10 @@ function AppRoutes() {
 
         {/* Redirects for removed/problematic pages */}
         <Route path="analytics" element={<Navigate to="financials" replace />} />
-        <Route path="tender-monitor" element={<Navigate to="tender-lifecycle" replace />} />
+        <Route path="tender-monitor" element={<Navigate to="tender-scanner" replace />} />
+        <Route path="tender-lifecycle" element={<Navigate to="tender-pipeline" replace />} />
+        <Route path="bpo" element={<Navigate to="tender-pipeline" replace />} />
+        <Route path="renewal-pipeline" element={<Navigate to="gebiz-intelligence" replace />} />
         <Route path="retention-analytics" element={<Navigate to="financials" replace />} />
         <Route path="gamification" element={<Navigate to="deployments" replace />} />
         <Route path="training" element={<Navigate to="deployments" replace />} />

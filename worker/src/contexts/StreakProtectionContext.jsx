@@ -1,6 +1,7 @@
 import { createContext, useContext, useState, useEffect, useCallback } from 'react';
 import { useAuth } from './AuthContext';
 import { useToast } from '../components/ui/Toast';
+import logger from '../utils/logger';
 
 const StreakProtectionContext = createContext();
 
@@ -217,7 +218,7 @@ export function StreakProtectionProvider({ children }) {
       const data = await response.json();
 
       if (data.success) {
-        console.log('✅ Enhanced push notifications registered');
+        logger.log('✅ Enhanced push notifications registered');
         return true;
       } else {
         console.error('Failed to register enhanced push notifications:', data.error);

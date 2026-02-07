@@ -11,7 +11,6 @@ const cheerio = require('cheerio');
 const { RateLimiterMemory } = require('rate-limiter-flexible');
 const validator = require('validator');
 const { db } = require('../../db/database');
-const { v4: uuidv4 } = require('uuid');
 
 // Rate limiter - 1 request every 5 seconds for HTML scraping
 const rateLimiter = new RateLimiterMemory({
@@ -42,15 +41,21 @@ class GeBIZRSSParser {
   }
 
   /**
-   * Main parsing method (updated to use HTML scraping)
+   * Main parsing method - scrapes GeBIZ listing page and extracts tender data
+   * Extracts real titles, agencies, dates from the listing HTML using cheerio
    * @returns {Object} Parsing results and statistics
    */
   async parseRSSFeed() {
     const startTime = Date.now();
 
     try {
-      // Apply rate limiting
-      await rateLimiter.consume('gebiz_html_scraper');
+      // Apply rate limiting (5-second cooldown between scrapes)
+      try {
+        await rateLimiter.consume('gebiz_html_scraper');
+      } catch (rateLimitError) {
+        const retryAfter = Math.ceil((rateLimitError.msBeforeNext || 5000) / 1000);
+        throw new Error(`Rate limited - retry in ${retryAfter}s`);
+      }
 
       console.log('🔍 Starting GeBIZ HTML scraping...');
 
@@ -61,10 +66,10 @@ class GeBIZRSSParser {
         throw new Error('Failed to fetch HTML content');
       }
 
-      // Extract tender document codes from HTML
-      const tenderCodes = this.extractTenderCodes(htmlContent);
+      // Extract structured tender data from listing page HTML
+      const tenders = this.extractTendersFromListing(htmlContent);
 
-      console.log(`📋 Found ${tenderCodes.length} tender documents on page`);
+      console.log(`📋 Found ${tenders.length} tenders on listing page`);
 
       const results = {
         newTenders: 0,
@@ -74,42 +79,43 @@ class GeBIZRSSParser {
         errorDetails: []
       };
 
-      // Process each tender document
-      for (const docCode of tenderCodes) {
+      // Process each extracted tender
+      for (const tenderData of tenders) {
         try {
-          const tenderData = await this.extractTenderDataFromCode(docCode);
+          if (!tenderData || !tenderData.tender_no) {
+            results.errors++;
+            continue;
+          }
 
-          if (tenderData) {
-            // Check for duplicates
-            if (await this.isDuplicate(tenderData.tender_no)) {
-              results.duplicates++;
-              console.log(`⏭️  Skipping duplicate: ${tenderData.tender_no}`);
-              continue;
-            }
+          // Check for duplicates in both pipeline and staging tables
+          if (await this.isDuplicate(tenderData.tender_no)) {
+            results.duplicates++;
+            console.log(`⏭️  Skipping duplicate: ${tenderData.tender_no}`);
+            continue;
+          }
 
-            // Validate and sanitize data
-            const validatedTender = this.validateTenderData(tenderData);
+          // Validate and sanitize data
+          const validatedTender = this.validateTenderData(tenderData);
 
-            if (validatedTender) {
-              results.validatedTenders.push(validatedTender);
-              results.newTenders++;
-            } else {
-              results.errors++;
-            }
+          if (validatedTender) {
+            results.validatedTenders.push(validatedTender);
+            results.newTenders++;
+          } else {
+            results.errors++;
           }
         } catch (error) {
           results.errors++;
           results.errorDetails.push({
-            item: docCode,
+            item: tenderData.tender_no || 'unknown',
             error: error.message
           });
-          console.error(`❌ Error processing tender ${docCode}: ${error.message}`);
+          console.error(`❌ Error processing tender ${tenderData.tender_no}: ${error.message}`);
         }
       }
 
       // Update statistics
       this.stats.lastRun = new Date();
-      this.stats.totalParsed += tenderCodes.length;
+      this.stats.totalParsed += tenders.length;
       this.stats.newTenders += results.newTenders;
       this.stats.duplicates += results.duplicates;
       this.stats.errors += results.errors;
@@ -125,7 +131,7 @@ class GeBIZRSSParser {
           title: 'GeBIZ Opportunities',
           description: 'Government procurement opportunities from GeBIZ',
           lastBuildDate: new Date().toISOString(),
-          totalItems: tenderCodes.length
+          totalItems: tenders.length
         }
       };
 
@@ -143,6 +149,185 @@ class GeBIZRSSParser {
         stats: this.stats
       };
     }
+  }
+
+  /**
+   * Extract structured tender data from the GeBIZ listing page HTML
+   * Uses cheerio to parse the actual titles, agencies, dates from listing entries
+   * @param {string} htmlContent Full HTML of the listing page
+   * @returns {Array} Array of tender data objects
+   */
+  extractTendersFromListing(htmlContent) {
+    const $ = cheerio.load(htmlContent);
+    const tenders = [];
+
+    // Find all tender links with docCode parameter
+    $('a[href*="docCode="]').each((index, element) => {
+      try {
+        const $link = $(element);
+        const href = $link.attr('href') || '';
+        const docCodeMatch = href.match(/docCode=([A-Z0-9]+)/i);
+
+        if (!docCodeMatch) return;
+
+        const docCode = docCodeMatch[1];
+        const title = $link.text().trim();
+
+        // Skip if this is just a navigation link with no real title
+        if (!title || title.length < 5) return;
+
+        // Walk up the DOM to find the containing tender listing entry
+        const $container = $link.closest('div').parent().closest('div');
+
+        // Extract all text content from the container to find agency, dates, category
+        const containerText = $container.text() || '';
+
+        // Extract agency - look for text patterns near the tender
+        const agency = this.extractAgencyFromContext(containerText, docCode);
+
+        // Extract dates from surrounding text
+        const dates = this.extractDatesFromContext(containerText);
+
+        // Extract category from surrounding text
+        const category = this.extractCategoryFromContext(containerText, title);
+
+        const tenderData = {
+          tender_no: docCode,
+          title: this.sanitizeText(title),
+          agency: agency,
+          description: `Government tender: ${this.sanitizeText(title)}`,
+          published_date: dates.published || new Date().toISOString().split('T')[0],
+          closing_date: dates.closing || this.getEstimatedClosingDate(),
+          category: category,
+          source_url: `https://www.gebiz.gov.sg/ptn/opportunity/directlink.xhtml?docCode=${docCode}`,
+          guid: docCode,
+          raw_content: JSON.stringify({
+            docCode,
+            fullTitle: title,
+            extractedAt: new Date().toISOString(),
+            containerText: containerText.substring(0, 500)
+          })
+        };
+
+        tenders.push(tenderData);
+      } catch (error) {
+        console.error(`Error extracting tender from listing element: ${error.message}`);
+      }
+    });
+
+    // Deduplicate by tender_no (page may have multiple links to same tender)
+    const seen = new Set();
+    return tenders.filter(t => {
+      if (seen.has(t.tender_no)) return false;
+      seen.add(t.tender_no);
+      return true;
+    });
+  }
+
+  /**
+   * Extract agency name from the text surrounding a tender listing entry
+   * @param {string} contextText Text from the container element
+   * @param {string} docCode Document code for prefix-based fallback
+   * @returns {string} Agency name
+   */
+  extractAgencyFromContext(contextText, docCode) {
+    // PRIORITY 1: Infer from document code prefix (most reliable)
+    // Ordered longest-prefix-first to match most specific prefix
+    const prefixMap = [
+      ['DEFNGPP', 'Ministry of Defence'],
+      ['MHASPF', 'Singapore Police Force'],
+      ['MOESCH', 'Ministry of Education'],
+      ['CDVHQ', 'Singapore Civil Defence Force'],
+      ['MHA', 'Ministry of Home Affairs'],
+      ['MOE', 'Ministry of Education'],
+      ['MOH', 'Ministry of Health'],
+      ['MOM', 'Ministry of Manpower'],
+      ['MSF', 'Ministry of Social and Family Development'],
+      ['MTI', 'Ministry of Trade and Industry'],
+      ['MOF', 'Ministry of Finance'],
+      ['MND', 'Ministry of National Development'],
+      ['MCI', 'Ministry of Communications and Information'],
+      ['MOT', 'Ministry of Transport'],
+      ['DSTA', 'Defence Science and Technology Agency'],
+      ['DST', 'Defence Science and Technology Agency'],
+      ['RPO', 'Republic of Singapore Air Force'],
+      ['STB', 'Singapore Tourism Board'],
+      ['ITE', 'Institute of Technical Education'],
+      ['PUB', 'Public Utilities Board'],
+      ['HDB', 'Housing and Development Board'],
+      ['NEA', 'National Environment Agency'],
+      ['LTA', 'Land Transport Authority'],
+      ['NP', 'National Parks Board'],
+      ['JTC', 'JTC Corporation'],
+      ['GOV', 'Government Technology Agency'],
+      ['IRAS', 'Inland Revenue Authority of Singapore'],
+      ['CPF', 'Central Provident Fund Board'],
+      ['BCA', 'Building and Construction Authority'],
+      ['HSA', 'Health Sciences Authority'],
+      ['SLA', 'Singapore Land Authority'],
+      ['URA', 'Urban Redevelopment Authority'],
+      ['CAAS', 'Civil Aviation Authority of Singapore'],
+      ['MPA', 'Maritime and Port Authority'],
+      ['SCDF', 'Singapore Civil Defence Force'],
+      ['SPF', 'Singapore Police Force'],
+    ];
+
+    for (const [prefix, agencyName] of prefixMap) {
+      if (docCode.startsWith(prefix)) {
+        return agencyName;
+      }
+    }
+
+    return 'Government Agency';
+  }
+
+  /**
+   * Extract published and closing dates from context text
+   * @param {string} contextText Text surrounding the tender entry
+   * @returns {Object} { published, closing } date strings
+   */
+  extractDatesFromContext(contextText) {
+    const dates = { published: null, closing: null };
+
+    // GeBIZ date format: "DD Mon YYYY HH:MM AM/PM" e.g. "06 Feb 2026 04:00 PM"
+    const datePattern = /(\d{1,2}\s+(?:Jan|Feb|Mar|Apr|May|Jun|Jul|Aug|Sep|Oct|Nov|Dec)\s+\d{4})/gi;
+    const dateMatches = contextText.match(datePattern) || [];
+
+    if (dateMatches.length >= 1) {
+      // First date is typically the published date
+      const parsed1 = new Date(dateMatches[0]);
+      if (!isNaN(parsed1.getTime())) {
+        dates.published = parsed1.toISOString().split('T')[0];
+      }
+    }
+
+    if (dateMatches.length >= 2) {
+      // Second date is typically the closing date
+      const parsed2 = new Date(dateMatches[dateMatches.length - 1]);
+      if (!isNaN(parsed2.getTime())) {
+        dates.closing = parsed2.toISOString().split('T')[0];
+      }
+    }
+
+    return dates;
+  }
+
+  /**
+   * Extract category from context text and title
+   * @param {string} contextText Text surrounding the tender entry
+   * @param {string} title Tender title
+   * @returns {string} Category
+   */
+  extractCategoryFromContext(contextText, title) {
+    // Look for GeBIZ category patterns like "Miscellaneous ⇒ Others"
+    const categoryPattern = /([A-Za-z\s&]+)\s*[⇒→>]\s*([A-Za-z\s&]+)/;
+    const catMatch = contextText.match(categoryPattern);
+    if (catMatch) {
+      return catMatch[1].trim();
+    }
+
+    // Fallback to keyword-based categorization
+    return this.categorizeContent(title, contextText);
   }
 
   /**
@@ -459,21 +644,28 @@ class GeBIZRSSParser {
     const text = `${title} ${description}`.toLowerCase();
 
     const categories = {
+      'healthcare_staffing': [
+        'hospital', 'nursing', 'clinical', 'medical', 'healthcare',
+        'ancillary', 'patient care', 'ward', 'ambulance', 'paramedic',
+        'therapist', 'allied health', 'nursing home', 'eldercare',
+        'community hospital', 'polyclinic', 'health centre'
+      ],
+      'hospitality_services': [
+        'hotel', 'banquet', 'hospitality', 'resort', 'convention',
+        'front desk', 'concierge', 'room attendant', 'guest service',
+        'integrated resort', 'marina bay', 'sentosa'
+      ],
       'manpower_services': [
         'manpower', 'staffing', 'personnel', 'workforce', 'outsourcing',
         'human resource', 'recruitment', 'temporary staff', 'contract staff'
       ],
       'cleaning_services': [
         'cleaning', 'cleaner', 'housekeeping', 'janitorial', 'sanitation',
-        'waste management', 'hygiene', 'maintenance'
+        'waste management', 'hygiene'
       ],
       'security_services': [
         'security', 'guard', 'surveillance', 'patrol', 'protection',
         'cctv', 'access control'
-      ],
-      'facility_management': [
-        'facility', 'building', 'maintenance', 'repair', 'upkeep',
-        'property management', 'estate management'
       ],
       'catering_services': [
         'catering', 'food', 'beverage', 'canteen', 'cafeteria',
@@ -481,7 +673,11 @@ class GeBIZRSSParser {
       ],
       'event_management': [
         'event', 'function', 'conference', 'seminar', 'workshop',
-        'exhibition', 'ceremony', 'program'
+        'exhibition', 'ceremony'
+      ],
+      'facility_management': [
+        'facility', 'building', 'repair', 'upkeep',
+        'property management', 'estate management'
       ],
       'transport_services': [
         'transport', 'transportation', 'vehicle', 'bus', 'shuttle',
@@ -628,13 +824,18 @@ class GeBIZRSSParser {
    */
   async isDuplicate(tenderNo) {
     try {
-      const existing = db.prepare(`
-        SELECT COUNT(*) as count
-        FROM bpo_tender_lifecycle
-        WHERE tender_no = ?
+      // Check both the pipeline table and the staging table
+      const inPipeline = db.prepare(`
+        SELECT COUNT(*) as count FROM bpo_tender_lifecycle WHERE tender_no = ?
       `).get(tenderNo);
 
-      return existing.count > 0;
+      if (inPipeline.count > 0) return true;
+
+      const inStaging = db.prepare(`
+        SELECT COUNT(*) as count FROM gebiz_active_tenders WHERE tender_no = ?
+      `).get(tenderNo);
+
+      return inStaging.count > 0;
     } catch (error) {
       console.error('Error checking for duplicates:', error);
       return false;

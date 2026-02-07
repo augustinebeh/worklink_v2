@@ -130,6 +130,7 @@ export default function KanbanColumn({
         colors.border,
         showDragOver && colors.dragOver
       )}
+      style={{ height: 'calc(100vh - 300px)' }}
       role="region"
       aria-label={`${stage.name} stage`}
     >
@@ -155,13 +156,12 @@ export default function KanbanColumn({
         </div>
       </div>
 
-      {/* Droppable Card Container */}
+      {/* Droppable Card Container — fills column, scrolls internally */}
       <div
         ref={setNodeRef}
         className={clsx(
-          'flex-1 overflow-y-auto p-3 relative',
-          'min-h-[200px] max-h-[calc(100vh-300px)]',
-          'scrollbar-thin scrollbar-thumb-slate-300 dark:scrollbar-thumb-slate-600 scrollbar-track-transparent',
+          'flex-1 min-h-0 overflow-y-auto p-3 relative',
+          'scrollbar-thin scrollbar-thumb-slate-300 dark:scrollbar-thumb-slate-600 scrollbar-track-transparent hover:scrollbar-thumb-slate-400 dark:hover:scrollbar-thumb-slate-500',
           'transition-all duration-250 ease-out',
           showDragOver && [
             'bg-gradient-to-b from-slate-50/80 to-slate-100/60 dark:from-slate-800/50 dark:to-slate-700/30',
@@ -170,9 +170,9 @@ export default function KanbanColumn({
           ]
         )}
         style={{
-          // Ensure entire area is droppable with enhanced feedback
           pointerEvents: 'auto',
           willChange: 'background, transform',
+          scrollBehavior: 'smooth',
         }}
         onDragOver={(e) => {
           e.preventDefault(); // Allow dropping
@@ -248,9 +248,9 @@ export default function KanbanColumn({
         )}
       </div>
 
-      {/* Column Footer (optional) */}
+      {/* Column Footer — sticky bottom, never fills space */}
       {tenders.length > 0 && (
-        <div className="p-2 border-t border-slate-200 dark:border-slate-700">
+        <div className="flex-shrink-0 p-2 border-t border-slate-200 dark:border-slate-700">
           <div className="flex items-center justify-between text-xs text-slate-600 dark:text-slate-400">
             <span>Total Value:</span>
             <span className="font-semibold">
@@ -269,11 +269,11 @@ export default function KanbanColumn({
  */
 export function KanbanColumnSkeleton() {
   return (
-    <div className="flex flex-col rounded-lg border-2 border-slate-200 dark:border-slate-700 w-80 flex-shrink-0 animate-pulse">
-      <div className="p-4 bg-slate-100 dark:bg-slate-800 rounded-t-lg">
+    <div className="flex flex-col rounded-lg border-2 border-slate-200 dark:border-slate-700 w-80 flex-shrink-0 animate-pulse" style={{ height: 'calc(100vh - 300px)' }}>
+      <div className="p-4 bg-slate-100 dark:bg-slate-800 rounded-t-lg flex-shrink-0">
         <div className="h-5 bg-slate-300 dark:bg-slate-600 rounded w-32"></div>
       </div>
-      <div className="flex-1 p-3 space-y-2 min-h-[200px]">
+      <div className="p-3 space-y-2 flex-1 min-h-0">
         <TenderCardSkeleton />
         <TenderCardSkeleton />
       </div>

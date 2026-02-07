@@ -1,4 +1,4 @@
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useMemo } from 'react';
 import { Link } from 'react-router-dom';
 import {
   MapPinIcon,
@@ -25,7 +25,7 @@ import {
   isToday as checkIsToday,
   isTomorrow as checkIsTomorrow,
 } from '../utils/constants';
-// import { useModalKeyboard } from '../hooks/useModalKeyboard';
+import { useOpenJobs, useMyDeployments } from '../hooks/useQueries';
 
 // Pending Account Overlay
 function PendingAccountOverlay() {
@@ -278,13 +278,18 @@ function Pagination({ currentPage, totalPages, onPageChange }) {
 
 export default function Jobs() {
   const { user, refreshUser } = useAuth();
-  const [jobs, setJobs] = useState([]);
-  const [myJobs, setMyJobs] = useState([]);
-  const [loading, setLoading] = useState(true);
   const [filter, setFilter] = useState('all');
   const [search, setSearch] = useState('');
   const [currentPage, setCurrentPage] = useState(1);
   const jobsPerPage = 10;
+
+  // React Query — cached, deduped, auto-refetching
+  const { data: jobs = [], isLoading: jobsLoading } = useOpenJobs();
+  const { data: deploymentsRaw = [], isLoading: deploymentsLoading } = useMyDeployments(user?.id);
+  const loading = jobsLoading || deploymentsLoading;
+
+  // Derive applied job IDs from deployments
+  const myJobs = useMemo(() => deploymentsRaw.map(d => d.job_id), [deploymentsRaw]);
 
   // Check if user is pending (excluding 'lead' status)
   const isPending = user?.status === 'pending';
@@ -294,28 +299,7 @@ export default function Jobs() {
     if (user) {
       refreshUser();
     }
-    fetchJobs();
   }, []);
-
-  const fetchJobs = async () => {
-    try {
-      const [jobsRes, myJobsRes] = await Promise.all([
-        fetch('/api/v1/jobs?status=open'),
-        user ? fetch(`/api/v1/candidates/${user.id}/deployments`) : Promise.resolve({ json: () => ({ data: [] }) }),
-      ]);
-
-      const jobsData = await jobsRes.json();
-      const myJobsData = await myJobsRes.json();
-
-      if (jobsData.success) setJobs(jobsData.data);
-      if (myJobsData.success) setMyJobs(myJobsData.data.map(d => d.job_id));
-    } catch (error) {
-      console.error('Failed to fetch jobs:', error);
-    } finally {
-      setLoading(false);
-    }
-  };
-
 
   const filteredJobs = jobs.filter(job => {
     if (search) {

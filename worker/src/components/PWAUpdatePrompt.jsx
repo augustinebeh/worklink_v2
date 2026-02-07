@@ -1,5 +1,6 @@
 import { useState, useEffect } from 'react';
 import { DownloadIcon, XIcon, RefreshCwIcon } from 'lucide-react';
+import logger from '../utils/logger';
 
 export function PWAUpdatePrompt() {
   const [updateAvailable, setUpdateAvailable] = useState(false);
@@ -14,14 +15,14 @@ export function PWAUpdatePrompt() {
         const { useRegisterSW } = await import('virtual:pwa-register/react');
         setPwaHook(() => useRegisterSW({
           onRegistered(r) {
-            console.log('SW Registered: ' + r);
+            logger.log('SW Registered: ' + r);
           },
           onRegisterError(error) {
-            console.log('SW registration error', error);
+            logger.log('SW registration error', error);
           },
         }));
       } catch (error) {
-        console.log('PWA not available in development mode');
+        logger.log('PWA not available in development mode');
         // PWA not available (development mode)
       }
     };

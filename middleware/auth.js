@@ -343,23 +343,6 @@ function authenticateAdminOrOwner(req, res, next) {
 }
 
 /**
- * Optional authentication - sets req.user if token is valid, but doesn't block if invalid
- */
-function optionalAuth(req, res, next) {
-  const authHeader = req.headers.authorization;
-  const token = authHeader && authHeader.split(' ')[1];
-
-  if (token) {
-    const decoded = verifyToken(token);
-    if (decoded) {
-      req.user = decoded;
-    }
-  }
-
-  next();
-}
-
-/**
  * Legacy token support for migration period
  * Supports both JWT tokens and old demo tokens
  * TODO: Remove after migration to JWT

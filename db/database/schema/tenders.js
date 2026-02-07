@@ -164,6 +164,38 @@ function createTendersTables() {
     CREATE INDEX IF NOT EXISTS idx_gebiz_active_tender_no ON gebiz_active_tenders(tender_no);
     CREATE INDEX IF NOT EXISTS idx_gebiz_active_closing ON gebiz_active_tenders(closing_date);
     CREATE INDEX IF NOT EXISTS idx_audit_log_resource ON audit_log(resource_type, resource_id);
+
+    -- =====================================================
+    -- CONTRACT RENEWALS (Predicted Renewal Opportunities)
+    -- =====================================================
+
+    -- Contract Renewals (predicted renewal opportunities)
+    CREATE TABLE IF NOT EXISTS contract_renewals (
+      id TEXT PRIMARY KEY,
+      original_tender_no TEXT,
+      agency TEXT NOT NULL,
+      title TEXT,
+      description TEXT,
+      service_category TEXT,
+      contract_start_date DATE,
+      contract_end_date DATE,
+      estimated_value REAL,
+      renewal_probability REAL DEFAULT 0.5,
+      current_supplier TEXT,
+      incumbent_advantage TEXT,
+      engagement_status TEXT DEFAULT 'monitoring',
+      assigned_bd_manager TEXT,
+      expected_rfp_date DATE,
+      pre_positioning_notes TEXT,
+      source TEXT DEFAULT 'historical_analysis',
+      created_at DATETIME DEFAULT CURRENT_TIMESTAMP,
+      updated_at DATETIME DEFAULT CURRENT_TIMESTAMP
+    );
+
+    CREATE INDEX IF NOT EXISTS idx_contract_renewals_agency ON contract_renewals(agency);
+    CREATE INDEX IF NOT EXISTS idx_contract_renewals_end_date ON contract_renewals(contract_end_date);
+    CREATE INDEX IF NOT EXISTS idx_contract_renewals_status ON contract_renewals(engagement_status);
+    CREATE INDEX IF NOT EXISTS idx_contract_renewals_probability ON contract_renewals(renewal_probability);
   `);
 
   console.log('  ✅ Tenders & matching tables created');

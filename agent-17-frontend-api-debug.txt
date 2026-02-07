@@ -1,6 +1,0 @@
-Frontend API Call Analysis
-  
-Candidates Page: Found
-Jobs Page: Found
-
-Manual debugging required - see console output for steps.

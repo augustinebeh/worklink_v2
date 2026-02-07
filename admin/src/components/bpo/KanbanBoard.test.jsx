@@ -10,11 +10,11 @@ import React from 'react';
 import { render, screen, fireEvent, waitFor } from '@testing-library/react';
 import { ToastProvider } from '../ui/Toast';
 import KanbanBoard from './KanbanBoard';
-import { lifecycleService } from "../../shared/services/api";
+import { pipelineService } from "../../shared/services/api";
 
 // Mock the lifecycle service
 jest.mock('../../shared/services/api', () => ({
-  lifecycleService: {
+  pipelineService: {
     getTenders: jest.fn(),
     moveTender: jest.fn()
   }
@@ -75,7 +75,7 @@ describe('KanbanBoard Component', () => {
     jest.clearAllMocks();
 
     // Default mock implementation
-    lifecycleService.getTenders.mockResolvedValue({
+    pipelineService.getTenders.mockResolvedValue({
       success: true,
       data: mockTenders
     });
@@ -116,7 +116,7 @@ describe('KanbanBoard Component', () => {
     });
 
     test('displays empty state when no tenders', async () => {
-      lifecycleService.getTenders.mockResolvedValue({
+      pipelineService.getTenders.mockResolvedValue({
         success: true,
         data: []
       });
@@ -134,7 +134,7 @@ describe('KanbanBoard Component', () => {
       renderWithProviders(<KanbanBoard />);
 
       await waitFor(() => {
-        expect(lifecycleService.getTenders).toHaveBeenCalledTimes(1);
+        expect(pipelineService.getTenders).toHaveBeenCalledTimes(1);
       });
     });
 
@@ -142,7 +142,7 @@ describe('KanbanBoard Component', () => {
       const { rerender } = renderWithProviders(<KanbanBoard refreshKey={0} />);
 
       await waitFor(() => {
-        expect(lifecycleService.getTenders).toHaveBeenCalledTimes(1);
+        expect(pipelineService.getTenders).toHaveBeenCalledTimes(1);
       });
 
       rerender(
@@ -152,12 +152,12 @@ describe('KanbanBoard Component', () => {
       );
 
       await waitFor(() => {
-        expect(lifecycleService.getTenders).toHaveBeenCalledTimes(2);
+        expect(pipelineService.getTenders).toHaveBeenCalledTimes(2);
       });
     });
 
     test('handles API errors gracefully', async () => {
-      lifecycleService.getTenders.mockRejectedValue(
+      pipelineService.getTenders.mockRejectedValue(
         new Error('Network error')
       );
 
@@ -233,7 +233,7 @@ describe('KanbanBoard Component', () => {
     test('calls onStageChange after successful move', async () => {
       const onStageChange = jest.fn();
 
-      lifecycleService.moveTender.mockResolvedValue({
+      pipelineService.moveTender.mockResolvedValue({
         success: true,
         data: { ...mockTenders[0], stage: 'review' }
       });
@@ -248,7 +248,7 @@ describe('KanbanBoard Component', () => {
 
       // In real implementation, you would simulate drag and drop here
       // For now, we verify the API service is available
-      expect(lifecycleService.moveTender).toBeDefined();
+      expect(pipelineService.moveTender).toBeDefined();
     });
   });
 

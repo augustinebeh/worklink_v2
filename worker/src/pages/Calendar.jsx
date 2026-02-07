@@ -18,6 +18,7 @@ import { useToast } from '../components/ui/Toast';
 import { clsx } from 'clsx';
 import { DEFAULT_LOCALE, TIMEZONE, getSGDateString, formatMoney } from '../utils/constants';
 import { EmptyState } from '../components/common';
+import { useMyDeployments, useAvailability, useAvailabilityMode, useSaveAvailability } from '../hooks/useQueries';
 
 const DAYS = ['Sun', 'Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat'];
 const MONTHS = ['January', 'February', 'March', 'April', 'May', 'June', 'July', 'August', 'September', 'October', 'November', 'December'];
@@ -121,14 +122,8 @@ export default function Calendar() {
   const toast = useToast();
   const [currentDate, setCurrentDate] = useState(new Date());
   const [selectedDate, setSelectedDate] = useState(new Date());
-  const [deployments, setDeployments] = useState([]);
-  const [availability, setAvailability] = useState([]);
-  const [availabilityMode, setAvailabilityMode] = useState('weekdays');
-  const [customDays, setCustomDays] = useState([]);
-  const [loading, setLoading] = useState(true);
   const [mode, setMode] = useState('view');
   const [pendingChanges, setPendingChanges] = useState({});
-  const [saving, setSaving] = useState(false);
 
   // Check if user is pending
   const isPending = user?.status === 'pending' || user?.status === 'lead';
@@ -138,34 +133,17 @@ export default function Calendar() {
   const daysInMonth = getDaysInMonth(year, month);
   const firstDay = getFirstDayOfMonth(year, month);
 
-  useEffect(() => {
-    if (user) fetchData();
-  }, [user, month, year]);
+  // React Query — cached, deduped, auto-refetching
+  const { data: deployments = [], isLoading: deploymentsLoading } = useMyDeployments(user?.id);
+  const { data: availability = [], isLoading: availabilityLoading } = useAvailability(user?.id);
+  const { data: modeData, isLoading: modeLoading } = useAvailabilityMode(user?.id);
+  const saveAvailability = useSaveAvailability(user?.id);
 
-  const fetchData = async () => {
-    setLoading(true);
-    try {
-      const [deploymentsRes, availabilityRes, modeRes] = await Promise.all([
-        fetch(`/api/v1/candidates/${user.id}/deployments`),
-        fetch(`/api/v1/availability/${user.id}?days=90`),
-        fetch(`/api/v1/candidates/${user.id}/availability-mode`),
-      ]);
-      const deploymentsData = await deploymentsRes.json();
-      const availabilityData = await availabilityRes.json();
-      const modeData = await modeRes.json();
-      
-      if (deploymentsData.success) setDeployments(deploymentsData.data || []);
-      if (availabilityData.success) setAvailability(availabilityData.data?.availability || []);
-      if (modeData.success) {
-        setAvailabilityMode(modeData.data?.mode || 'weekdays');
-        setCustomDays(modeData.data?.customDays || []);
-      }
-    } catch (error) {
-      console.error('Failed to fetch data:', error);
-    } finally {
-      setLoading(false);
-    }
-  };
+  const loading = deploymentsLoading || availabilityLoading || modeLoading;
+  const saving = saveAvailability.isPending;
+
+  const availabilityMode = modeData?.mode || 'weekdays';
+  const customDays = modeData?.customDays || [];
 
   const goToPreviousMonth = () => setCurrentDate(new Date(year, month - 1, 1));
   const goToNextMonth = () => setCurrentDate(new Date(year, month + 1, 1));
@@ -245,38 +223,27 @@ export default function Calendar() {
   const handleSaveAvailability = async () => {
     const dates = Object.entries(pendingChanges).map(([date, status]) => ({ date, status }));
     if (dates.length === 0) { setMode('view'); return; }
-    setSaving(true);
-    try {
-      const res = await fetch(`/api/v1/availability/${user.id}`, {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ dates }),
-      });
-      if ((await res.json()).success) {
+    saveAvailability.mutate(dates, {
+      onSuccess: () => {
         toast.success('Saved!', 'Availability updated');
         setPendingChanges({});
         setMode('view');
-        fetchData();
-      }
-    } catch (error) {
-      toast.error('Failed', 'Could not save');
-    } finally {
-      setSaving(false);
-    }
+      },
+      onError: () => {
+        toast.error('Failed', 'Could not save');
+      },
+    });
   };
 
   const handleSetAvailability = async (status) => {
-    try {
-      await fetch(`/api/v1/availability/${user.id}`, {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ dates: [{ date: selectedDateStr, status }] }),
-      });
-      toast.success('Updated', `Marked as ${status}`);
-      fetchData();
-    } catch (error) {
-      toast.error('Failed', 'Could not update');
-    }
+    saveAvailability.mutate([{ date: selectedDateStr, status }], {
+      onSuccess: () => {
+        toast.success('Updated', `Marked as ${status}`);
+      },
+      onError: () => {
+        toast.error('Failed', 'Could not update');
+      },
+    });
   };
 
   const getDayStatus = (day) => {

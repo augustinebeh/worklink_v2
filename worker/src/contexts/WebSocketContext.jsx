@@ -51,7 +51,7 @@ export function WebSocketProvider({ children }) {
       wsRef.current.onmessage = (event) => {
         try {
           const data = JSON.parse(event.data);
-          console.log('📥 [WS] Received message:', data.type, data);
+          logger.debug('📥 [WS] Received message:', data.type, data);
           setLastMessage(data);
           handleMessage(data);
         } catch (error) {
@@ -93,7 +93,7 @@ export function WebSocketProvider({ children }) {
         break;
 
       case 'chat_message':
-        console.log('📥 [WS] Processing chat_message:', data.message?.content?.substring(0, 50));
+        logger.debug('📥 [WS] Processing chat_message:', data.message?.content?.substring(0, 50));
         setUnreadMessages(prev => prev + 1);
         notifyListeners('chat_message', data);
         break;

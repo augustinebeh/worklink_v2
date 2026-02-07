@@ -1,4 +1,4 @@
-import { useState, useEffect } from 'react';
+import { useState, useMemo } from 'react';
 import {
   WalletIcon,
   ArrowDownLeftIcon,
@@ -11,6 +11,7 @@ import { useAuth } from '../contexts/AuthContext';
 import { clsx } from 'clsx';
 import { formatMoney, DEFAULT_LOCALE, TIMEZONE, PAYMENT_STATUS_LABELS, getSGDateString } from '../utils/constants';
 import { FilterTabs, EmptyState, LoadingSkeleton, StatusBadge, StatPod, SectionHeader } from '../components/common';
+import { usePayments } from '../hooks/useQueries';
 
 function TransactionItem({ payment }) {
   const isPaid = payment.status === 'paid';
@@ -46,39 +47,23 @@ function TransactionItem({ payment }) {
 
 export default function Wallet() {
   const { user } = useAuth();
-  const [payments, setPayments] = useState([]);
-  const [stats, setStats] = useState({ total: 0, pending: 0, thisMonth: 0 });
-  const [loading, setLoading] = useState(true);
   const [filter, setFilter] = useState('all');
   const [balanceHidden, setBalanceHidden] = useState(false);
 
-  useEffect(() => {
-    if (user) fetchPayments();
-  }, [user]);
+  // React Query — cached, deduped, auto-refetching
+  const { data: payments = [], isLoading: loading } = usePayments(user?.id);
 
-  const fetchPayments = async () => {
-    try {
-      const res = await fetch(`/api/v1/payments?candidate_id=${user.id}`);
-      const data = await res.json();
-      if (data.success) {
-        setPayments(data.data);
-
-        const total = data.data.filter(p => p.status === 'paid').reduce((sum, p) => sum + p.total_amount, 0);
-        const pending = data.data.filter(p => p.status === 'pending' || p.status === 'approved').reduce((sum, p) => sum + p.total_amount, 0);
-        const currentMonth = getSGDateString().substring(0, 7);
-        const thisMonth = data.data.filter(p => {
-          const paymentMonth = getSGDateString(p.created_at).substring(0, 7);
-          return p.status === 'paid' && paymentMonth === currentMonth;
-        }).reduce((sum, p) => sum + p.total_amount, 0);
-
-        setStats({ total, pending, thisMonth });
-      }
-    } catch (error) {
-      console.error('Failed to fetch payments:', error);
-    } finally {
-      setLoading(false);
-    }
-  };
+  // Derive stats from payments data
+  const stats = useMemo(() => {
+    const total = payments.filter(p => p.status === 'paid').reduce((sum, p) => sum + p.total_amount, 0);
+    const pending = payments.filter(p => p.status === 'pending' || p.status === 'approved').reduce((sum, p) => sum + p.total_amount, 0);
+    const currentMonth = getSGDateString().substring(0, 7);
+    const thisMonth = payments.filter(p => {
+      const paymentMonth = getSGDateString(p.created_at).substring(0, 7);
+      return p.status === 'paid' && paymentMonth === currentMonth;
+    }).reduce((sum, p) => sum + p.total_amount, 0);
+    return { total, pending, thisMonth };
+  }, [payments]);
 
   const filteredPayments = payments.filter(p => {
     if (filter === 'pending') return p.status === 'pending' || p.status === 'approved';

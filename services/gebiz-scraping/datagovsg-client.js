@@ -11,13 +11,17 @@ const axios = require('axios');
 class DataGovSGClient {
   constructor() {
     this.baseURL = 'https://data.gov.sg/api/action';
-    
-    // Resource ID for Government Procurement dataset
-    this.resourceId = 'd_8b84c4ee58e3cfc0ece0d773c8ca6abc';
-    
-    // Rate limiting
+
+    // Correct Resource ID for GeBIZ Government Procurement dataset
+    this.resourceId = 'd_acde1106003906a75c3fa052592f2fcb';
+
+    // API Key for authentication
+    this.apiKey = process.env.DATA_GOV_SG_API_KEY;
+
+    // Rate limiting — increased to 3s to avoid 429 errors
     this.lastRequestTime = null;
-    this.minRequestDelay = 1000; // 1 second between requests
+    this.minRequestDelay = 3000; // 3 seconds between requests
+    this.maxRetries = 3;
   }
 
   /**
@@ -35,46 +39,62 @@ class DataGovSGClient {
   }
 
   /**
-   * Search historical GeBIZ procurement data
+   * Search historical GeBIZ procurement data with retry on 429
    */
   async searchProcurement(filters = {}, limit = 100, offset = 0) {
-    await this.respectRateLimit();
+    for (let attempt = 1; attempt <= this.maxRetries; attempt++) {
+      await this.respectRateLimit();
 
-    try {
-      const params = {
-        resource_id: this.resourceId,
-        limit: limit,
-        offset: offset,
-        ...filters
-      };
-
-      console.log(`🔍 Fetching procurement data: offset=${offset}, limit=${limit}`);
-
-      const response = await axios.get(`${this.baseURL}/datastore_search`, {
-        params: params,
-        timeout: 30000
-      });
-
-      if (response.data.success) {
-        return {
-          success: true,
-          total: response.data.result.total,
-          records: response.data.result.records,
-          fields: response.data.result.fields
+      try {
+        const params = {
+          resource_id: this.resourceId,
+          limit: limit,
+          offset: offset,
+          ...filters
         };
-      } else {
+
+        console.log(`🔍 Fetching procurement data: offset=${offset}, limit=${limit}${attempt > 1 ? ` (retry ${attempt})` : ''}`);
+
+        const headers = {};
+        if (this.apiKey) {
+          headers['Authorization'] = this.apiKey;
+        }
+
+        const response = await axios.get(`${this.baseURL}/datastore_search`, {
+          params: params,
+          headers: headers,
+          timeout: 30000
+        });
+
+        if (response.data.success) {
+          return {
+            success: true,
+            total: response.data.result.total,
+            records: response.data.result.records,
+            fields: response.data.result.fields
+          };
+        } else {
+          return {
+            success: false,
+            error: 'API returned success: false'
+          };
+        }
+
+      } catch (error) {
+        const status = error.response?.status;
+        // Retry on 429 (rate limit) or 5xx (server error) with exponential backoff
+        if ((status === 429 || (status >= 500 && status < 600)) && attempt < this.maxRetries) {
+          const backoff = Math.pow(2, attempt) * 5000; // 10s, 20s, 40s
+          console.warn(`⚠️ Data.gov.sg ${status} error, retrying in ${backoff / 1000}s... (attempt ${attempt}/${this.maxRetries})`);
+          await new Promise(resolve => setTimeout(resolve, backoff));
+          continue;
+        }
+        console.error('❌ Data.gov.sg API error:', error.message);
         return {
           success: false,
-          error: 'API returned success: false'
+          error: error.message
         };
       }
-
-    } catch (error) {
-      console.error('❌ Data.gov.sg API error:', error.message);
-      return {
-        success: false,
-        error: error.message
-      };
     }
   }
 
@@ -119,11 +139,17 @@ class DataGovSGClient {
    */
   async getMetadata() {
     try {
+      const headers = {};
+      if (this.apiKey) {
+        headers['Authorization'] = this.apiKey;
+      }
+
       const response = await axios.get(`${this.baseURL}/datastore_search`, {
         params: {
           resource_id: this.resourceId,
           limit: 1
-        }
+        },
+        headers: headers
       });
 
       if (response.data.success) {
@@ -146,19 +172,22 @@ class DataGovSGClient {
   }
 
   /**
-   * Normalize record format
+   * Normalize record format based on correct GeBIZ dataset structure
+   * Fields from API: tender_no, tender_description, agency, award_date,
+   * tender_detail_status, supplier_name, awarded_amt, _id
    */
   normalizeRecord(record) {
     return {
-      tender_no: record.tender_no || record.reference_no || null,
-      description: record.tender_description || record.description || null,
-      awarded_amount: parseFloat(record.awarded_amt || record.award_amt || 0),
-      supplier_name: record.supplier_name || record.awardee || null,
-      award_date: record.award_date || record.awarded_date || null,
-      agency: record.agency || record.buyer_name || null,
-      category: record.category || null,
-      contract_period_start: record.contract_period_start || null,
-      contract_period_end: record.contract_period_end || null,
+      tender_no: record.tender_no || null,
+      description: record.tender_description || null,
+      awarded_amount: parseFloat(record.awarded_amt || 0),
+      supplier_name: record.supplier_name || null,
+      award_date: record.award_date || null,
+      agency: record.agency || null,
+      tender_status: record.tender_detail_status || null,
+      category: null, // Not available in this dataset
+      contract_period_start: null, // Not available in this dataset
+      contract_period_end: null, // Not available in this dataset
       raw_data: JSON.stringify(record)
     };
   }

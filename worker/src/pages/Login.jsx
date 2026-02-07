@@ -14,6 +14,7 @@ import {
 import { useAuth } from '../contexts/AuthContext';
 import Logo from '../components/ui/Logo';
 import { clsx } from 'clsx';
+import logger from '../utils/logger';
 
 const EMAIL_REGEX = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
 
@@ -136,7 +137,7 @@ export default function Login() {
   }, [location.search]);
 
   const handleTelegramAuth = useCallback(async (telegramUser) => {
-    console.log('handleTelegramAuth:', telegramUser);
+    logger.log('handleTelegramAuth:', telegramUser);
     setLoading(true); setError(''); setSuccess('');
     try {
       const res = await fetch('/api/v1/auth/telegram/login', {
@@ -144,7 +145,7 @@ export default function Login() {
         body: JSON.stringify({ ...telegramUser, referralCode }),
       });
       const data = await res.json();
-      console.log('Telegram response:', data);
+      logger.log('Telegram response:', data);
       if (data.success) {
         localStorage.setItem('token', data.token);
         localStorage.setItem('worker_user', JSON.stringify(data.data));
@@ -169,7 +170,7 @@ export default function Login() {
   }, [referralCode]);
 
   const handleGoogleAuth = useCallback(async (credential) => {
-    console.log('handleGoogleAuth');
+    logger.log('handleGoogleAuth');
     setLoading(true); setError(''); setSuccess('');
     try {
       const res = await fetch('/api/v1/auth/google/login', {
@@ -177,7 +178,7 @@ export default function Login() {
         body: JSON.stringify({ credential, referralCode }),
       });
       const data = await res.json();
-      console.log('Google response:', data);
+      logger.log('Google response:', data);
       if (data.success) {
         localStorage.setItem('token', data.token);
         localStorage.setItem('worker_user', JSON.stringify(data.data));
@@ -212,7 +213,7 @@ export default function Login() {
       try {
         const authResult = hash.split('tgAuthResult=')[1];
         const telegramUser = JSON.parse(decodeURIComponent(authResult));
-        console.log('Telegram auth from URL hash:', telegramUser);
+        logger.log('Telegram auth from URL hash:', telegramUser);
 
         // Clear hash from URL
         window.history.replaceState(null, '', window.location.pathname);

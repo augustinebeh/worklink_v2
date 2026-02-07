@@ -1,5 +1,5 @@
 import { useState, useCallback } from 'react';
-import { lifecycleService } from '../shared/services/api';
+import { pipelineService } from '../shared/services/api';
 import { useToast } from '../components/ui/Toast';
 
 /**
@@ -117,7 +117,7 @@ export function useKanbanDnd({ tenders, setTenders, onStageChange }) {
 
     try {
       // Make API call to persist the change
-      const response = await lifecycleService.moveTender(tenderId, {
+      const response = await pipelineService.moveTender(tenderId, {
         new_stage: targetStage,
         user_id: sessionStorage.getItem('user_id') || 'admin',
         notes: `Moved via drag-and-drop from ${tender.stage} to ${targetStage}`

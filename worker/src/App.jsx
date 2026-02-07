@@ -1,11 +1,23 @@
 import { lazy, Suspense } from 'react';
 import { BrowserRouter, Routes, Route, Navigate, useLocation } from 'react-router-dom';
+import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
 import { AuthProvider, useAuth } from './contexts/AuthContext';
 import { WebSocketProvider } from './contexts/WebSocketContext';
 import { ThemeProvider } from './contexts/ThemeContext';
 import { AppSettingsProvider } from './contexts/AppSettingsContext';
 import { StreakProtectionProvider } from './contexts/StreakProtectionContext';
 import { ToastProvider } from './components/ui/Toast';
+
+const queryClient = new QueryClient({
+  defaultOptions: {
+    queries: {
+      staleTime: 30 * 1000,
+      gcTime: 5 * 60 * 1000,
+      retry: 1,
+      refetchOnWindowFocus: false,
+    },
+  },
+});
 import Header from './components/layout/Header';
 import BottomNav from './components/layout/BottomNav';
 import { PageTransition } from './components/layout/PageTransition';
@@ -228,24 +240,26 @@ function AppRoutes() {
 
 export default function App() {
   return (
-    <BrowserRouter>
-      <ThemeProvider>
-        <AuthProvider>
-          <AppSettingsProvider>
-            <ToastProvider>
-              <WebSocketProvider>
-                <StreakProtectionProvider>
-                  <ErrorBoundary>
-                    <AppRoutes />
-                  </ErrorBoundary>
-                  <InstallPrompt />
-                  {/* <PWAUpdatePrompt /> */}
-                </StreakProtectionProvider>
-              </WebSocketProvider>
-            </ToastProvider>
-          </AppSettingsProvider>
-        </AuthProvider>
-      </ThemeProvider>
-    </BrowserRouter>
+    <QueryClientProvider client={queryClient}>
+      <BrowserRouter>
+        <ThemeProvider>
+          <AuthProvider>
+            <AppSettingsProvider>
+              <ToastProvider>
+                <WebSocketProvider>
+                  <StreakProtectionProvider>
+                    <ErrorBoundary>
+                      <AppRoutes />
+                    </ErrorBoundary>
+                    <InstallPrompt />
+                    {/* <PWAUpdatePrompt /> */}
+                  </StreakProtectionProvider>
+                </WebSocketProvider>
+              </ToastProvider>
+            </AppSettingsProvider>
+          </AuthProvider>
+        </ThemeProvider>
+      </BrowserRouter>
+    </QueryClientProvider>
   );
 }

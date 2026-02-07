@@ -1366,6 +1366,132 @@ function createSchema(db) {
     CREATE INDEX IF NOT EXISTS idx_consultant_goals_consultant_status ON consultant_goals(consultant_id, status);
 
     -- ============================================================================
+    -- SCRAPING & SCANNER TABLES
+    -- ============================================================================
+
+    -- GeBIZ Active Tenders (staging area for freshly scraped tenders)
+    CREATE TABLE IF NOT EXISTS gebiz_active_tenders (
+      id INTEGER PRIMARY KEY AUTOINCREMENT,
+      tender_no TEXT UNIQUE NOT NULL,
+      title TEXT NOT NULL,
+      agency TEXT,
+      closing_date DATE,
+      published_date DATE,
+      category TEXT,
+      estimated_value REAL,
+      url TEXT,
+      details TEXT,
+      has_details BOOLEAN DEFAULT 0,
+      status TEXT DEFAULT 'open',
+      in_pipeline BOOLEAN DEFAULT 0,
+      dismissed BOOLEAN DEFAULT 0,
+      source TEXT DEFAULT 'gebiz',
+      scraped_at DATETIME,
+      created_at DATETIME DEFAULT CURRENT_TIMESTAMP,
+      updated_at DATETIME DEFAULT CURRENT_TIMESTAMP
+    );
+
+    CREATE INDEX IF NOT EXISTS idx_active_tenders_status ON gebiz_active_tenders(status);
+    CREATE INDEX IF NOT EXISTS idx_active_tenders_agency ON gebiz_active_tenders(agency);
+    CREATE INDEX IF NOT EXISTS idx_active_tenders_closing ON gebiz_active_tenders(closing_date);
+    -- NOTE: in_pipeline, dismissed, and source indexes are created by migration (handles existing DBs without those columns)
+
+    -- Scraping Portals (portal configuration for multi-source scraping)
+    CREATE TABLE IF NOT EXISTS scraping_portals (
+      id INTEGER PRIMARY KEY AUTOINCREMENT,
+      portal_key TEXT UNIQUE NOT NULL,
+      name TEXT NOT NULL,
+      url TEXT,
+      description TEXT,
+      type TEXT DEFAULT 'government',
+      enabled INTEGER DEFAULT 0,
+      scraper_available INTEGER DEFAULT 0,
+      icon TEXT,
+      schedule TEXT,
+      last_scraped_at DATETIME,
+      created_at DATETIME DEFAULT CURRENT_TIMESTAMP,
+      updated_at DATETIME DEFAULT CURRENT_TIMESTAMP
+    );
+
+    CREATE INDEX IF NOT EXISTS idx_scraping_portals_key ON scraping_portals(portal_key);
+    CREATE INDEX IF NOT EXISTS idx_scraping_portals_enabled ON scraping_portals(enabled);
+
+    -- Scanner Settings (key-value store for scanner configuration)
+    CREATE TABLE IF NOT EXISTS scanner_settings (
+      key TEXT PRIMARY KEY,
+      value TEXT NOT NULL,
+      updated_at DATETIME DEFAULT CURRENT_TIMESTAMP
+    );
+
+    -- Scraping Jobs Log (log of all scraping runs)
+    CREATE TABLE IF NOT EXISTS scraping_jobs_log (
+      id INTEGER PRIMARY KEY AUTOINCREMENT,
+      job_type TEXT NOT NULL,
+      status TEXT NOT NULL,
+      records_processed INTEGER DEFAULT 0,
+      records_new INTEGER DEFAULT 0,
+      records_updated INTEGER DEFAULT 0,
+      errors TEXT,
+      duration_seconds INTEGER,
+      started_at DATETIME,
+      completed_at DATETIME,
+      created_at DATETIME DEFAULT CURRENT_TIMESTAMP
+    );
+
+    CREATE INDEX IF NOT EXISTS idx_scraping_jobs_type ON scraping_jobs_log(job_type);
+    CREATE INDEX IF NOT EXISTS idx_scraping_jobs_status ON scraping_jobs_log(status);
+
+    -- Scraping Alerts (in-app alerts from scraping)
+    CREATE TABLE IF NOT EXISTS scraping_alerts (
+      id INTEGER PRIMARY KEY AUTOINCREMENT,
+      alert_type TEXT NOT NULL,
+      title TEXT NOT NULL,
+      description TEXT,
+      source_table TEXT,
+      source_id INTEGER,
+      priority TEXT DEFAULT 'medium',
+      status TEXT DEFAULT 'pending',
+      url TEXT,
+      metadata TEXT,
+      notified_at DATETIME,
+      reviewed_at DATETIME,
+      created_at DATETIME DEFAULT CURRENT_TIMESTAMP
+    );
+
+    CREATE INDEX IF NOT EXISTS idx_scraping_alerts_type ON scraping_alerts(alert_type);
+    CREATE INDEX IF NOT EXISTS idx_scraping_alerts_status ON scraping_alerts(status);
+
+    -- ============================================================================
+    -- CONTRACT RENEWALS TABLE (predicted renewal opportunities)
+    -- ============================================================================
+    CREATE TABLE IF NOT EXISTS contract_renewals (
+      id TEXT PRIMARY KEY,
+      original_tender_no TEXT,
+      agency TEXT NOT NULL,
+      title TEXT,
+      description TEXT,
+      service_category TEXT,
+      contract_start_date DATE,
+      contract_end_date DATE,
+      estimated_value REAL,
+      renewal_probability REAL DEFAULT 0.5,
+      current_supplier TEXT,
+      incumbent_advantage TEXT,
+      engagement_status TEXT DEFAULT 'monitoring',
+      assigned_bd_manager TEXT,
+      expected_rfp_date DATE,
+      pre_positioning_notes TEXT,
+      source TEXT DEFAULT 'historical_analysis',
+      created_at DATETIME DEFAULT CURRENT_TIMESTAMP,
+      updated_at DATETIME DEFAULT CURRENT_TIMESTAMP
+    );
+
+    CREATE INDEX IF NOT EXISTS idx_contract_renewals_agency ON contract_renewals(agency);
+    CREATE INDEX IF NOT EXISTS idx_contract_renewals_end_date ON contract_renewals(contract_end_date);
+    CREATE INDEX IF NOT EXISTS idx_contract_renewals_status ON contract_renewals(engagement_status);
+    CREATE INDEX IF NOT EXISTS idx_contract_renewals_probability ON contract_renewals(renewal_probability);
+
+    -- ============================================================================
     -- BPO TENDER LIFECYCLE TABLE (7-stage pipeline management)
     -- ============================================================================
     CREATE TABLE IF NOT EXISTS bpo_tender_lifecycle (
@@ -1417,6 +1543,7 @@ function createSchema(db) {
       is_urgent BOOLEAN DEFAULT 0,
       is_featured BOOLEAN DEFAULT 0,
       priority TEXT DEFAULT 'medium', -- 'low', 'medium', 'high', 'critical'
+      win_probability REAL, -- 0-100 percentage likelihood of winning
 
       -- Win/Loss
       outcome TEXT, -- 'won', 'lost', 'pending'
@@ -1696,7 +1823,209 @@ function runMigrations(db) {
       } catch (e) {
         console.warn('Template tables creation warning:', e.message);
       }
-    }
+    },
+    // Migration: Add in_pipeline and dismissed columns to gebiz_active_tenders (if they don't exist)
+    () => {
+      try {
+        const tableInfo = db.prepare("PRAGMA table_info('gebiz_active_tenders')").all();
+        const columns = tableInfo.map(c => c.name);
+
+        if (!columns.includes('in_pipeline')) {
+          db.exec(`ALTER TABLE gebiz_active_tenders ADD COLUMN in_pipeline BOOLEAN DEFAULT 0`);
+          db.exec(`CREATE INDEX IF NOT EXISTS idx_active_tenders_pipeline ON gebiz_active_tenders(in_pipeline)`);
+        }
+        if (!columns.includes('dismissed')) {
+          db.exec(`ALTER TABLE gebiz_active_tenders ADD COLUMN dismissed BOOLEAN DEFAULT 0`);
+          db.exec(`CREATE INDEX IF NOT EXISTS idx_active_tenders_dismissed ON gebiz_active_tenders(dismissed)`);
+        }
+      } catch (e) {
+        console.warn('gebiz_active_tenders migration warning:', e.message);
+      }
+    },
+
+    // Migration: Add win_probability column to bpo_tender_lifecycle (if it doesn't exist)
+    () => {
+      try {
+        const tableInfo = db.prepare("PRAGMA table_info('bpo_tender_lifecycle')").all();
+        const columns = tableInfo.map(c => c.name);
+
+        if (!columns.includes('win_probability')) {
+          db.exec(`ALTER TABLE bpo_tender_lifecycle ADD COLUMN win_probability REAL`);
+        }
+      } catch (e) {
+        console.warn('bpo_tender_lifecycle migration warning:', e.message);
+      }
+    },
+
+    // Migration: Add missing columns to escalation_queue (older schema lacks sla_deadline, sla_breach, etc.)
+    () => {
+      try {
+        const tableInfo = db.prepare("PRAGMA table_info('escalation_queue')").all();
+        if (tableInfo.length === 0) return; // table doesn't exist yet, will be created by service
+        const columns = tableInfo.map(c => c.name);
+
+        const newColumns = [
+          { name: 'trigger_type', sql: "ALTER TABLE escalation_queue ADD COLUMN trigger_type TEXT NOT NULL DEFAULT 'manual'" },
+          { name: 'trigger_reason', sql: "ALTER TABLE escalation_queue ADD COLUMN trigger_reason TEXT" },
+          { name: 'context_data', sql: "ALTER TABLE escalation_queue ADD COLUMN context_data TEXT" },
+          { name: 'assigned_admin', sql: "ALTER TABLE escalation_queue ADD COLUMN assigned_admin TEXT" },
+          { name: 'assigned_at', sql: "ALTER TABLE escalation_queue ADD COLUMN assigned_at DATETIME" },
+          { name: 'first_response_at', sql: "ALTER TABLE escalation_queue ADD COLUMN first_response_at DATETIME" },
+          { name: 'sla_breach', sql: "ALTER TABLE escalation_queue ADD COLUMN sla_breach BOOLEAN DEFAULT FALSE" },
+          { name: 'sla_deadline', sql: "ALTER TABLE escalation_queue ADD COLUMN sla_deadline DATETIME" },
+          { name: 'escalation_count', sql: "ALTER TABLE escalation_queue ADD COLUMN escalation_count INTEGER DEFAULT 1" },
+          { name: 'user_satisfaction_score', sql: "ALTER TABLE escalation_queue ADD COLUMN user_satisfaction_score INTEGER" },
+        ];
+
+        for (const col of newColumns) {
+          if (!columns.includes(col.name)) {
+            db.exec(col.sql);
+          }
+        }
+      } catch (e) {
+        console.warn('escalation_queue migration warning:', e.message);
+      }
+    },
+
+    // Migration: Deduplicate tender_alerts and add UNIQUE constraint
+    () => {
+      try {
+        const tableInfo = db.prepare("PRAGMA table_info('tender_alerts')").all();
+        if (tableInfo.length === 0) return;
+
+        // Check if duplicates exist
+        const dupeCount = db.prepare(`
+          SELECT COUNT(*) as c FROM tender_alerts
+          WHERE id NOT IN (SELECT MIN(id) FROM tender_alerts GROUP BY keyword)
+        `).get().c;
+
+        if (dupeCount > 0) {
+          // Delete all duplicates, keeping only the oldest (MIN id) for each keyword
+          db.exec(`
+            DELETE FROM tender_alerts
+            WHERE id NOT IN (SELECT MIN(id) FROM tender_alerts GROUP BY keyword)
+          `);
+          console.log(`  Cleaned up ${dupeCount} duplicate tender alerts`);
+        }
+
+        // Add UNIQUE index on keyword (if not already exists)
+        db.exec(`CREATE UNIQUE INDEX IF NOT EXISTS idx_tender_alerts_keyword ON tender_alerts(keyword)`);
+      } catch (e) {
+        console.warn('tender_alerts dedup migration warning:', e.message);
+      }
+    },
+
+    // Migration: Add source column to gebiz_active_tenders
+    () => {
+      try {
+        const tableInfo = db.prepare("PRAGMA table_info('gebiz_active_tenders')").all();
+        if (tableInfo.length === 0) return;
+        const columns = tableInfo.map(c => c.name);
+        if (!columns.includes('source')) {
+          db.exec(`ALTER TABLE gebiz_active_tenders ADD COLUMN source TEXT DEFAULT 'gebiz'`);
+          db.exec(`CREATE INDEX IF NOT EXISTS idx_active_tenders_source ON gebiz_active_tenders(source)`);
+          console.log('  Added source column to gebiz_active_tenders');
+        }
+      } catch (e) {
+        console.warn('gebiz_active_tenders source migration warning:', e.message);
+      }
+    },
+
+    // Migration: Seed scraping_portals table
+    () => {
+      try {
+        const tableInfo = db.prepare("PRAGMA table_info('scraping_portals')").all();
+        if (tableInfo.length === 0) return; // Table doesn't exist yet
+
+        const count = db.prepare('SELECT COUNT(*) as c FROM scraping_portals').get().c;
+        if (count === 0) {
+          const insert = db.prepare(`
+            INSERT OR IGNORE INTO scraping_portals
+            (portal_key, name, url, description, type, enabled, scraper_available)
+            VALUES (?, ?, ?, ?, ?, ?, ?)
+          `);
+
+          const portals = [
+            // Government Portals
+            ['gebiz', 'GeBIZ', 'https://www.gebiz.gov.sg', 'Singapore Government Electronic Business portal — primary source for public sector manpower and services tenders', 'government', 1, 1],
+            ['alps', 'ALPS Healthcare', 'https://alps.sg', 'Healthcare Supply Chain Network — procurement for SingHealth, NHG, and NUHS clusters. Ancillary manpower and nursing support tenders', 'government', 0, 0],
+            ['mohh_ariba', 'MOHH eProcurement', 'https://www.ariba.com', 'MOH Holdings sourcing via SAP Ariba — register as vendor and follow MOHH for healthcare manpower RFPs', 'government', 0, 0],
+            // Tender Aggregators
+            ['tenderboard', 'TenderBoard', 'https://www.tenderboard.biz', 'Singapore private sector tender aggregator — aggregates hidden tenders from private healthcare and corporate hospitality groups', 'aggregator', 0, 0],
+            ['tendersgo', 'TendersGo', 'https://www.tendersgo.com', 'Global tender search engine covering 200+ countries with HR, manpower and services categories', 'aggregator', 0, 0],
+            // Hospitality & Private Sector
+            ['mbs_supplier', 'MBS Supplier Portal', 'https://www.marinabaysands.com', 'Marina Bay Sands (LVS) vendor registration — F&B manpower, banquet casual labor, and events staffing contracts', 'hospitality', 0, 0],
+            ['ariba_discovery', 'Ariba Discovery', 'https://discovery.ariba.com', 'SAP Ariba Discovery — luxury hotel chains (Marriott, Hilton, IHG) source local manpower agencies for high-season banquet events', 'hospitality', 0, 0],
+            ['procurehere', 'Procurehere', 'https://www.procurehere.com', 'Private invitational tender platform — used by mid-to-large hospitality groups for manpower agency bidding', 'hospitality', 0, 0],
+          ];
+
+          for (const p of portals) {
+            insert.run(...p);
+          }
+          console.log(`  Seeded ${portals.length} scraping portals`);
+        }
+      } catch (e) {
+        console.warn('scraping_portals seed migration warning:', e.message);
+      }
+    },
+
+    // Migration: Replace old portals with business-aligned portals
+    () => {
+      try {
+        const tableInfo = db.prepare("PRAGMA table_info('scraping_portals')").all();
+        if (tableInfo.length === 0) return;
+
+        // Check if old portals exist (EPU, HDB, LTA etc. from initial seed)
+        const hasOldPortals = db.prepare("SELECT portal_key FROM scraping_portals WHERE portal_key IN ('epu', 'hdb', 'lta', 'mom', 'nea', 'dgmarket')").get();
+        if (!hasOldPortals) return; // Already migrated or fresh DB
+
+        // Delete all old portals and re-seed with business-aligned ones
+        db.prepare('DELETE FROM scraping_portals').run();
+
+        const insert = db.prepare(`
+          INSERT OR IGNORE INTO scraping_portals
+          (portal_key, name, url, description, type, enabled, scraper_available)
+          VALUES (?, ?, ?, ?, ?, ?, ?)
+        `);
+
+        const portals = [
+          ['gebiz', 'GeBIZ', 'https://www.gebiz.gov.sg', 'Singapore Government Electronic Business portal — primary source for public sector manpower and services tenders', 'government', 1, 1],
+          ['alps', 'ALPS Healthcare', 'https://alps.sg', 'Healthcare Supply Chain Network — procurement for SingHealth, NHG, and NUHS clusters. Ancillary manpower and nursing support tenders', 'government', 0, 0],
+          ['mohh_ariba', 'MOHH eProcurement', 'https://www.ariba.com', 'MOH Holdings sourcing via SAP Ariba — register as vendor and follow MOHH for healthcare manpower RFPs', 'government', 0, 0],
+          ['tenderboard', 'TenderBoard', 'https://www.tenderboard.biz', 'Singapore private sector tender aggregator — aggregates hidden tenders from private healthcare and corporate hospitality groups', 'aggregator', 0, 0],
+          ['tendersgo', 'TendersGo', 'https://www.tendersgo.com', 'Global tender search engine covering 200+ countries with HR, manpower and services categories', 'aggregator', 0, 0],
+          ['mbs_supplier', 'MBS Supplier Portal', 'https://www.marinabaysands.com', 'Marina Bay Sands (LVS) vendor registration — F&B manpower, banquet casual labor, and events staffing contracts', 'hospitality', 0, 0],
+          ['ariba_discovery', 'Ariba Discovery', 'https://discovery.ariba.com', 'SAP Ariba Discovery — luxury hotel chains (Marriott, Hilton, IHG) source local manpower agencies for high-season banquet events', 'hospitality', 0, 0],
+          ['procurehere', 'Procurehere', 'https://www.procurehere.com', 'Private invitational tender platform — used by mid-to-large hospitality groups for manpower agency bidding', 'hospitality', 0, 0],
+        ];
+
+        for (const p of portals) {
+          insert.run(...p);
+        }
+        console.log(`  Replaced old portals with ${portals.length} business-aligned portals`);
+      } catch (e) {
+        console.warn('Portal replacement migration warning:', e.message);
+      }
+    },
+
+    // Migration: Seed scanner_settings defaults
+    () => {
+      try {
+        const tableInfo = db.prepare("PRAGMA table_info('scanner_settings')").all();
+        if (tableInfo.length === 0) return;
+
+        const existing = db.prepare("SELECT key FROM scanner_settings WHERE key = 'feed_categories'").get();
+        if (!existing) {
+          db.prepare(`
+            INSERT OR IGNORE INTO scanner_settings (key, value)
+            VALUES ('feed_categories', ?)
+          `).run('manpower_services,cleaning_services,security_services,healthcare_staffing,hospitality_services,catering_services,event_management');
+          console.log('  Seeded default feed_categories setting');
+        }
+      } catch (e) {
+        console.warn('scanner_settings seed migration warning:', e.message);
+      }
+    },
   ];
 
   // Run all migrations

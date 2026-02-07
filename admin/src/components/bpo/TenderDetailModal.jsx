@@ -13,7 +13,9 @@ import {
   AlertCircleIcon,
   EditIcon,
   SaveIcon,
-  XIcon
+  XIcon,
+  HistoryIcon,
+  ArrowRightIcon
 } from 'lucide-react';
 import Modal, { ModalFooter } from '../ui/Modal';
 import Button from '../ui/Button';
@@ -63,6 +65,46 @@ export default function TenderDetailModal({
 
   const toast = useToast();
 
+  // Activity timeline
+  const [activities, setActivities] = useState([]);
+  const [loadingActivities, setLoadingActivities] = useState(false);
+
+  // Fetch activity log when tender changes
+  useEffect(() => {
+    if (tender?.id && isOpen) {
+      const fetchActivities = async () => {
+        setLoadingActivities(true);
+        try {
+          const res = await fetch(`/api/v1/pipeline/${tender.id}`);
+          const data = await res.json();
+          if (data.success && data.data) {
+            // Build activity from tender data
+            const acts = [];
+            if (data.data.created_at) {
+              acts.push({ type: 'created', date: data.data.created_at, detail: 'Tender created' });
+            }
+            if (data.data.stage_updated_at && data.data.stage_updated_at !== data.data.created_at) {
+              acts.push({ type: 'stage_change', date: data.data.stage_updated_at, detail: `Moved to ${data.data.stage?.replace(/_/g, ' ')}` });
+            }
+            if (data.data.decision_made_at) {
+              acts.push({ type: 'decision', date: data.data.decision_made_at, detail: `Decision: ${data.data.decision} by ${data.data.decision_made_by || 'unknown'}` });
+            }
+            if (data.data.outcome_date) {
+              acts.push({ type: 'outcome', date: data.data.outcome_date, detail: `Outcome: ${data.data.outcome}${data.data.winner ? ` (Winner: ${data.data.winner})` : ''}` });
+            }
+            acts.sort((a, b) => new Date(b.date) - new Date(a.date));
+            setActivities(acts);
+          }
+        } catch (e) {
+          console.error('Error fetching activities:', e);
+        } finally {
+          setLoadingActivities(false);
+        }
+      };
+      fetchActivities();
+    }
+  }, [tender?.id, isOpen]);
+
   // Initialize form data when tender changes
   useEffect(() => {
     if (tender) {
@@ -91,8 +133,13 @@ export default function TenderDetailModal({
   const handleSave = async () => {
     setLoading(true);
     try {
-      // Simulate API call - replace with actual API call
-      await new Promise(resolve => setTimeout(resolve, 1000));
+      const res = await fetch(`/api/v1/pipeline/${tender.id}`, {
+        method: 'PATCH',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify(formData)
+      });
+      const data = await res.json();
+      if (!data.success) throw new Error(data.error || 'Update failed');
 
       if (onUpdate) {
         onUpdate(tender.id, formData);
@@ -346,21 +393,53 @@ export default function TenderDetailModal({
 
         {/* Notes Section */}
         <div>
-          <label className="block text-sm font-medium text-gray-700 mb-2">Notes</label>
+          <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">Notes</label>
           {isEditing ? (
             <textarea
               value={formData.notes}
               onChange={(e) => setFormData(prev => ({ ...prev, notes: e.target.value }))}
               rows="4"
-              className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500"
+              className="w-full px-3 py-2 border border-gray-300 dark:border-slate-600 bg-white dark:bg-slate-800 text-slate-900 dark:text-white rounded-md focus:outline-none focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500"
               placeholder="Add notes about this tender..."
             />
           ) : (
-            <p className="text-gray-600 whitespace-pre-line">
+            <p className="text-gray-600 dark:text-gray-400 whitespace-pre-line">
               {tender.notes || 'No notes added yet.'}
             </p>
           )}
         </div>
+
+        {/* Activity Timeline */}
+        {!isEditing && (
+          <div>
+            <div className="flex items-center gap-2 mb-3">
+              <HistoryIcon className="h-4 w-4 text-slate-500 dark:text-slate-400" />
+              <label className="text-sm font-medium text-gray-700 dark:text-gray-300">Activity Timeline</label>
+            </div>
+            {loadingActivities ? (
+              <p className="text-sm text-slate-500 dark:text-slate-400">Loading...</p>
+            ) : activities.length === 0 ? (
+              <p className="text-sm text-slate-500 dark:text-slate-400">No activity recorded yet.</p>
+            ) : (
+              <div className="space-y-3 relative before:absolute before:left-[7px] before:top-2 before:bottom-2 before:w-px before:bg-slate-200 dark:before:bg-slate-700">
+                {activities.map((act, idx) => (
+                  <div key={idx} className="flex items-start gap-3 relative">
+                    <div className={`w-4 h-4 rounded-full flex-shrink-0 mt-0.5 z-10 ${
+                      act.type === 'created' ? 'bg-blue-500' :
+                      act.type === 'stage_change' ? 'bg-amber-500' :
+                      act.type === 'decision' ? 'bg-purple-500' :
+                      act.type === 'outcome' ? 'bg-green-500' : 'bg-slate-400'
+                    }`} />
+                    <div className="flex-1 min-w-0">
+                      <p className="text-sm text-slate-700 dark:text-slate-300">{act.detail}</p>
+                      <p className="text-xs text-slate-400 dark:text-slate-500">{new Date(act.date).toLocaleDateString('en-SG', { day: 'numeric', month: 'short', year: 'numeric', hour: '2-digit', minute: '2-digit' })}</p>
+                    </div>
+                  </div>
+                ))}
+              </div>
+            )}
+          </div>
+        )}
       </div>
 
       <ModalFooter>

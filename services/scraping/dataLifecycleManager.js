@@ -1,7 +1,8 @@
 /**
  * Data Lifecycle Manager
- * Handles insertion of new tenders into bpo_tender_lifecycle table
- * Features: Auto-priority detection, source tracking, lifecycle stage management
+ * Handles insertion of scraped tenders into gebiz_active_tenders (staging table).
+ * Tenders are promoted to bpo_tender_lifecycle only when a user clicks "Add to Pipeline".
+ * Features: Auto-priority detection, source tracking, staging & promotion flow
  */
 
 const { db } = require('../../db/database');
@@ -13,12 +14,17 @@ class DataLifecycleManager {
     this.defaultStage = 'new_opportunity';
   }
 
+  // ---------------------------------------------------------------------------
+  // PRIMARY METHOD: Insert scraped tenders into the staging table
+  // ---------------------------------------------------------------------------
+
   /**
-   * Create lifecycle cards for new tenders
+   * Insert validated tenders into gebiz_active_tenders (staging table).
+   * Uses INSERT OR IGNORE so duplicate tender_no values are silently skipped.
    * @param {Array} validatedTenders Array of validated tender data
-   * @returns {Object} Creation results
+   * @returns {Object} Creation results { created, skipped, errors, createdIds, errorDetails }
    */
-  async createLifecycleCards(validatedTenders) {
+  async insertToStagingTable(validatedTenders) {
     if (!validatedTenders || !Array.isArray(validatedTenders)) {
       throw new Error('Invalid tenders data provided');
     }
@@ -31,19 +37,49 @@ class DataLifecycleManager {
       errorDetails: []
     };
 
-    console.log(`📝 Creating lifecycle cards for ${validatedTenders.length} tenders...`);
+    console.log(`📝 Inserting ${validatedTenders.length} tenders into staging table (gebiz_active_tenders)...`);
+
+    const insertStmt = db.prepare(`
+      INSERT OR IGNORE INTO gebiz_active_tenders (
+        tender_no, title, agency, closing_date, published_date,
+        category, estimated_value, url, details,
+        status, in_pipeline, dismissed, source, scraped_at
+      ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, 'open', 0, 0, 'gebiz', ?)
+    `);
 
     for (const tender of validatedTenders) {
       try {
-        const lifecycleCard = await this.createSingleLifecycleCard(tender);
-
-        if (lifecycleCard) {
-          results.created++;
-          results.createdIds.push(lifecycleCard.id);
-          console.log(`✅ Created lifecycle card: ${lifecycleCard.tender_no} (${lifecycleCard.id})`);
-        } else {
+        // Pre-check: skip if already in staging OR already in pipeline
+        if (await this.stagingTenderExists(tender.tender_no)) {
           results.skipped++;
-          console.log(`⏭️  Skipped tender: ${tender.tender_no} (already exists or invalid)`);
+          console.log(`⏭️  Skipped tender: ${tender.tender_no} (already in staging table)`);
+          continue;
+        }
+
+        const now = new Date().toISOString();
+        const estimatedValue = this.estimateValue(tender);
+
+        const result = insertStmt.run(
+          tender.tender_no,
+          tender.title,
+          tender.agency,
+          tender.closing_date,
+          tender.published_date,
+          tender.category,
+          estimatedValue,
+          tender.source_url || null,
+          tender.description || null,
+          now
+        );
+
+        if (result.changes === 1) {
+          results.created++;
+          results.createdIds.push(result.lastInsertRowid);
+          console.log(`✅ Staged tender: ${tender.tender_no} (id ${result.lastInsertRowid})`);
+        } else {
+          // INSERT OR IGNORE hit a duplicate at the DB level
+          results.skipped++;
+          console.log(`⏭️  Skipped tender: ${tender.tender_no} (duplicate, INSERT OR IGNORE)`);
         }
 
       } catch (error) {
@@ -52,23 +88,37 @@ class DataLifecycleManager {
           tender_no: tender.tender_no || 'Unknown',
           error: error.message
         });
-        console.error(`❌ Failed to create lifecycle card for ${tender.tender_no}: ${error.message}`);
+        console.error(`❌ Failed to stage tender ${tender.tender_no}: ${error.message}`);
       }
     }
 
-    console.log(`📊 Lifecycle creation complete: ${results.created} created, ${results.skipped} skipped, ${results.errors} errors`);
+    console.log(`📊 Staging complete: ${results.created} created, ${results.skipped} skipped, ${results.errors} errors`);
 
     return results;
   }
 
   /**
-   * Create a single lifecycle card
+   * Backward-compatible alias -- callers that still reference createLifecycleCards
+   * will now route through the staging table instead.
+   */
+  async createLifecycleCards(validatedTenders) {
+    return this.insertToStagingTable(validatedTenders);
+  }
+
+  // ---------------------------------------------------------------------------
+  // PROMOTION: Move a staged tender into bpo_tender_lifecycle (pipeline)
+  // ---------------------------------------------------------------------------
+
+  /**
+   * Create a single lifecycle card in bpo_tender_lifecycle.
+   * Intended to be called when a user promotes a tender from the Scanner page
+   * ("Add to Pipeline" button) -- NOT during automated scraping.
    * @param {Object} tenderData Validated tender data
    * @returns {Object|null} Created lifecycle card or null if skipped
    */
   async createSingleLifecycleCard(tenderData) {
     try {
-      // Check if lifecycle card already exists
+      // Check if lifecycle card already exists in the pipeline
       if (await this.lifecycleCardExists(tenderData.tender_no)) {
         return null; // Skip existing
       }
@@ -123,7 +173,7 @@ class DataLifecycleManager {
         updated_at: now
       };
 
-      // Insert into database
+      // Insert into pipeline table
       const insertQuery = `
         INSERT INTO bpo_tender_lifecycle (
           id, source_type, source_id, tender_no, title, agency, description, category,
@@ -171,6 +221,14 @@ class DataLifecycleManager {
       );
 
       if (result.changes === 1) {
+        // Mark the staging row as promoted so it doesn't show in the Scanner feed
+        try {
+          db.prepare(`
+            UPDATE gebiz_active_tenders SET in_pipeline = 1, updated_at = ? WHERE tender_no = ?
+          `).run(now, tenderData.tender_no);
+        } catch (_) {
+          // Staging row may not exist (e.g. manual creation) -- that's fine
+        }
         return lifecycleData;
       } else {
         throw new Error('Failed to insert lifecycle card');
@@ -182,8 +240,32 @@ class DataLifecycleManager {
     }
   }
 
+  // ---------------------------------------------------------------------------
+  // EXISTENCE CHECKS
+  // ---------------------------------------------------------------------------
+
   /**
-   * Check if lifecycle card already exists
+   * Check if a tender already exists in the staging table (gebiz_active_tenders)
+   * @param {string} tenderNo Tender number
+   * @returns {boolean} True if exists
+   */
+  async stagingTenderExists(tenderNo) {
+    try {
+      const existing = db.prepare(`
+        SELECT COUNT(*) as count
+        FROM gebiz_active_tenders
+        WHERE tender_no = ?
+      `).get(tenderNo);
+
+      return existing.count > 0;
+    } catch (error) {
+      console.error('Error checking staging tender existence:', error);
+      return false;
+    }
+  }
+
+  /**
+   * Check if lifecycle card already exists in the pipeline (bpo_tender_lifecycle)
    * @param {string} tenderNo Tender number
    * @returns {boolean} True if exists
    */

@@ -305,6 +305,9 @@ function sanitizeInput(req, res, next) {
         const maxLength = isOAuthField ? 5000 : 1000;
         return sanitizeString(value, maxLength);
       }
+      if (Array.isArray(value)) {
+        return value.map((item, i) => sanitizeValue(item, String(i)));
+      }
       if (typeof value === 'object' && value !== null) {
         const sanitized = {};
         for (const [key, val] of Object.entries(value)) {

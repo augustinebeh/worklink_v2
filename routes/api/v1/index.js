@@ -87,6 +87,11 @@ const alertsRoutes = require('./alerts');
 const bpoLifecycleRoutes = require('./bpo/lifecycle');
 const scrapingRoutes = require('./scraping');
 
+// Consolidated BPO Routes (Feb 2026 Reorganization)
+const pipelineRoutes = require('./pipeline');
+const scannerRoutes = require('./scanner');
+const intelligenceRoutes = require('./intelligence');
+
 // Mount routes
 router.use('/auth', authRoutes);
 router.use('/candidates', candidateRoutes);
@@ -161,6 +166,11 @@ router.use('/gebiz/renewals', gebizRenewalsRoutes);
 router.use('/alerts', alertsRoutes);
 router.use('/bpo/lifecycle', bpoLifecycleRoutes);
 router.use('/scraping', scrapingRoutes);
+
+// Consolidated BPO Routes (Feb 2026 Reorganization)
+router.use('/pipeline', pipelineRoutes);
+router.use('/scanner', scannerRoutes);
+router.use('/intelligence', intelligenceRoutes);
 
 // Scraping Services
 router.use('/scraping/gebiz-rss', gebizRssRoutes);
@@ -242,6 +252,11 @@ router.get('/', (req, res) => {
       alerts: { path: '/api/v1/alerts', status: 'active', description: 'Multi-channel alert system (email, SMS, Slack, in-app)' },
       bpoLifecycle: { path: '/api/v1/bpo/lifecycle', status: 'active', description: '7-stage tender pipeline management' },
       scraping: { path: '/api/v1/scraping', status: 'active', description: 'RSS scraping control and monitoring' },
+
+      // Consolidated BPO Routes (Feb 2026 Reorganization)
+      pipeline: { path: '/api/v1/pipeline', status: 'active', description: 'Unified tender pipeline management' },
+      scanner: { path: '/api/v1/scanner', status: 'active', description: 'Live feed scanner, alerts & scraper controls' },
+      intelligence: { path: '/api/v1/intelligence', status: 'active', description: 'Historical data, competitors & renewals' },
     },
     notes: {
       emailConfig: 'Disabled - not required for core functionality',

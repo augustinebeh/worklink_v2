@@ -8,6 +8,7 @@
 import React, { createContext, useContext, useReducer, useEffect, useCallback } from 'react';
 import { useWebSocket } from '../../contexts/WebSocketContext';
 import { useAuth } from '../../contexts/AuthContext';
+import logger from '../../utils/logger';
 
 const FOMOContext = createContext();
 
@@ -228,7 +229,7 @@ export const FOMOProvider = ({ children }) => {
         audio.volume = event.urgency === 'critical' ? 0.8 : 0.5;
         audio.play().catch(() => {}); // Ignore if audio fails
       } catch (error) {
-        console.log('Audio notification failed:', error);
+        logger.log('Audio notification failed:', error);
       }
     }
 
@@ -323,7 +324,7 @@ export const FOMOProvider = ({ children }) => {
         break;
 
       default:
-        console.log('Unknown FOMO action:', action.type);
+        logger.debug('Unknown FOMO action:', action.type);
         break;
     }
 

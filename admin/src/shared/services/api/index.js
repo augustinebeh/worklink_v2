@@ -24,6 +24,8 @@ import notificationService from './notification.service.js';
 import renewalService from './renewal.service.js';
 import alertService from './alert.service.js';
 import lifecycleService from './lifecycle.service.js';
+import pipelineService from './pipeline.service.js';
+import scannerService from './scanner.service.js';
 
 // Export individual services
 export { authService };
@@ -42,6 +44,8 @@ export { notificationService };
 export { renewalService };
 export { alertService };
 export { lifecycleService };
+export { pipelineService };
+export { scannerService };
 
 // Named exports for destructuring
 export {
@@ -60,7 +64,9 @@ export {
   notificationService as notification,
   renewalService as renewal,
   alertService as alert,
-  lifecycleService as lifecycle
+  lifecycleService as lifecycle,
+  pipelineService as pipeline,
+  scannerService as scanner
 };
 
 /**
@@ -91,6 +97,8 @@ export const api = {
   tender: tenderService,
   renewal: renewalService,
   lifecycle: lifecycleService,
+  pipeline: pipelineService,
+  scanner: scannerService,
   alert: alertService,
   
   // Analytics
