@@ -7,6 +7,7 @@
 const express = require('express');
 const router = express.Router();
 const aiChat = require('../../../services/ai-chat');
+const { authenticateAdmin } = require('../../../middleware/auth');
 
 // =====================================================
 // AI SETTINGS
@@ -21,7 +22,7 @@ router.get('/settings', (req, res) => {
     const settings = aiChat.getSettings();
     res.json({ success: true, data: settings });
   } catch (error) {
-    res.status(500).json({ success: false, error: error.message });
+    res.status(500).json({ success: false, error: 'Internal server error' });
   }
 });
 
@@ -29,7 +30,7 @@ router.get('/settings', (req, res) => {
  * PUT /api/v1/ai-chat/settings
  * Update AI chat settings
  */
-router.put('/settings', (req, res) => {
+router.put('/settings', authenticateAdmin, (req, res) => {
   try {
     const { key, value } = req.body;
 
@@ -40,7 +41,7 @@ router.put('/settings', (req, res) => {
     aiChat.updateSetting(key, value);
     res.json({ success: true, message: 'Setting updated' });
   } catch (error) {
-    res.status(500).json({ success: false, error: error.message });
+    res.status(500).json({ success: false, error: 'Internal server error' });
   }
 });
 
@@ -57,7 +58,7 @@ router.get('/conversations/:candidateId/mode', (req, res) => {
     const mode = aiChat.getConversationMode(req.params.candidateId);
     res.json({ success: true, data: { mode } });
   } catch (error) {
-    res.status(500).json({ success: false, error: error.message });
+    res.status(500).json({ success: false, error: 'Internal server error' });
   }
 });
 
@@ -65,7 +66,7 @@ router.get('/conversations/:candidateId/mode', (req, res) => {
  * PUT /api/v1/ai-chat/conversations/:candidateId/mode
  * Set AI mode for a specific conversation
  */
-router.put('/conversations/:candidateId/mode', (req, res) => {
+router.put('/conversations/:candidateId/mode', authenticateAdmin, (req, res) => {
   try {
     const { mode } = req.body;
 
@@ -80,7 +81,7 @@ router.put('/conversations/:candidateId/mode', (req, res) => {
 
     res.json({ success: true, message: 'Mode updated', data: { mode } });
   } catch (error) {
-    res.status(500).json({ success: false, error: error.message });
+    res.status(500).json({ success: false, error: 'Internal server error' });
   }
 });
 
@@ -98,7 +99,7 @@ router.get('/suggestions', (req, res) => {
     const suggestions = aiChat.getPendingSuggestions(candidateId);
     res.json({ success: true, data: suggestions });
   } catch (error) {
-    res.status(500).json({ success: false, error: error.message });
+    res.status(500).json({ success: false, error: 'Internal server error' });
   }
 });
 
@@ -106,7 +107,7 @@ router.get('/suggestions', (req, res) => {
  * POST /api/v1/ai-chat/suggestions/:id/accept
  * Accept and send an AI suggestion
  */
-router.post('/suggestions/:id/accept', async (req, res) => {
+router.post('/suggestions/:id/accept', authenticateAdmin, async (req, res) => {
   try {
     const { candidateId } = req.body;
 
@@ -122,7 +123,7 @@ router.post('/suggestions/:id/accept', async (req, res) => {
       data: result,
     });
   } catch (error) {
-    res.status(500).json({ success: false, error: error.message });
+    res.status(500).json({ success: false, error: 'Internal server error' });
   }
 });
 
@@ -130,7 +131,7 @@ router.post('/suggestions/:id/accept', async (req, res) => {
  * POST /api/v1/ai-chat/suggestions/:id/edit
  * Edit and send an AI suggestion
  */
-router.post('/suggestions/:id/edit', async (req, res) => {
+router.post('/suggestions/:id/edit', authenticateAdmin, async (req, res) => {
   try {
     const { candidateId, content } = req.body;
 
@@ -153,7 +154,7 @@ router.post('/suggestions/:id/edit', async (req, res) => {
       data: result,
     });
   } catch (error) {
-    res.status(500).json({ success: false, error: error.message });
+    res.status(500).json({ success: false, error: 'Internal server error' });
   }
 });
 
@@ -161,12 +162,12 @@ router.post('/suggestions/:id/edit', async (req, res) => {
  * POST /api/v1/ai-chat/suggestions/:id/dismiss
  * Dismiss an AI suggestion
  */
-router.post('/suggestions/:id/dismiss', async (req, res) => {
+router.post('/suggestions/:id/dismiss', authenticateAdmin, async (req, res) => {
   try {
     await aiChat.dismissSuggestion(parseInt(req.params.id));
     res.json({ success: true, message: 'Suggestion dismissed' });
   } catch (error) {
-    res.status(500).json({ success: false, error: error.message });
+    res.status(500).json({ success: false, error: 'Internal server error' });
   }
 });
 
@@ -178,7 +179,7 @@ router.post('/suggestions/:id/dismiss', async (req, res) => {
  * POST /api/v1/ai-chat/generate
  * Manually generate an AI response (for testing or on-demand)
  */
-router.post('/generate', async (req, res) => {
+router.post('/generate', authenticateAdmin, async (req, res) => {
   try {
     const { candidateId, message } = req.body;
 
@@ -198,7 +199,7 @@ router.post('/generate', async (req, res) => {
       data: response,
     });
   } catch (error) {
-    res.status(500).json({ success: false, error: error.message });
+    res.status(500).json({ success: false, error: 'Internal server error' });
   }
 });
 
@@ -206,7 +207,7 @@ router.post('/generate', async (req, res) => {
  * POST /api/v1/ai-chat/send
  * Send an AI-generated response directly
  */
-router.post('/send', async (req, res) => {
+router.post('/send', authenticateAdmin, async (req, res) => {
   try {
     const { candidateId, content, channel = 'app' } = req.body;
 
@@ -225,7 +226,7 @@ router.post('/send', async (req, res) => {
       data: result,
     });
   } catch (error) {
-    res.status(500).json({ success: false, error: error.message });
+    res.status(500).json({ success: false, error: 'Internal server error' });
   }
 });
 
@@ -237,7 +238,7 @@ router.post('/send', async (req, res) => {
  * POST /api/v1/ai-chat/detect-intent
  * Detect intent from a message (for testing)
  */
-router.post('/detect-intent', async (req, res) => {
+router.post('/detect-intent', authenticateAdmin, async (req, res) => {
   try {
     const { message } = req.body;
 
@@ -249,7 +250,7 @@ router.post('/detect-intent', async (req, res) => {
 
     res.json({ success: true, data: intent });
   } catch (error) {
-    res.status(500).json({ success: false, error: error.message });
+    res.status(500).json({ success: false, error: 'Internal server error' });
   }
 });
 
@@ -262,7 +263,7 @@ router.post('/detect-intent', async (req, res) => {
  * Submit feedback on an AI-generated message
  * Used by admin to boost or reduce confidence after reviewing auto-replies
  */
-router.post('/feedback/:messageId', async (req, res) => {
+router.post('/feedback/:messageId', authenticateAdmin, async (req, res) => {
   try {
     const { feedback } = req.body; // 'positive' or 'negative'
     const messageId = parseInt(req.params.messageId);
@@ -324,15 +325,12 @@ router.post('/feedback/:messageId', async (req, res) => {
     // Update metrics
     ml.updateDailyMetrics(feedback === 'positive' ? 'admin_boost' : 'admin_reduce');
 
-    console.log(`[ML] Admin feedback: ${feedback} on message ${messageId}`);
-
     res.json({
       success: true,
       message: feedback === 'positive' ? 'Confidence boosted' : 'Confidence reduced',
     });
   } catch (error) {
-    console.error('Feedback error:', error);
-    res.status(500).json({ success: false, error: error.message });
+    res.status(500).json({ success: false, error: 'Internal server error' });
   }
 });
 

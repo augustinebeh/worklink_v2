@@ -11,6 +11,10 @@
  * - Engagement tracking integration
  */
 
+
+const { createLogger } = require('./structured-logger');
+const logger = createLogger('candidate-matching');
+
 const { askClaude } = require('./claude');
 
 /**
@@ -280,7 +284,7 @@ async function enhancedMatchCandidates(job, candidates, options = {}) {
     includeReasons = true
   } = options;
 
-  console.log(`🤖 [Matching] Starting enhanced matching for job "${job.title}" with ${candidates.length} candidates`);
+  logger.info('[Matching] Starting enhanced matching for job "${job.title}" with ${candidates.length} candidates');
 
   // Step 1: Calculate weighted scores for all candidates
   const scoredCandidates = candidates.map(candidate => {
@@ -307,14 +311,14 @@ async function enhancedMatchCandidates(job, candidates, options = {}) {
       return (b.total_jobs_completed || 0) - (a.total_jobs_completed || 0);
     });
 
-  console.log(`🤖 [Matching] ${qualifiedCandidates.length} candidates meet minimum score of ${minScore}`);
+  logger.info('[Matching] ${qualifiedCandidates.length} candidates meet minimum score of ${minScore}');
 
   const topCandidates = qualifiedCandidates.slice(0, Math.min(maxResults * 2, 20)); // Get extra for AI enhancement
 
   // Step 3: AI Enhancement (if enabled)
   if (useAI && topCandidates.length > 0) {
     try {
-      console.log(`🤖 [Matching] Enhancing top ${topCandidates.length} candidates with AI insights`);
+      logger.info('[Matching] Enhancing top ${topCandidates.length} candidates with AI insights');
 
       const aiEnhanced = await enhanceCandidatesWithAI(job, topCandidates);
 
@@ -340,9 +344,9 @@ async function enhancedMatchCandidates(job, candidates, options = {}) {
         return b.confidence - a.confidence;
       });
 
-      console.log(`🤖 [Matching] AI enhancement completed`);
+      logger.info('[Matching] AI enhancement completed');
     } catch (error) {
-      console.warn('🤖 [Matching] AI enhancement failed, using weighted scoring only:', error.message);
+      logger.warn('[Matching] AI enhancement failed, using weighted scoring only:', { data: error.message });
     }
   }
 
@@ -371,7 +375,7 @@ async function enhancedMatchCandidates(job, candidates, options = {}) {
     return baseResult;
   });
 
-  console.log(`🤖 [Matching] Completed matching, returning top ${finalResults.length} candidates`);
+  logger.info('[Matching] Completed matching, returning top ${finalResults.length} candidates');
 
   return {
     matches: finalResults,
@@ -452,7 +456,7 @@ Return ONLY valid JSON array.`;
       return JSON.parse(jsonMatch[0]);
     }
   } catch (error) {
-    console.warn('AI enhancement parsing failed:', error.message);
+    logger.warn('AI enhancement parsing failed:', { data: error.message });
   }
 
   return [];

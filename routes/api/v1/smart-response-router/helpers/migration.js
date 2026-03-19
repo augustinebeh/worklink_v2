@@ -46,7 +46,7 @@ class SmartRouterMigration {
       logger.error('Failed to get migration status', { error: error.message });
       return {
         success: false,
-        error: error.message,
+        error: 'Internal server error',
         data: null
       };
     }
@@ -107,7 +107,7 @@ class SmartRouterMigration {
 
       return {
         success: false,
-        error: error.message,
+        error: 'Internal server error',
         currentStage: this.currentStage
       };
     }
@@ -149,7 +149,7 @@ class SmartRouterMigration {
       logger.error('Rollback failed', { error: error.message });
       return {
         success: false,
-        error: error.message,
+        error: 'Internal server error',
         currentStage: this.currentStage
       };
     }
@@ -189,7 +189,7 @@ class SmartRouterMigration {
       logger.error('Failed to get migration stats', { error: error.message });
       return {
         success: false,
-        error: error.message,
+        error: 'Internal server error',
         data: null
       };
     }
@@ -229,7 +229,7 @@ class SmartRouterMigration {
 
       return {
         success: false,
-        error: error.message,
+        error: 'Internal server error',
         checks: {},
         canProceed: false
       };

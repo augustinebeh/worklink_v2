@@ -45,7 +45,7 @@ export default function Clients() {
         setClients(data.data);
       }
     } catch (error) {
-      console.error('Failed to fetch clients:', error);
+      // Failed to fetch clients:
     } finally {
       setLoading(false);
     }
@@ -68,7 +68,7 @@ export default function Clients() {
         fetchClients();
       }
     } catch (error) {
-      console.error('Failed to create client:', error);
+      // Failed to create client:
     }
   };
 

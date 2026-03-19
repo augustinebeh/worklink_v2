@@ -5,6 +5,9 @@
  * replacing assumptions with actual database information.
  */
 
+const { createLogger } = require('../../utils/structured-logger');
+const logger = createLogger('response-formatter');
+
 class ResponseFormatter {
   constructor() {
     this.fallbackMessages = {
@@ -106,7 +109,7 @@ class ResponseFormatter {
       return response.trim();
 
     } catch (error) {
-      console.error('Error formatting payment status:', error);
+      logger.error('Error formatting payment status', { error: error.message });
       return this.fallbackMessages.payment;
     }
   }
@@ -180,7 +183,7 @@ class ResponseFormatter {
       return response.trim();
 
     } catch (error) {
-      console.error('Error formatting account verification:', error);
+      logger.error('Error formatting account verification', { error: error.message });
       return this.fallbackMessages.account;
     }
   }
@@ -282,7 +285,7 @@ class ResponseFormatter {
       return response.trim();
 
     } catch (error) {
-      console.error('Error formatting job history:', error);
+      logger.error('Error formatting job history', { error: error.message });
       return this.fallbackMessages.jobs;
     }
   }
@@ -383,7 +386,7 @@ class ResponseFormatter {
       return response.trim();
 
     } catch (error) {
-      console.error('Error formatting withdrawal eligibility:', error);
+      logger.error('Error formatting withdrawal eligibility', { error: error.message });
       return this.fallbackMessages.withdrawal;
     }
   }
@@ -490,7 +493,7 @@ class ResponseFormatter {
       return response.trim();
 
     } catch (error) {
-      console.error('Error formatting interview schedule:', error);
+      logger.error('Error formatting interview schedule', { error: error.message });
       return this.fallbackMessages.interview;
     }
   }
@@ -561,7 +564,7 @@ class ResponseFormatter {
       return response.trim();
 
     } catch (error) {
-      console.error('Error formatting comprehensive summary:', error);
+      logger.error('Error formatting comprehensive summary', { error: error.message });
       return "I'm having trouble accessing your information right now. Please try again in a moment.";
     }
   }
@@ -598,7 +601,7 @@ class ResponseFormatter {
           return this.formatGeneralResponse(userData, context);
       }
     } catch (error) {
-      console.error('Error formatting intent response:', error);
+      logger.error('Error formatting intent response', { error: error.message });
       return "I understand you're looking for information, but I'm having trouble accessing your data right now. Please try again in a moment or contact support if the issue persists.";
     }
   }
@@ -665,7 +668,7 @@ class ResponseFormatter {
       return response.trim();
 
     } catch (error) {
-      console.error('Error formatting job opportunities:', error);
+      logger.error('Error formatting job opportunities', { error: error.message });
       return this.fallbackMessages.jobs;
     }
   }
@@ -717,7 +720,7 @@ class ResponseFormatter {
       return response.trim();
 
     } catch (error) {
-      console.error('Error formatting general response:', error);
+      logger.error('Error formatting general response', { error: error.message });
       return "I'm here to help with your WorkLink account! Feel free to ask me about your payments, jobs, account status, or any other questions you might have.";
     }
   }
@@ -765,7 +768,7 @@ class ResponseFormatter {
       if (!data) return fallback;
       return this.formatData(data);
     } catch (error) {
-      console.error('Formatting error:', error);
+      logger.error('Formatting error', { error: error.message });
       return fallback;
     }
   }

@@ -1,5 +1,7 @@
 const webpush = require('web-push');
 const { db } = require('../db');
+const { createLogger } = require('../utils/structured-logger');
+const logger = createLogger('retention-notifications');
 
 // Lazy-loaded FOMO engine integration
 let fomoEngine = null;
@@ -8,7 +10,7 @@ function getFOMOEngine() {
     try {
       fomoEngine = require('./fomo-engine');
     } catch (e) {
-      console.log('FOMO engine not loaded:', e.message);
+      logger.debug('FOMO engine not loaded', { error: e.message });
     }
   }
   return fomoEngine;
@@ -21,7 +23,7 @@ function getStreakProtection() {
     try {
       streakProtection = require('./streak-protection-system');
     } catch (e) {
-      console.log('Streak protection system not loaded:', e.message);
+      logger.debug('Streak protection system not loaded', { error: e.message });
     }
   }
   return streakProtection;
@@ -41,13 +43,12 @@ class RetentionNotificationService {
           process.env.VAPID_PUBLIC_KEY,
           process.env.VAPID_PRIVATE_KEY
         );
-        console.log('✅ VAPID configured for push notifications');
+        logger.info('VAPID configured for push notifications');
       } else {
-        console.log('⚠️  VAPID keys not configured - push notifications will be queued');
+        logger.warn('VAPID keys not configured - push notifications will be queued');
       }
     } catch (error) {
-      console.log('⚠️  VAPID setup failed:', error.message);
-      console.log('   Push notifications will be queued instead of sent');
+      logger.warn('VAPID setup failed, push notifications will be queued instead of sent', { error: error.message });
     }
   }
 
@@ -65,7 +66,7 @@ class RetentionNotificationService {
 
   async checkRetentionTriggers() {
     try {
-      console.log('🔍 Checking retention triggers...');
+      logger.debug('Checking retention triggers');
 
       await Promise.all([
         this.checkInactiveUsers(),
@@ -75,13 +76,13 @@ class RetentionNotificationService {
         this.checkPeerAchievements()
       ]);
     } catch (error) {
-      console.error('Error checking retention triggers:', error);
+      logger.error('Error checking retention triggers', { error: error.message });
     }
   }
 
   async checkFOMOTriggers() {
     try {
-      console.log('🎯 Checking FOMO triggers...');
+      logger.debug('Checking FOMO triggers');
 
       await Promise.all([
         this.checkJobSlotScarcity(),
@@ -92,7 +93,7 @@ class RetentionNotificationService {
         this.checkTierCompetitionAlerts()
       ]);
     } catch (error) {
-      console.error('Error checking FOMO triggers:', error);
+      logger.error('Error checking FOMO triggers', { error: error.message });
     }
   }
 
@@ -307,9 +308,9 @@ class RetentionNotificationService {
       // Log successful notification
       this.logNotification(user.id, payload.data.type, 'sent');
 
-      console.log(`✅ Sent ${payload.data.type} notification to ${user.name}`);
+      logger.info('Sent notification', { type: payload.data.type, userName: user.name });
     } catch (error) {
-      console.error(`❌ Failed to send notification to ${user.name}:`, error);
+      logger.error('Failed to send notification', { userName: user.name, error: error.message });
 
       // Remove invalid subscription
       if (error.statusCode === 410) {
@@ -341,7 +342,7 @@ class RetentionNotificationService {
     try {
       db.prepare(query).run(userId, type);
     } catch (error) {
-      console.error('Error marking notification as sent:', error);
+      logger.error('Error marking notification as sent', { error: error.message });
     }
   }
 
@@ -353,9 +354,9 @@ class RetentionNotificationService {
     const query = `DELETE FROM push_subscriptions WHERE candidate_id = ?`;
     try {
       db.prepare(query).run(userId);
-      console.log(`🗑️  Removed invalid subscription for user ${userId}`);
+      logger.info('Removed invalid subscription', { userId });
     } catch (error) {
-      console.error('Error removing invalid subscription:', error);
+      logger.error('Error removing invalid subscription', { error: error.message });
     }
   }
 
@@ -418,9 +419,9 @@ class RetentionNotificationService {
         await this.sendJobScarcityAlerts(job);
       }
 
-      console.log(`📊 Processed ${scarcityJobs.length} jobs with slot scarcity`);
+      logger.debug('Processed jobs with slot scarcity', { count: scarcityJobs.length });
     } catch (error) {
-      console.error('Error checking job slot scarcity:', error);
+      logger.error('Error checking job slot scarcity', { error: error.message });
     }
   }
 
@@ -465,7 +466,7 @@ class RetentionNotificationService {
         }
       }
     } catch (error) {
-      console.error('Failed to send job scarcity alerts:', error);
+      logger.error('Failed to send job scarcity alerts', { error: error.message });
     }
   }
 
@@ -498,9 +499,9 @@ class RetentionNotificationService {
         await this.sendTimeUrgencyAlerts(job);
       }
 
-      console.log(`⏰ Processed ${urgentJobs.length} time-limited opportunities`);
+      logger.debug('Processed time-limited opportunities', { count: urgentJobs.length });
     } catch (error) {
-      console.error('Error checking time-limited opportunities:', error);
+      logger.error('Error checking time-limited opportunities', { error: error.message });
     }
   }
 
@@ -544,7 +545,7 @@ class RetentionNotificationService {
         }
       }
     } catch (error) {
-      console.error('Failed to send time urgency alerts:', error);
+      logger.error('Failed to send time urgency alerts', { error: error.message });
     }
   }
 
@@ -577,9 +578,9 @@ class RetentionNotificationService {
         await this.sendPeerActivityAlerts(surge);
       }
 
-      console.log(`👥 Processed ${activitySurges.length} peer activity surges`);
+      logger.debug('Processed peer activity surges', { count: activitySurges.length });
     } catch (error) {
-      console.error('Error checking peer activity surges:', error);
+      logger.error('Error checking peer activity surges', { error: error.message });
     }
   }
 
@@ -627,7 +628,7 @@ class RetentionNotificationService {
         }
       }
     } catch (error) {
-      console.error('Failed to send peer activity alerts:', error);
+      logger.error('Failed to send peer activity alerts', { error: error.message });
     }
   }
 
@@ -650,9 +651,9 @@ class RetentionNotificationService {
         await this.sendCompetitivePressureAlerts(job);
       }
 
-      console.log(`⚔️ Processed ${competitiveJobs.length} competitive job opportunities`);
+      logger.debug('Processed competitive job opportunities', { count: competitiveJobs.length });
     } catch (error) {
-      console.error('Error checking competitive pressure:', error);
+      logger.error('Error checking competitive pressure', { error: error.message });
     }
   }
 
@@ -694,7 +695,7 @@ class RetentionNotificationService {
         }
       }
     } catch (error) {
-      console.error('Failed to send competitive pressure alerts:', error);
+      logger.error('Failed to send competitive pressure alerts', { error: error.message });
     }
   }
 
@@ -724,9 +725,9 @@ class RetentionNotificationService {
         }
       }
 
-      console.log(`🔥 Processed streak protection for ${candidatesAtRisk.length} candidates`);
+      logger.debug('Processed streak protection', { candidateCount: candidatesAtRisk.length });
     } catch (error) {
-      console.error('Error checking streak protection opportunities:', error);
+      logger.error('Error checking streak protection opportunities', { error: error.message });
     }
   }
 
@@ -758,7 +759,7 @@ class RetentionNotificationService {
         this.markNotificationSent(candidate.id, 'streak_protection_fomo');
       }
     } catch (error) {
-      console.error('Failed to send streak protection alert:', error);
+      logger.error('Failed to send streak protection alert', { error: error.message });
     }
   }
 
@@ -790,9 +791,9 @@ class RetentionNotificationService {
         await this.sendTierCompetitionAlerts(achievement);
       }
 
-      console.log(`🏆 Processed ${recentTierAchievements.length} tier competition opportunities`);
+      logger.debug('Processed tier competition opportunities', { count: recentTierAchievements.length });
     } catch (error) {
-      console.error('Error checking tier competition alerts:', error);
+      logger.error('Error checking tier competition alerts', { error: error.message });
     }
   }
 
@@ -837,7 +838,7 @@ class RetentionNotificationService {
         }
       }
     } catch (error) {
-      console.error('Failed to send tier competition alerts:', error);
+      logger.error('Failed to send tier competition alerts', { error: error.message });
     }
   }
 
@@ -851,7 +852,7 @@ class RetentionNotificationService {
         await fomo.processImmediateFOMO(candidateId, eventType, eventData);
       }
     } catch (error) {
-      console.error('Failed to integrate with FOMO engine:', error);
+      logger.error('Failed to integrate with FOMO engine', { error: error.message });
     }
   }
 
@@ -880,9 +881,9 @@ class RetentionNotificationService {
         });
       }
 
-      console.log(`✅ Sent ${payload.data.type} notification to ${user.name}`);
+      logger.info('Sent notification', { type: payload.data.type, userName: user.name });
     } catch (error) {
-      console.error(`❌ Failed to send notification to ${user.name}:`, error);
+      logger.error('Failed to send notification', { userName: user.name, error: error.message });
 
       // Remove invalid subscription
       if (error.statusCode === 410) {

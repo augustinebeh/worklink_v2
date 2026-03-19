@@ -8,6 +8,8 @@ const router = express.Router();
 const EPUSer19Monitor = require('../../../../services/gebiz-intelligence/epu-ser-19-monitor');
 const EPUSer19Scraper = require('../../../../services/gebiz-intelligence/epu-ser-19-scraper');
 const { authenticateToken, requireAdmin } = require('../../../../middleware/auth');
+const { createLogger } = require('../../../../utils/structured-logger');
+const logger = createLogger('epu-intelligence');
 
 // Initialize services
 const epuMonitor = new EPUSer19Monitor();
@@ -40,11 +42,11 @@ router.get('/dashboard', authenticateToken, requireAdmin, async (req, res) => {
       }
     });
   } catch (error) {
-    console.error('EPU dashboard error:', error);
+    logger.error('EPU dashboard error', { error: error.message });
     res.status(500).json({
       success: false,
       message: 'Failed to generate EPU/SER/19 dashboard',
-      error: error.message
+      error: 'Internal server error'
     });
   }
 });
@@ -119,11 +121,11 @@ router.get('/opportunities', authenticateToken, requireAdmin, async (req, res) =
       }
     });
   } catch (error) {
-    console.error('EPU opportunities error:', error);
+    logger.error('EPU opportunities error', { error: error.message });
     res.status(500).json({
       success: false,
       message: 'Failed to fetch EPU/SER/19 opportunities',
-      error: error.message
+      error: 'Internal server error'
     });
   }
 });
@@ -192,11 +194,11 @@ router.get('/opportunity/:id', authenticateToken, requireAdmin, async (req, res)
     });
 
   } catch (error) {
-    console.error('EPU opportunity detail error:', error);
+    logger.error('EPU opportunity detail error', { error: error.message });
     res.status(500).json({
       success: false,
       message: 'Failed to fetch EPU/SER/19 opportunity details',
-      error: error.message
+      error: 'Internal server error'
     });
   }
 });
@@ -207,7 +209,7 @@ router.get('/opportunity/:id', authenticateToken, requireAdmin, async (req, res)
  */
 router.post('/scan', authenticateToken, requireAdmin, async (req, res) => {
   try {
-    console.log('🚀 Starting EPU/SER/19 specialized scan...');
+    logger.info('Starting EPU/SER/19 specialized scan');
 
     // Run the specialized scraper
     const results = await epuScraper.scrapeEPUTenders();
@@ -229,11 +231,11 @@ router.post('/scan', authenticateToken, requireAdmin, async (req, res) => {
     });
 
   } catch (error) {
-    console.error('EPU scan error:', error);
+    logger.error('EPU scan error', { error: error.message });
     res.status(500).json({
       success: false,
       message: 'EPU/SER/19 scan failed',
-      error: error.message
+      error: 'Internal server error'
     });
   }
 });
@@ -275,7 +277,7 @@ router.get('/competitors', authenticateToken, requireAdmin, async (req, res) => 
         comp.competitive_advantages = comp.competitive_advantages ? JSON.parse(comp.competitive_advantages) : [];
         comp.weaknesses = comp.weaknesses ? JSON.parse(comp.weaknesses) : [];
       } catch (e) {
-        console.log('Error parsing competitor JSON fields:', e.message);
+        logger.warn('Error parsing competitor JSON fields', { error: e.message });
       }
     });
 
@@ -292,11 +294,11 @@ router.get('/competitors', authenticateToken, requireAdmin, async (req, res) => 
     });
 
   } catch (error) {
-    console.error('EPU competitors error:', error);
+    logger.error('EPU competitors error', { error: error.message });
     res.status(500).json({
       success: false,
       message: 'Failed to fetch EPU/SER/19 competitor analysis',
-      error: error.message
+      error: 'Internal server error'
     });
   }
 });
@@ -316,8 +318,9 @@ router.get('/pricing-intelligence', authenticateToken, requireAdmin, async (req,
 
     epuMonitor.initDB();
 
-    let whereClause = 'WHERE award_date >= date("now", "-' + parseInt(months_back) + ' months")';
-    const params = [];
+    const monthsBackSafe = Math.max(1, Math.min(120, parseInt(months_back) || 12));
+    let whereClause = 'WHERE award_date >= date("now", ?)';
+    const params = [`-${monthsBackSafe} months`];
 
     if (service_type) {
       whereClause += ' AND service_type = ?';
@@ -385,11 +388,11 @@ router.get('/pricing-intelligence', authenticateToken, requireAdmin, async (req,
     });
 
   } catch (error) {
-    console.error('EPU pricing intelligence error:', error);
+    logger.error('EPU pricing intelligence error', { error: error.message });
     res.status(500).json({
       success: false,
       message: 'Failed to fetch EPU/SER/19 pricing intelligence',
-      error: error.message
+      error: 'Internal server error'
     });
   }
 });
@@ -437,11 +440,11 @@ router.get('/alerts', authenticateToken, requireAdmin, async (req, res) => {
     });
 
   } catch (error) {
-    console.error('EPU alerts error:', error);
+    logger.error('EPU alerts error', { error: error.message });
     res.status(500).json({
       success: false,
       message: 'Failed to fetch EPU/SER/19 alerts',
-      error: error.message
+      error: 'Internal server error'
     });
   }
 });
@@ -460,11 +463,11 @@ router.get('/market-report', authenticateToken, requireAdmin, async (req, res) =
     });
 
   } catch (error) {
-    console.error('EPU market report error:', error);
+    logger.error('EPU market report error', { error: error.message });
     res.status(500).json({
       success: false,
       message: 'Failed to generate EPU/SER/19 market report',
-      error: error.message
+      error: 'Internal server error'
     });
   }
 });

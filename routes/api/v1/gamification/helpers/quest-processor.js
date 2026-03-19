@@ -13,11 +13,27 @@ const logger = createLogger('gamification-quests');
  * @returns {Array} Parsed quests with requirement and target properties
  */
 function parseQuests(quests) {
-  return quests.map(q => ({
-    ...q,
-    requirement: JSON.parse(q.requirement || '{}'),
-    target: JSON.parse(q.requirement || '{}').count || 1,
-  }));
+  return quests.map(q => {
+    const requirement = JSON.parse(q.requirement || '{}');
+    const target = requirement.count || 1;
+
+    // Compute status for frontend rendering
+    let status = 'available';
+    if (q.claimed) {
+      status = 'claimed';
+    } else if (q.completed) {
+      status = 'claimable';
+    } else if (q.started_at) {
+      status = 'in_progress';
+    }
+
+    return {
+      ...q,
+      requirement,
+      target,
+      status,
+    };
+  });
 }
 
 /**
@@ -85,7 +101,7 @@ function updateQuestProgress(db, questId, candidateId, incrementBy = 1) {
       progress: newProgress,
       target,
       completed: isCompleted,
-      questName: quest.name
+      questName: quest.title
     };
 
   } catch (error) {

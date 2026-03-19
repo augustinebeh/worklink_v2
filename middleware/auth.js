@@ -9,9 +9,16 @@ const jwt = require('jsonwebtoken');
 const { db } = require('../db');
 const logger = require('../utils/logger');
 
-// JWT secret from environment or fallback
-const JWT_SECRET = process.env.JWT_SECRET || 'worklink-v2-secret-key';
+// JWT secret from environment - NO FALLBACK (must be configured)
+const JWT_SECRET = process.env.JWT_SECRET;
 const JWT_EXPIRES_IN = process.env.JWT_EXPIRES_IN || '24h';
+
+if (!JWT_SECRET) {
+  logger.error('CRITICAL: JWT_SECRET environment variable is not set. Authentication will not work.');
+  if (process.env.NODE_ENV === 'production') {
+    throw new Error('JWT_SECRET must be set in production');
+  }
+}
 
 /**
  * Generate JWT token for user
@@ -63,14 +70,9 @@ function generateAdminToken(admin) {
  */
 function verifyToken(token) {
   try {
-    // Handle legacy demo tokens
-    if (token === 'demo-admin-token') {
-      return { id: 'ADM_DEV', role: 'admin', name: 'Demo Admin', email: 'admin@worklink.sg' };
-    }
-
-    // If JWT_SECRET is not configured, allow access (no JWT security)
     if (!JWT_SECRET) {
-      return { id: 'ADM_DEV', role: 'admin', name: 'Dev Admin', email: 'dev@worklink.sg' }; // Default admin access
+      logger.error('Cannot verify token: JWT_SECRET not configured');
+      return null;
     }
 
     return jwt.verify(token, JWT_SECRET, {
@@ -100,11 +102,6 @@ function extractToken(req) {
     return req.cookies.token;
   }
 
-  // Check query parameter (for development/testing)
-  if (req.query.token) {
-    return req.query.token;
-  }
-
   return null;
 }
 
@@ -126,24 +123,15 @@ function getUserFromDatabase(userId, userType = 'candidate') {
         WHERE id = ?
       `).get(userId);
     } else if (userType === 'admin' || userType === 'support') {
-      // In a real implementation, you'd have admin/support tables
-      // For now, we'll simulate based on ID patterns
-      if (userId.startsWith('ADM_') || userId === 'ADMIN001') {
+      // Admin users are verified by JWT role claim issued during login.
+      // Only ADMIN001 (the env-configured admin) is a valid admin ID.
+      if (userId === 'ADMIN001') {
         user = {
           id: userId,
-          name: 'Admin User',
-          email: 'admin@worklink.sg',
+          name: 'Admin',
+          email: process.env.ADMIN_EMAIL || 'admin@worklink.sg',
           role: 'admin',
           type: 'admin',
-          status: 'active'
-        };
-      } else if (userId.startsWith('SUP_')) {
-        user = {
-          id: userId,
-          name: 'Support User',
-          email: 'support@worklink.sg',
-          role: 'support',
-          type: 'support',
           status: 'active'
         };
       }
@@ -151,7 +139,7 @@ function getUserFromDatabase(userId, userType = 'candidate') {
 
     return user;
   } catch (error) {
-    console.error('Database error in getUserFromDatabase:', error);
+    logger.error('Database error in getUserFromDatabase', { error: error.message });
     return null;
   }
 }
@@ -183,21 +171,15 @@ function authenticateUser(req, res, next) {
       });
     }
 
-    // For development mode (no JWT_SECRET), use the returned user directly
-    let user;
-    if (!process.env.JWT_SECRET && decoded.id === 'ADM_DEV') {
-      user = decoded; // Use the development admin object directly
-    } else {
-      // Get user from database for production JWT tokens
-      user = getUserFromDatabase(decoded.id, decoded.type || decoded.role);
+    // Get user from database
+    const user = getUserFromDatabase(decoded.id, decoded.type || decoded.role);
 
-      if (!user) {
-        return res.status(401).json({
-          success: false,
-          error: 'User not found or inactive',
-          code: 'USER_NOT_FOUND'
-        });
-      }
+    if (!user) {
+      return res.status(401).json({
+        success: false,
+        error: 'User not found or inactive',
+        code: 'USER_NOT_FOUND'
+      });
     }
 
     // Check if user is active
@@ -239,11 +221,13 @@ function optionalAuth(req, res, next) {
 
     if (token) {
       const decoded = verifyToken(token);
-      const user = getUserFromDatabase(decoded.id, decoded.type);
+      if (decoded) {
+        const user = getUserFromDatabase(decoded.id, decoded.type);
 
-      if (user && user.status === 'active') {
-        req.user = user;
-        req.token = token;
+        if (user && user.status === 'active') {
+          req.user = user;
+          req.token = token;
+        }
       }
     }
 
@@ -343,58 +327,11 @@ function authenticateAdminOrOwner(req, res, next) {
 }
 
 /**
- * Legacy token support for migration period
- * Supports both JWT tokens and old demo tokens
- * TODO: Remove after migration to JWT
+ * Legacy auth - now delegates to standard authenticateUser
+ * Kept for backward compatibility of imports only
  */
 function legacyAuth(req, res, next) {
-  const authHeader = req.headers.authorization;
-  const token = authHeader && authHeader.split(' ')[1];
-
-  if (!token) {
-    return res.status(401).json({
-      success: false,
-      error: 'Access token required'
-    });
-  }
-
-  // Try JWT first
-  const decoded = verifyToken(token);
-  if (decoded) {
-    req.user = decoded;
-    return next();
-  }
-
-  // Fall back to legacy demo tokens (temporary)
-  if (token === 'demo-admin-token') {
-    req.user = {
-      id: 'ADMIN001',
-      email: 'admin@worklink.sg',
-      name: 'Admin',
-      role: 'admin'
-    };
-    return next();
-  }
-
-  if (token.startsWith('demo-token-')) {
-    const candidateId = token.replace('demo-token-', '');
-    const candidate = db.prepare('SELECT * FROM candidates WHERE id = ?').get(candidateId);
-
-    if (candidate) {
-      req.user = {
-        id: candidate.id,
-        email: candidate.email,
-        name: candidate.name,
-        role: 'candidate'
-      };
-      return next();
-    }
-  }
-
-  return res.status(401).json({
-    success: false,
-    error: 'Invalid or expired token'
-  });
+  return authenticateUser(req, res, next);
 }
 
 module.exports = {

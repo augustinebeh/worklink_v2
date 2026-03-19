@@ -5,6 +5,8 @@
  */
 
 const sgMail = require('@sendgrid/mail');
+const { createLogger } = require('../../utils/structured-logger');
+const logger = createLogger('notification-email');
 
 class EmailService {
   constructor() {
@@ -20,13 +22,13 @@ class EmailService {
     const apiKey = process.env.SENDGRID_API_KEY;
     
     if (!apiKey) {
-      console.warn('⚠️  SendGrid API key not found. Email notifications disabled.');
+      logger.warn('SendGrid API key not found, email notifications disabled');
       return false;
     }
     
     sgMail.setApiKey(apiKey);
     this.initialized = true;
-    console.log('✅ Email service initialized (SendGrid)');
+    logger.info('Email service initialized (SendGrid)');
     return true;
   }
 
@@ -394,7 +396,7 @@ class EmailService {
         message: `Email sent to ${emails.length} recipient(s)`
       };
     } catch (error) {
-      console.error('Email send error:', error);
+      logger.error('Email send error', { error: error.message });
       return {
         success: false,
         error: error.message,

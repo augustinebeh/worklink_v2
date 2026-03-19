@@ -9,6 +9,7 @@ const router = express.Router();
 const { db } = require('../../../../../db');
 const { createLogger } = require('../../../../../utils/structured-logger');
 const { getLeaderboard } = require('../helpers/database-queries');
+const { authenticateToken } = require('../../../../../middleware/auth');
 
 const logger = createLogger('gamification-leaderboard');
 
@@ -16,7 +17,7 @@ const logger = createLogger('gamification-leaderboard');
  * GET /leaderboard
  * Get leaderboard with ranking and filtering options
  */
-router.get('/leaderboard', (req, res) => {
+router.get('/leaderboard', authenticateToken, (req, res) => {
   try {
     const { period = 'all', limit = 20, tier } = req.query;
     let parsedLimit = parseInt(limit);
@@ -28,34 +29,39 @@ router.get('/leaderboard', (req, res) => {
 
     let leaderboardQuery = `
       SELECT
-        id,
-        name,
-        xp,
-        level,
-        total_jobs_completed,
-        rating,
-        profile_photo,
-        streak_days,
-        profile_flair,
-        selected_border_id,
-        current_tier,
-        ROW_NUMBER() OVER (ORDER BY xp DESC, total_jobs_completed DESC) as rank
-      FROM candidates
-      WHERE status = 'active' AND xp > 0
+        c.id,
+        c.name,
+        c.xp,
+        c.level,
+        c.total_jobs_completed,
+        c.rating,
+        c.profile_photo,
+        c.streak_days,
+        c.profile_flair,
+        c.selected_border_id,
+        c.current_tier,
+        ROW_NUMBER() OVER (ORDER BY c.xp DESC, c.total_jobs_completed DESC) as rank,
+        pb.id as border_id,
+        pb.name as border_name,
+        pb.image_url as border_image_url,
+        pb.rarity as border_rarity
+      FROM candidates c
+      LEFT JOIN profile_borders pb ON c.selected_border_id = pb.id
+      WHERE c.status = 'active' AND c.xp > 0
     `;
 
     let params = [];
 
     // Add tier filter if specified
     if (tier) {
-      leaderboardQuery += ` AND current_tier = ?`;
+      leaderboardQuery += ` AND c.current_tier = ?`;
       params.push(tier);
     }
 
     // Add period filter (future enhancement)
     // For now, we only support 'all' time
 
-    leaderboardQuery += ` ORDER BY xp DESC, total_jobs_completed DESC LIMIT ?`;
+    leaderboardQuery += ` ORDER BY c.xp DESC, c.total_jobs_completed DESC LIMIT ?`;
     params.push(parsedLimit);
 
     const leaderboard = db.prepare(leaderboardQuery).all(...params);
@@ -75,19 +81,16 @@ router.get('/leaderboard', (req, res) => {
 
     const { total } = db.prepare(countQuery).get(...countParams);
 
-    // Add border information for display
+    // Extract border information from the joined query results
     const leaderboardWithBorders = leaderboard.map(candidate => {
-      let borderInfo = null;
-      if (candidate.selected_border_id) {
-        borderInfo = db.prepare(`
-          SELECT id, name, image_url, rarity
-          FROM profile_borders
-          WHERE id = ?
-        `).get(candidate.selected_border_id);
-      }
+      const { border_id, border_name, border_image_url, border_rarity, ...candidateData } = candidate;
+
+      const borderInfo = border_id
+        ? { id: border_id, name: border_name, image_url: border_image_url, rarity: border_rarity }
+        : null;
 
       return {
-        ...candidate,
+        ...candidateData,
         border: borderInfo
       };
     });
@@ -121,7 +124,7 @@ router.get('/leaderboard', (req, res) => {
     });
     res.status(500).json({
       success: false,
-      error: error.message
+      error: 'Internal server error'
     });
   }
 });
@@ -130,7 +133,7 @@ router.get('/leaderboard', (req, res) => {
  * GET /leaderboard/rank/:candidateId
  * Get a specific candidate's ranking and nearby candidates
  */
-router.get('/leaderboard/rank/:candidateId', (req, res) => {
+router.get('/leaderboard/rank/:candidateId', authenticateToken, (req, res) => {
   try {
     const candidateId = req.params.candidateId;
     const { context = 5 } = req.query; // Number of candidates to show above/below
@@ -203,7 +206,7 @@ router.get('/leaderboard/rank/:candidateId', (req, res) => {
     });
     res.status(500).json({
       success: false,
-      error: error.message
+      error: 'Internal server error'
     });
   }
 });

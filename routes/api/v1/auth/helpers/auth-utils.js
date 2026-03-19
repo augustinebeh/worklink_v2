@@ -127,29 +127,7 @@ async function verifyGoogleToken(idToken) {
     return null;
   }
 
-  // DEV MODE: Skip backend verification (frontend already verified)
-  if (process.env.NODE_ENV !== 'production') {
-    logger.warn('🔧 DEV MODE: Skipping Google token verification (trusting frontend)');
-
-    // Decode JWT without verification (dev only!)
-    try {
-      const payload = JSON.parse(Buffer.from(idToken.split('.')[1], 'base64').toString());
-      return {
-        googleId: payload.sub,
-        email: payload.email,
-        emailVerified: true,
-        name: payload.name,
-        picture: payload.picture,
-        givenName: payload.given_name,
-        familyName: payload.family_name,
-      };
-    } catch (error) {
-      logger.error('Failed to decode JWT:', error.message);
-      return null;
-    }
-  }
-
-  // PRODUCTION: Verify with Google API
+  // Always verify with Google API - never skip verification
   try {
     // Use Google's tokeninfo endpoint for verification with axios
     const response = await axios.get(`https://oauth2.googleapis.com/tokeninfo`, {
@@ -207,6 +185,12 @@ function processReferral(newCandidateId, newCandidateName, referralCode) {
     const referrer = db.prepare('SELECT id, name FROM candidates WHERE referral_code = ?').get(referralCode);
     if (!referrer) {
       logger.warn(`Invalid referral code: ${referralCode}`);
+      return null;
+    }
+
+    // Prevent self-referral
+    if (referrer.id === newCandidateId) {
+      logger.warn(`Self-referral attempt blocked: ${newCandidateId}`);
       return null;
     }
 

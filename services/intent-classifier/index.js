@@ -17,6 +17,8 @@ const patterns = require('./patterns');
 const singlishProcessor = require('./singlish-processor');
 const contextAnalyzer = require('./context-analyzer');
 const confidence = require('./confidence-calculator');
+const { createLogger } = require('../../utils/structured-logger');
+const logger = createLogger('intent-classifier');
 
 // Core intent categories
 const INTENT_CATEGORIES = {
@@ -75,7 +77,7 @@ function classifyIntent(message, context = {}) {
 
   // Performance check
   if (finalResult.processingTimeMs > 100) {
-    console.warn(`[Intent Classifier] Slow classification: ${finalResult.processingTimeMs}ms for "${message.substring(0, 50)}..."`);
+    logger.warn('Slow classification', { processing_time_ms: finalResult.processingTimeMs, message_preview: message.substring(0, 50) });
   }
 
   return finalResult;
@@ -277,7 +279,7 @@ function classifyBatch(messages) {
   const totalTime = Date.now() - startTime;
   const avgTime = totalTime / messages.length;
 
-  console.log(`[Intent Classifier] Batch processed ${messages.length} messages in ${totalTime}ms (avg: ${avgTime.toFixed(1)}ms)`);
+  logger.info('Batch classification complete', { count: messages.length, total_time_ms: totalTime, avg_time_ms: parseFloat(avgTime.toFixed(1)) });
 
   return results;
 }

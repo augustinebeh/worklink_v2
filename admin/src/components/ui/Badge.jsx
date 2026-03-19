@@ -41,7 +41,7 @@ const statusVariants = {
   expired: 'neutral',
 };
 
-export default function Badge({ 
+export function Badge({ 
   children, 
   variant,
   status,
@@ -112,3 +112,5 @@ export function StatusBadge({ status }) {
     </Badge>
   );
 }
+
+export default Badge;

@@ -7,6 +7,8 @@
 
 const FactBasedTemplateSystem = require('./index');
 const { db } = require('../../db');
+const { createLogger } = require('../../utils/structured-logger');
+const logger = createLogger('template-integration-bridge');
 
 class TemplateIntegrationBridge {
   constructor() {
@@ -14,7 +16,7 @@ class TemplateIntegrationBridge {
     this.isEnabled = true;
     this.fallbackToAI = false; // Set to true to fallback to original AI if template fails
 
-    console.log('🌉 [Integration Bridge] Template response integration initialized');
+    logger.info('Template response integration initialized');
   }
 
   /**
@@ -23,7 +25,7 @@ class TemplateIntegrationBridge {
    */
   async processIncomingMessage(candidateId, message, channel = 'app') {
     try {
-      console.log(`🌉 [Bridge] Processing message for ${candidateId} via template system`);
+      logger.info(`Processing message for ${candidateId} via template system`);
 
       // Use fact-based template system
       const templateResponse = await this.templateSystem.processMessage(candidateId, message, {
@@ -32,7 +34,7 @@ class TemplateIntegrationBridge {
       });
 
       if (templateResponse && !templateResponse.error) {
-        console.log(`✅ [Bridge] Template system handled message successfully`);
+        logger.info('Template system handled message successfully');
 
         // Send response if in auto mode
         if (templateResponse.content && !templateResponse.requiresAdminAttention) {
@@ -48,12 +50,12 @@ class TemplateIntegrationBridge {
 
       // Fallback to original AI if enabled and template fails
       if (this.fallbackToAI) {
-        console.log(`⚠️ [Bridge] Template system failed, falling back to AI`);
+        logger.warn('Template system failed, falling back to AI');
         return await this.fallbackToOriginalAI(candidateId, message, channel);
       }
 
       // Otherwise, escalate to admin
-      console.log(`🚨 [Bridge] Template system couldn't handle message, escalating to admin`);
+      logger.warn('Template system could not handle message, escalating to admin');
       return {
         mode: 'escalated',
         response: templateResponse,
@@ -61,7 +63,7 @@ class TemplateIntegrationBridge {
       };
 
     } catch (error) {
-      console.error('❌ [Bridge] Processing error:', error);
+      logger.error('Processing error', { error: error.message });
 
       if (this.fallbackToAI) {
         return await this.fallbackToOriginalAI(candidateId, message, channel);
@@ -87,7 +89,7 @@ class TemplateIntegrationBridge {
     try {
       const messaging = require('../messaging');
 
-      console.log(`📤 [Bridge] Sending template response to ${candidateId} via ${channel}`);
+      logger.info(`Sending template response to ${candidateId} via ${channel}`);
 
       const result = await messaging.sendToCandidate(candidateId, response.content, {
         channel: channel,
@@ -111,13 +113,13 @@ class TemplateIntegrationBridge {
           channel: channel
         });
 
-        console.log(`✅ [Bridge] Template response sent successfully`);
+        logger.info('Template response sent successfully');
       }
 
       return result;
 
     } catch (error) {
-      console.error('❌ [Bridge] Error sending template response:', error);
+      logger.error('Error sending template response', { error: error.message });
       throw error;
     }
   }
@@ -127,7 +129,7 @@ class TemplateIntegrationBridge {
    */
   async fallbackToOriginalAI(candidateId, message, channel) {
     try {
-      console.log(`🤖 [Bridge] Falling back to original AI system`);
+      logger.info('Falling back to original AI system');
 
       // Load original AI chat service
       const originalAI = require('../ai-chat/index');
@@ -138,7 +140,7 @@ class TemplateIntegrationBridge {
       if (aiResponse) {
         // Filter out problematic responses even from AI fallback
         if (this.isProblematicResponse(aiResponse.content)) {
-          console.log(`⚠️ [Bridge] AI fallback response filtered as problematic`);
+          logger.warn('AI fallback response filtered as problematic');
 
           // Create escalation instead
           await this.templateSystem.escalationHandler.createEscalation(
@@ -173,7 +175,7 @@ class TemplateIntegrationBridge {
       throw new Error('AI fallback failed');
 
     } catch (error) {
-      console.error('❌ [Bridge] AI fallback error:', error);
+      logger.error('AI fallback error', { error: error.message });
 
       return {
         mode: 'error',
@@ -233,7 +235,7 @@ class TemplateIntegrationBridge {
       return result;
 
     } catch (error) {
-      console.error('❌ [Bridge] Error sending AI response:', error);
+      logger.error('Error sending AI response', { error: error.message });
       throw error;
     }
   }
@@ -258,7 +260,7 @@ class TemplateIntegrationBridge {
         response.confidence || 0.8
       );
     } catch (error) {
-      console.error('❌ [Bridge] Error logging successful response:', error);
+      logger.error('Error logging successful response', { error: error.message });
     }
   }
 
@@ -281,7 +283,7 @@ class TemplateIntegrationBridge {
         response.confidence || 0.8
       );
     } catch (error) {
-      console.error('❌ [Bridge] Error logging AI fallback:', error);
+      logger.error('Error logging AI fallback', { error: error.message });
     }
   }
 
@@ -309,7 +311,7 @@ class TemplateIntegrationBridge {
         CREATE INDEX IF NOT EXISTS idx_bridge_logs_created ON template_bridge_logs(created_at);
       `);
     } catch (error) {
-      console.error('❌ [Bridge] Error creating tables:', error);
+      logger.error('Error creating tables', { error: error.message });
     }
   }
 
@@ -346,7 +348,7 @@ class TemplateIntegrationBridge {
       };
 
     } catch (error) {
-      console.error('❌ [Bridge] Error getting metrics:', error);
+      logger.error('Error getting metrics', { error: error.message });
       return null;
     }
   }
@@ -356,7 +358,7 @@ class TemplateIntegrationBridge {
    */
   setEnabled(enabled) {
     this.isEnabled = enabled;
-    console.log(`🌉 [Bridge] Template system ${enabled ? 'enabled' : 'disabled'}`);
+    logger.info(`Template system ${enabled ? 'enabled' : 'disabled'}`);
   }
 
   /**
@@ -364,7 +366,7 @@ class TemplateIntegrationBridge {
    */
   configureFallback(enableFallback) {
     this.fallbackToAI = enableFallback;
-    console.log(`🌉 [Bridge] AI fallback ${enableFallback ? 'enabled' : 'disabled'}`);
+    logger.info(`AI fallback ${enableFallback ? 'enabled' : 'disabled'}`);
   }
 
   /**

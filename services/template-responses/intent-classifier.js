@@ -5,6 +5,9 @@
  * intention without making promises about responses or timing
  */
 
+const { createLogger } = require('../../utils/structured-logger');
+const logger = createLogger('template-intent-classifier');
+
 class IntentClassifier {
   constructor() {
     this.intentPatterns = this.initializeIntentPatterns();
@@ -173,7 +176,7 @@ class IntentClassifier {
     bestMatch.requiresRealData = this.requiresRealData(bestMatch.category);
     bestMatch.messageTone = this.analyzeTone(messageLower);
 
-    console.log(`🎯 [Intent] Classified "${message.substring(0, 30)}..." as ${bestMatch.category} (${bestMatch.confidence.toFixed(2)})`);
+    logger.info('Intent classified', { message_preview: message.substring(0, 30), category: bestMatch.category, confidence: bestMatch.confidence.toFixed(2) });
 
     return bestMatch;
   }

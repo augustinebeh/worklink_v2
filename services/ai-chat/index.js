@@ -15,13 +15,15 @@ const { askClaude } = require('../../utils/claude');
 const ml = require('../ml');
 const prompts = require('./prompts');
 const tools = require('./tools');
+const { createLogger } = require('../../utils/structured-logger');
+const logger = createLogger('ai-chat');
 
 /**
  * Get AI settings
  */
 function getSettings() {
   const rows = db.prepare('SELECT key, value FROM ai_settings').all();
-  console.log(`🤖 [AI] getSettings: Found ${rows.length} settings in database`);
+  logger.debug('Retrieved AI settings from database', { count: rows.length });
   const settings = {};
   rows.forEach(row => {
     if (row.value === 'true') settings[row.key] = true;
@@ -29,7 +31,7 @@ function getSettings() {
     else if (!isNaN(parseFloat(row.value))) settings[row.key] = parseFloat(row.value);
     else settings[row.key] = row.value;
   });
-  console.log(`🤖 [AI] getSettings result:`, JSON.stringify(settings));
+  logger.debug('AI settings result', { settings });
   return settings;
 }
 
@@ -40,10 +42,10 @@ function getSettings() {
 function getConversationMode(candidateId) {
   const settings = getSettings();
 
-  console.log(`🤖 [AI] getConversationMode: ai_enabled=${settings.ai_enabled} (type: ${typeof settings.ai_enabled})`);
+  logger.debug('Getting conversation mode', { aiEnabled: settings.ai_enabled, type: typeof settings.ai_enabled });
 
   if (!settings.ai_enabled) {
-    console.log(`🤖 [AI] AI is disabled globally, returning 'off'`);
+    logger.debug('AI is disabled globally, returning off');
     return 'off';
   }
 
@@ -52,16 +54,16 @@ function getConversationMode(candidateId) {
     SELECT mode FROM conversation_ai_settings WHERE candidate_id = ?
   `).get(candidateId);
 
-  console.log(`🤖 [AI] Conversation override for ${candidateId}:`, conversationSettings || 'none');
+  logger.debug('Conversation override check', { candidateId, override: conversationSettings || 'none' });
 
   if (conversationSettings && conversationSettings.mode !== 'inherit') {
-    console.log(`🤖 [AI] Using conversation override: ${conversationSettings.mode}`);
+    logger.debug('Using conversation override', { mode: conversationSettings.mode });
     return conversationSettings.mode;
   }
 
   // Fall back to global default
   const mode = settings.default_mode || 'off';
-  console.log(`🤖 [AI] Using global default: ${mode}`);
+  logger.debug('Using global default mode', { mode });
   return mode;
 }
 
@@ -72,7 +74,7 @@ function getSLMSettings() {
   const rows = db.prepare(`
     SELECT key, value FROM ai_settings WHERE key LIKE 'slm_%'
   `).all();
-  console.log(`🤖 [SLM] getSLMSettings: Found ${rows.length} settings in database`);
+  logger.debug('Retrieved SLM settings from database', { count: rows.length });
 
   const settings = {};
   rows.forEach(row => {
@@ -91,7 +93,7 @@ function getSLMSettings() {
     settings.max_context_messages = 10;
   }
 
-  console.log(`🤖 [SLM] getSLMSettings result:`, JSON.stringify(settings));
+  logger.debug('SLM settings result', { settings });
   return settings;
 }
 
@@ -102,10 +104,10 @@ function getSLMSettings() {
 function getConversationSLMMode(candidateId) {
   const settings = getSLMSettings();
 
-  console.log(`🤖 [SLM] getConversationSLMMode: slm_enabled=${settings.enabled} (type: ${typeof settings.enabled})`);
+  logger.debug('Getting conversation SLM mode', { slmEnabled: settings.enabled, type: typeof settings.enabled });
 
   if (!settings.enabled) {
-    console.log(`🤖 [SLM] SLM is disabled globally, returning 'off'`);
+    logger.debug('SLM is disabled globally, returning off');
     return 'off';
   }
 
@@ -114,16 +116,16 @@ function getConversationSLMMode(candidateId) {
     SELECT mode FROM conversation_slm_settings WHERE candidate_id = ?
   `).get(candidateId);
 
-  console.log(`🤖 [SLM] Conversation override for ${candidateId}:`, conversationSettings || 'none');
+  logger.debug('SLM conversation override check', { candidateId, override: conversationSettings || 'none' });
 
   if (conversationSettings && conversationSettings.mode !== 'inherit') {
-    console.log(`🤖 [SLM] Using conversation override: ${conversationSettings.mode}`);
+    logger.debug('Using SLM conversation override', { mode: conversationSettings.mode });
     return conversationSettings.mode;
   }
 
   // Fall back to global default
   const mode = settings.default_mode || 'auto';
-  console.log(`🤖 [SLM] Using global default: ${mode}`);
+  logger.debug('Using SLM global default mode', { mode });
   return mode;
 }
 
@@ -199,7 +201,7 @@ async function detectIntent(message) {
 
     return { intent: 'unknown', confidence: 0.5, keywords: [] };
   } catch (error) {
-    console.error('Intent detection failed:', error.message);
+    logger.error('Intent detection failed', { error: error.message });
     return { intent: 'unknown', confidence: 0.5, keywords: [] };
   }
 }
@@ -273,7 +275,7 @@ function getPendingUserResponse(message, candidateName) {
  * @returns {object} Response object with content, source, confidence, etc.
  */
 async function generateResponse(candidateId, message, options = {}) {
-  console.log(`🤖 [AI] generateResponse called for ${candidateId}: "${message.substring(0, 50)}..."`);
+  logger.info('generateResponse called', { candidateId, messagePreview: message.substring(0, 50) });
   const startTime = Date.now();
   const settings = getSettings();
 
@@ -282,26 +284,26 @@ async function generateResponse(candidateId, message, options = {}) {
   try {
     const smartRouterIntegration = require('./smart-router-integration');
 
-    console.log(`🎯 [SMART ROUTER] Using Smart Response Router integration for ${candidateId}`);
+    logger.info('Using Smart Response Router integration', { candidateId });
 
     const smartResponse = await smartRouterIntegration.generateResponse(candidateId, message, options);
 
-    console.log(`🎯 [SMART ROUTER] Response generated: ${smartResponse.source}, System: ${smartResponse.systemUsed}`);
+    logger.info('Smart Router response generated', { source: smartResponse.source, systemUsed: smartResponse.systemUsed });
 
     return smartResponse;
 
   } catch (smartRouterError) {
-    console.error('🚨 [SMART ROUTER] Integration failed, falling back to legacy system:', smartRouterError.message);
+    logger.error('Smart Router integration failed, falling back to legacy system', { error: smartRouterError.message });
     // Continue with legacy system below
   }
 
   // LEGACY SYSTEM (fallback)
-  console.log(`🤖 [LEGACY AI] Using legacy AI system for ${candidateId}`);
+  logger.info('Using legacy AI system', { candidateId });
 
   // IMPROVED: Use enhanced chat engine with interview scheduling for pending candidates
   const candidate = getCandidate(candidateId);
   if (candidate && candidate.status === 'pending') {
-    console.log(`🤖 [AI] IMPROVED - Candidate ${candidateId} is PENDING - using interview scheduling system`);
+    logger.info('Pending candidate detected, using interview scheduling system', { candidateId });
 
     try {
       // Use improved chat engine for pending candidates
@@ -316,7 +318,7 @@ async function generateResponse(candidateId, message, options = {}) {
 
       const responseTime = Date.now() - startTime;
 
-      console.log(`🎯 [IMPROVED AI] Enhanced pending response: ${enhancedResponse.source}, Intent: ${enhancedResponse.intent}`);
+      logger.info('Enhanced pending response generated', { source: enhancedResponse.source, intent: enhancedResponse.intent });
 
       return {
         content: enhancedResponse.content,
@@ -331,7 +333,7 @@ async function generateResponse(candidateId, message, options = {}) {
       };
 
     } catch (error) {
-      console.error('❌ Enhanced chat engine error:', error);
+      logger.error('Enhanced chat engine error', { error: error.message });
       // Fallback to basic response
       const pendingResponse = getPendingUserResponse(message, candidate.name);
       const responseTime = Date.now() - startTime;
@@ -358,7 +360,7 @@ async function generateResponse(candidateId, message, options = {}) {
     (lowerMessage.includes('pending') && (lowerMessage.includes('amount') || lowerMessage.includes('much') || lowerMessage.includes('payment')));
 
   // 1. Try improved fact-based responses first, then knowledge base
-  console.log(`🤖 [AI] Checking fact-based responses first, then knowledge base (kb_enabled=${settings.kb_enabled}, needsRealTimeData=${needsRealTimeData})`);
+  logger.debug('Checking fact-based responses first, then knowledge base', { kbEnabled: settings.kb_enabled, needsRealTimeData });
 
   try {
     // First, try improved fact-based responses for active candidates
@@ -371,7 +373,7 @@ async function generateResponse(candidateId, message, options = {}) {
     if (improvedResponse && !improvedResponse.error && improvedResponse.source !== 'llm_with_real_data') {
       const responseTime = Date.now() - startTime;
 
-      console.log(`🎯 [IMPROVED AI] Using fact-based response: ${improvedResponse.source}`);
+      logger.info('Using fact-based response', { source: improvedResponse.source });
 
       return {
         content: improvedResponse.content,
@@ -385,13 +387,13 @@ async function generateResponse(candidateId, message, options = {}) {
       };
     }
   } catch (error) {
-    console.log(`🤖 [AI] Improved engine not available, falling back to KB: ${error.message}`);
+    logger.debug('Improved engine not available, falling back to KB', { error: error.message });
   }
 
   // Fallback to knowledge base (but filter out problematic responses)
   if (settings.kb_enabled !== false && !needsRealTimeData) {
     const kbAnswer = await ml.findAnswer(message);
-    console.log(`🤖 [AI] KB answer:`, kbAnswer ? 'Found' : 'Not found');
+    logger.debug('KB answer lookup', { found: !!kbAnswer });
 
     if (kbAnswer) {
       // FILTER OUT PROBLEMATIC RESPONSES
@@ -409,7 +411,7 @@ async function generateResponse(candidateId, message, options = {}) {
       );
 
       if (hasProblematicContent) {
-        console.log(`⚠️ [AI] Filtering out problematic KB response: "${kbAnswer.answer.substring(0, 50)}..."`);
+        logger.warn('Filtering out problematic KB response', { preview: kbAnswer.answer.substring(0, 50) });
         // Don't return the problematic response, let it fall through to LLM
       } else {
         ml.recordKBHit();
@@ -441,27 +443,27 @@ async function generateResponse(candidateId, message, options = {}) {
   }
 
   // 2. Fall back to Claude LLM
-  console.log(`🤖 [AI] No KB answer, calling LLM...`);
+  logger.info('No KB answer, calling LLM');
   ml.recordLLMCall();
 
   try {
     // Get context
     const candidate = getCandidate(candidateId);
-    console.log(`🤖 [AI] Candidate found:`, candidate ? candidate.name : 'NOT FOUND');
+    logger.debug('Candidate lookup', { found: !!candidate, name: candidate?.name });
     const history = getConversationHistory(candidateId, settings.max_context_messages || 10);
     const jobs = settings.include_job_suggestions ? getAvailableJobs(5) : [];
 
     // Detect intent first (needed for tool selection)
-    console.log(`🤖 [AI] Detecting intent...`);
+    logger.debug('Detecting intent');
     const intentResult = await detectIntent(message);
-    console.log(`🤖 [AI] Intent: ${intentResult.intent}`);
+    logger.debug('Intent detected', { intent: intentResult.intent });
 
     // Execute tools based on intent to get real data
-    console.log(`🤖 [AI] Checking if tools needed...`);
+    logger.debug('Checking if tools needed');
     const toolResult = tools.executeToolForIntent(candidateId, intentResult.intent, message);
     const toolContext = toolResult ? tools.formatToolResultAsContext(toolResult) : '';
     if (toolResult) {
-      console.log(`🤖 [AI] Tool executed: ${toolResult.tool}`);
+      logger.debug('Tool executed', { tool: toolResult.tool });
     }
 
     // Build prompts with tool context
@@ -480,9 +482,9 @@ async function generateResponse(candidateId, message, options = {}) {
 
     // Generate response - slightly more tokens for normal style
     const maxTokens = responseStyle === 'normal' ? 200 : 150;
-    console.log(`🤖 [AI] Calling askClaude (style: ${responseStyle}, maxTokens: ${maxTokens})...`);
+    logger.debug('Calling askClaude', { responseStyle, maxTokens });
     const response = await askClaude(message, systemPrompt, { maxTokens });
-    console.log(`🤖 [AI] LLM response received: "${response.substring(0, 50)}..."`)
+    logger.info('LLM response received', { preview: response.substring(0, 50) });
 
     const responseTime = Date.now() - startTime;
 
@@ -514,14 +516,14 @@ async function generateResponse(candidateId, message, options = {}) {
       fromKB: false,
     };
   } catch (error) {
-    console.error('AI response generation failed:', error.message);
+    logger.error('AI response generation failed', { error: error.message });
 
     // Return a fallback message
     return {
       content: "I'm having trouble responding right now. A team member will get back to you shortly! 🙏",
       source: 'fallback',
       confidence: 0,
-      error: error.message,
+      error: 'Internal server error',
       fromKB: false,
     };
   }
@@ -543,12 +545,11 @@ async function processIncomingMessage(candidateId, content, channel = 'app') {
   const aiMode = getConversationMode(candidateId);
   const slmMode = getConversationSLMMode(candidateId);
 
-  console.log(`🤖 [PROCESSING] Message for ${candidateId}`);
-  console.log(`🤖 [PROCESSING] AI mode: ${aiMode}, SLM mode: ${slmMode}`);
+  logger.info('Processing incoming message', { candidateId, aiMode, slmMode });
 
   // Check if SLM should handle this message first
   if (slmMode !== 'off' && slmSettings.enabled) {
-    console.log(`🤖 [SLM] SLM is enabled, checking if it should handle this message...`);
+    logger.debug('SLM is enabled, checking if it should handle this message');
 
     try {
       const SLMSchedulingBridge = require('../../utils/slm-scheduling-bridge');
@@ -566,7 +567,7 @@ async function processIncomingMessage(candidateId, content, channel = 'app') {
         ));
 
       if (shouldSLMHandle) {
-        console.log(`🤖 [SLM] SLM will handle this message (reason: ${candidate?.status === 'pending' ? 'pending candidate' : slmMode})`);
+        logger.info('SLM will handle this message', { reason: candidate?.status === 'pending' ? 'pending candidate' : slmMode });
 
         const slmResponse = await slmBridge.integrateWithChatSLM(candidateId, content, {
           channel,
@@ -575,7 +576,7 @@ async function processIncomingMessage(candidateId, content, channel = 'app') {
         });
 
         if (slmResponse) {
-          console.log(`🤖 [SLM] SLM generated response: "${slmResponse.content?.substring(0, 50)}..."`);
+          logger.info('SLM generated response', { preview: slmResponse.content?.substring(0, 50) });
 
           if (slmMode === 'auto') {
             // Auto mode: Send SLM response immediately
@@ -589,9 +590,9 @@ async function processIncomingMessage(candidateId, content, channel = 'app') {
                 quickReplies: slmResponse.quickReplies || [],
                 telegramButtons: slmResponse.telegramButtons || null
               });
-              console.log(`🤖 [SLM] SLM response sent successfully via ${result.channel}`);
+              logger.info('SLM response sent successfully', { channel: result.channel });
             } catch (err) {
-              console.error(`🤖 [SLM] Failed to send SLM response:`, err.message);
+              logger.error('Failed to send SLM response', { error: err.message });
             }
           } else {
             // For suggest mode or manual review, broadcast to admins
@@ -621,31 +622,31 @@ async function processIncomingMessage(candidateId, content, channel = 'app') {
         }
       }
     } catch (error) {
-      console.error(`🤖 [SLM] SLM processing failed, falling back to AI:`, error.message);
+      logger.error('SLM processing failed, falling back to AI', { error: error.message });
     }
   }
 
   // Fall back to regular AI processing
-  console.log(`🤖 [AI] Processing with regular AI system...`);
+  logger.debug('Processing with regular AI system');
 
   if (aiMode === 'off') {
-    console.log(`🤖 [AI] AI mode is OFF, no response generated`);
+    logger.debug('AI mode is OFF, no response generated');
     return null;
   }
 
   // Generate AI response
-  console.log(`🤖 [AI] Generating AI response...`);
+  logger.debug('Generating AI response');
   const response = await generateResponse(candidateId, content, { mode: aiMode });
-  console.log(`🤖 [AI] Response generated:`, response ? `"${response.content?.substring(0, 50)}..."` : 'NULL');
+  logger.debug('Response generated', { hasResponse: !!response, preview: response?.content?.substring(0, 50) });
 
   if (aiMode === 'auto') {
     // Auto mode: Send response immediately
-    console.log(`🤖 [AI] AUTO mode: Sending response immediately`);
+    logger.info('AUTO mode: Sending response immediately');
     try {
       await sendAIResponse(candidateId, response, channel, content);
-      console.log(`🤖 [AI] AI response sent successfully`);
+      logger.info('AI response sent successfully');
     } catch (err) {
-      console.error(`🤖 [AI] Failed to send AI response:`, err.message);
+      logger.error('Failed to send AI response', { error: err.message });
     }
     return {
       mode: 'auto',
@@ -685,7 +686,7 @@ async function processIncomingMessage(candidateId, content, channel = 'app') {
  */
 async function sendAIResponse(candidateId, response, channel = 'app', originalQuestion = null) {
   const startTime = Date.now();
-  console.log(`📤 [AI ENHANCED] Sending response to ${candidateId} via ${channel}: "${response.content.substring(0, 50)}..."`);
+  logger.info('Sending AI response', { candidateId, channel, preview: response.content.substring(0, 50) });
 
   try {
     const messaging = require('../messaging');
@@ -711,7 +712,7 @@ async function sendAIResponse(candidateId, response, channel = 'app', originalQu
       routingOptions.isPendingCandidate = response.isPendingUser || false;
       routingOptions.usesRealData = response.usesRealData || false;
 
-      console.log(`📤 [AI ENHANCED] SLM response detected, using enhanced routing`, {
+      logger.info('SLM response detected, using enhanced routing', {
         candidateId,
         source: response.source,
         slmGenerated: true,
@@ -725,11 +726,11 @@ async function sendAIResponse(candidateId, response, channel = 'app', originalQu
 
     const responseTime = Date.now() - startTime;
 
-    console.log(`📤 [AI ENHANCED] Send result:`, {
+    logger.info('AI response send result', {
       success: result.success,
       channel: result.channel,
       error: result.error,
-      responseTime: `${responseTime}ms`,
+      responseTimeMs: responseTime,
       slmGenerated: routingOptions.slmGenerated || false
     });
 
@@ -745,7 +746,7 @@ async function sendAIResponse(candidateId, response, channel = 'app', originalQu
         try {
           ml.storePendingFeedback(candidateId, response.logId, originalQuestion);
         } catch (feedbackError) {
-          console.warn('Failed to store pending feedback:', feedbackError.message);
+          logger.warn('Failed to store pending feedback', { error: feedbackError.message });
         }
       }
     }
@@ -772,10 +773,10 @@ async function sendAIResponse(candidateId, response, channel = 'app', originalQu
   } catch (error) {
     const responseTime = Date.now() - startTime;
 
-    console.error(`📤 [AI ENHANCED] Failed to send AI response:`, {
+    logger.error('Failed to send AI response', {
       candidateId,
       error: error.message,
-      responseTime: `${responseTime}ms`,
+      responseTimeMs: responseTime,
       source: response.source
     });
 
@@ -786,7 +787,7 @@ async function sendAIResponse(candidateId, response, channel = 'app', originalQu
           UPDATE ai_response_logs SET status = 'send_failed' WHERE id = ?
         `).run(response.logId);
       } catch (dbError) {
-        console.warn('Failed to update log with error status:', dbError.message);
+        logger.warn('Failed to update log with error status', { error: dbError.message });
       }
     }
 
@@ -799,14 +800,14 @@ async function sendAIResponse(candidateId, response, channel = 'app', originalQu
         candidateId,
         aiLogId: response.logId,
         source: response.source,
-        error: error.message,
+        error: 'Internal server error',
         channel: channel,
         responseTime: responseTime,
         requiresManualIntervention: true,
         timestamp: new Date().toISOString()
       });
     } catch (adminNotifyError) {
-      console.error('Failed to notify admins of send failure:', adminNotifyError.message);
+      logger.error('Failed to notify admins of send failure', { error: adminNotifyError.message });
     }
 
     // Re-throw error for upstream handling

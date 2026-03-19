@@ -10,6 +10,7 @@
 
 const logger = require('../utils/logger');
 const conversationManager = require('./conversation-manager');
+const intervalRegistry = require('../utils/interval-registry');
 
 // Urgent keywords that trigger immediate notifications
 const URGENT_KEYWORDS = [
@@ -36,6 +37,12 @@ const notificationQueue = new Map();
 
 // Track first messages to identify new conversations
 const seenCandidates = new Set();
+
+// Periodically clear seenCandidates to prevent unbounded growth
+const seenCandidatesTimer = setInterval(() => {
+  if (seenCandidates.size > 1000) seenCandidates.clear();
+}, 600000); // Every 10 minutes
+intervalRegistry.register('notifications-seen-cleanup', seenCandidatesTimer, 'Smart notifications seen candidates cleanup (10m)');
 
 // Flush interval reference for cleanup
 let flushIntervalId = null;
@@ -346,6 +353,7 @@ function startAutoFlush() {
       flushNotificationQueue();
     }
   }, BATCH_FLUSH_INTERVAL_MS);
+  intervalRegistry.register('notifications-auto-flush', flushIntervalId, 'Smart notifications auto-flush (5m)');
 
   logger.info(`[SmartNotifications] Auto-flush started (every ${BATCH_FLUSH_INTERVAL_MS / 1000 / 60} minutes)`);
 }

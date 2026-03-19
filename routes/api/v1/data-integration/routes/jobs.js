@@ -7,6 +7,8 @@
 const express = require('express');
 const { param, query, validationResult } = require('express-validator');
 const router = express.Router();
+const { createLogger } = require('../../../../../utils/structured-logger');
+const logger = createLogger('data-integration:jobs');
 
 // Import data integration services and helpers
 const DataIntegrationLayer = require('../../../../../services/data-integration');
@@ -130,7 +132,7 @@ router.get('/:candidateId/history',
       });
 
     } catch (error) {
-      console.error('Job history error:', error);
+      logger.error('Job history error', { error: error.message });
       res.status(500).json({
         success: false,
         error: 'Failed to retrieve job history'
@@ -236,7 +238,7 @@ router.get('/:candidateId/applications',
       });
 
     } catch (error) {
-      console.error('Job applications error:', error);
+      logger.error('Job applications error', { error: error.message });
       res.status(500).json({
         success: false,
         error: 'Failed to retrieve job applications'
@@ -324,7 +326,7 @@ router.get('/:candidateId/upcoming',
       });
 
     } catch (error) {
-      console.error('Upcoming jobs error:', error);
+      logger.error('Upcoming jobs error', { error: error.message });
       res.status(500).json({
         success: false,
         error: 'Failed to retrieve upcoming jobs'
@@ -412,7 +414,7 @@ router.get('/:candidateId/performance',
       });
 
     } catch (error) {
-      console.error('Job performance error:', error);
+      logger.error('Job performance error', { error: error.message });
       res.status(500).json({
         success: false,
         error: 'Failed to retrieve job performance data'

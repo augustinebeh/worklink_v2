@@ -5,6 +5,9 @@
  * Ensures critical issues get immediate human attention
  */
 
+const { createLogger } = require('../../utils/structured-logger');
+const logger = createLogger('escalation-handler');
+
 class EscalationHandler {
   constructor(db) {
     this.db = db;
@@ -49,7 +52,7 @@ class EscalationHandler {
       }
     };
 
-    console.log('🚨 [Escalation] Handler initialized');
+    logger.info('Escalation handler initialized');
   }
 
   /**
@@ -120,7 +123,7 @@ class EscalationHandler {
         this.generateAutoResponse(category, priority)
       ).lastInsertRowid;
 
-      console.log(`🚨 [Escalation] Created escalation #${escalationId} for ${candidateId} (${priority} priority)`);
+      logger.info('Escalation created', { escalation_id: escalationId, candidate_id: candidateId, priority });
 
       // Send notifications if required
       if (this.priorityLevels[priority].adminNotification) {
@@ -130,7 +133,7 @@ class EscalationHandler {
       return escalationId;
 
     } catch (error) {
-      console.error('❌ [Escalation] Error creating escalation:', error);
+      logger.error('Error creating escalation', { error: error.message });
       return null;
     }
   }
@@ -196,10 +199,10 @@ class EscalationHandler {
         timestamp: new Date().toISOString()
       });
 
-      console.log(`📢 [Escalation] Notified admins about escalation #${escalationId}`);
+      logger.info('Admins notified about escalation', { escalation_id: escalationId });
 
     } catch (error) {
-      console.error('❌ [Escalation] Error notifying admins:', error);
+      logger.error('Error notifying admins', { error: error.message });
     }
   }
 
@@ -279,13 +282,13 @@ class EscalationHandler {
       `).run(adminId, escalationId);
 
       if (result.changes > 0) {
-        console.log(`👤 [Escalation] Assigned escalation #${escalationId} to admin ${adminId}`);
+        logger.info('Escalation assigned', { escalation_id: escalationId, admin_id: adminId });
         return true;
       }
 
       return false;
     } catch (error) {
-      console.error('❌ [Escalation] Error assigning escalation:', error);
+      logger.error('Error assigning escalation', { error: error.message });
       return false;
     }
   }
@@ -304,13 +307,13 @@ class EscalationHandler {
       `).run(resolutionNotes, escalationId, adminId);
 
       if (result.changes > 0) {
-        console.log(`✅ [Escalation] Resolved escalation #${escalationId}`);
+        logger.info('Escalation resolved', { escalation_id: escalationId });
         return true;
       }
 
       return false;
     } catch (error) {
-      console.error('❌ [Escalation] Error resolving escalation:', error);
+      logger.error('Error resolving escalation', { error: error.message });
       return false;
     }
   }
@@ -359,7 +362,7 @@ class EscalationHandler {
       return { stats, summary };
 
     } catch (error) {
-      console.error('❌ [Escalation] Error getting stats:', error);
+      logger.error('Error getting escalation stats', { error: error.message });
       return { stats: [], summary: {} };
     }
   }
@@ -392,7 +395,7 @@ class EscalationHandler {
       });
 
     } catch (error) {
-      console.error('❌ [Escalation] Error checking overdue:', error);
+      logger.error('Error checking overdue escalations', { error: error.message });
     }
   }
 
@@ -409,7 +412,7 @@ class EscalationHandler {
     // Send urgent notification
     this.notifyAdmins(escalation.id, escalation.candidate_id, newPriority, 'overdue');
 
-    console.log(`⚠️ [Escalation] Escalated overdue item #${escalation.id} to ${newPriority} priority`);
+    logger.warn('Escalated overdue item', { escalation_id: escalation.id, new_priority: newPriority });
   }
 }
 

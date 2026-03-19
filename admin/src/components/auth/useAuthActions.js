@@ -64,7 +64,7 @@ export function useLogout() {
       await logout();
       return true;
     } catch (error) {
-      console.error('Logout error:', error);
+      // Logout error
       // Even if logout fails, we should still clear local state
       return true;
     } finally {

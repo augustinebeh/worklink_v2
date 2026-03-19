@@ -75,7 +75,7 @@ router.get('/profile/:candidateId', (req, res) => {
     });
     res.status(500).json({
       success: false,
-      error: error.message
+      error: 'Internal server error'
     });
   }
 });

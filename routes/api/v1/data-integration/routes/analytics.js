@@ -7,6 +7,8 @@
 const express = require('express');
 const { query, validationResult } = require('express-validator');
 const router = express.Router();
+const { createLogger } = require('../../../../../utils/structured-logger');
+const logger = createLogger('data-integration:analytics');
 
 // Import data integration services and helpers
 const DataIntegrationLayer = require('../../../../../services/data-integration');
@@ -115,7 +117,7 @@ router.get('/statistics',
       });
 
     } catch (error) {
-      console.error('Analytics statistics error:', error);
+      logger.error('Analytics statistics error', { error: error.message });
       res.status(500).json({
         success: false,
         error: 'Failed to retrieve analytics statistics'
@@ -192,7 +194,7 @@ router.get('/usage-patterns',
       });
 
     } catch (error) {
-      console.error('Usage patterns error:', error);
+      logger.error('Usage patterns error', { error: error.message });
       res.status(500).json({
         success: false,
         error: 'Failed to retrieve usage patterns'
@@ -273,7 +275,7 @@ router.get('/data-quality',
       });
 
     } catch (error) {
-      console.error('Data quality error:', error);
+      logger.error('Data quality error', { error: error.message });
       res.status(500).json({
         success: false,
         error: 'Failed to retrieve data quality metrics'
@@ -351,7 +353,7 @@ router.get('/performance-metrics',
       });
 
     } catch (error) {
-      console.error('Performance metrics error:', error);
+      logger.error('Performance metrics error', { error: error.message });
       res.status(500).json({
         success: false,
         error: 'Failed to retrieve performance metrics'
@@ -388,7 +390,7 @@ router.post('/trigger-cleanup',
       });
 
     } catch (error) {
-      console.error('Cache cleanup error:', error);
+      logger.error('Cache cleanup error', { error: error.message });
       res.status(500).json({
         success: false,
         error: 'Failed to perform cache cleanup'

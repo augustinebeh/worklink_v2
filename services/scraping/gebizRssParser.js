@@ -10,7 +10,9 @@ const zlib = require('zlib');
 const cheerio = require('cheerio');
 const { RateLimiterMemory } = require('rate-limiter-flexible');
 const validator = require('validator');
-const { db } = require('../../db/database');
+const { db } = require('../../db');
+const { createLogger } = require('../../utils/structured-logger');
+const logger = createLogger('gebiz-rss-parser');
 
 // Rate limiter - 1 request every 5 seconds for HTML scraping
 const rateLimiter = new RateLimiterMemory({
@@ -57,7 +59,7 @@ class GeBIZRSSParser {
         throw new Error(`Rate limited - retry in ${retryAfter}s`);
       }
 
-      console.log('🔍 Starting GeBIZ HTML scraping...');
+      logger.info('Starting GeBIZ HTML scraping');
 
       // Fetch and parse HTML page
       const htmlContent = await this.fetchHTML();
@@ -69,7 +71,7 @@ class GeBIZRSSParser {
       // Extract structured tender data from listing page HTML
       const tenders = this.extractTendersFromListing(htmlContent);
 
-      console.log(`📋 Found ${tenders.length} tenders on listing page`);
+      logger.info('Found tenders on listing page', { count: tenders.length });
 
       const results = {
         newTenders: 0,
@@ -90,7 +92,7 @@ class GeBIZRSSParser {
           // Check for duplicates in both pipeline and staging tables
           if (await this.isDuplicate(tenderData.tender_no)) {
             results.duplicates++;
-            console.log(`⏭️  Skipping duplicate: ${tenderData.tender_no}`);
+            logger.debug('Skipping duplicate tender', { tenderNo: tenderData.tender_no });
             continue;
           }
 
@@ -109,7 +111,7 @@ class GeBIZRSSParser {
             item: tenderData.tender_no || 'unknown',
             error: error.message
           });
-          console.error(`❌ Error processing tender ${tenderData.tender_no}: ${error.message}`);
+          logger.error('Error processing tender', { tenderNo: tenderData.tender_no, error: error.message });
         }
       }
 
@@ -121,7 +123,7 @@ class GeBIZRSSParser {
       this.stats.errors += results.errors;
       this.stats.processingTime = Date.now() - startTime;
 
-      console.log(`✅ HTML scraping complete: ${results.newTenders} new, ${results.duplicates} duplicates, ${results.errors} errors`);
+      logger.info('HTML scraping complete', { newTenders: results.newTenders, duplicates: results.duplicates, errors: results.errors });
 
       return {
         success: true,
@@ -137,7 +139,7 @@ class GeBIZRSSParser {
 
     } catch (error) {
       this.stats.errors++;
-      console.error('❌ HTML scraping failed:', error.message);
+      logger.error('HTML scraping failed', { error: error.message });
 
       return {
         success: false,
@@ -211,7 +213,7 @@ class GeBIZRSSParser {
 
         tenders.push(tenderData);
       } catch (error) {
-        console.error(`Error extracting tender from listing element: ${error.message}`);
+        logger.error('Error extracting tender from listing element', { error: error.message });
       }
     });
 
@@ -434,7 +436,7 @@ class GeBIZRSSParser {
       };
 
     } catch (error) {
-      console.error(`Error extracting tender data from code ${docCode}: ${error.message}`);
+      logger.error('Error extracting tender data from code', { docCode, error: error.message });
       return null;
     }
   }
@@ -767,7 +769,7 @@ class GeBIZRSSParser {
       };
 
     } catch (error) {
-      console.error(`Validation failed: ${error.message}`);
+      logger.warn('Tender validation failed', { error: error.message });
       return null;
     }
   }
@@ -837,7 +839,7 @@ class GeBIZRSSParser {
 
       return inStaging.count > 0;
     } catch (error) {
-      console.error('Error checking for duplicates:', error);
+      logger.error('Error checking for duplicates', { error: error.message });
       return false;
     }
   }

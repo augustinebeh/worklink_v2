@@ -8,6 +8,8 @@ const router = express.Router();
 const { db } = require('../../../db');
 const Parser = require('rss-parser');
 const parser = new Parser();
+const { createLogger } = require('../../../utils/structured-logger');
+const logger = createLogger('tender-monitor');
 
 // GeBIZ RSS Feed URL
 const GEBIZ_RSS_URL = 'https://www.gebiz.gov.sg/rss/ptn-rss.xml';
@@ -25,7 +27,7 @@ router.get('/alerts', (req, res) => {
 
     res.json({ success: true, data: alerts });
   } catch (error) {
-    res.status(500).json({ success: false, error: error.message });
+    res.status(500).json({ success: false, error: 'Internal server error' });
   }
 });
 
@@ -53,7 +55,7 @@ router.post('/alerts', (req, res) => {
 
     res.status(201).json({ success: true, data: alert });
   } catch (error) {
-    res.status(500).json({ success: false, error: error.message });
+    res.status(500).json({ success: false, error: 'Internal server error' });
   }
 });
 
@@ -79,7 +81,7 @@ router.patch('/alerts/:id', (req, res) => {
     const alert = db.prepare('SELECT * FROM tender_alerts WHERE id = ?').get(req.params.id);
     res.json({ success: true, data: alert });
   } catch (error) {
-    res.status(500).json({ success: false, error: error.message });
+    res.status(500).json({ success: false, error: 'Internal server error' });
   }
 });
 
@@ -90,7 +92,7 @@ router.delete('/alerts/:id', (req, res) => {
     db.prepare('DELETE FROM tender_alerts WHERE id = ?').run(req.params.id);
     res.json({ success: true });
   } catch (error) {
-    res.status(500).json({ success: false, error: error.message });
+    res.status(500).json({ success: false, error: 'Internal server error' });
   }
 });
 
@@ -110,7 +112,7 @@ router.get('/alerts/:id/matches', (req, res) => {
 
     res.json({ success: true, data: matches });
   } catch (error) {
-    res.status(500).json({ success: false, error: error.message });
+    res.status(500).json({ success: false, error: 'Internal server error' });
   }
 });
 
@@ -120,7 +122,7 @@ router.post('/check-gebiz', async (req, res) => {
     const results = await checkGeBIZFeed();
     res.json({ success: true, data: results });
   } catch (error) {
-    res.status(500).json({ success: false, error: error.message });
+    res.status(500).json({ success: false, error: 'Internal server error' });
   }
 });
 
@@ -138,7 +140,7 @@ router.get('/matches/unread', (req, res) => {
 
     res.json({ success: true, data: matches, count: matches.length });
   } catch (error) {
-    res.status(500).json({ success: false, error: error.message });
+    res.status(500).json({ success: false, error: 'Internal server error' });
   }
 });
 
@@ -159,7 +161,7 @@ router.post('/matches/mark-read', (req, res) => {
 
     res.json({ success: true });
   } catch (error) {
-    res.status(500).json({ success: false, error: error.message });
+    res.status(500).json({ success: false, error: 'Internal server error' });
   }
 });
 
@@ -225,7 +227,7 @@ router.get('/dashboard', (req, res) => {
       },
     });
   } catch (error) {
-    res.status(500).json({ success: false, error: error.message });
+    res.status(500).json({ success: false, error: 'Internal server error' });
   }
 });
 
@@ -260,7 +262,7 @@ router.post('/import', (req, res) => {
     const tender = db.prepare('SELECT * FROM tenders WHERE id = ?').get(id);
     res.status(201).json({ success: true, data: tender });
   } catch (error) {
-    res.status(500).json({ success: false, error: error.message });
+    res.status(500).json({ success: false, error: 'Internal server error' });
   }
 });
 
@@ -282,11 +284,11 @@ async function checkGeBIZFeed() {
   };
 
   try {
-    console.log(`[${now}] Checking GeBIZ RSS feed: ${GEBIZ_RSS_URL}`);
+    logger.info('Checking GeBIZ RSS feed', { url: GEBIZ_RSS_URL, timestamp: now });
 
     // Fetch and parse RSS feed
     const feed = await parser.parseURL(GEBIZ_RSS_URL);
-    console.log(`Found ${feed.items.length} items in RSS feed`);
+    logger.info('Found items in RSS feed', { count: feed.items.length });
 
     results.processedItems = feed.items.length;
 
@@ -329,7 +331,7 @@ async function checkGeBIZFeed() {
           );
 
           results.newTenders++;
-          console.log(`Created new tender: ${tenderId} - ${tenderData.title}`);
+          logger.info('Created new tender', { tenderId, title: tenderData.title });
         } else {
           tenderId = existingTender.id;
         }
@@ -360,7 +362,7 @@ async function checkGeBIZFeed() {
               );
 
               results.newMatches++;
-              console.log(`New match: ${alert.keyword} -> ${tenderData.title}`);
+              logger.info('New match found', { keyword: alert.keyword, title: tenderData.title });
 
               // Send email notification if enabled
               if (alert.email_notify) {
@@ -371,19 +373,19 @@ async function checkGeBIZFeed() {
         }
 
       } catch (itemError) {
-        console.error('Error processing RSS item:', itemError);
-        results.errors.push(`Item processing error: ${itemError.message}`);
+        logger.error('Error processing RSS item', { error: itemError.message });
+        results.errors.push('Item processing error');
       }
     }
 
     // Update last checked timestamps
     db.prepare('UPDATE tender_alerts SET last_checked = ? WHERE active = 1').run(now);
 
-    console.log(`RSS check completed: ${results.newTenders} new tenders, ${results.newMatches} new matches`);
+    logger.info('RSS check completed', { newTenders: results.newTenders, newMatches: results.newMatches });
 
   } catch (error) {
-    console.error('Error fetching GeBIZ RSS feed:', error);
-    results.errors.push(`RSS fetch error: ${error.message}`);
+    logger.error('Error fetching GeBIZ RSS feed', { error: error.message });
+    results.errors.push('RSS fetch error');
 
     // Still update timestamp to avoid constant retries
     db.prepare('UPDATE tender_alerts SET last_checked = ? WHERE active = 1').run(now);
@@ -558,7 +560,7 @@ function categorizeTender(title, description) {
 // Helper: Send email alert
 async function sendTenderAlert(alert, tenderData) {
   try {
-    console.log(`Sending email alert for keyword "${alert.keyword}": ${tenderData.title}`);
+    logger.info('Sending email alert', { keyword: alert.keyword, title: tenderData.title });
 
     // Import email service
     const emailService = require('../../../services/email');
@@ -566,10 +568,10 @@ async function sendTenderAlert(alert, tenderData) {
     // Send tender alert email
     const result = await emailService.sendTenderAlert(alert, tenderData);
 
-    console.log(`Tender alert email sent successfully. Results:`, result);
+    logger.info('Tender alert email sent successfully', { result });
     return result;
   } catch (error) {
-    console.error(`Failed to send tender alert for keyword "${alert.keyword}":`, error);
+    logger.error('Failed to send tender alert', { keyword: alert.keyword, error: error.message });
 
     // Log the failure but don't throw - we don't want email failures to break tender monitoring
     try {
@@ -589,10 +591,10 @@ async function sendTenderAlert(alert, tenderData) {
         new Date().toISOString()
       );
     } catch (logError) {
-      console.error('Failed to log email failure:', logError);
+      logger.error('Failed to log email failure', { error: logError.message });
     }
 
-    return { success: false, error: error.message };
+    return { success: false, error: 'Internal server error' };
   }
 }
 
@@ -642,7 +644,7 @@ router.post('/webhook', (req, res) => {
 
     res.json({ success: true, data: results });
   } catch (error) {
-    res.status(500).json({ success: false, error: error.message });
+    res.status(500).json({ success: false, error: 'Internal server error' });
   }
 });
 

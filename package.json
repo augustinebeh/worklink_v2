@@ -27,7 +27,7 @@
     "clean": "echo '🧹 Cleaning build cache and dist folders...' && rm -rf admin/node_modules/.vite worker/node_modules/.vite admin/dist worker/dist admin/node_modules/.cache worker/node_modules/.cache 2>/dev/null && echo '✅ Cleaned: Vite cache, dist folders, and node cache'",
     "postinstall": "echo 'Main dependencies installed'",
     "install:all": "npm install && cd admin && npm install && cd ../worker && npm install",
-    "db:reset": "node -e \"require('./db/database').resetToSampleData()\"",
+    "db:reset": "node -e \"require('./db').resetToSampleData()\"",
     "gebiz:init": "node scripts/ensure-gebiz-tables.js",
     "gebiz:init-railway": "node scripts/railway-gebiz-init.js",
     "gebiz:test": "node scripts/railway-gebiz-init.js test",
@@ -95,6 +95,7 @@
     "lint-staged": "^16.2.7",
     "node-fetch": "^3.3.2",
     "nodemon": "^3.0.1",
-    "puppeteer": "^24.36.1"
+    "puppeteer": "^24.36.1",
+    "supertest": "^7.2.2"
   }
 }

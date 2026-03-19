@@ -8,10 +8,7 @@ import {
   useSensor,
   useSensors,
   closestCenter,
-  closestCorners,
   pointerWithin,
-  rectIntersection,
-  getFirstCollision,
   MouseSensor
 } from '@dnd-kit/core';
 import {
@@ -22,33 +19,9 @@ import {
 import { clsx } from 'clsx';
 import KanbanColumn, { KanbanColumnSkeleton } from './KanbanColumn';
 import TenderCard from './TenderCard';
+import KanbanHeader, { KanbanFooter, STAGES, BD_MANAGERS } from './KanbanHeader';
 import { useKanbanDnd } from '../../hooks/useKanbanDnd';
 import { pipelineService } from '../../shared/services/api';
-
-/**
- * Stage configuration for the 8-stage tender lifecycle
- */
-const STAGES = [
-  { id: 'renewal_watch', name: 'Renewal Watch' },
-  { id: 'new_opportunity', name: 'New Opportunity' },
-  { id: 'review', name: 'Review' },
-  { id: 'bidding', name: 'Bidding' },
-  { id: 'internal_approval', name: 'Approval' },
-  { id: 'submitted', name: 'Submitted' },
-  { id: 'awarded', name: 'Won' },
-  { id: 'lost', name: 'Lost' }
-];
-
-/**
- * BD Managers for assignment
- */
-const BD_MANAGERS = [
-  { id: 'sarah_tan', name: 'Sarah Tan', avatar: 'ST' },
-  { id: 'david_lim', name: 'David Lim', avatar: 'DL' },
-  { id: 'michelle_wong', name: 'Michelle Wong', avatar: 'MW' },
-  { id: 'alex_chen', name: 'Alex Chen', avatar: 'AC' },
-  { id: 'priya_sharma', name: 'Priya Sharma', avatar: 'PS' }
-];
 
 /**
  * KanbanBoard Component
@@ -92,30 +65,18 @@ export default function KanbanBoard({
   });
 
   // Configure sensors for drag and drop
-  // Optimized for sortable preset with better collision detection
   const sensors = useSensors(
-    // MouseSensor for precise mouse interactions
     useSensor(MouseSensor, {
-      activationConstraint: {
-        distance: 8, // Prevent accidental drags
-      },
+      activationConstraint: { distance: 8 },
     }),
-    // PointerSensor for touch and pen
     useSensor(PointerSensor, {
-      activationConstraint: {
-        distance: 8,
-      },
+      activationConstraint: { distance: 8 },
     }),
-    // KeyboardSensor with sortable coordinates
     useSensor(KeyboardSensor, {
       coordinateGetter: sortableKeyboardCoordinates,
     }),
-    // TouchSensor for mobile with optimized constraints
     useSensor(TouchSensor, {
-      activationConstraint: {
-        delay: 200, // Longer delay for better mobile experience
-        tolerance: 8,
-      },
+      activationConstraint: { delay: 200, tolerance: 8 },
     })
   );
 
@@ -149,7 +110,6 @@ export default function KanbanBoard({
         throw new Error(response.message || 'Failed to fetch tenders');
       }
     } catch (err) {
-      console.error('Error fetching tenders:', err);
       setError(err.message);
     } finally {
       setLoading(false);
@@ -157,29 +117,23 @@ export default function KanbanBoard({
   };
 
   // Group tenders by stage and create sortable context items
-  const { tendersByStage, allTenderIds, stageIds } = useMemo(() => {
+  const { tendersByStage, stageIds } = useMemo(() => {
     const grouped = {};
-    const allIds = [];
 
-    // Initialize all stages
     STAGES.forEach(stage => {
       grouped[stage.id] = [];
     });
 
-    // Group tenders by stage
     tenders.forEach(tender => {
       if (grouped[tender.stage]) {
         grouped[tender.stage].push(tender);
-        allIds.push(tender.id);
       }
     });
 
-    // Get stage IDs for column sortable context
     const stageIds = STAGES.map(stage => stage.id);
 
     return {
       tendersByStage: grouped,
-      allTenderIds: allIds,
       stageIds: stageIds
     };
   }, [tenders]);
@@ -193,8 +147,6 @@ export default function KanbanBoard({
   // Handle BD assignment
   const handleAssignBd = async (tender) => {
     // Show assignment modal or dropdown
-    // For now, this is a placeholder
-    console.log('Assign BD to tender:', tender.id);
   };
 
   // Handle view details
@@ -206,10 +158,8 @@ export default function KanbanBoard({
 
   // Drag-to-scroll handlers for kanban board background
   const handleMouseDownScroll = (e) => {
-    // Only start drag scrolling if not already dragging a card and clicking on background
     if (isDragging || !kanbanContainerRef.current) return;
 
-    // Check if we're clicking on a card or button (avoid scrolling on interactive elements)
     const target = e.target;
     if (target.closest('[data-card-element="true"]') ||
         target.closest('button') ||
@@ -224,7 +174,6 @@ export default function KanbanBoard({
       scrollLeft: kanbanContainerRef.current.scrollLeft
     });
 
-    // Prevent text selection during drag
     e.preventDefault();
   };
 
@@ -233,7 +182,7 @@ export default function KanbanBoard({
 
     e.preventDefault();
     const x = e.pageX - kanbanContainerRef.current.offsetLeft;
-    const walk = (x - dragScrollStart.x) * 2; // Multiply for faster scrolling
+    const walk = (x - dragScrollStart.x) * 2;
     kanbanContainerRef.current.scrollLeft = dragScrollStart.scrollLeft - walk;
   };
 
@@ -265,29 +214,15 @@ export default function KanbanBoard({
 
   return (
     <div className="space-y-4">
-      {/* Mobile Warning */}
-      {isMobile && (
-        <div className="bg-amber-50 dark:bg-amber-900/20 border border-amber-200 dark:border-amber-800 rounded-lg p-4">
-          <p className="text-sm text-amber-800 dark:text-amber-200">
-            Drag-and-drop is optimized for desktop. On mobile, use the stage dropdown to move tenders.
-          </p>
-        </div>
-      )}
+      <KanbanHeader isMobile={isMobile} />
 
       {/* Kanban Board with Sortable Context */}
       <DndContext
         sensors={sensors}
         collisionDetection={(args) => {
-          // Enhanced collision detection for live displacement
-          const { droppableRects, droppableContainers, collisionRect } = args;
-
-          // First try pointer within for precise targeting
           const pointerCollisions = pointerWithin(args);
 
-          // If pointer is within any droppable, use those
           if (pointerCollisions.length > 0) {
-            // Prioritize column containers over individual cards
-            // Check if collision id corresponds to a stage (column)
             const columnCollisions = pointerCollisions.filter(collision =>
               STAGES.some(stage => stage.id === collision.id)
             );
@@ -299,7 +234,6 @@ export default function KanbanBoard({
             return pointerCollisions;
           }
 
-          // Fallback to closest center for edge cases
           return closestCenter(args);
         }}
         onDragStart={handleDragStart}
@@ -307,7 +241,6 @@ export default function KanbanBoard({
         onDragEnd={handleDragEnd}
         onDragCancel={handleDragCancel}
       >
-        {/* Sortable Context for stages */}
         <SortableContext items={stageIds} strategy={verticalListSortingStrategy}>
           <div
             ref={kanbanContainerRef}
@@ -326,12 +259,10 @@ export default function KanbanBoard({
             onMouseLeave={handleMouseLeaveScroll}
           >
             {loading ? (
-              // Loading skeletons
               STAGES.map(stage => (
                 <KanbanColumnSkeleton key={stage.id} />
               ))
             ) : (
-              // Kanban columns with proper sortable context
               STAGES.map(stage => (
                 <KanbanColumn
                   key={stage.id}
@@ -348,16 +279,13 @@ export default function KanbanBoard({
           </div>
         </SortableContext>
 
-        {/* Drag Overlay with simplified animation */}
+        {/* Drag Overlay */}
         <DragOverlay
           dropAnimation={{
             duration: 200,
             easing: 'cubic-bezier(0.2, 0, 0, 1)',
           }}
-          style={{
-            cursor: 'grabbing',
-          }}
-          // Disable automatic positioning adjustments
+          style={{ cursor: 'grabbing' }}
           adjustScale={false}
           wrapperElement="div"
         >
@@ -369,8 +297,6 @@ export default function KanbanBoard({
                 borderRadius: '8px',
               }}
             >
-
-              {/* Enhanced border glow */}
               <div
                 className="absolute inset-0 rounded-lg border-2 border-blue-300 dark:border-blue-500 opacity-80"
                 style={{
@@ -379,7 +305,6 @@ export default function KanbanBoard({
                   zIndex: -1,
                 }}
               />
-
               <TenderCard
                 tender={activeTender}
                 bdManagers={BD_MANAGERS}
@@ -388,20 +313,9 @@ export default function KanbanBoard({
             </div>
           ) : null}
         </DragOverlay>
-
       </DndContext>
 
-      {/* Keyboard Instructions */}
-      {!isMobile && (
-        <div className="bg-slate-50 dark:bg-slate-900/20 border border-slate-200 dark:border-slate-800 rounded-lg p-3">
-          <p className="text-xs text-slate-600 dark:text-slate-400">
-            <strong>Tip:</strong> Click and drag cards to move between stages.
-            Use <kbd className="px-1 py-0.5 bg-white dark:bg-slate-800 border border-slate-300 dark:border-slate-600 rounded text-xs">Tab</kbd> and
-            <kbd className="px-1 py-0.5 bg-white dark:bg-slate-800 border border-slate-300 dark:border-slate-600 rounded text-xs mx-1">Arrow Keys</kbd>
-            for keyboard navigation.
-          </p>
-        </div>
-      )}
+      <KanbanFooter isMobile={isMobile} />
     </div>
   );
 }

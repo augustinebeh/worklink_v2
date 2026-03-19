@@ -10,6 +10,8 @@
 const express = require('express');
 const router = express.Router();
 const { db } = require('../../../db');
+const { createLogger } = require('../../../utils/structured-logger');
+const logger = createLogger('scanner');
 
 // Optional scraping service (may not be available in all environments)
 let scrapingService;
@@ -17,7 +19,7 @@ try {
   const scraping = require('../../../services/scraping');
   scrapingService = scraping.scrapingService;
 } catch (error) {
-  console.warn('Scraping service not available:', error.message);
+  logger.warn('Scraping service not available', { error: error.message });
 }
 
 // ============================================================================
@@ -143,7 +145,7 @@ router.get('/feed', (req, res) => {
       }
     });
   } catch (error) {
-    res.status(500).json({ success: false, error: error.message });
+    res.status(500).json({ success: false, error: 'Internal server error' });
   }
 });
 
@@ -169,7 +171,7 @@ router.post('/feed/:id/dismiss', (req, res) => {
 
     res.json({ success: true, data: tender });
   } catch (error) {
-    res.status(500).json({ success: false, error: error.message });
+    res.status(500).json({ success: false, error: 'Internal server error' });
   }
 });
 
@@ -212,7 +214,7 @@ router.get('/feed/stats', (req, res) => {
       }
     });
   } catch (error) {
-    res.status(500).json({ success: false, error: error.message });
+    res.status(500).json({ success: false, error: 'Internal server error' });
   }
 });
 
@@ -236,7 +238,7 @@ router.get('/alerts', (req, res) => {
 
     res.json({ success: true, data: alerts });
   } catch (error) {
-    res.status(500).json({ success: false, error: error.message });
+    res.status(500).json({ success: false, error: 'Internal server error' });
   }
 });
 
@@ -267,7 +269,7 @@ router.post('/alerts', (req, res) => {
 
     res.status(201).json({ success: true, data: alert });
   } catch (error) {
-    res.status(500).json({ success: false, error: error.message });
+    res.status(500).json({ success: false, error: 'Internal server error' });
   }
 });
 
@@ -296,7 +298,7 @@ router.patch('/alerts/:id', (req, res) => {
     const alert = db.prepare('SELECT * FROM tender_alerts WHERE id = ?').get(req.params.id);
     res.json({ success: true, data: alert });
   } catch (error) {
-    res.status(500).json({ success: false, error: error.message });
+    res.status(500).json({ success: false, error: 'Internal server error' });
   }
 });
 
@@ -310,7 +312,7 @@ router.delete('/alerts/:id', (req, res) => {
     db.prepare('DELETE FROM tender_alerts WHERE id = ?').run(req.params.id);
     res.json({ success: true });
   } catch (error) {
-    res.status(500).json({ success: false, error: error.message });
+    res.status(500).json({ success: false, error: 'Internal server error' });
   }
 });
 
@@ -333,7 +335,7 @@ router.get('/alerts/:id/matches', (req, res) => {
 
     res.json({ success: true, data: matches });
   } catch (error) {
-    res.status(500).json({ success: false, error: error.message });
+    res.status(500).json({ success: false, error: 'Internal server error' });
   }
 });
 
@@ -354,7 +356,7 @@ router.get('/matches/unread', (req, res) => {
 
     res.json({ success: true, data: matches, count: matches.length });
   } catch (error) {
-    res.status(500).json({ success: false, error: error.message });
+    res.status(500).json({ success: false, error: 'Internal server error' });
   }
 });
 
@@ -378,7 +380,7 @@ router.post('/matches/mark-read', (req, res) => {
 
     res.json({ success: true });
   } catch (error) {
-    res.status(500).json({ success: false, error: error.message });
+    res.status(500).json({ success: false, error: 'Internal server error' });
   }
 });
 
@@ -410,7 +412,7 @@ router.get('/scraper/status', async (req, res) => {
     res.status(500).json({
       success: false,
       error: 'Failed to get scraping status',
-      details: error.message
+      details: 'Internal server error'
     });
   }
 });
@@ -441,7 +443,7 @@ router.get('/scraper/health', async (req, res) => {
       success: false,
       healthy: false,
       error: 'Health check failed',
-      details: error.message
+      details: 'Internal server error'
     });
   }
 });
@@ -474,7 +476,7 @@ router.post('/scraper/trigger', async (req, res) => {
     res.status(500).json({
       success: false,
       error: 'Manual scraping failed',
-      details: error.message,
+      details: 'Internal server error',
       timestamp: new Date().toISOString()
     });
   }
@@ -538,7 +540,7 @@ router.post('/scraper/scheduler/:action', async (req, res) => {
     res.status(500).json({
       success: false,
       error: `Failed to ${req.params.action} scheduler`,
-      details: error.message
+      details: 'Internal server error'
     });
   }
 });
@@ -580,7 +582,7 @@ router.get('/scraper/logs', async (req, res) => {
     res.status(500).json({
       success: false,
       error: 'Failed to get scraping logs',
-      details: error.message
+      details: 'Internal server error'
     });
   }
 });
@@ -609,7 +611,7 @@ router.get('/portals', (req, res) => {
 
     res.json({ success: true, data: portals });
   } catch (error) {
-    res.status(500).json({ success: false, error: error.message });
+    res.status(500).json({ success: false, error: 'Internal server error' });
   }
 });
 
@@ -648,7 +650,7 @@ router.patch('/portals/:key', (req, res) => {
     const updated = db.prepare('SELECT * FROM scraping_portals WHERE portal_key = ?').get(key);
     res.json({ success: true, data: updated });
   } catch (error) {
-    res.status(500).json({ success: false, error: error.message });
+    res.status(500).json({ success: false, error: 'Internal server error' });
   }
 });
 
@@ -694,7 +696,7 @@ router.get('/settings/categories', (req, res) => {
       data: { enabled: enabledKeys, available }
     });
   } catch (error) {
-    res.status(500).json({ success: false, error: error.message });
+    res.status(500).json({ success: false, error: 'Internal server error' });
   }
 });
 
@@ -714,7 +716,7 @@ router.patch('/settings/categories', (req, res) => {
       categories = Object.values(categories);
     }
     if (!Array.isArray(categories)) {
-      console.error('PATCH /settings/categories - invalid body:', JSON.stringify(req.body));
+      logger.error('PATCH /settings/categories - invalid body', { body: req.body });
       return res.status(400).json({ success: false, error: 'categories must be an array' });
     }
 
@@ -739,7 +741,7 @@ router.patch('/settings/categories', (req, res) => {
       data: { enabled: filtered, available }
     });
   } catch (error) {
-    res.status(500).json({ success: false, error: error.message });
+    res.status(500).json({ success: false, error: 'Internal server error' });
   }
 });
 
@@ -788,7 +790,7 @@ router.get('/dashboard', async (req, res) => {
       try {
         scraperStatus = scrapingService.getStatus();
       } catch (error) {
-        console.error('Error getting scraper status:', error);
+        logger.error('Error getting scraper status', { error: error.message });
       }
     }
 
@@ -838,7 +840,7 @@ router.get('/dashboard', async (req, res) => {
       }
     });
   } catch (error) {
-    res.status(500).json({ success: false, error: error.message });
+    res.status(500).json({ success: false, error: 'Internal server error' });
   }
 });
 

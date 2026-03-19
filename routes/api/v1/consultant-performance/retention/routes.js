@@ -21,7 +21,7 @@ router.post('/run-campaigns', async (req, res) => {
     const results = await retentionEngine.runEngagementCampaigns();
     res.json({ success: true, data: results });
   } catch (error) {
-    res.status(500).json({ success: false, error: error.message });
+    res.status(500).json({ success: false, error: 'Internal server error' });
   }
 });
 
@@ -34,7 +34,7 @@ router.post('/update-scores', async (req, res) => {
     const results = await retentionEngine.updateAllEngagementScores();
     res.json({ success: true, data: results });
   } catch (error) {
-    res.status(500).json({ success: false, error: error.message });
+    res.status(500).json({ success: false, error: 'Internal server error' });
   }
 });
 
@@ -48,7 +48,7 @@ router.get('/analytics', async (req, res) => {
     const analytics = await retentionEngine.getRetentionAnalytics(days);
     res.json({ success: true, data: analytics });
   } catch (error) {
-    res.status(500).json({ success: false, error: error.message });
+    res.status(500).json({ success: false, error: 'Internal server error' });
   }
 });
 
@@ -76,7 +76,7 @@ router.get('/at-risk', async (req, res) => {
       }
     });
   } catch (error) {
-    res.status(500).json({ success: false, error: error.message });
+    res.status(500).json({ success: false, error: 'Internal server error' });
   }
 });
 

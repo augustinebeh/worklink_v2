@@ -34,11 +34,12 @@ router.get('/', authenticateAdmin, async (req, res) => {
     let query = `
       SELECT
         c.id,
+        c.id as candidate_id,
         c.name,
         c.email,
         c.phone,
         c.status as candidate_status,
-        c.avatar_url,
+        c.profile_photo,
         c.online_status,
         c.last_seen,
 
@@ -72,7 +73,7 @@ router.get('/', authenticateAdmin, async (req, res) => {
           read,
           ROW_NUMBER() OVER (PARTITION BY candidate_id ORDER BY created_at DESC) as rn
         FROM messages
-        WHERE deleted IS NULL OR deleted = 0
+        WHERE 1=1
       ) latest ON c.id = latest.candidate_id AND latest.rn = 1
 
       -- Get conversation statistics
@@ -84,7 +85,7 @@ router.get('/', authenticateAdmin, async (req, res) => {
           COUNT(CASE WHEN sender = 'admin' THEN 1 END) as admin_messages,
           COUNT(CASE WHEN sender = 'candidate' THEN 1 END) as candidate_messages
         FROM messages
-        WHERE deleted IS NULL OR deleted = 0
+        WHERE 1=1
         GROUP BY candidate_id
       ) stats ON c.id = stats.candidate_id
 
@@ -224,7 +225,7 @@ router.get('/', authenticateAdmin, async (req, res) => {
     res.status(500).json({
       success: false,
       error: 'Failed to retrieve conversations',
-      details: error.message
+      details: 'Internal server error'
     });
   }
 });
@@ -237,6 +238,14 @@ router.put('/:candidateId/status', authenticateAdmin, (req, res) => {
   try {
     const { candidateId } = req.params;
     const { status, priority, assignedTo, notes } = req.body;
+
+    // Validate notes length
+    if (notes && (typeof notes !== 'string' || notes.length > 5000)) {
+      return res.status(400).json({
+        success: false,
+        error: 'Notes must be a string with max 5000 characters'
+      });
+    }
 
     const validStatuses = ['active', 'paused', 'resolved', 'escalated', 'archived'];
     const validPriorities = ['low', 'normal', 'high', 'urgent'];
@@ -307,7 +316,7 @@ router.put('/:candidateId/status', authenticateAdmin, (req, res) => {
     res.status(500).json({
       success: false,
       error: 'Failed to update conversation status',
-      details: error.message
+      details: 'Internal server error'
     });
   }
 });
@@ -349,14 +358,14 @@ router.get('/:candidateId', authenticateAdmin, async (req, res) => {
         MIN(created_at) as first_message_at,
         MAX(created_at) as latest_message_at
       FROM messages
-      WHERE candidate_id = ? AND (deleted IS NULL OR deleted = 0)
+      WHERE candidate_id = ?
     `).get(candidateId);
 
     // Get recent messages (last 10)
     const recentMessages = db.prepare(`
       SELECT content, sender, created_at, read
       FROM messages
-      WHERE candidate_id = ? AND (deleted IS NULL OR deleted = 0)
+      WHERE candidate_id = ?
       ORDER BY created_at DESC
       LIMIT 10
     `).all(candidateId);
@@ -385,7 +394,7 @@ router.get('/:candidateId', authenticateAdmin, async (req, res) => {
     res.status(500).json({
       success: false,
       error: 'Failed to retrieve conversation details',
-      details: error.message
+      details: 'Internal server error'
     });
   }
 });

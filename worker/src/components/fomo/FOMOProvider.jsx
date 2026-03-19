@@ -8,6 +8,7 @@
 import React, { createContext, useContext, useReducer, useEffect, useCallback } from 'react';
 import { useWebSocket } from '../../contexts/WebSocketContext';
 import { useAuth } from '../../contexts/AuthContext';
+import { triggerNotificationEffects } from './FOMONotificationManager';
 import logger from '../../utils/logger';
 
 const FOMOContext = createContext();
@@ -135,7 +136,7 @@ export const FOMOProvider = ({ children }) => {
       switch (data.type) {
         case 'fomo_trigger':
           dispatch({ type: FOMO_ACTIONS.ADD_TRIGGER, payload: data.event });
-          triggerNotificationEffects(data.event);
+          triggerNotificationEffects(data.event, state.settings);
           break;
 
         case 'fomo_triggers':
@@ -151,7 +152,7 @@ export const FOMOProvider = ({ children }) => {
 
         case 'fomo_urgency':
           dispatch({ type: FOMO_ACTIONS.SET_URGENCY_ALERT, payload: data.alert });
-          triggerNotificationEffects(data.alert);
+          triggerNotificationEffects(data.alert, state.settings);
           break;
 
         case 'fomo_scarcity':
@@ -164,7 +165,7 @@ export const FOMOProvider = ({ children }) => {
 
         case 'fomo_streak_risk':
           dispatch({ type: FOMO_ACTIONS.SET_STREAK_RISK, payload: data.risk });
-          triggerNotificationEffects(data.risk);
+          triggerNotificationEffects(data.risk, state.settings);
           break;
 
         case 'fomo_peer_activity':
@@ -217,28 +218,6 @@ export const FOMOProvider = ({ children }) => {
 
     return () => clearInterval(interval);
   }, [isConnected, state.settings.autoRefresh, state.settings.refreshInterval]);
-
-  // Trigger notification effects (sound, vibration)
-  const triggerNotificationEffects = useCallback((event) => {
-    if (!event) return;
-
-    // Sound notification
-    if (state.settings.enableSounds && event.urgency !== 'low') {
-      try {
-        const audio = new Audio('/sounds/notification.mp3');
-        audio.volume = event.urgency === 'critical' ? 0.8 : 0.5;
-        audio.play().catch(() => {}); // Ignore if audio fails
-      } catch (error) {
-        logger.log('Audio notification failed:', error);
-      }
-    }
-
-    // Vibration
-    if (state.settings.enableVibration && 'vibrate' in navigator && event.urgency !== 'low') {
-      const pattern = event.urgency === 'critical' ? [200, 100, 200] : [100];
-      navigator.vibrate(pattern);
-    }
-  }, [state.settings]);
 
   // Request FOMO triggers from server
   const requestFOMOTriggers = useCallback(() => {
@@ -298,18 +277,15 @@ export const FOMOProvider = ({ children }) => {
   const handleFOMOAction = useCallback((action, trigger) => {
     if (!action || !trigger) return;
 
-    // Track the action
     trackActivity('fomo_action_taken', {
       actionType: action.type,
       triggerType: trigger.type,
       triggerId: trigger.id
     });
 
-    // Handle different action types
     switch (action.type) {
       case 'view_job':
         if (action.jobId) {
-          // Navigate to job details
           window.location.href = `/jobs/${action.jobId}`;
         }
         break;
@@ -319,7 +295,6 @@ export const FOMOProvider = ({ children }) => {
         break;
 
       case 'quick_checkin':
-        // Trigger check-in process
         trackActivity('quick_checkin', { source: 'fomo' });
         break;
 
@@ -328,7 +303,6 @@ export const FOMOProvider = ({ children }) => {
         break;
     }
 
-    // Auto-dismiss trigger after action
     dismissFOMOEvent(trigger.id);
   }, [trackActivity, dismissFOMOEvent]);
 
@@ -399,34 +373,7 @@ export const useFOMO = () => {
   return context;
 };
 
-// Hook for tracking FOMO activities
-export const useFOMOTracking = () => {
-  const { trackActivity, trackJobView } = useFOMO();
-
-  const trackJobApplication = useCallback((jobId, metadata = {}) => {
-    trackActivity('job_application', { jobId, ...metadata });
-  }, [trackActivity]);
-
-  const trackLevelUp = useCallback((newLevel, metadata = {}) => {
-    trackActivity('level_up', { newLevel, ...metadata });
-  }, [trackActivity]);
-
-  const trackAchievementUnlock = useCallback((achievementId, metadata = {}) => {
-    trackActivity('achievement_unlocked', { achievementId, ...metadata });
-  }, [trackActivity]);
-
-  const trackStreakMilestone = useCallback((streakDays, metadata = {}) => {
-    trackActivity('streak_milestone', { streakDays, ...metadata });
-  }, [trackActivity]);
-
-  return {
-    trackJobApplication,
-    trackLevelUp,
-    trackAchievementUnlock,
-    trackStreakMilestone,
-    trackJobView,
-    trackActivity
-  };
-};
+// Re-export useFOMOTracking from the notification manager for backward compatibility
+export { useFOMOTracking } from './FOMONotificationManager';
 
 export default FOMOProvider;

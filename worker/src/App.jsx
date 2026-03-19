@@ -102,14 +102,14 @@ function AppRoutes() {
   return (
     <Routes>
       {/* Public route - Login */}
-      <Route path="/login" element={<Login />} />
+      <Route path="/login" element={<ErrorBoundary><Login /></ErrorBoundary>} />
 
       {/* All other routes require authentication */}
       <Route
         path="/"
         element={
           <ProtectedRoute>
-            <AppLayout><Home /></AppLayout>
+            <AppLayout><ErrorBoundary><Home /></ErrorBoundary></AppLayout>
           </ProtectedRoute>
         }
       />
@@ -117,7 +117,7 @@ function AppRoutes() {
         path="/jobs"
         element={
           <ProtectedRoute>
-            <AppLayout><Jobs /></AppLayout>
+            <AppLayout><ErrorBoundary><Jobs /></ErrorBoundary></AppLayout>
           </ProtectedRoute>
         }
       />
@@ -125,7 +125,7 @@ function AppRoutes() {
         path="/jobs/:id"
         element={
           <ProtectedRoute>
-            <AppLayout><JobDetail /></AppLayout>
+            <AppLayout><ErrorBoundary><JobDetail /></ErrorBoundary></AppLayout>
           </ProtectedRoute>
         }
       />
@@ -133,7 +133,7 @@ function AppRoutes() {
         path="/calendar"
         element={
           <ProtectedRoute>
-            <AppLayout><Calendar /></AppLayout>
+            <AppLayout><ErrorBoundary><Calendar /></ErrorBoundary></AppLayout>
           </ProtectedRoute>
         }
       />
@@ -141,7 +141,7 @@ function AppRoutes() {
         path="/wallet"
         element={
           <ProtectedRoute>
-            <AppLayout><Wallet /></AppLayout>
+            <AppLayout><ErrorBoundary><Wallet /></ErrorBoundary></AppLayout>
           </ProtectedRoute>
         }
       />
@@ -149,7 +149,7 @@ function AppRoutes() {
         path="/profile"
         element={
           <ProtectedRoute>
-            <AppLayout><Profile /></AppLayout>
+            <AppLayout><ErrorBoundary><Profile /></ErrorBoundary></AppLayout>
           </ProtectedRoute>
         }
       />
@@ -157,7 +157,7 @@ function AppRoutes() {
         path="/chat"
         element={
           <ProtectedRoute>
-            <AppLayout><Chat /></AppLayout>
+            <AppLayout><ErrorBoundary><Chat /></ErrorBoundary></AppLayout>
           </ProtectedRoute>
         }
       />
@@ -165,7 +165,7 @@ function AppRoutes() {
         path="/notifications"
         element={
           <ProtectedRoute>
-            <AppLayout><Notifications /></AppLayout>
+            <AppLayout><ErrorBoundary><Notifications /></ErrorBoundary></AppLayout>
           </ProtectedRoute>
         }
       />
@@ -175,7 +175,7 @@ function AppRoutes() {
         path="/quests"
         element={
           <ProtectedRoute>
-            <AppLayout><Quests /></AppLayout>
+            <AppLayout><ErrorBoundary><Quests /></ErrorBoundary></AppLayout>
           </ProtectedRoute>
         }
       />
@@ -183,7 +183,7 @@ function AppRoutes() {
         path="/achievements"
         element={
           <ProtectedRoute>
-            <AppLayout><Achievements /></AppLayout>
+            <AppLayout><ErrorBoundary><Achievements /></ErrorBoundary></AppLayout>
           </ProtectedRoute>
         }
       />
@@ -191,7 +191,7 @@ function AppRoutes() {
         path="/rewards"
         element={
           <ProtectedRoute>
-            <AppLayout><Rewards /></AppLayout>
+            <AppLayout><ErrorBoundary><Rewards /></ErrorBoundary></AppLayout>
           </ProtectedRoute>
         }
       />
@@ -199,7 +199,7 @@ function AppRoutes() {
         path="/leaderboard"
         element={
           <ProtectedRoute>
-            <AppLayout><Leaderboard /></AppLayout>
+            <AppLayout><ErrorBoundary><Leaderboard /></ErrorBoundary></AppLayout>
           </ProtectedRoute>
         }
       />
@@ -207,7 +207,7 @@ function AppRoutes() {
         path="/training"
         element={
           <ProtectedRoute>
-            <AppLayout><Training /></AppLayout>
+            <AppLayout><ErrorBoundary><Training /></ErrorBoundary></AppLayout>
           </ProtectedRoute>
         }
       />
@@ -217,7 +217,7 @@ function AppRoutes() {
         path="/referrals"
         element={
           <ProtectedRoute>
-            <AppLayout><Referrals /></AppLayout>
+            <AppLayout><ErrorBoundary><Referrals /></ErrorBoundary></AppLayout>
           </ProtectedRoute>
         }
       />
@@ -227,7 +227,7 @@ function AppRoutes() {
         path="/complete-profile"
         element={
           <ProtectedRoute>
-            <AppLayout><CompleteProfile /></AppLayout>
+            <AppLayout><ErrorBoundary><CompleteProfile /></ErrorBoundary></AppLayout>
           </ProtectedRoute>
         }
       />

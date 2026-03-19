@@ -1,6 +1,8 @@
 const express = require('express');
 const router = express.Router();
 const { db } = require('../../../db');
+const { safeJsonParse } = require('../../../db/utils/db-helpers');
+const { authenticateAdmin, authenticateToken } = require('../../../middleware/auth');
 
 // Get all training courses
 router.get('/', (req, res) => {
@@ -41,14 +43,19 @@ router.get('/', (req, res) => {
       }
     });
   } catch (error) {
-    res.status(500).json({ success: false, error: error.message });
+    res.status(500).json({ success: false, error: 'Internal server error' });
   }
 });
 
 // Create training
-router.post('/', (req, res) => {
+router.post('/', authenticateAdmin, (req, res) => {
   try {
     const { title, description, duration_minutes, xp_reward, certification_name } = req.body;
+
+    if (!title || typeof title !== 'string' || title.trim() === '') {
+      return res.status(400).json({ success: false, error: 'title is required and must be a non-empty string' });
+    }
+
     const id = 'TRN' + Date.now().toString(36).toUpperCase();
 
     db.prepare(`
@@ -59,12 +66,12 @@ router.post('/', (req, res) => {
     const training = db.prepare('SELECT * FROM training WHERE id = ?').get(id);
     res.status(201).json({ success: true, data: training });
   } catch (error) {
-    res.status(500).json({ success: false, error: error.message });
+    res.status(500).json({ success: false, error: 'Internal server error' });
   }
 });
 
 // Update training
-router.put('/:id', (req, res) => {
+router.put('/:id', authenticateAdmin, (req, res) => {
   try {
     const { title, description, duration_minutes, xp_reward, certification_name } = req.body;
 
@@ -77,17 +84,17 @@ router.put('/:id', (req, res) => {
     const training = db.prepare('SELECT * FROM training WHERE id = ?').get(req.params.id);
     res.json({ success: true, data: training });
   } catch (error) {
-    res.status(500).json({ success: false, error: error.message });
+    res.status(500).json({ success: false, error: 'Internal server error' });
   }
 });
 
 // Delete training
-router.delete('/:id', (req, res) => {
+router.delete('/:id', authenticateAdmin, (req, res) => {
   try {
     db.prepare('DELETE FROM training WHERE id = ?').run(req.params.id);
     res.json({ success: true });
   } catch (error) {
-    res.status(500).json({ success: false, error: error.message });
+    res.status(500).json({ success: false, error: 'Internal server error' });
   }
 });
 
@@ -138,12 +145,12 @@ router.get('/candidate/:candidateId', (req, res) => {
       }
     });
   } catch (error) {
-    res.status(500).json({ success: false, error: error.message });
+    res.status(500).json({ success: false, error: 'Internal server error' });
   }
 });
 
 // Enroll in training
-router.post('/:id/enroll', (req, res) => {
+router.post('/:id/enroll', authenticateToken, (req, res) => {
   try {
     const { candidate_id } = req.body;
     db.prepare(`
@@ -152,16 +159,28 @@ router.post('/:id/enroll', (req, res) => {
     `).run(candidate_id, req.params.id);
     res.json({ success: true });
   } catch (error) {
-    res.status(500).json({ success: false, error: error.message });
+    res.status(500).json({ success: false, error: 'Internal server error' });
   }
 });
 
 // Complete training
-router.post('/:id/complete', (req, res) => {
+router.post('/:id/complete', authenticateToken, (req, res) => {
   try {
     const { candidate_id, score } = req.body;
+
+    if (score === undefined || score === null || typeof score !== 'number' || score < 0 || score > 100) {
+      return res.status(400).json({ success: false, error: 'score is required and must be a number between 0 and 100' });
+    }
+    if (!candidate_id || typeof candidate_id !== 'string') {
+      return res.status(400).json({ success: false, error: 'candidate_id is required and must be a string' });
+    }
+
     const training = db.prepare('SELECT * FROM training WHERE id = ?').get(req.params.id);
-    
+
+    if (!training) {
+      return res.status(404).json({ success: false, error: 'Training not found' });
+    }
+
     const passed = score >= training.pass_score;
     const status = passed ? 'completed' : 'failed';
 
@@ -185,7 +204,7 @@ router.post('/:id/complete', (req, res) => {
 
         // Add certification atomically
         const candidate = db.prepare('SELECT certifications FROM candidates WHERE id = ?').get(candidate_id);
-        const certs = JSON.parse(candidate.certifications || '[]');
+        const certs = safeJsonParse(candidate.certifications, []);
         if (!certs.includes(training.certification_name)) {
           certs.push(training.certification_name);
           db.prepare('UPDATE candidates SET certifications = ? WHERE id = ?')
@@ -199,7 +218,7 @@ router.post('/:id/complete', (req, res) => {
 
     res.json({ success: true, passed, xp_awarded: passed ? training.xp_reward : 0 });
   } catch (error) {
-    res.status(500).json({ success: false, error: error.message });
+    res.status(500).json({ success: false, error: 'Internal server error' });
   }
 });
 

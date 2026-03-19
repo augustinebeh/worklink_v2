@@ -59,7 +59,7 @@ export default function Deployments() {
       });
       if (data.success) setDeployments(data.data);
     } catch (error) {
-      console.error('Failed to fetch deployments:', error);
+      // Failed to fetch deployments:
     } finally {
       setLoading(false);
     }

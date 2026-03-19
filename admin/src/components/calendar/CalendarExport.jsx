@@ -1,20 +1,8 @@
 import React, { useState } from 'react';
-import { Download, Calendar, FileText, Mail, Link } from 'lucide-react';
+import { Download } from 'lucide-react';
 import { format, addDays } from 'date-fns';
-
-const EXPORT_FORMATS = [
-  { id: 'ics', label: 'Calendar (.ics)', icon: Calendar, description: 'Import into Outlook, Google Calendar, etc.' },
-  { id: 'csv', label: 'Spreadsheet (.csv)', icon: FileText, description: 'Excel-compatible format with all details' },
-  { id: 'json', label: 'JSON Data', icon: FileText, description: 'Raw data format for developers' },
-  { id: 'email', label: 'Email Summary', icon: Mail, description: 'Send schedule summary via email' }
-];
-
-const EXPORT_RANGES = [
-  { id: 'today', label: 'Today Only', days: 0 },
-  { id: 'week', label: 'This Week', days: 7 },
-  { id: 'month', label: 'Next 30 Days', days: 30 },
-  { id: 'quarter', label: 'Next 90 Days', days: 90 }
-];
+import ExportOptions, { EXPORT_FORMATS, EXPORT_RANGES } from './ExportOptions';
+import ExportPreview from './ExportPreview';
 
 const CalendarExport = ({
   isOpen,
@@ -54,8 +42,7 @@ const CalendarExport = ({
 
       onClose();
     } catch (error) {
-      console.error('Export error:', error);
-      alert('Export failed. Please try again.');
+      // Export failed - error state could be added here for UI feedback
     } finally {
       setLoading(false);
     }
@@ -89,12 +76,11 @@ const CalendarExport = ({
     });
 
     if (exportData.includeAvailability) {
-      // Add availability blocks as events
       const filteredAvailability = filterAvailabilityByRange(availability, exportData.range);
 
       filteredAvailability.forEach((slot, index) => {
         const startDate = new Date(slot.datetime);
-        const endDate = new Date(startDate.getTime() + 60 * 60000); // 1 hour slots
+        const endDate = new Date(startDate.getTime() + 60 * 60000);
 
         icsContent.push(
           'BEGIN:VEVENT',
@@ -193,8 +179,6 @@ const CalendarExport = ({
     if (!response.ok) {
       throw new Error('Failed to send email');
     }
-
-    alert('Schedule summary sent successfully!');
   };
 
   const filterInterviewsByRange = (interviews, range) => {
@@ -243,7 +227,6 @@ const CalendarExport = ({
   if (!isOpen) return null;
 
   const selectedFormatConfig = EXPORT_FORMATS.find(f => f.id === selectedFormat);
-  const selectedRangeConfig = EXPORT_RANGES.find(r => r.id === selectedRange);
   const filteredCount = filterInterviewsByRange(interviews, selectedRange).length;
 
   return (
@@ -270,142 +253,28 @@ const CalendarExport = ({
             </button>
           </div>
 
-          {/* Export Format */}
-          <div className="mb-6">
-            <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-3">
-              Export Format
-            </label>
-            <div className="space-y-3">
-              {EXPORT_FORMATS.map(format => {
-                const Icon = format.icon;
-                return (
-                  <label
-                    key={format.id}
-                    className={`flex items-start gap-3 p-3 rounded-lg border cursor-pointer transition-colors ${
-                      selectedFormat === format.id
-                        ? 'border-blue-500 bg-blue-50 dark:bg-blue-900/20'
-                        : 'border-gray-300 dark:border-gray-600 hover:bg-gray-50 dark:hover:bg-gray-800'
-                    }`}
-                  >
-                    <input
-                      type="radio"
-                      name="format"
-                      value={format.id}
-                      checked={selectedFormat === format.id}
-                      onChange={(e) => setSelectedFormat(e.target.value)}
-                      className="mt-1"
-                    />
-                    <Icon className="w-4 h-4 mt-0.5 text-gray-500" />
-                    <div>
-                      <div className="font-medium text-gray-900 dark:text-white">
-                        {format.label}
-                      </div>
-                      <div className="text-sm text-gray-600 dark:text-gray-400">
-                        {format.description}
-                      </div>
-                    </div>
-                  </label>
-                );
-              })}
-            </div>
-          </div>
+          <ExportOptions
+            selectedFormat={selectedFormat}
+            setSelectedFormat={setSelectedFormat}
+            selectedRange={selectedRange}
+            setSelectedRange={setSelectedRange}
+            includeAvailability={includeAvailability}
+            setIncludeAvailability={setIncludeAvailability}
+            includePrivateInfo={includePrivateInfo}
+            setIncludePrivateInfo={setIncludePrivateInfo}
+            emailAddress={emailAddress}
+            setEmailAddress={setEmailAddress}
+            filteredCount={filteredCount}
+          />
 
-          {/* Date Range */}
-          <div className="mb-6">
-            <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-3">
-              Date Range
-            </label>
-            <div className="grid grid-cols-2 gap-3">
-              {EXPORT_RANGES.map(range => (
-                <label
-                  key={range.id}
-                  className={`flex items-center justify-center p-3 rounded-lg border cursor-pointer transition-colors ${
-                    selectedRange === range.id
-                      ? 'border-blue-500 bg-blue-50 dark:bg-blue-900/20 text-blue-700 dark:text-blue-300'
-                      : 'border-gray-300 dark:border-gray-600 hover:bg-gray-50 dark:hover:bg-gray-800'
-                  }`}
-                >
-                  <input
-                    type="radio"
-                    name="range"
-                    value={range.id}
-                    checked={selectedRange === range.id}
-                    onChange={(e) => setSelectedRange(e.target.value)}
-                    className="sr-only"
-                  />
-                  <span className="text-sm font-medium">{range.label}</span>
-                </label>
-              ))}
-            </div>
-            <p className="text-xs text-gray-500 dark:text-gray-400 mt-2">
-              {filteredCount} interviews in selected range
-            </p>
-          </div>
-
-          {/* Email Address for Email Export */}
-          {selectedFormat === 'email' && (
-            <div className="mb-6">
-              <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
-                Email Address
-              </label>
-              <input
-                type="email"
-                value={emailAddress}
-                onChange={(e) => setEmailAddress(e.target.value)}
-                placeholder="Enter email address"
-                className="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-lg bg-white dark:bg-gray-800 text-gray-900 dark:text-white"
-                required
-              />
-            </div>
-          )}
-
-          {/* Options */}
-          <div className="mb-6 space-y-3">
-            <label className="flex items-center gap-3">
-              <input
-                type="checkbox"
-                checked={includeAvailability}
-                onChange={(e) => setIncludeAvailability(e.target.checked)}
-                className="w-4 h-4 text-blue-600 border-gray-300 rounded focus:ring-blue-500"
-              />
-              <span className="text-sm text-gray-700 dark:text-gray-300">
-                Include availability slots
-              </span>
-            </label>
-
-            <label className="flex items-center gap-3">
-              <input
-                type="checkbox"
-                checked={includePrivateInfo}
-                onChange={(e) => setIncludePrivateInfo(e.target.checked)}
-                className="w-4 h-4 text-blue-600 border-gray-300 rounded focus:ring-blue-500"
-              />
-              <span className="text-sm text-gray-700 dark:text-gray-300">
-                Include private information (email addresses)
-              </span>
-            </label>
-          </div>
-
-          {/* Actions */}
-          <div className="flex justify-end gap-3">
-            <button
-              onClick={onClose}
-              className="px-4 py-2 text-gray-700 dark:text-gray-300 border border-gray-300 dark:border-gray-600 rounded-lg hover:bg-gray-50 dark:hover:bg-gray-800 transition-colors"
-            >
-              Cancel
-            </button>
-            <button
-              onClick={handleExport}
-              disabled={loading || (selectedFormat === 'email' && !emailAddress)}
-              className="flex items-center gap-2 px-4 py-2 bg-blue-600 hover:bg-blue-700 text-white rounded-lg transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
-            >
-              {loading && (
-                <div className="w-4 h-4 border-2 border-white border-t-transparent rounded-full animate-spin" />
-              )}
-              <Download className="w-4 h-4" />
-              Export {selectedFormatConfig?.label}
-            </button>
-          </div>
+          <ExportPreview
+            onClose={onClose}
+            onExport={handleExport}
+            loading={loading}
+            selectedFormat={selectedFormat}
+            emailAddress={emailAddress}
+            formatLabel={selectedFormatConfig?.label}
+          />
         </div>
       </div>
     </div>

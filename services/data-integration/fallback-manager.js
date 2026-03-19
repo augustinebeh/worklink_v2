@@ -5,6 +5,9 @@
  * ensuring graceful degradation and helpful responses.
  */
 
+const { createLogger } = require('../../utils/structured-logger');
+const logger = createLogger('fallback-manager');
+
 class FallbackManager {
   constructor() {
     this.fallbackStrategies = new Map();
@@ -46,7 +49,7 @@ class FallbackManager {
       return await strategy.execute(context, options);
 
     } catch (error) {
-      console.error(`Fallback error for ${dataType}:`, error);
+      logger.error('Fallback error', { data_type: dataType, error: error.message });
       return this.getEmergencyFallback(dataType, context);
     }
   }
@@ -63,7 +66,7 @@ class FallbackManager {
       // For now, return null to indicate no cached data
       return null;
     } catch (error) {
-      console.error('Cache fallback error:', error);
+      logger.error('Cache fallback error', { error: error.message });
       return null;
     }
   }

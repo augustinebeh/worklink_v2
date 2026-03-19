@@ -6,50 +6,23 @@
 
 const express = require('express');
 const router = express.Router();
-const Database = require('better-sqlite3');
-const path = require('path');
+const { db } = require('../../../../db');
 const { v4: uuidv4 } = require('uuid');
-const fs = require('fs');
+const { createLogger } = require('../../../../utils/structured-logger');
+const { safeJsonParse } = require('../../../../db/utils/db-helpers');
+const logger = createLogger('bpo-lifecycle');
 
-// Import table creator with fallback for Railway deployment
-let ensureTableExistsWithFallback;
-try {
-  const tableCreator = require('../../../db/database/utils/table-creator');
-  ensureTableExistsWithFallback = tableCreator.ensureTableExistsWithFallback;
-} catch (error) {
-  // Fallback function for Railway deployment if table-creator module not found
-  ensureTableExistsWithFallback = (tableName) => {
-    console.warn(`⚠️  Table creator not available, using basic check for ${tableName}`);
-    return true; // Assume table exists or will be created by schema
-  };
+// Helper: check if a table exists (Railway compatibility)
+function tableExists(tableName) {
+  return !!db.prepare("SELECT name FROM sqlite_master WHERE type='table' AND name=?").get(tableName);
 }
-
-// Railway-compatible database path configuration that matches main system
-const getDbPath = () => {
-  try {
-    // Try to use the main config first (for local development)
-    const { DB_PATH } = require('../../../db/database/config');
-    return DB_PATH;
-  } catch (error) {
-    // Fallback for Railway deployment - use same logic as main config
-    const DATA_DIR = process.env.RAILWAY_VOLUME_MOUNT_PATH || path.join(__dirname, '../../../data');
-    return path.join(DATA_DIR, 'worklink.db');
-  }
-};
-
-const DB_PATH = getDbPath();
 
 // ============================================================================
 // GET /api/v1/bpo/lifecycle - List all tenders in pipeline
 // ============================================================================
 router.get('/', (req, res) => {
   try {
-    const db = new Database(DB_PATH, { readonly: true });
-
-    // Check if bpo_tender_lifecycle table exists (Railway compatibility)
-    const tableCheck = db.prepare("SELECT name FROM sqlite_master WHERE type='table' AND name='bpo_tender_lifecycle'").get();
-    if (!tableCheck) {
-      db.close();
+    if (!tableExists('bpo_tender_lifecycle')) {
       return res.json({
         success: true,
         data: [], // Frontend expects data to be an array of tenders
@@ -75,52 +48,50 @@ router.get('/', (req, res) => {
 
     let query = 'SELECT * FROM bpo_tender_lifecycle WHERE 1=1';
     const params = [];
-    
+
     if (stage) {
       query += ' AND stage = ?';
       params.push(stage);
     }
-    
+
     if (priority) {
       query += ' AND priority = ?';
       params.push(priority);
     }
-    
+
     if (agency) {
       query += ' AND agency = ?';
       params.push(agency);
     }
-    
+
     if (assigned_to) {
       query += ' AND assigned_to = ?';
       params.push(assigned_to);
     }
-    
+
     if (is_urgent) {
       query += ' AND is_urgent = ?';
       params.push(is_urgent === 'true' ? 1 : 0);
     }
-    
+
     if (is_renewal) {
       query += ' AND is_renewal = ?';
       params.push(is_renewal === 'true' ? 1 : 0);
     }
-    
+
     query += ' ORDER BY stage_updated_at DESC LIMIT ? OFFSET ?';
     params.push(parseInt(limit), parseInt(offset));
-    
+
     const tenders = db.prepare(query).all(...params);
-    
+
     // Parse JSON fields
     tenders.forEach(t => {
-      if (t.qualification_details) t.qualification_details = JSON.parse(t.qualification_details);
-      if (t.assigned_team) t.assigned_team = JSON.parse(t.assigned_team);
-      if (t.documents) t.documents = JSON.parse(t.documents);
-      if (t.tags) t.tags = JSON.parse(t.tags);
+      t.qualification_details = safeJsonParse(t.qualification_details);
+      t.assigned_team = safeJsonParse(t.assigned_team, []);
+      t.documents = safeJsonParse(t.documents, []);
+      t.tags = safeJsonParse(t.tags, []);
     });
-    
-    db.close();
-    
+
     res.json({
       success: true,
       data: tenders,
@@ -130,8 +101,8 @@ router.get('/', (req, res) => {
       }
     });
   } catch (error) {
-    console.error('Error fetching tenders:', error);
-    res.status(500).json({ success: false, error: error.message });
+    logger.error('Error fetching tenders', { error: error.message });
+    res.status(500).json({ success: false, error: 'Internal server error' });
   }
 });
 
@@ -140,36 +111,31 @@ router.get('/', (req, res) => {
 // ============================================================================
 router.get('/:id', (req, res) => {
   try {
-    const db = new Database(DB_PATH, { readonly: true });
-    
     const tender = db.prepare('SELECT * FROM bpo_tender_lifecycle WHERE id = ?').get(req.params.id);
-    
+
     if (!tender) {
-      db.close();
       return res.status(404).json({ success: false, error: 'Tender not found' });
     }
-    
+
     // Parse JSON fields
-    if (tender.qualification_details) tender.qualification_details = JSON.parse(tender.qualification_details);
-    if (tender.assigned_team) tender.assigned_team = JSON.parse(tender.assigned_team);
-    if (tender.documents) tender.documents = JSON.parse(tender.documents);
-    if (tender.tags) tender.tags = JSON.parse(tender.tags);
-    
+    tender.qualification_details = safeJsonParse(tender.qualification_details);
+    tender.assigned_team = safeJsonParse(tender.assigned_team, []);
+    tender.documents = safeJsonParse(tender.documents, []);
+    tender.tags = safeJsonParse(tender.tags, []);
+
     // If this is a renewal, get renewal details
     if (tender.is_renewal && tender.renewal_id) {
       const renewal = db.prepare('SELECT * FROM contract_renewals WHERE id = ?').get(tender.renewal_id);
       tender.renewal_details = renewal;
     }
-    
-    db.close();
-    
+
     res.json({
       success: true,
       data: tender
     });
   } catch (error) {
-    console.error('Error fetching tender:', error);
-    res.status(500).json({ success: false, error: error.message });
+    logger.error('Error fetching tender', { error: error.message });
+    res.status(500).json({ success: false, error: 'Internal server error' });
   }
 });
 
@@ -178,11 +144,7 @@ router.get('/:id', (req, res) => {
 // ============================================================================
 router.post('/', (req, res) => {
   try {
-    const db = new Database(DB_PATH);
-
-    // Ensure BPO lifecycle table exists (if !table then create table pattern)
-    if (!ensureTableExistsWithFallback('bpo_tender_lifecycle')) {
-      db.close();
+    if (!tableExists('bpo_tender_lifecycle')) {
       return res.status(503).json({
         success: false,
         error: 'Failed to initialize BPO lifecycle tables',
@@ -212,17 +174,16 @@ router.post('/', (req, res) => {
       external_url,
       assigned_to
     } = req.body;
-    
+
     if (!title || !agency) {
-      db.close();
-      return res.status(400).json({ 
-        success: false, 
-        error: 'Missing required fields: title, agency' 
+      return res.status(400).json({
+        success: false,
+        error: 'Missing required fields: title, agency'
       });
     }
-    
+
     const id = uuidv4();
-    
+
     db.prepare(`
       INSERT INTO bpo_tender_lifecycle (
         id, source_type, source_id, tender_no, title, agency, description, category,
@@ -253,19 +214,17 @@ router.post('/', (req, res) => {
       external_url || null,
       assigned_to || null
     );
-    
+
     const tender = db.prepare('SELECT * FROM bpo_tender_lifecycle WHERE id = ?').get(id);
-    
-    db.close();
-    
+
     res.status(201).json({
       success: true,
       data: tender,
       message: 'Tender created successfully'
     });
   } catch (error) {
-    console.error('Error creating tender:', error);
-    res.status(500).json({ success: false, error: error.message });
+    logger.error('Error creating tender', { error: error.message });
+    res.status(500).json({ success: false, error: 'Internal server error' });
   }
 });
 
@@ -274,12 +233,7 @@ router.post('/', (req, res) => {
 // ============================================================================
 router.patch('/:id', (req, res) => {
   try {
-    const db = new Database(DB_PATH);
-
-    // Check if bpo_tender_lifecycle table exists (Railway compatibility)
-    const tableCheck = db.prepare("SELECT name FROM sqlite_master WHERE type='table' AND name='bpo_tender_lifecycle'").get();
-    if (!tableCheck) {
-      db.close();
+    if (!tableExists('bpo_tender_lifecycle')) {
       return res.status(503).json({
         success: false,
         error: 'BPO lifecycle system not available on this deployment',
@@ -289,7 +243,7 @@ router.patch('/:id', (req, res) => {
 
     const updates = [];
     const params = [];
-    
+
     const allowedFields = [
       'title', 'agency', 'description', 'category', 'closing_date',
       'estimated_value', 'our_bid_amount', 'estimated_cost', 'estimated_margin',
@@ -297,11 +251,11 @@ router.patch('/:id', (req, res) => {
       'assigned_team', 'qualification_score', 'qualification_details',
       'decision', 'decision_reasoning', 'notes', 'tags', 'documents'
     ];
-    
+
     for (const field of allowedFields) {
       if (req.body[field] !== undefined) {
         updates.push(`${field} = ?`);
-        
+
         // Stringify JSON fields
         if (['assigned_team', 'qualification_details', 'tags', 'documents'].includes(field)) {
           params.push(JSON.stringify(req.body[field]));
@@ -312,34 +266,30 @@ router.patch('/:id', (req, res) => {
         }
       }
     }
-    
+
     if (updates.length === 0) {
-      db.close();
       return res.status(400).json({ success: false, error: 'No valid fields to update' });
     }
-    
+
     updates.push('updated_at = CURRENT_TIMESTAMP');
     params.push(req.params.id);
-    
+
     const result = db.prepare(`UPDATE bpo_tender_lifecycle SET ${updates.join(', ')} WHERE id = ?`).run(...params);
-    
+
     if (result.changes === 0) {
-      db.close();
       return res.status(404).json({ success: false, error: 'Tender not found' });
     }
-    
+
     const tender = db.prepare('SELECT * FROM bpo_tender_lifecycle WHERE id = ?').get(req.params.id);
-    
-    db.close();
-    
+
     res.json({
       success: true,
       data: tender,
       message: 'Tender updated successfully'
     });
   } catch (error) {
-    console.error('Error updating tender:', error);
-    res.status(500).json({ success: false, error: error.message });
+    logger.error('Error updating tender', { error: error.message });
+    res.status(500).json({ success: false, error: 'Internal server error' });
   }
 });
 
@@ -348,14 +298,7 @@ router.patch('/:id', (req, res) => {
 // ============================================================================
 router.post('/renewal/:renewalId/move', (req, res) => {
   try {
-    const db = new Database(DB_PATH);
-
-    // Check if required tables exist (Railway compatibility)
-    const tenderTableCheck = db.prepare("SELECT name FROM sqlite_master WHERE type='table' AND name='bpo_tender_lifecycle'").get();
-    const renewalTableCheck = db.prepare("SELECT name FROM sqlite_master WHERE type='table' AND name='contract_renewals'").get();
-
-    if (!tenderTableCheck || !renewalTableCheck) {
-      db.close();
+    if (!tableExists('bpo_tender_lifecycle') || !tableExists('contract_renewals')) {
       return res.status(503).json({
         success: false,
         error: 'Required systems not available on this deployment',
@@ -369,7 +312,6 @@ router.post('/renewal/:renewalId/move', (req, res) => {
     const renewal = db.prepare('SELECT * FROM contract_renewals WHERE id = ?').get(renewalId);
 
     if (!renewal) {
-      db.close();
       return res.status(404).json({ success: false, error: 'Renewal not found' });
     }
 
@@ -409,16 +351,14 @@ router.post('/renewal/:renewalId/move', (req, res) => {
 
     const tender = db.prepare('SELECT * FROM bpo_tender_lifecycle WHERE id = ?').get(tenderId);
 
-    db.close();
-
     res.json({
       success: true,
       data: tender,
       message: 'Renewal moved to pipeline successfully'
     });
   } catch (error) {
-    console.error('Error moving renewal to pipeline:', error);
-    res.status(500).json({ success: false, error: error.message });
+    logger.error('Error moving renewal to pipeline', { error: error.message });
+    res.status(500).json({ success: false, error: 'Internal server error' });
   }
 });
 
@@ -427,12 +367,7 @@ router.post('/renewal/:renewalId/move', (req, res) => {
 // ============================================================================
 router.post('/:id/move', (req, res) => {
   try {
-    const db = new Database(DB_PATH);
-
-    // Check if bpo_tender_lifecycle table exists (Railway compatibility)
-    const tableCheck = db.prepare("SELECT name FROM sqlite_master WHERE type='table' AND name='bpo_tender_lifecycle'").get();
-    if (!tableCheck) {
-      db.close();
+    if (!tableExists('bpo_tender_lifecycle')) {
       return res.status(503).json({
         success: false,
         error: 'BPO lifecycle system not available on this deployment',
@@ -441,12 +376,11 @@ router.post('/:id/move', (req, res) => {
     }
 
     const { new_stage, user_id } = req.body;
-    
+
     if (!new_stage) {
-      db.close();
       return res.status(400).json({ success: false, error: 'new_stage required' });
     }
-    
+
     const validStages = [
       'renewal_watch',
       'new_opportunity',
@@ -457,31 +391,28 @@ router.post('/:id/move', (req, res) => {
       'awarded',
       'lost'
     ];
-    
+
     if (!validStages.includes(new_stage)) {
-      db.close();
       return res.status(400).json({ success: false, error: 'Invalid stage' });
     }
-    
+
     const result = db.prepare(`
-      UPDATE bpo_tender_lifecycle 
+      UPDATE bpo_tender_lifecycle
       SET stage = ?,
           stage_updated_at = CURRENT_TIMESTAMP,
           updated_at = CURRENT_TIMESTAMP
       WHERE id = ?
     `).run(new_stage, req.params.id);
-    
+
     if (result.changes === 0) {
-      db.close();
       return res.status(404).json({ success: false, error: 'Tender not found' });
     }
-    
+
     const tender = db.prepare('SELECT * FROM bpo_tender_lifecycle WHERE id = ?').get(req.params.id);
 
     // Log audit trail (Railway compatible - optional)
     try {
-      const auditTableCheck = db.prepare("SELECT name FROM sqlite_master WHERE type='table' AND name='audit_log'").get();
-      if (auditTableCheck) {
+      if (tableExists('audit_log')) {
         db.prepare(`
           INSERT INTO audit_log (id, event_type, event_action, resource_type, resource_id, user_id, new_value)
           VALUES (?, 'stage_changed', 'update', 'tender', ?, ?, ?)
@@ -489,19 +420,17 @@ router.post('/:id/move', (req, res) => {
       }
     } catch (auditError) {
       // Audit logging failed but don't break the main operation
-      console.warn('Audit logging failed:', auditError.message);
+      logger.warn('Audit logging failed', { error: auditError.message });
     }
 
-    db.close();
-    
     res.json({
       success: true,
       data: tender,
       message: `Tender moved to ${new_stage}`
     });
   } catch (error) {
-    console.error('Error moving tender:', error);
-    res.status(500).json({ success: false, error: error.message });
+    logger.error('Error moving tender', { error: error.message });
+    res.status(500).json({ success: false, error: 'Internal server error' });
   }
 });
 
@@ -510,12 +439,7 @@ router.post('/:id/move', (req, res) => {
 // ============================================================================
 router.post('/:id/decision', (req, res) => {
   try {
-    const db = new Database(DB_PATH);
-
-    // Check if bpo_tender_lifecycle table exists (Railway compatibility)
-    const tableCheck = db.prepare("SELECT name FROM sqlite_master WHERE type='table' AND name='bpo_tender_lifecycle'").get();
-    if (!tableCheck) {
-      db.close();
+    if (!tableExists('bpo_tender_lifecycle')) {
       return res.status(503).json({
         success: false,
         error: 'BPO lifecycle system not available on this deployment',
@@ -530,14 +454,13 @@ router.post('/:id/decision', (req, res) => {
       qualification_details,
       user_id
     } = req.body;
-    
+
     if (!decision) {
-      db.close();
       return res.status(400).json({ success: false, error: 'decision required' });
     }
-    
+
     const result = db.prepare(`
-      UPDATE bpo_tender_lifecycle 
+      UPDATE bpo_tender_lifecycle
       SET decision = ?,
           decision_reasoning = ?,
           decision_made_at = CURRENT_TIMESTAMP,
@@ -554,16 +477,15 @@ router.post('/:id/decision', (req, res) => {
       qualification_details ? JSON.stringify(qualification_details) : null,
       req.params.id
     );
-    
+
     if (result.changes === 0) {
-      db.close();
       return res.status(404).json({ success: false, error: 'Tender not found' });
     }
-    
+
     // If decision is 'no-go', move to lost
     if (decision === 'no-go') {
       db.prepare(`
-        UPDATE bpo_tender_lifecycle 
+        UPDATE bpo_tender_lifecycle
         SET stage = 'lost',
             outcome = 'lost',
             outcome_date = date('now'),
@@ -571,19 +493,17 @@ router.post('/:id/decision', (req, res) => {
         WHERE id = ?
       `).run(decision_reasoning || 'No-go decision', req.params.id);
     }
-    
+
     const tender = db.prepare('SELECT * FROM bpo_tender_lifecycle WHERE id = ?').get(req.params.id);
-    
-    db.close();
-    
+
     res.json({
       success: true,
       data: tender,
       message: 'Decision recorded successfully'
     });
   } catch (error) {
-    console.error('Error recording decision:', error);
-    res.status(500).json({ success: false, error: error.message });
+    logger.error('Error recording decision', { error: error.message });
+    res.status(500).json({ success: false, error: 'Internal server error' });
   }
 });
 
@@ -592,12 +512,7 @@ router.post('/:id/decision', (req, res) => {
 // ============================================================================
 router.get('/dashboard/stats', (req, res) => {
   try {
-    const db = new Database(DB_PATH, { readonly: true });
-
-    // Check if bpo_tender_lifecycle table exists (Railway compatibility)
-    const tableCheck = db.prepare("SELECT name FROM sqlite_master WHERE type='table' AND name='bpo_tender_lifecycle'").get();
-    if (!tableCheck) {
-      db.close();
+    if (!tableExists('bpo_tender_lifecycle')) {
       return res.json({
         success: true,
         data: {
@@ -656,11 +571,11 @@ router.get('/dashboard/stats', (req, res) => {
         SUM(CASE WHEN outcome = 'won' THEN actual_contract_value ELSE 0 END) as total_won_value
       FROM bpo_tender_lifecycle
     `).get();
-    
+
     // Win rate calculation
     const winLossCount = stats.won + stats.lost;
     const winRate = winLossCount > 0 ? Math.round((stats.won / winLossCount) * 100) : 0;
-    
+
     // Closing soon
     const closingSoon = db.prepare(`
       SELECT COUNT(*) as count
@@ -670,9 +585,7 @@ router.get('/dashboard/stats', (req, res) => {
         AND closing_date <= date('now', '+7 days')
         AND stage NOT IN ('submitted', 'awarded', 'lost')
     `).get();
-    
-    db.close();
-    
+
     res.json({
       success: true,
       data: {
@@ -682,8 +595,8 @@ router.get('/dashboard/stats', (req, res) => {
       }
     });
   } catch (error) {
-    console.error('Error fetching stats:', error);
-    res.status(500).json({ success: false, error: error.message });
+    logger.error('Error fetching stats', { error: error.message });
+    res.status(500).json({ success: false, error: 'Internal server error' });
   }
 });
 
@@ -692,12 +605,7 @@ router.get('/dashboard/stats', (req, res) => {
 // ============================================================================
 router.get('/dashboard/deadlines', (req, res) => {
   try {
-    const db = new Database(DB_PATH, { readonly: true });
-
-    // Check if bpo_tender_lifecycle table exists (Railway compatibility)
-    const tableCheck = db.prepare("SELECT name FROM sqlite_master WHERE type='table' AND name='bpo_tender_lifecycle'").get();
-    if (!tableCheck) {
-      db.close();
+    if (!tableExists('bpo_tender_lifecycle')) {
       return res.json({
         success: true,
         data: [],
@@ -706,9 +614,9 @@ router.get('/dashboard/deadlines', (req, res) => {
     }
 
     const { days = 7 } = req.query;
-    
+
     const deadlines = db.prepare(`
-      SELECT 
+      SELECT
         *,
         CAST((julianday(closing_date) - julianday('now')) AS INTEGER) as days_until_close
       FROM bpo_tender_lifecycle
@@ -718,16 +626,14 @@ router.get('/dashboard/deadlines', (req, res) => {
         AND stage NOT IN ('submitted', 'awarded', 'lost')
       ORDER BY closing_date ASC
     `).all(days);
-    
-    db.close();
-    
+
     res.json({
       success: true,
       data: deadlines
     });
   } catch (error) {
-    console.error('Error fetching deadlines:', error);
-    res.status(500).json({ success: false, error: error.message });
+    logger.error('Error fetching deadlines', { error: error.message });
+    res.status(500).json({ success: false, error: 'Internal server error' });
   }
 });
 
@@ -736,12 +642,7 @@ router.get('/dashboard/deadlines', (req, res) => {
 // ============================================================================
 router.delete('/:id', (req, res) => {
   try {
-    const db = new Database(DB_PATH);
-
-    // Check if bpo_tender_lifecycle table exists (Railway compatibility)
-    const tableCheck = db.prepare("SELECT name FROM sqlite_master WHERE type='table' AND name='bpo_tender_lifecycle'").get();
-    if (!tableCheck) {
-      db.close();
+    if (!tableExists('bpo_tender_lifecycle')) {
       return res.status(503).json({
         success: false,
         error: 'BPO lifecycle system not available on this deployment',
@@ -750,20 +651,18 @@ router.delete('/:id', (req, res) => {
     }
 
     const result = db.prepare('DELETE FROM bpo_tender_lifecycle WHERE id = ?').run(req.params.id);
-    
-    db.close();
-    
+
     if (result.changes === 0) {
       return res.status(404).json({ success: false, error: 'Tender not found' });
     }
-    
+
     res.json({
       success: true,
       message: 'Tender deleted successfully'
     });
   } catch (error) {
-    console.error('Error deleting tender:', error);
-    res.status(500).json({ success: false, error: error.message });
+    logger.error('Error deleting tender', { error: error.message });
+    res.status(500).json({ success: false, error: 'Internal server error' });
   }
 });
 

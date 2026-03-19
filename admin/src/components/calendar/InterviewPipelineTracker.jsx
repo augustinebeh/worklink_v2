@@ -97,7 +97,7 @@ const InterviewPipelineTracker = ({
       ];
 
       setPipelineData(mockPipelineData);
-      console.log('Pipeline data loaded (frontend-only):', mockPipelineData);
+      // Pipeline data loaded (frontend-only)
     } catch (err) {
       setError('Failed to fetch pipeline data');
     } finally {

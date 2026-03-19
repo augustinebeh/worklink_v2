@@ -8,6 +8,8 @@
 const intentClassifier = require('./index');
 const { db } = require('../../db');
 const monitor = require('./monitoring');
+const { createLogger } = require('../../utils/structured-logger');
+const logger = createLogger('intent-classifier-integration');
 
 /**
  * Enhanced intent detection that replaces the old LLM-based detection
@@ -93,7 +95,7 @@ async function enrichContextFromDatabase(candidateId, baseContext) {
       hasCompletedJobs: (candidate.total_jobs_completed || 0) > 0
     };
   } catch (error) {
-    console.error('Error enriching context:', error.message);
+    logger.error('Error enriching context', { error: error.message });
     return baseContext;
   }
 }
@@ -264,7 +266,7 @@ function logClassification(candidateId, message, result) {
     );
   } catch (error) {
     // Non-critical error - don't break the flow
-    console.error('Error logging classification:', error.message);
+    logger.error('Error logging classification', { error: error.message });
   }
 }
 
@@ -304,7 +306,7 @@ function getClassificationAnalytics(days = 7) {
       performanceMet: avgProcessingTime < 100
     };
   } catch (error) {
-    console.error('Error getting analytics:', error.message);
+    logger.error('Error getting analytics', { error: error.message });
     return null;
   }
 }
@@ -313,7 +315,7 @@ function getClassificationAnalytics(days = 7) {
  * Test the integration with sample data
  */
 async function testIntegration() {
-  console.log('🔌 Testing Intent Classifier Integration\n');
+  logger.info('Testing Intent Classifier Integration');
 
   const testCases = [
     { candidateId: 'test-001', message: "When will I get paid ah?" },
@@ -326,11 +328,14 @@ async function testIntegration() {
   for (const testCase of testCases) {
     const result = await classifyForAIChat(testCase.candidateId, testCase.message);
 
-    console.log(`📝 Message: "${testCase.message}"`);
-    console.log(`🎯 Intent: ${result.intent} (${result.confidence.toFixed(2)} confidence)`);
-    console.log(`📊 Strategy: ${result.responseStrategy}`);
-    console.log(`⚡ Processing Time: ${result.processingTimeMs}ms`);
-    console.log(`🔥 Escalation: ${result.escalationLevel}\n`);
+    logger.info('Test classification result', {
+      message: testCase.message,
+      intent: result.intent,
+      confidence: result.confidence.toFixed(2),
+      strategy: result.responseStrategy,
+      processing_time_ms: result.processingTimeMs,
+      escalation: result.escalationLevel
+    });
   }
 }
 

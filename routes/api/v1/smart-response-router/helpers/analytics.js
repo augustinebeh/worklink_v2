@@ -102,7 +102,7 @@ class SmartRouterAnalytics {
 
       return {
         success: false,
-        error: error.message,
+        error: 'Internal server error',
         data: null
       };
     }
@@ -218,7 +218,7 @@ class SmartRouterAnalytics {
 
       return {
         success: false,
-        error: error.message,
+        error: 'Internal server error',
         data: null
       };
     }
@@ -283,7 +283,7 @@ class SmartRouterAnalytics {
 
       return {
         success: false,
-        error: error.message,
+        error: 'Internal server error',
         data: null
       };
     }
@@ -333,7 +333,7 @@ class SmartRouterAnalytics {
 
       return {
         success: false,
-        error: error.message,
+        error: 'Internal server error',
         data: null
       };
     }

@@ -40,7 +40,7 @@ const RealTimeMonitoring = ({ refreshInterval = 30000 }) => {
         setLoading(false);
       }
     } catch (error) {
-      console.error('Failed to fetch real-time metrics:', error);
+      // Failed to fetch real-time metrics:
     }
   };
 

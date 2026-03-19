@@ -1,9 +1,10 @@
 const express = require('express');
 const router = express.Router();
 const { db } = require('../../../db');
+const { authenticateAdmin } = require('../../../middleware/auth');
 
 // Get all tenders
-router.get('/', (req, res) => {
+router.get('/', authenticateAdmin, (req, res) => {
   try {
     const { status, source, page = 1, limit = 20 } = req.query;
     const offset = (page - 1) * limit;
@@ -38,12 +39,12 @@ router.get('/', (req, res) => {
       },
     });
   } catch (error) {
-    res.status(500).json({ success: false, error: error.message });
+    res.status(500).json({ success: false, error: 'Internal server error' });
   }
 });
 
 // Get tender by ID
-router.get('/:id', (req, res) => {
+router.get('/:id', authenticateAdmin, (req, res) => {
   try {
     const tender = db.prepare('SELECT * FROM tenders WHERE id = ?').get(req.params.id);
     if (!tender) {
@@ -51,12 +52,12 @@ router.get('/:id', (req, res) => {
     }
     res.json({ success: true, data: tender });
   } catch (error) {
-    res.status(500).json({ success: false, error: error.message });
+    res.status(500).json({ success: false, error: 'Internal server error' });
   }
 });
 
 // Update tender status
-router.patch('/:id', (req, res) => {
+router.patch('/:id', authenticateAdmin, (req, res) => {
   try {
     const { status, notes, our_bid_amount, assigned_to, win_probability } = req.body;
     const updates = [];
@@ -76,12 +77,12 @@ router.patch('/:id', (req, res) => {
     const tender = db.prepare('SELECT * FROM tenders WHERE id = ?').get(req.params.id);
     res.json({ success: true, data: tender });
   } catch (error) {
-    res.status(500).json({ success: false, error: error.message });
+    res.status(500).json({ success: false, error: 'Internal server error' });
   }
 });
 
 // Get tender statistics
-router.get('/stats/overview', (req, res) => {
+router.get('/stats/overview', authenticateAdmin, (req, res) => {
   try {
     const stats = {
       total: db.prepare('SELECT COUNT(*) as count FROM tenders').get().count,
@@ -97,12 +98,12 @@ router.get('/stats/overview', (req, res) => {
 
     res.json({ success: true, data: stats });
   } catch (error) {
-    res.status(500).json({ success: false, error: error.message });
+    res.status(500).json({ success: false, error: 'Internal server error' });
   }
 });
 
 // Get BPO acquisition recommendations
-router.get('/recommendations/acquisition', (req, res) => {
+router.get('/recommendations/acquisition', authenticateAdmin, (req, res) => {
   try {
     // Analyze tender patterns for recommendations
     const recommendations = [
@@ -289,7 +290,7 @@ router.get('/recommendations/acquisition', (req, res) => {
       },
     });
   } catch (error) {
-    res.status(500).json({ success: false, error: error.message });
+    res.status(500).json({ success: false, error: 'Internal server error' });
   }
 });
 

@@ -7,6 +7,8 @@
 
 const express = require('express');
 const rateLimit = require('express-rate-limit');
+const { createLogger } = require('../../../../utils/structured-logger');
+const logger = createLogger('data-integration');
 
 const router = express.Router();
 
@@ -160,7 +162,7 @@ router.get('/docs', (req, res) => {
 
 // Error handling middleware
 router.use((error, req, res, next) => {
-  console.error('Data Integration API Error:', error);
+  logger.error('Data Integration API Error', { error: error.message });
 
   // Rate limit error
   if (error.status === 429) {
@@ -193,7 +195,7 @@ router.use((error, req, res, next) => {
     return res.status(500).json({
       success: false,
       error: 'Database error occurred',
-      details: process.env.NODE_ENV === 'development' ? error.message : undefined
+      details: 'Internal server error'
     });
   }
 
@@ -201,7 +203,7 @@ router.use((error, req, res, next) => {
   res.status(500).json({
     success: false,
     error: 'Internal server error',
-    details: process.env.NODE_ENV === 'development' ? error.message : undefined
+    details: 'Internal server error'
   });
 });
 

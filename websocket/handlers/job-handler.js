@@ -8,6 +8,9 @@ const { db } = require('../../db');
 const { candidateClients, EventTypes } = require('../clients');
 const { broadcastToAdmins } = require('../broadcast');
 const { createNotification } = require('./notification-handler');
+const { createLogger } = require('../../utils/structured-logger');
+
+const logger = createLogger('websocket:job-handler');
 
 /**
  * Handle job application from candidate
@@ -101,13 +104,13 @@ function handleJobApplication(candidateId, jobId) {
     );
 
   } catch (error) {
-    console.error('Job application error:', error);
+    logger.error('Job application error', { candidateId, jobId, error: error.message });
     const clientWs = candidateClients.get(candidateId);
     if (clientWs?.readyState === WebSocket.OPEN) {
       clientWs.send(JSON.stringify({ 
         type: 'job_application_result', 
         success: false, 
-        error: error.message 
+        error: 'Internal server error'
       }));
     }
   }

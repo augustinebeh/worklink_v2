@@ -7,6 +7,9 @@
 
 const express = require('express');
 const router = express.Router();
+const { createLogger } = require('../../../../../utils/structured-logger');
+const { authenticateAdmin } = require('../../../../../middleware/auth');
+const logger = createLogger('ai-automation:engagement');
 
 // Import engagement tracking utilities
 const {
@@ -24,7 +27,7 @@ const {
  * POST /track
  * Track a single engagement event
  */
-router.post('/track', (req, res) => {
+router.post('/track', authenticateAdmin, (req, res) => {
   try {
     const {
       candidateId,
@@ -72,8 +75,8 @@ router.post('/track', (req, res) => {
       data: result
     });
   } catch (error) {
-    console.error('Error in engagement tracking:', error);
-    res.status(500).json({ success: false, error: error.message });
+    logger.error('Error in engagement tracking', { error: error.message });
+    res.status(500).json({ success: false, error: 'Internal server error' });
   }
 });
 
@@ -81,7 +84,7 @@ router.post('/track', (req, res) => {
  * POST /batch
  * Track multiple engagement events in batch
  */
-router.post('/batch', (req, res) => {
+router.post('/batch', authenticateAdmin, (req, res) => {
   try {
     const { engagements } = req.body;
 
@@ -121,8 +124,8 @@ router.post('/batch', (req, res) => {
       }
     });
   } catch (error) {
-    console.error('Error in batch engagement tracking:', error);
-    res.status(500).json({ success: false, error: error.message });
+    logger.error('Error in batch engagement tracking', { error: error.message });
+    res.status(500).json({ success: false, error: 'Internal server error' });
   }
 });
 
@@ -130,7 +133,7 @@ router.post('/batch', (req, res) => {
  * GET /candidate/:candidateId
  * Get engagement summary for a candidate
  */
-router.get('/candidate/:candidateId', (req, res) => {
+router.get('/candidate/:candidateId', authenticateAdmin, (req, res) => {
   try {
     const { candidateId } = req.params;
     const { days = '30' } = req.query;
@@ -149,8 +152,8 @@ router.get('/candidate/:candidateId', (req, res) => {
       data: summary
     });
   } catch (error) {
-    console.error('Error getting engagement summary:', error);
-    res.status(500).json({ success: false, error: error.message });
+    logger.error('Error getting engagement summary', { error: error.message });
+    res.status(500).json({ success: false, error: 'Internal server error' });
   }
 });
 
@@ -158,7 +161,7 @@ router.get('/candidate/:candidateId', (req, res) => {
  * GET /leaderboard
  * Get engagement leaderboard
  */
-router.get('/leaderboard', (req, res) => {
+router.get('/leaderboard', authenticateAdmin, (req, res) => {
   try {
     const {
       period = '30',
@@ -186,8 +189,8 @@ router.get('/leaderboard', (req, res) => {
       }
     });
   } catch (error) {
-    console.error('Error getting engagement leaderboard:', error);
-    res.status(500).json({ success: false, error: error.message });
+    logger.error('Error getting engagement leaderboard', { error: error.message });
+    res.status(500).json({ success: false, error: 'Internal server error' });
   }
 });
 
@@ -195,7 +198,7 @@ router.get('/leaderboard', (req, res) => {
  * GET /analytics
  * Get engagement analytics for dashboard
  */
-router.get('/analytics', (req, res) => {
+router.get('/analytics', authenticateAdmin, (req, res) => {
   try {
     const { days = '30' } = req.query;
 
@@ -213,8 +216,8 @@ router.get('/analytics', (req, res) => {
       data: analytics
     });
   } catch (error) {
-    console.error('Error getting engagement analytics:', error);
-    res.status(500).json({ success: false, error: error.message });
+    logger.error('Error getting engagement analytics', { error: error.message });
+    res.status(500).json({ success: false, error: 'Internal server error' });
   }
 });
 
@@ -222,7 +225,7 @@ router.get('/analytics', (req, res) => {
  * GET /predict/:candidateId
  * Predict candidate responsiveness
  */
-router.get('/predict/:candidateId', (req, res) => {
+router.get('/predict/:candidateId', authenticateAdmin, (req, res) => {
   try {
     const { candidateId } = req.params;
 
@@ -240,8 +243,8 @@ router.get('/predict/:candidateId', (req, res) => {
       data: prediction
     });
   } catch (error) {
-    console.error('Error predicting responsiveness:', error);
-    res.status(500).json({ success: false, error: error.message });
+    logger.error('Error predicting responsiveness', { error: error.message });
+    res.status(500).json({ success: false, error: 'Internal server error' });
   }
 });
 
@@ -249,7 +252,7 @@ router.get('/predict/:candidateId', (req, res) => {
  * GET /types
  * Get all available engagement types
  */
-router.get('/types', (req, res) => {
+router.get('/types', authenticateAdmin, (req, res) => {
   try {
     res.json({
       success: true,
@@ -264,7 +267,7 @@ router.get('/types', (req, res) => {
       }
     });
   } catch (error) {
-    res.status(500).json({ success: false, error: error.message });
+    res.status(500).json({ success: false, error: 'Internal server error' });
   }
 });
 
@@ -272,7 +275,7 @@ router.get('/types', (req, res) => {
  * POST /refresh-metrics
  * Refresh engagement metrics for all candidates
  */
-router.post('/refresh-metrics', (req, res) => {
+router.post('/refresh-metrics', authenticateAdmin, (req, res) => {
   try {
     const { candidateIds = null, days = 30 } = req.body;
 
@@ -287,8 +290,8 @@ router.post('/refresh-metrics', (req, res) => {
       data: result
     });
   } catch (error) {
-    console.error('Error refreshing engagement metrics:', error);
-    res.status(500).json({ success: false, error: error.message });
+    logger.error('Error refreshing engagement metrics', { error: error.message });
+    res.status(500).json({ success: false, error: 'Internal server error' });
   }
 });
 

@@ -5,6 +5,7 @@
 
 const express = require('express');
 const router = express.Router();
+const { db } = require('../../../../../db');
 const { getClientOverview } = require('../helpers/metrics-calculator');
 
 /**
@@ -13,13 +14,7 @@ const { getClientOverview } = require('../helpers/metrics-calculator');
  */
 router.get('/overview', (req, res) => {
   try {
-    const Database = require('better-sqlite3');
-    const path = require('path');
-    const dbPath = path.join(__dirname, '../../../../../data/worklink.db');
-    const db = new Database(dbPath);
-
     const overview = getClientOverview(db);
-    db.close();
 
     res.json({
       success: true,
@@ -33,7 +28,7 @@ router.get('/overview', (req, res) => {
     res.status(500).json({
       success: false,
       error: 'Failed to fetch client overview',
-      details: error.message
+      details: 'Internal server error'
     });
   }
 });
@@ -45,10 +40,6 @@ router.get('/overview', (req, res) => {
 router.get('/active', (req, res) => {
   try {
     const { limit = 50 } = req.query;
-    const Database = require('better-sqlite3');
-    const path = require('path');
-    const dbPath = path.join(__dirname, '../../../../../data/worklink.db');
-    const db = new Database(dbPath);
 
     const clients = db.prepare(`
       SELECT
@@ -65,8 +56,6 @@ router.get('/active', (req, res) => {
       LIMIT ?
     `).all(parseInt(limit));
 
-    db.close();
-
     res.json({
       success: true,
       data: clients,
@@ -80,7 +69,7 @@ router.get('/active', (req, res) => {
     res.status(500).json({
       success: false,
       error: 'Failed to fetch active clients',
-      details: error.message
+      details: 'Internal server error'
     });
   }
 });
@@ -92,10 +81,6 @@ router.get('/active', (req, res) => {
 router.get('/performance', (req, res) => {
   try {
     const { timeframe = '30d', limit = 25 } = req.query;
-    const Database = require('better-sqlite3');
-    const path = require('path');
-    const dbPath = path.join(__dirname, '../../../../../data/worklink.db');
-    const db = new Database(dbPath);
 
     // Calculate date range
     const now = new Date();
@@ -145,8 +130,6 @@ router.get('/performance', (req, res) => {
       won_value: client.won_value || 0
     }));
 
-    db.close();
-
     res.json({
       success: true,
       data: enhanced,
@@ -161,7 +144,7 @@ router.get('/performance', (req, res) => {
     res.status(500).json({
       success: false,
       error: 'Failed to fetch client performance',
-      details: error.message
+      details: 'Internal server error'
     });
   }
 });
@@ -174,10 +157,6 @@ router.get('/:id/tenders', (req, res) => {
   try {
     const { id } = req.params;
     const { status = 'all', limit = 25 } = req.query;
-    const Database = require('better-sqlite3');
-    const path = require('path');
-    const dbPath = path.join(__dirname, '../../../../../data/worklink.db');
-    const db = new Database(dbPath);
 
     let whereClause = 'WHERE t.assigned_to = ?';
     let params = [id];
@@ -203,8 +182,6 @@ router.get('/:id/tenders', (req, res) => {
       LIMIT ?
     `).all(...params, parseInt(limit));
 
-    db.close();
-
     res.json({
       success: true,
       data: tenders,
@@ -220,7 +197,7 @@ router.get('/:id/tenders', (req, res) => {
     res.status(500).json({
       success: false,
       error: 'Failed to fetch client tenders',
-      details: error.message
+      details: 'Internal server error'
     });
   }
 });
@@ -230,15 +207,8 @@ router.get('/:id/tenders', (req, res) => {
  */
 router.get('/health', (req, res) => {
   try {
-    const Database = require('better-sqlite3');
-    const path = require('path');
-    const dbPath = path.join(__dirname, '../../../../../data/worklink.db');
-    const db = new Database(dbPath);
-
     const clientCount = db.prepare('SELECT COUNT(*) as count FROM clients').get().count;
     const activeClientCount = db.prepare("SELECT COUNT(*) as count FROM clients WHERE status = 'active'").get().count;
-
-    db.close();
 
     res.json({
       success: true,
@@ -254,7 +224,7 @@ router.get('/health', (req, res) => {
     res.status(500).json({
       success: false,
       error: 'Client health check failed',
-      details: error.message
+      details: 'Internal server error'
     });
   }
 });

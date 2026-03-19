@@ -7,6 +7,8 @@
 const express = require('express');
 const { param, validationResult } = require('express-validator');
 const router = express.Router();
+const { createLogger } = require('../../../../../utils/structured-logger');
+const logger = createLogger('data-integration:payments');
 
 // Import data integration services and helpers
 const DataIntegrationLayer = require('../../../../../services/data-integration');
@@ -126,7 +128,7 @@ router.get('/:candidateId/status',
       });
 
     } catch (error) {
-      console.error('Payment status error:', error);
+      logger.error('Payment status error', { error: error.message });
       res.status(500).json({
         success: false,
         error: 'Failed to retrieve payment status'
@@ -206,7 +208,7 @@ router.get('/:candidateId/:paymentId',
       });
 
     } catch (error) {
-      console.error('Payment details error:', error);
+      logger.error('Payment details error', { error: error.message });
       res.status(500).json({
         success: false,
         error: 'Failed to retrieve payment details'
@@ -287,7 +289,7 @@ router.get('/:candidateId/history',
       });
 
     } catch (error) {
-      console.error('Payment history error:', error);
+      logger.error('Payment history error', { error: error.message });
       res.status(500).json({
         success: false,
         error: 'Failed to retrieve payment history'
@@ -365,7 +367,7 @@ router.get('/:candidateId/summary',
       });
 
     } catch (error) {
-      console.error('Payment summary error:', error);
+      logger.error('Payment summary error', { error: error.message });
       res.status(500).json({
         success: false,
         error: 'Failed to retrieve payment summary'
@@ -381,7 +383,7 @@ async function getPaymentTimeline(paymentId) {
   try {
     return await dataIntegration.paymentService.getPaymentTimeline(paymentId);
   } catch (error) {
-    console.error('Error getting payment timeline:', error);
+    logger.error('Error getting payment timeline', { error: error.message });
     return [];
   }
 }
@@ -393,7 +395,7 @@ async function getRelatedTransactions(candidateId, paymentId) {
   try {
     return await dataIntegration.paymentService.getRelatedTransactions(candidateId, paymentId);
   } catch (error) {
-    console.error('Error getting related transactions:', error);
+    logger.error('Error getting related transactions', { error: error.message });
     return [];
   }
 }

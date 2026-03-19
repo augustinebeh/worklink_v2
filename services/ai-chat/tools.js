@@ -6,6 +6,8 @@
  */
 
 const { db } = require('../../db');
+const { createLogger } = require('../../utils/structured-logger');
+const logger = createLogger('ai-chat-tools');
 
 /**
  * Get worker's recent job deployments and their statuses
@@ -73,8 +75,8 @@ function getWorkerJobStatus(candidateId) {
       summary: `${pending.length} pending, ${inProgress.length} in progress, ${completed.length} completed, ${issues.length} issues`
     };
   } catch (error) {
-    console.error('Error getting worker job status:', error.message);
-    return { found: false, error: error.message };
+    logger.error('Error getting worker job status', { error: error.message });
+    return { found: false, error: 'Internal server error' };
   }
 }
 
@@ -155,8 +157,8 @@ function getWorkerPaymentStatus(candidateId) {
       nextPaymentInfo: 'Payments are processed every Friday for completed jobs.'
     };
   } catch (error) {
-    console.error('Error getting worker payment status:', error.message);
-    return { found: false, error: error.message };
+    logger.error('Error getting worker payment status', { error: error.message });
+    return { found: false, error: 'Internal server error' };
   }
 }
 
@@ -205,7 +207,7 @@ function escalateConversation(candidateId, reason) {
         timestamp: new Date().toISOString()
       });
     } catch (wsError) {
-      console.warn('Could not broadcast escalation:', wsError.message);
+      logger.warn('Could not broadcast escalation', { error: wsError.message });
     }
 
     return {
@@ -213,8 +215,8 @@ function escalateConversation(candidateId, reason) {
       message: `Conversation escalated to admin team. Reason: ${reason}`
     };
   } catch (error) {
-    console.error('Error escalating conversation:', error.message);
-    return { success: false, error: error.message };
+    logger.error('Error escalating conversation', { error: error.message });
+    return { success: false, error: 'Internal server error' };
   }
 }
 
@@ -246,7 +248,7 @@ function updateConversationStatus(candidateId, status) {
         timestamp: new Date().toISOString()
       });
     } catch (wsError) {
-      console.warn('Could not broadcast status update:', wsError.message);
+      logger.warn('Could not broadcast status update', { error: wsError.message });
     }
 
     return {
@@ -255,8 +257,8 @@ function updateConversationStatus(candidateId, status) {
       message: `Conversation status updated to ${status}`
     };
   } catch (error) {
-    console.error('Error updating conversation status:', error.message);
-    return { success: false, error: error.message };
+    logger.error('Error updating conversation status', { error: error.message });
+    return { success: false, error: 'Internal server error' };
   }
 }
 
@@ -314,8 +316,8 @@ function getMatchingJobs(candidateId, filters = {}) {
       }))
     };
   } catch (error) {
-    console.error('Error getting matching jobs:', error.message);
-    return { found: false, error: error.message };
+    logger.error('Error getting matching jobs', { error: error.message });
+    return { found: false, error: 'Internal server error' };
   }
 }
 
@@ -372,8 +374,8 @@ function getUpcomingJobs(candidateId) {
       }))
     };
   } catch (error) {
-    console.error('Error getting upcoming jobs:', error.message);
-    return { found: false, error: error.message };
+    logger.error('Error getting upcoming jobs', { error: error.message });
+    return { found: false, error: 'Internal server error' };
   }
 }
 

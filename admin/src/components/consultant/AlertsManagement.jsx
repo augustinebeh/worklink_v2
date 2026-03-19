@@ -40,7 +40,7 @@ const AlertsManagement = () => {
         setAlerts(data.data.alerts || []);
       }
     } catch (error) {
-      console.error('Failed to fetch alerts:', error);
+      // Failed to fetch alerts:
     } finally {
       setLoading(false);
     }
@@ -61,7 +61,7 @@ const AlertsManagement = () => {
         await fetchAlerts();
       }
     } catch (error) {
-      console.error('Failed to acknowledge alert:', error);
+      // Failed to acknowledge alert:
     }
   };
 
@@ -80,7 +80,7 @@ const AlertsManagement = () => {
         await fetchAlerts();
       }
     } catch (error) {
-      console.error('Failed to resolve alert:', error);
+      // Failed to resolve alert:
     }
   };
 

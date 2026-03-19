@@ -8,6 +8,9 @@
 const express = require('express');
 const router = express.Router();
 const { db } = require('../../../../../db');
+const { createLogger } = require('../../../../../utils/structured-logger');
+const { authenticateAdmin } = require('../../../../../middleware/auth');
+const logger = createLogger('follow-up');
 
 // Import follow-up system utilities
 const {
@@ -22,7 +25,7 @@ const {
  * POST /sequences
  * Create a new follow-up sequence
  */
-router.post('/sequences', (req, res) => {
+router.post('/sequences', authenticateAdmin, (req, res) => {
   try {
     const sequenceData = req.body;
 
@@ -41,8 +44,8 @@ router.post('/sequences', (req, res) => {
       data: result
     });
   } catch (error) {
-    console.error('Error creating follow-up sequence:', error);
-    res.status(500).json({ success: false, error: error.message });
+    logger.error('Error creating follow-up sequence', { error: error.message });
+    res.status(500).json({ success: false, error: 'Internal server error' });
   }
 });
 
@@ -50,7 +53,7 @@ router.post('/sequences', (req, res) => {
  * GET /sequences
  * Get all follow-up sequences
  */
-router.get('/sequences', (req, res) => {
+router.get('/sequences', authenticateAdmin, (req, res) => {
   try {
     const { active = 'true' } = req.query;
 
@@ -75,8 +78,8 @@ router.get('/sequences', (req, res) => {
       data: { sequences }
     });
   } catch (error) {
-    console.error('Error getting follow-up sequences:', error);
-    res.status(500).json({ success: false, error: error.message });
+    logger.error('Error getting follow-up sequences', { error: error.message });
+    res.status(500).json({ success: false, error: 'Internal server error' });
   }
 });
 
@@ -84,7 +87,7 @@ router.get('/sequences', (req, res) => {
  * GET /sequences/:sequenceId
  * Get specific follow-up sequence details
  */
-router.get('/sequences/:sequenceId', (req, res) => {
+router.get('/sequences/:sequenceId', authenticateAdmin, (req, res) => {
   try {
     const sequence = db.prepare('SELECT * FROM follow_up_sequences WHERE id = ?').get(req.params.sequenceId);
 
@@ -118,8 +121,8 @@ router.get('/sequences/:sequenceId', (req, res) => {
       }
     });
   } catch (error) {
-    console.error('Error getting sequence details:', error);
-    res.status(500).json({ success: false, error: error.message });
+    logger.error('Error getting sequence details', { error: error.message });
+    res.status(500).json({ success: false, error: 'Internal server error' });
   }
 });
 
@@ -127,7 +130,7 @@ router.get('/sequences/:sequenceId', (req, res) => {
  * POST /trigger
  * Trigger a follow-up sequence for a candidate
  */
-router.post('/trigger', (req, res) => {
+router.post('/trigger', authenticateAdmin, (req, res) => {
   try {
     const { candidateId, sequenceId, triggerEvent, triggerData = {} } = req.body;
 
@@ -146,8 +149,8 @@ router.post('/trigger', (req, res) => {
       data: result
     });
   } catch (error) {
-    console.error('Error triggering follow-up sequence:', error);
-    res.status(500).json({ success: false, error: error.message });
+    logger.error('Error triggering follow-up sequence', { error: error.message });
+    res.status(500).json({ success: false, error: 'Internal server error' });
   }
 });
 
@@ -155,7 +158,7 @@ router.post('/trigger', (req, res) => {
  * POST /process
  * Process pending follow-up actions
  */
-router.post('/process', async (req, res) => {
+router.post('/process', authenticateAdmin, async (req, res) => {
   try {
     const result = await processFollowUpActions();
 
@@ -165,8 +168,8 @@ router.post('/process', async (req, res) => {
       data: result
     });
   } catch (error) {
-    console.error('Error processing follow-up actions:', error);
-    res.status(500).json({ success: false, error: error.message });
+    logger.error('Error processing follow-up actions', { error: error.message });
+    res.status(500).json({ success: false, error: 'Internal server error' });
   }
 });
 
@@ -174,7 +177,7 @@ router.post('/process', async (req, res) => {
  * GET /candidate/:candidateId
  * Get follow-up instances for a candidate
  */
-router.get('/candidate/:candidateId', (req, res) => {
+router.get('/candidate/:candidateId', authenticateAdmin, (req, res) => {
   try {
     const { candidateId } = req.params;
     const { status = 'all' } = req.query;
@@ -206,8 +209,8 @@ router.get('/candidate/:candidateId', (req, res) => {
       data: { instances }
     });
   } catch (error) {
-    console.error('Error getting candidate follow-ups:', error);
-    res.status(500).json({ success: false, error: error.message });
+    logger.error('Error getting candidate follow-ups', { error: error.message });
+    res.status(500).json({ success: false, error: 'Internal server error' });
   }
 });
 
@@ -215,7 +218,7 @@ router.get('/candidate/:candidateId', (req, res) => {
  * POST /instances/:instanceId/cancel
  * Cancel a follow-up instance
  */
-router.post('/instances/:instanceId/cancel', (req, res) => {
+router.post('/instances/:instanceId/cancel', authenticateAdmin, (req, res) => {
   try {
     const { instanceId } = req.params;
     const { reason = 'Manual cancellation' } = req.body;
@@ -239,8 +242,8 @@ router.post('/instances/:instanceId/cancel', (req, res) => {
       data: { instanceId, reason }
     });
   } catch (error) {
-    console.error('Error cancelling follow-up instance:', error);
-    res.status(500).json({ success: false, error: error.message });
+    logger.error('Error cancelling follow-up instance', { error: error.message });
+    res.status(500).json({ success: false, error: 'Internal server error' });
   }
 });
 
@@ -248,7 +251,7 @@ router.post('/instances/:instanceId/cancel', (req, res) => {
  * GET /stats
  * Get follow-up system statistics
  */
-router.get('/stats', (req, res) => {
+router.get('/stats', authenticateAdmin, (req, res) => {
   try {
     const { days = '30' } = req.query;
 
@@ -270,8 +273,8 @@ router.get('/stats', (req, res) => {
       }
     });
   } catch (error) {
-    console.error('Error getting follow-up stats:', error);
-    res.status(500).json({ success: false, error: error.message });
+    logger.error('Error getting follow-up stats', { error: error.message });
+    res.status(500).json({ success: false, error: 'Internal server error' });
   }
 });
 
@@ -279,7 +282,7 @@ router.get('/stats', (req, res) => {
  * POST /initialize-defaults
  * Initialize default follow-up sequences
  */
-router.post('/initialize-defaults', (req, res) => {
+router.post('/initialize-defaults', authenticateAdmin, (req, res) => {
   try {
     const result = initializeDefaultSequences();
 
@@ -289,8 +292,8 @@ router.post('/initialize-defaults', (req, res) => {
       data: result
     });
   } catch (error) {
-    console.error('Error initializing default sequences:', error);
-    res.status(500).json({ success: false, error: error.message });
+    logger.error('Error initializing default sequences', { error: error.message });
+    res.status(500).json({ success: false, error: 'Internal server error' });
   }
 });
 
@@ -298,7 +301,7 @@ router.post('/initialize-defaults', (req, res) => {
  * POST /auto-trigger
  * Auto-trigger sequences based on recent activity
  */
-router.post('/auto-trigger', (req, res) => {
+router.post('/auto-trigger', authenticateAdmin, (req, res) => {
   try {
     const { lookbackHours = 24 } = req.body;
 
@@ -310,8 +313,8 @@ router.post('/auto-trigger', (req, res) => {
       data: result
     });
   } catch (error) {
-    console.error('Error auto-triggering sequences:', error);
-    res.status(500).json({ success: false, error: error.message });
+    logger.error('Error auto-triggering sequences', { error: error.message });
+    res.status(500).json({ success: false, error: 'Internal server error' });
   }
 });
 
@@ -319,7 +322,7 @@ router.post('/auto-trigger', (req, res) => {
  * GET /config
  * Get follow-up system configuration
  */
-router.get('/config', (req, res) => {
+router.get('/config', authenticateAdmin, (req, res) => {
   try {
     const config = {
       availableTriggers: [
@@ -340,7 +343,7 @@ router.get('/config', (req, res) => {
       data: config
     });
   } catch (error) {
-    res.status(500).json({ success: false, error: error.message });
+    res.status(500).json({ success: false, error: 'Internal server error' });
   }
 });
 

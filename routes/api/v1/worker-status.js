@@ -37,7 +37,7 @@ router.get('/classify/:candidateId', async (req, res) => {
   } catch (error) {
     res.status(500).json({
       success: false,
-      error: error.message
+      error: 'Internal server error'
     });
   }
 });
@@ -60,7 +60,7 @@ router.post('/batch-classify', async (req, res) => {
   } catch (error) {
     res.status(500).json({
       success: false,
-      error: error.message
+      error: 'Internal server error'
     });
   }
 });
@@ -80,7 +80,7 @@ router.get('/statistics', async (req, res) => {
   } catch (error) {
     res.status(500).json({
       success: false,
-      error: error.message
+      error: 'Internal server error'
     });
   }
 });
@@ -120,7 +120,7 @@ router.put('/:candidateId/status', async (req, res) => {
   } catch (error) {
     res.status(500).json({
       success: false,
-      error: error.message
+      error: 'Internal server error'
     });
   }
 });
@@ -143,7 +143,7 @@ router.get('/:candidateId/history', async (req, res) => {
   } catch (error) {
     res.status(500).json({
       success: false,
-      error: error.message
+      error: 'Internal server error'
     });
   }
 });
@@ -179,7 +179,7 @@ router.post('/:candidateId/override', async (req, res) => {
   } catch (error) {
     res.status(500).json({
       success: false,
-      error: error.message
+      error: 'Internal server error'
     });
   }
 });
@@ -205,7 +205,7 @@ router.get('/:candidateId/slm-routing', async (req, res) => {
   } catch (error) {
     res.status(500).json({
       success: false,
-      error: error.message
+      error: 'Internal server error'
     });
   }
 });
@@ -240,7 +240,7 @@ router.post('/:candidateId/test-slm-routing', async (req, res) => {
   } catch (error) {
     res.status(500).json({
       success: false,
-      error: error.message
+      error: 'Internal server error'
     });
   }
 });
@@ -285,7 +285,7 @@ router.get('/interviews/queue', (req, res) => {
   } catch (error) {
     res.status(500).json({
       success: false,
-      error: error.message
+      error: 'Internal server error'
     });
   }
 });
@@ -319,7 +319,7 @@ router.get('/interviews/scheduled', (req, res) => {
   } catch (error) {
     res.status(500).json({
       success: false,
-      error: error.message
+      error: 'Internal server error'
     });
   }
 });
@@ -394,7 +394,7 @@ router.put('/interviews/:interviewId/complete', async (req, res) => {
   } catch (error) {
     res.status(500).json({
       success: false,
-      error: error.message
+      error: 'Internal server error'
     });
   }
 });
@@ -418,7 +418,7 @@ router.get('/health', async (req, res) => {
   } catch (error) {
     res.status(500).json({
       success: false,
-      error: error.message,
+      error: 'Internal server error',
       status: 'unhealthy'
     });
   }

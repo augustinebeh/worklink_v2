@@ -50,38 +50,6 @@ const EventTypes = {
   CANDIDATE_UPDATED: 'candidate_updated'
 };
 
-/**
- * Check if a given type is a valid event type
- * @param {string} type - Event type to validate
- * @returns {boolean} True if valid
- */
-function isValidEventType(type) {
-  return Object.values(EventTypes).includes(type);
-}
-
-/**
- * Get all event types as an array
- * @returns {string[]} Array of event type values
- */
-function getAllEventTypes() {
-  return Object.values(EventTypes);
-}
-
-/**
- * Get event types by category
- * @param {string} category - Category name (chat, job, payment, etc.)
- * @returns {string[]} Array of event types in that category
- */
-function getEventTypesByCategory(category) {
-  const prefix = category.toUpperCase() + '_';
-  return Object.entries(EventTypes)
-    .filter(([key]) => key.startsWith(prefix) || key === category.toUpperCase())
-    .map(([, value]) => value);
-}
-
 module.exports = {
-  EventTypes,
-  isValidEventType,
-  getAllEventTypes,
-  getEventTypesByCategory
+  EventTypes
 };

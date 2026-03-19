@@ -18,7 +18,7 @@ export function useErrorHandler() {
    * Handle different types of errors with appropriate responses
    */
   const handleError = useCallback((error, context = {}) => {
-    console.error('Error handled:', error, context);
+    // Error handled
 
     // Extract error information
     const errorInfo = {
@@ -32,7 +32,7 @@ export function useErrorHandler() {
     switch (errorInfo.status) {
       case 401:
         // Unauthorized - redirect to login
-        console.warn('🔐 Unauthorized access detected, logging out...');
+        // Unauthorized access detected, logging out
         logout();
         return {
           message: 'Your session has expired. Please log in again.',
@@ -216,28 +216,33 @@ export function useFormErrorHandler() {
 
 /**
  * Global error handler for unhandled promise rejections and errors
+ * Returns a cleanup function that removes the listeners
  */
 export function setupGlobalErrorHandling() {
-  // Handle unhandled promise rejections
-  window.addEventListener('unhandledrejection', (event) => {
-    console.error('🚨 Unhandled promise rejection:', event.reason);
+  const handleUnhandledRejection = (event) => {
+    // Unhandled promise rejection
 
     // Prevent browser console error
     event.preventDefault();
+  };
 
-    // You could show a global toast notification here
-    console.warn('An unexpected error occurred. Please try refreshing the page.');
-  });
+  const handleError = (event) => {
+    // Uncaught error handled by global handler
+  };
+
+  // Handle unhandled promise rejections
+  window.addEventListener('unhandledrejection', handleUnhandledRejection);
 
   // Handle uncaught errors
-  window.addEventListener('error', (event) => {
-    console.error('🚨 Uncaught error:', event.error);
+  window.addEventListener('error', handleError);
 
-    // You could show a global toast notification here
-    console.warn('An unexpected error occurred. Please try refreshing the page.');
-  });
+  // Global error handlers installed
 
-  console.log('✅ Global error handlers installed');
+  // Return cleanup function
+  return () => {
+    window.removeEventListener('unhandledrejection', handleUnhandledRejection);
+    window.removeEventListener('error', handleError);
+  };
 }
 
 /**

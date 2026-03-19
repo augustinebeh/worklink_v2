@@ -7,6 +7,8 @@
 const express = require('express');
 const { body, param, validationResult } = require('express-validator');
 const router = express.Router();
+const { createLogger } = require('../../../../../utils/structured-logger');
+const logger = createLogger('data-integration:candidates');
 
 // Import data integration services and helpers
 const DataIntegrationLayer = require('../../../../../services/data-integration');
@@ -106,11 +108,11 @@ router.get('/:candidateId/comprehensive',
       });
 
     } catch (error) {
-      console.error('Comprehensive data access error:', error);
+      logger.error('Comprehensive data access error', { error: error.message });
       res.status(500).json({
         success: false,
         error: 'Failed to retrieve user data',
-        details: process.env.NODE_ENV === 'development' ? error.message : undefined
+        details: 'Internal server error'
       });
     }
   }
@@ -186,11 +188,11 @@ router.get('/:candidateId/:dataType',
       });
 
     } catch (error) {
-      console.error('Specific data access error:', error);
+      logger.error('Specific data access error', { error: error.message });
       res.status(500).json({
         success: false,
         error: 'Failed to retrieve specific data',
-        details: process.env.NODE_ENV === 'development' ? error.message : undefined
+        details: 'Internal server error'
       });
     }
   }
@@ -252,7 +254,7 @@ router.get('/:candidateId/account/verification',
       });
 
     } catch (error) {
-      console.error('Account verification error:', error);
+      logger.error('Account verification error', { error: error.message });
       res.status(500).json({
         success: false,
         error: 'Failed to retrieve account verification status'
@@ -294,7 +296,7 @@ router.delete('/:candidateId/cache',
       });
 
     } catch (error) {
-      console.error('Cache invalidation error:', error);
+      logger.error('Cache invalidation error', { error: error.message });
       res.status(500).json({
         success: false,
         error: 'Failed to invalidate cache'

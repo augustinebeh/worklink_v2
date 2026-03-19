@@ -1,19 +1,20 @@
 const express = require('express');
 const router = express.Router();
 const { db, resetToSampleData } = require('../../../db');
+const { authenticateAdmin } = require('../../../middleware/auth');
 
 // Reset database to sample data
-router.post('/reset-to-sample', (req, res) => {
+router.post('/reset-to-sample', authenticateAdmin, (req, res) => {
   try {
     resetToSampleData();
     res.json({ success: true, message: 'Database reset to sample data' });
   } catch (error) {
-    res.status(500).json({ success: false, error: error.message });
+    res.status(500).json({ success: false, error: 'Internal server error' });
   }
 });
 
 // Get database stats
-router.get('/stats', (req, res) => {
+router.get('/stats', authenticateAdmin, (req, res) => {
   try {
     const stats = {
       candidates: db.prepare('SELECT COUNT(*) as count FROM candidates').get().count,
@@ -27,23 +28,23 @@ router.get('/stats', (req, res) => {
     };
     res.json({ success: true, data: stats });
   } catch (error) {
-    res.status(500).json({ success: false, error: error.message });
+    res.status(500).json({ success: false, error: 'Internal server error' });
   }
 });
 
 // System settings
-router.get('/settings', (req, res) => {
+router.get('/settings', authenticateAdmin, (req, res) => {
   try {
     const settings = db.prepare('SELECT * FROM settings').all();
     const settingsMap = {};
     settings.forEach(s => { settingsMap[s.key] = s.value; });
     res.json({ success: true, data: settingsMap });
   } catch (error) {
-    res.status(500).json({ success: false, error: error.message });
+    res.status(500).json({ success: false, error: 'Internal server error' });
   }
 });
 
-router.put('/settings', (req, res) => {
+router.put('/settings', authenticateAdmin, (req, res) => {
   try {
     const { key, value } = req.body;
     db.prepare(`
@@ -52,7 +53,7 @@ router.put('/settings', (req, res) => {
     `).run(key, value, value);
     res.json({ success: true });
   } catch (error) {
-    res.status(500).json({ success: false, error: error.message });
+    res.status(500).json({ success: false, error: 'Internal server error' });
   }
 });
 

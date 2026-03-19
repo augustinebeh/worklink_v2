@@ -141,7 +141,7 @@ export function useKanbanDnd({ tenders, setTenders, onStageChange }) {
         throw new Error(response.message || 'Failed to move tender');
       }
     } catch (error) {
-      console.error('Error moving tender:', error);
+      // Error moving tender
 
       // Rollback to previous state
       if (previousState) {

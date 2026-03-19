@@ -7,6 +7,8 @@ const cron = require('node-cron');
 const EmailDeliveryTracker = require('./delivery-tracker');
 const emailService = require('./index');
 const { db } = require('../../db');
+const { createLogger } = require('../../utils/structured-logger');
+const logger = createLogger('email-scheduler');
 
 class EmailScheduler {
   constructor() {
@@ -20,11 +22,11 @@ class EmailScheduler {
    */
   start() {
     if (this.isRunning) {
-      console.log('Email scheduler is already running');
+      logger.info('Email scheduler is already running');
       return;
     }
 
-    console.log('Starting email scheduler...');
+    logger.info('Starting email scheduler...');
 
     // Process failed emails every 5 minutes
     this.jobs.set('retry-failed', cron.schedule('*/5 * * * *', async () => {
@@ -52,7 +54,7 @@ class EmailScheduler {
     }));
 
     this.isRunning = true;
-    console.log('Email scheduler started with', this.jobs.size, 'scheduled tasks');
+    logger.info(`Email scheduler started with ${this.jobs.size} scheduled tasks`);
   }
 
   /**
@@ -60,20 +62,20 @@ class EmailScheduler {
    */
   stop() {
     if (!this.isRunning) {
-      console.log('Email scheduler is not running');
+      logger.info('Email scheduler is not running');
       return;
     }
 
-    console.log('Stopping email scheduler...');
+    logger.info('Stopping email scheduler...');
 
     for (const [name, job] of this.jobs) {
       job.destroy();
-      console.log(`Stopped ${name} job`);
+      logger.info(`Stopped ${name} job`);
     }
 
     this.jobs.clear();
     this.isRunning = false;
-    console.log('Email scheduler stopped');
+    logger.info('Email scheduler stopped');
   }
 
   /**
@@ -81,16 +83,16 @@ class EmailScheduler {
    */
   async processFailedEmails() {
     try {
-      console.log('Processing failed emails for retry...');
+      logger.info('Processing failed emails for retry...');
 
       const failedEmails = this.deliveryTracker.getEmailsForRetry();
 
       if (failedEmails.length === 0) {
-        console.log('No failed emails to retry');
+        logger.info('No failed emails to retry');
         return;
       }
 
-      console.log(`Found ${failedEmails.length} failed emails to retry`);
+      logger.info(`Found ${failedEmails.length} failed emails to retry`);
 
       let retriedCount = 0;
       let permanentFailures = 0;
@@ -118,7 +120,7 @@ class EmailScheduler {
             try {
               emailData.templateData = JSON.parse(emailRecord.metadata);
             } catch (e) {
-              console.warn('Failed to parse email metadata:', e);
+              logger.warn('Failed to parse email metadata', { error: e.message });
             }
           }
 
@@ -126,10 +128,10 @@ class EmailScheduler {
           await emailService.sendEmail(emailData);
           retriedCount++;
 
-          console.log(`Successfully retried email: ${emailRecord.tracking_id}`);
+          logger.info(`Successfully retried email: ${emailRecord.tracking_id}`);
 
         } catch (error) {
-          console.error(`Failed to retry email ${emailRecord.tracking_id}:`, error);
+          logger.error(`Failed to retry email ${emailRecord.tracking_id}`, { error: error.message });
 
           // Check if this is a permanent failure
           if (emailRecord.attempt_count >= emailRecord.max_attempts) {
@@ -142,10 +144,10 @@ class EmailScheduler {
         }
       }
 
-      console.log(`Email retry completed: ${retriedCount} retried, ${permanentFailures} permanent failures`);
+      logger.info(`Email retry completed: ${retriedCount} retried, ${permanentFailures} permanent failures`);
 
     } catch (error) {
-      console.error('Error processing failed emails:', error);
+      logger.error('Error processing failed emails', { error: error.message });
     }
   }
 
@@ -187,13 +189,13 @@ class EmailScheduler {
    */
   async cleanupOldRecords() {
     try {
-      console.log('Cleaning up old email delivery records...');
+      logger.info('Cleaning up old email delivery records...');
 
       const result = this.deliveryTracker.cleanOldRecords(30); // Keep 30 days
 
-      console.log(`Cleanup completed: ${result.deletedLogs} logs, ${result.deletedAttempts} attempts deleted`);
+      logger.info(`Cleanup completed: ${result.deletedLogs} logs, ${result.deletedAttempts} attempts deleted`);
     } catch (error) {
-      console.error('Error cleaning up old records:', error);
+      logger.error('Error cleaning up old records', { error: error.message });
     }
   }
 
@@ -202,7 +204,7 @@ class EmailScheduler {
    */
   async sendDailyReports() {
     try {
-      console.log('Sending daily reports...');
+      logger.info('Sending daily reports...');
 
       // Get report data
       const reportData = await this.generateDailyReport();
@@ -211,15 +213,15 @@ class EmailScheduler {
       const recipients = await this.getReportRecipients('daily_reports');
 
       if (recipients.length === 0) {
-        console.log('No recipients configured for daily reports');
+        logger.info('No recipients configured for daily reports');
         return;
       }
 
       await emailService.sendReport('daily', reportData, recipients);
 
-      console.log(`Daily reports sent to ${recipients.length} recipients`);
+      logger.info(`Daily reports sent to ${recipients.length} recipients`);
     } catch (error) {
-      console.error('Error sending daily reports:', error);
+      logger.error('Error sending daily reports', { error: error.message });
     }
   }
 
@@ -228,7 +230,7 @@ class EmailScheduler {
    */
   async sendWeeklyReports() {
     try {
-      console.log('Sending weekly reports...');
+      logger.info('Sending weekly reports...');
 
       // Get report data
       const reportData = await this.generateWeeklyReport();
@@ -237,15 +239,15 @@ class EmailScheduler {
       const recipients = await this.getReportRecipients('weekly_reports');
 
       if (recipients.length === 0) {
-        console.log('No recipients configured for weekly reports');
+        logger.info('No recipients configured for weekly reports');
         return;
       }
 
       await emailService.sendReport('weekly', reportData, recipients);
 
-      console.log(`Weekly reports sent to ${recipients.length} recipients`);
+      logger.info(`Weekly reports sent to ${recipients.length} recipients`);
     } catch (error) {
-      console.error('Error sending weekly reports:', error);
+      logger.error('Error sending weekly reports', { error: error.message });
     }
   }
 
@@ -312,7 +314,7 @@ class EmailScheduler {
         }
       };
     } catch (error) {
-      console.error('Error generating daily report:', error);
+      logger.error('Error generating daily report', { error: error.message });
       return null;
     }
   }
@@ -374,7 +376,7 @@ class EmailScheduler {
         }
       };
     } catch (error) {
-      console.error('Error generating weekly report:', error);
+      logger.error('Error generating weekly report', { error: error.message });
       return null;
     }
   }
@@ -395,7 +397,7 @@ class EmailScheduler {
         name: r.user_type === 'admin' ? 'Admin User' : 'User'
       }));
     } catch (error) {
-      console.error('Error getting report recipients:', error);
+      logger.error('Error getting report recipients', { error: error.message });
       return [];
     }
   }
@@ -406,7 +408,7 @@ class EmailScheduler {
   async performHealthCheck() {
     try {
       if (!emailService.isInitialized) {
-        console.warn('Email service is not initialized');
+        logger.warn('Email service is not initialized');
         return;
       }
 
@@ -418,18 +420,18 @@ class EmailScheduler {
           (stats.overall.failed / stats.overall.total_emails) * 100 : 0;
 
         if (failureRate > 50) {
-          console.warn(`High email failure rate detected: ${failureRate.toFixed(2)}%`);
+          logger.warn(`High email failure rate detected: ${failureRate.toFixed(2)}%`);
           // Could send alert email to admin here
         }
 
         if (stats.overall.pending > 100) {
-          console.warn(`High number of pending emails: ${stats.overall.pending}`);
+          logger.warn(`High number of pending emails: ${stats.overall.pending}`);
         }
       }
 
-      console.log('Email service health check completed');
+      logger.info('Email service health check completed');
     } catch (error) {
-      console.error('Error during email service health check:', error);
+      logger.error('Error during email service health check', { error: error.message });
     }
   }
 
@@ -459,7 +461,7 @@ class EmailScheduler {
       job.start();
     }
 
-    console.log(`Added custom email job: ${name} (${cronExpression})`);
+    logger.info(`Added custom email job: ${name} (${cronExpression})`);
     return job;
   }
 
@@ -471,7 +473,7 @@ class EmailScheduler {
     if (job) {
       job.destroy();
       this.jobs.delete(name);
-      console.log(`Removed custom email job: ${name}`);
+      logger.info(`Removed custom email job: ${name}`);
       return true;
     }
     return false;

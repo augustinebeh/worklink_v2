@@ -7,6 +7,8 @@
 
 const rateLimit = require('express-rate-limit');
 const RedisStore = require('rate-limit-redis');
+const { createLogger } = require('../utils/structured-logger');
+const logger = createLogger('rate-limiting');
 
 class RateLimitingManager {
   constructor() {
@@ -84,10 +86,10 @@ class RateLimitingManager {
         });
 
         await this.redisClient.connect();
-        console.log('✅ Rate limiting Redis store connected');
+        logger.info('Rate limiting Redis store connected');
       }
     } catch (error) {
-      console.log('⚠️ Redis unavailable for rate limiting, using memory store');
+      logger.warn('Redis unavailable for rate limiting, using memory store');
       this.redisClient = null;
     }
   }
@@ -161,7 +163,7 @@ class RateLimitingManager {
    * Called when rate limit is reached for the first time
    */
   onLimitReached(req) {
-    console.warn(`Rate limit reached for ${req.user?.id || 'anonymous'} from ${req.ip}`);
+    logger.warn('Rate limit reached', { userId: req.user?.id || 'anonymous', ip: req.ip });
 
     // Log security event for suspicious activity
     if (req.user) {
@@ -312,11 +314,6 @@ class RateLimitingManager {
         return next();
       }
 
-      // Check for admin bypass header
-      if (req.get('X-Admin-Bypass') === process.env.ADMIN_BYPASS_TOKEN) {
-        return next();
-      }
-
       // Continue with normal rate limiting
       next();
     };
@@ -381,7 +378,7 @@ class RateLimitingManager {
         await this.redisClient.expire(`violations:${key}`, 24 * 60 * 60); // 24 hours
       }
     } catch (error) {
-      console.error('Failed to increment violation count:', error);
+      logger.error('Failed to increment violation count', { error: error.message });
     }
   }
 
@@ -397,7 +394,7 @@ class RateLimitingManager {
       remaining: req.rateLimit.remaining
     };
 
-    console.warn('Rate limit exceeded:', logData);
+    logger.warn('Rate limit exceeded', logData);
 
     // In a production environment, you'd send this to your monitoring system
     // this.sendToMonitoring('rate_limit_exceeded', logData);

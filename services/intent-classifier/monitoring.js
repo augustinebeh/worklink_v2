@@ -7,6 +7,8 @@
 
 const { db } = require('../../db');
 const EventEmitter = require('events');
+const { createLogger } = require('../../utils/structured-logger');
+const slogger = createLogger('intent-classifier-monitor');
 
 class IntentClassifierMonitor extends EventEmitter {
   constructor() {
@@ -121,7 +123,7 @@ class IntentClassifierMonitor extends EventEmitter {
         hourBucket
       );
     } catch (dbError) {
-      console.error('Failed to store metrics:', dbError.message);
+      slogger.error('Failed to store metrics', { error: dbError.message });
     }
   }
 
@@ -212,7 +214,7 @@ class IntentClassifierMonitor extends EventEmitter {
         errorCount: stat.errors
       }));
     } catch (error) {
-      console.error('Failed to get hourly stats:', error.message);
+      slogger.error('Failed to get hourly stats', { error: error.message });
       return [];
     }
   }
@@ -246,7 +248,7 @@ class IntentClassifierMonitor extends EventEmitter {
         escalationRate: ((item.escalations / item.count) * 100).toFixed(1)
       }));
     } catch (error) {
-      console.error('Failed to get intent distribution:', error.message);
+      slogger.error('Failed to get intent distribution', { error: error.message });
       return [];
     }
   }
@@ -284,7 +286,7 @@ class IntentClassifierMonitor extends EventEmitter {
         targetMet: (metrics?.avg_time || 0) < this.alertThresholds.maxResponseTime
       };
     } catch (error) {
-      console.error('Failed to get performance metrics:', error.message);
+      slogger.error('Failed to get performance metrics', { error: error.message });
       return {
         minResponseTime: 0,
         maxResponseTime: 0,
@@ -383,9 +385,9 @@ class IntentClassifierMonitor extends EventEmitter {
         WHERE timestamp < datetime('now', '-30 days')
       `).run();
 
-      console.log(`Cleaned up ${deleted.changes} old metric records`);
+      slogger.info(`Cleaned up ${deleted.changes} old metric records`);
     } catch (error) {
-      console.error('Failed to cleanup old metrics:', error.message);
+      slogger.error('Failed to cleanup old metrics', { error: error.message });
     }
   }
 
@@ -440,7 +442,7 @@ class IntentClassifierMonitor extends EventEmitter {
         }
       };
     } catch (error) {
-      console.error('Failed to generate report:', error.message);
+      slogger.error('Failed to generate report', { error: error.message });
       return null;
     }
   }
@@ -451,23 +453,23 @@ const monitor = new IntentClassifierMonitor();
 
 // Set up alert handlers
 monitor.on('slow_classification', (data) => {
-  console.warn(`🐌 Slow classification detected: ${data.responseTime}ms for "${data.message}"`);
+  slogger.warn(`Slow classification detected: ${data.responseTime}ms for "${data.message}"`);
 });
 
 monitor.on('classification_error', (data) => {
-  console.error(`❌ Classification error for "${data.message}": ${data.error}`);
+  slogger.error(`Classification error for "${data.message}"`, { error: data.error });
 });
 
 monitor.on('high_error_rate', (data) => {
-  console.error(`🚨 High error rate alert: ${data.errorRate.toFixed(1)}% (threshold: ${data.threshold}%)`);
+  slogger.error(`High error rate alert: ${data.errorRate.toFixed(1)}% (threshold: ${data.threshold}%)`);
 });
 
 monitor.on('high_slow_rate', (data) => {
-  console.warn(`⚠️ High slow classification rate: ${data.slowRate.toFixed(1)}% (threshold: ${data.threshold}%)`);
+  slogger.warn(`High slow classification rate: ${data.slowRate.toFixed(1)}% (threshold: ${data.threshold}%)`);
 });
 
 monitor.on('degraded_performance', (data) => {
-  console.warn(`⏱️ Performance degradation: ${data.avgResponseTime.toFixed(1)}ms avg (threshold: ${data.threshold}ms)`);
+  slogger.warn(`Performance degradation: ${data.avgResponseTime.toFixed(1)}ms avg (threshold: ${data.threshold}ms)`);
 });
 
 module.exports = monitor;

@@ -9,6 +9,8 @@ const { db } = require('../../../../../db');
 const { authenticateAdmin } = require('../../../../../middleware/auth');
 const { parseJSONFields } = require('../helpers/avatar-utils');
 const { buildSearchQuery, buildPagination, buildOrderClause, buildCountQuery } = require('../helpers/query-builder');
+const { createLogger } = require('../../../../../utils/structured-logger');
+const logger = createLogger('api:candidates:list');
 
 const router = express.Router();
 
@@ -76,11 +78,11 @@ router.get('/', authenticateAdmin, (req, res) => {
     });
 
   } catch (error) {
-    console.error('Error fetching candidates:', error);
+    logger.error('Error fetching candidates', { error: error.message });
     res.status(500).json({
       success: false,
       error: 'Failed to retrieve candidates',
-      details: error.message
+      details: 'Internal server error'
     });
   }
 });
@@ -243,11 +245,11 @@ router.get('/search', authenticateAdmin, (req, res) => {
     });
 
   } catch (error) {
-    console.error('Error searching candidates:', error);
+    logger.error('Error searching candidates', { error: error.message });
     res.status(500).json({
       success: false,
       error: 'Failed to search candidates',
-      details: error.message
+      details: 'Internal server error'
     });
   }
 });

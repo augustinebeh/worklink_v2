@@ -2,9 +2,12 @@ const express = require('express');
 const router = express.Router();
 const { db } = require('../../../db');
 const { getSGDateString } = require('../../../shared/constants');
+const { authenticateAdmin } = require('../../../middleware/auth');
+const { createLogger } = require('../../../utils/structured-logger');
+const logger = createLogger('analytics');
 
 // Comprehensive financial dashboard
-router.get('/financial/dashboard', (req, res) => {
+router.get('/financial/dashboard', authenticateAdmin, (req, res) => {
   try {
     const today = getSGDateString(); // Singapore timezone
     const thisMonth = today.substring(0, 7);
@@ -263,13 +266,13 @@ router.get('/financial/dashboard', (req, res) => {
       },
     });
   } catch (error) {
-    console.error('Financial dashboard error:', error);
-    res.status(500).json({ success: false, error: error.message });
+    logger.error('Financial dashboard error', { error: error.message });
+    res.status(500).json({ success: false, error: 'Internal server error' });
   }
 });
 
 // Get incentive schemes
-router.get('/incentives', (req, res) => {
+router.get('/incentives', authenticateAdmin, (req, res) => {
   try {
     const schemes = db.prepare('SELECT * FROM incentive_schemes WHERE active = 1').all();
     
@@ -291,12 +294,12 @@ router.get('/incentives', (req, res) => {
       } 
     });
   } catch (error) {
-    res.status(500).json({ success: false, error: error.message });
+    res.status(500).json({ success: false, error: 'Internal server error' });
   }
 });
 
 // Calculate incentive for a deployment (with margin protection)
-router.post('/incentives/calculate', (req, res) => {
+router.post('/incentives/calculate', authenticateAdmin, (req, res) => {
   try {
     const { deployment_id, candidate_id, scheme_id } = req.body;
 
@@ -354,12 +357,12 @@ router.post('/incentives/calculate', (req, res) => {
       },
     });
   } catch (error) {
-    res.status(500).json({ success: false, error: error.message });
+    res.status(500).json({ success: false, error: 'Internal server error' });
   }
 });
 
 // Referral tracking
-router.get('/referrals', (req, res) => {
+router.get('/referrals', authenticateAdmin, (req, res) => {
   try {
     const referrals = db.prepare(`
       SELECT 
@@ -385,12 +388,12 @@ router.get('/referrals', (req, res) => {
 
     res.json({ success: true, data: { referrals, stats } });
   } catch (error) {
-    res.status(500).json({ success: false, error: error.message });
+    res.status(500).json({ success: false, error: 'Internal server error' });
   }
 });
 
 // Job profitability calculator
-router.post('/calculate-job-profit', (req, res) => {
+router.post('/calculate-job-profit', authenticateAdmin, (req, res) => {
   try {
     const { charge_rate, pay_rate, hours, headcount, estimated_incentives = 0 } = req.body;
 
@@ -433,12 +436,12 @@ router.post('/calculate-job-profit', (req, res) => {
       },
     });
   } catch (error) {
-    res.status(500).json({ success: false, error: error.message });
+    res.status(500).json({ success: false, error: 'Internal server error' });
   }
 });
 
 // Get dashboard analytics (original endpoint updated)
-router.get('/dashboard', (req, res) => {
+router.get('/dashboard', authenticateAdmin, (req, res) => {
   try {
     const today = getSGDateString(); // Singapore timezone
     
@@ -490,12 +493,12 @@ router.get('/dashboard', (req, res) => {
 
     res.json({ success: true, data: analytics });
   } catch (error) {
-    res.status(500).json({ success: false, error: error.message });
+    res.status(500).json({ success: false, error: 'Internal server error' });
   }
 });
 
 // Get revenue analytics
-router.get('/revenue', (req, res) => {
+router.get('/revenue', authenticateAdmin, (req, res) => {
   try {
     const monthlyRevenue = db.prepare(`
       SELECT 
@@ -514,12 +517,12 @@ router.get('/revenue', (req, res) => {
 
     res.json({ success: true, data: { monthlyRevenue } });
   } catch (error) {
-    res.status(500).json({ success: false, error: error.message });
+    res.status(500).json({ success: false, error: 'Internal server error' });
   }
 });
 
 // Get leaderboard
-router.get('/leaderboard', (req, res) => {
+router.get('/leaderboard', authenticateAdmin, (req, res) => {
   try {
     const leaderboard = db.prepare(`
       SELECT 
@@ -532,7 +535,7 @@ router.get('/leaderboard', (req, res) => {
 
     res.json({ success: true, data: leaderboard });
   } catch (error) {
-    res.status(500).json({ success: false, error: error.message });
+    res.status(500).json({ success: false, error: 'Internal server error' });
   }
 });
 
@@ -541,7 +544,7 @@ router.get('/leaderboard', (req, res) => {
 // =====================================================
 
 // Get retention overview metrics
-router.get('/retention/overview', (req, res) => {
+router.get('/retention/overview', authenticateAdmin, (req, res) => {
   try {
     const { days = 30 } = req.query;
 
@@ -643,13 +646,13 @@ router.get('/retention/overview', (req, res) => {
       }
     });
   } catch (error) {
-    console.error('Error fetching retention overview:', error);
-    res.status(500).json({ success: false, error: error.message });
+    logger.error('Error fetching retention overview', { error: error.message });
+    res.status(500).json({ success: false, error: 'Internal server error' });
   }
 });
 
 // Get churn risk analysis
-router.get('/retention/churn-risk', (req, res) => {
+router.get('/retention/churn-risk', authenticateAdmin, (req, res) => {
   try {
     const churnRiskQuery = `
       SELECT
@@ -709,13 +712,13 @@ router.get('/retention/churn-risk', (req, res) => {
       }
     });
   } catch (error) {
-    console.error('Error fetching churn risk analysis:', error);
-    res.status(500).json({ success: false, error: error.message });
+    logger.error('Error fetching churn risk analysis', { error: error.message });
+    res.status(500).json({ success: false, error: 'Internal server error' });
   }
 });
 
 // Simple retention test endpoint
-router.get('/retention-test', (req, res) => {
+router.get('/retention-test', authenticateAdmin, (req, res) => {
   res.json({
     success: true,
     message: 'Retention endpoint is working',

@@ -74,7 +74,7 @@ Join me and we'll BOTH get $${referralBonus} when you complete your first job!
 
 Use my referral code: ${code}
 
-Sign up now: https://worklinkv2-production.up.railway.app/login?ref=${code}`;
+Sign up now: ${window.location.origin}/login?ref=${code}`;
   };
 
   const handleCopy = () => {

@@ -22,7 +22,7 @@ router.post('/calculate/:candidateId', async (req, res) => {
     const result = await reliabilitySystem.calculateReliabilityScore(candidateId);
     res.json({ success: true, data: result });
   } catch (error) {
-    res.status(500).json({ success: false, error: error.message });
+    res.status(500).json({ success: false, error: 'Internal server error' });
   }
 });
 
@@ -45,7 +45,7 @@ router.post('/backup-system/:deploymentId', async (req, res) => {
     const backupSystem = await reliabilitySystem.createBackupSystem(deploymentId, primaryCandidates);
     res.json({ success: true, data: backupSystem });
   } catch (error) {
-    res.status(500).json({ success: false, error: error.message });
+    res.status(500).json({ success: false, error: 'Internal server error' });
   }
 });
 
@@ -58,7 +58,7 @@ router.get('/analytics', async (req, res) => {
     const analytics = await reliabilitySystem.getReliabilityAnalytics();
     res.json({ success: true, data: analytics });
   } catch (error) {
-    res.status(500).json({ success: false, error: error.message });
+    res.status(500).json({ success: false, error: 'Internal server error' });
   }
 });
 
@@ -86,7 +86,7 @@ router.get('/tier/:tier', async (req, res) => {
       }
     });
   } catch (error) {
-    res.status(500).json({ success: false, error: error.message });
+    res.status(500).json({ success: false, error: 'Internal server error' });
   }
 });
 

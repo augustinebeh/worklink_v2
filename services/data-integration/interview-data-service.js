@@ -6,6 +6,8 @@
  */
 
 const { db } = require('../../db');
+const { createLogger } = require('../../utils/structured-logger');
+const logger = createLogger('interview-data-service');
 
 class InterviewDataService {
   /**
@@ -171,7 +173,7 @@ class InterviewDataService {
       }
 
     } catch (error) {
-      console.error('Error generating interview records:', error);
+      logger.error('Error generating interview records', { error: error.message });
     }
 
     return interviews;

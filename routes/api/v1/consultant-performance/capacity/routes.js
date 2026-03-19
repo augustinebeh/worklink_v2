@@ -9,6 +9,7 @@ const express = require('express');
 const router = express.Router();
 const { db } = require('../../../../../db');
 const { CapacityManagementSystem } = require('../../../../../utils/capacity-management');
+const { authenticateAdmin } = require('../../../../../middleware/auth');
 
 const capacityManager = new CapacityManagementSystem();
 
@@ -16,7 +17,7 @@ const capacityManager = new CapacityManagementSystem();
  * GET /capacity/status
  * Get current capacity utilization and alerts
  */
-router.get('/status', async (req, res) => {
+router.get('/status', authenticateAdmin, async (req, res) => {
   try {
     const capacity = await capacityManager.getCurrentCapacity();
     const canAccept = await capacityManager.canAcceptNewCandidates();
@@ -35,7 +36,7 @@ router.get('/status', async (req, res) => {
       }
     });
   } catch (error) {
-    res.status(500).json({ success: false, error: error.message });
+    res.status(500).json({ success: false, error: 'Internal server error' });
   }
 });
 
@@ -43,12 +44,12 @@ router.get('/status', async (req, res) => {
  * POST /capacity/emergency-brake
  * Activate emergency brake to stop all sourcing
  */
-router.post('/emergency-brake', async (req, res) => {
+router.post('/emergency-brake', authenticateAdmin, async (req, res) => {
   try {
     const result = await capacityManager.emergencyBrake();
     res.json({ success: true, data: result });
   } catch (error) {
-    res.status(500).json({ success: false, error: error.message });
+    res.status(500).json({ success: false, error: 'Internal server error' });
   }
 });
 
@@ -56,12 +57,12 @@ router.post('/emergency-brake', async (req, res) => {
  * POST /capacity/resume
  * Resume sourcing after emergency brake
  */
-router.post('/resume', async (req, res) => {
+router.post('/resume', authenticateAdmin, async (req, res) => {
   try {
     const result = await capacityManager.resumeSourcing();
     res.json({ success: true, data: result });
   } catch (error) {
-    res.status(500).json({ success: false, error: error.message });
+    res.status(500).json({ success: false, error: 'Internal server error' });
   }
 });
 
@@ -69,7 +70,7 @@ router.post('/resume', async (req, res) => {
  * GET /capacity/analytics
  * Get capacity analytics and trends
  */
-router.get('/analytics', async (req, res) => {
+router.get('/analytics', authenticateAdmin, async (req, res) => {
   try {
     const { days = 7 } = req.query;
     const since = new Date(Date.now() - days * 24 * 60 * 60 * 1000).toISOString();
@@ -101,7 +102,7 @@ router.get('/analytics', async (req, res) => {
       }
     });
   } catch (error) {
-    res.status(500).json({ success: false, error: error.message });
+    res.status(500).json({ success: false, error: 'Internal server error' });
   }
 });
 

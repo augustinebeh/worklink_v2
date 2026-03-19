@@ -3,6 +3,10 @@
  * Extends existing A/B testing logic to optimize SLM conversation flows
  */
 
+
+const { createLogger } = require('./structured-logger');
+const logger = createLogger('conversation-ab-testing');
+
 class ConversationABTesting {
   constructor() {
     this.activeTests = new Map();
@@ -94,7 +98,7 @@ class ConversationABTesting {
     this.activeTests.set(testId, test);
     await this.persistTest(test);
 
-    console.log(`🧪 A/B Test initialized: ${test.name} (ID: ${testId})`);
+    logger.info('A/B Test initialized: ${test.name} (ID: ${testId})');
     return testId;
   }
 
@@ -133,7 +137,7 @@ class ConversationABTesting {
     await this.persistAssignment(testId, candidateId, variantId);
 
     const assignedVariant = test.variants.get(variantId);
-    console.log(`👤 Candidate ${candidateId} assigned to variant ${variantId} in test ${testId}`);
+    logger.info('Candidate ${candidateId} assigned to variant ${variantId} in test ${testId}');
 
     return assignedVariant;
   }
@@ -164,7 +168,7 @@ class ConversationABTesting {
       // Update test metrics
       test.metrics.set(variantId, metrics);
 
-      console.log(`📊 Tracked ${eventType} for candidate ${candidateId} in test ${testId}, variant ${variantId}`);
+      logger.info('Tracked ${eventType} for candidate ${candidateId} in test ${testId}, variant ${variantId}');
     }
   }
 
@@ -556,12 +560,12 @@ class ConversationABTesting {
 
   async persistTest(test) {
     // In production, save to database
-    console.log('Persisting test:', test.id);
+    logger.info('Persisting test:', { data: test.id });
   }
 
   async persistAssignment(testId, candidateId, variantId) {
     // In production, save to database
-    console.log(`Persisting assignment: Test ${testId}, Candidate ${candidateId}, Variant ${variantId}`);
+    logger.info('Persisting assignment: Test ${testId}, Candidate ${candidateId}, Variant ${variantId}');
   }
 
   /**

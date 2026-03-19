@@ -7,6 +7,8 @@ const express = require('express');
 const router = express.Router();
 const { scrapingService } = require('../../../../services/scraping');
 const auth = require('../../../../middleware/auth');
+const { createLogger } = require('../../../../utils/structured-logger');
+const logger = createLogger('gebiz-rss');
 
 // Apply authentication middleware to all routes
 router.use(auth.authenticateToken);
@@ -26,11 +28,11 @@ router.get('/status', async (req, res) => {
     });
 
   } catch (error) {
-    console.error('Error getting scraping status:', error);
+    logger.error('Error getting scraping status', { error: error.message });
     res.status(500).json({
       success: false,
       error: 'Failed to get scraping status',
-      details: error.message
+      details: 'Internal server error'
     });
   }
 });
@@ -51,12 +53,12 @@ router.get('/health', async (req, res) => {
     });
 
   } catch (error) {
-    console.error('Error getting health status:', error);
+    logger.error('Error getting health status', { error: error.message });
     res.status(500).json({
       success: false,
       healthy: false,
       error: 'Health check failed',
-      details: error.message
+      details: 'Internal server error'
     });
   }
 });
@@ -73,7 +75,7 @@ router.post('/manual', async (req, res) => {
     options.triggeredBy = req.user?.id || req.user?.email || 'admin';
     options.manual = true;
 
-    console.log(`📝 Manual scraping triggered by: ${options.triggeredBy}`);
+    logger.info('Manual scraping triggered', { triggeredBy: options.triggeredBy });
 
     const result = await scrapingService.manualScrape(options);
 
@@ -85,11 +87,11 @@ router.post('/manual', async (req, res) => {
     });
 
   } catch (error) {
-    console.error('Error in manual scraping:', error);
+    logger.error('Error in manual scraping', { error: error.message });
     res.status(500).json({
       success: false,
       error: 'Manual scraping failed',
-      details: error.message,
+      details: 'Internal server error',
       timestamp: new Date().toISOString()
     });
   }
@@ -111,11 +113,11 @@ router.post('/execute-now', async (req, res) => {
     });
 
   } catch (error) {
-    console.error('Error in immediate execution:', error);
+    logger.error('Error in immediate execution', { error: error.message });
     res.status(500).json({
       success: false,
       error: 'Immediate execution failed',
-      details: error.message,
+      details: 'Internal server error',
       timestamp: new Date().toISOString()
     });
   }
@@ -137,11 +139,11 @@ router.get('/scheduler/status', async (req, res) => {
     });
 
   } catch (error) {
-    console.error('Error getting scheduler status:', error);
+    logger.error('Error getting scheduler status', { error: error.message });
     res.status(500).json({
       success: false,
       error: 'Failed to get scheduler status',
-      details: error.message
+      details: 'Internal server error'
     });
   }
 });
@@ -171,11 +173,11 @@ router.post('/scheduler/start', async (req, res) => {
     }
 
   } catch (error) {
-    console.error('Error starting scheduler:', error);
+    logger.error('Error starting scheduler', { error: error.message });
     res.status(500).json({
       success: false,
       error: 'Failed to start scheduler',
-      details: error.message
+      details: 'Internal server error'
     });
   }
 });
@@ -205,11 +207,11 @@ router.post('/scheduler/stop', async (req, res) => {
     }
 
   } catch (error) {
-    console.error('Error stopping scheduler:', error);
+    logger.error('Error stopping scheduler', { error: error.message });
     res.status(500).json({
       success: false,
       error: 'Failed to stop scheduler',
-      details: error.message
+      details: 'Internal server error'
     });
   }
 });
@@ -234,11 +236,11 @@ router.post('/scheduler/restart', async (req, res) => {
     }, 2000);
 
   } catch (error) {
-    console.error('Error restarting scheduler:', error);
+    logger.error('Error restarting scheduler', { error: error.message });
     res.status(500).json({
       success: false,
       error: 'Failed to restart scheduler',
-      details: error.message
+      details: 'Internal server error'
     });
   }
 });
@@ -259,11 +261,11 @@ router.get('/parser/stats', async (req, res) => {
     });
 
   } catch (error) {
-    console.error('Error getting parser stats:', error);
+    logger.error('Error getting parser stats', { error: error.message });
     res.status(500).json({
       success: false,
       error: 'Failed to get parser statistics',
-      details: error.message
+      details: 'Internal server error'
     });
   }
 });
@@ -285,11 +287,11 @@ router.post('/parser/reset-stats', async (req, res) => {
     });
 
   } catch (error) {
-    console.error('Error resetting parser stats:', error);
+    logger.error('Error resetting parser stats', { error: error.message });
     res.status(500).json({
       success: false,
       error: 'Failed to reset parser statistics',
-      details: error.message
+      details: 'Internal server error'
     });
   }
 });
@@ -310,11 +312,11 @@ router.get('/lifecycle/stats', async (req, res) => {
     });
 
   } catch (error) {
-    console.error('Error getting lifecycle stats:', error);
+    logger.error('Error getting lifecycle stats', { error: error.message });
     res.status(500).json({
       success: false,
       error: 'Failed to get lifecycle statistics',
-      details: error.message
+      details: 'Internal server error'
     });
   }
 });
@@ -325,7 +327,7 @@ router.get('/lifecycle/stats', async (req, res) => {
  */
 router.get('/logs', async (req, res) => {
   try {
-    const { db } = require('../../../../db/database');
+    const { db } = require('../../../../db');
     const limit = parseInt(req.query.limit) || 50;
     const offset = parseInt(req.query.offset) || 0;
 
@@ -355,11 +357,11 @@ router.get('/logs', async (req, res) => {
     });
 
   } catch (error) {
-    console.error('Error getting scraping logs:', error);
+    logger.error('Error getting scraping logs', { error: error.message });
     res.status(500).json({
       success: false,
       error: 'Failed to get scraping logs',
-      details: error.message
+      details: 'Internal server error'
     });
   }
 });
@@ -370,7 +372,7 @@ router.get('/logs', async (req, res) => {
  */
 router.delete('/logs/cleanup', async (req, res) => {
   try {
-    const { db } = require('../../../../db/database');
+    const { db } = require('../../../../db');
 
     // Keep only the last 100 log entries
     const result = db.prepare(`
@@ -394,11 +396,11 @@ router.delete('/logs/cleanup', async (req, res) => {
     });
 
   } catch (error) {
-    console.error('Error cleaning up logs:', error);
+    logger.error('Error cleaning up logs', { error: error.message });
     res.status(500).json({
       success: false,
       error: 'Failed to cleanup logs',
-      details: error.message
+      details: 'Internal server error'
     });
   }
 });

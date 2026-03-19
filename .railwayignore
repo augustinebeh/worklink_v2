@@ -13,6 +13,7 @@ yarn-error.log*
 .env.local
 .env.development
 .env.test
+.env.production
 
 # IDE files
 .vscode/
@@ -29,10 +30,15 @@ Thumbs.db
 *.md
 !README.md
 
+# Database files
+*.db
+*.db-shm
+*.db-wal
+data/*.db
+data/*.db-shm
+data/*.db-wal
+
 # Local data (seed data is included, live data is excluded)
-data/worklink.db
-data/worklink.db-shm
-data/worklink.db-wal
 data/core/*.json
 data/business/*.json
 data/transactions/*.json
@@ -51,7 +57,7 @@ tests/
 # admin/node_modules is excluded but admin/dist is included
 
 # Credentials
-credentials_n_infomation
+credentials_n_infomation/
 
 # Worker legacy files
 worker/js

@@ -12,6 +12,8 @@ const fs = require('fs');
 const { v4: uuidv4 } = require('uuid');
 const sharp = require('sharp');
 const { db } = require('../db');
+const { createLogger } = require('../utils/structured-logger');
+const logger = createLogger('chat-attachments');
 
 // Configuration
 const UPLOAD_DIR = path.join(__dirname, '..', 'public', 'uploads', 'chat');
@@ -105,7 +107,7 @@ async function createThumbnail(buffer, thumbnailPath) {
       .toFile(thumbnailPath);
     return true;
   } catch (error) {
-    console.error('Failed to create thumbnail:', error.message);
+    logger.error('Failed to create thumbnail', { error: error.message });
     return false;
   }
 }
@@ -183,7 +185,7 @@ async function uploadAttachment(file, candidateId, messageId = null) {
         }
       }
     } catch (cleanupError) {
-      console.error('Failed to cleanup files after DB error:', cleanupError.message);
+      logger.error('Failed to cleanup files after DB error', { error: cleanupError.message });
     }
     throw new Error(`Failed to store attachment record: ${error.message}`);
   }
@@ -310,7 +312,7 @@ function deleteAttachment(attachmentId) {
     try {
       fs.unlinkSync(filePath);
     } catch (error) {
-      console.error(`Failed to delete file ${filePath}:`, error.message);
+      logger.error('Failed to delete file', { file_path: filePath, error: error.message });
     }
   }
 
@@ -321,7 +323,7 @@ function deleteAttachment(attachmentId) {
       try {
         fs.unlinkSync(thumbnailPath);
       } catch (error) {
-        console.error(`Failed to delete thumbnail ${thumbnailPath}:`, error.message);
+        logger.error('Failed to delete thumbnail', { thumbnail_path: thumbnailPath, error: error.message });
       }
     }
   }

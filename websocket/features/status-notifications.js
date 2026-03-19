@@ -6,9 +6,9 @@
  */
 
 const { db } = require('../../db');
-const { EventTypes } = require('../config/event-types');
 const { createLogger } = require('../../utils/structured-logger');
 const clientStore = require('../utils/client-store');
+const { createNotification } = require('../broadcasting/event-notifiers');
 
 const logger = createLogger('websocket:status-notifications');
 
@@ -105,51 +105,8 @@ function getCandidateStatus(candidateId) {
 
 // ==================== NOTIFICATION MANAGEMENT ====================
 
-/**
- * Create a new notification for a candidate
- * @param {string} candidateId - Candidate ID
- * @param {string} type - Notification type
- * @param {string} title - Notification title
- * @param {string} message - Notification message
- * @param {Object|null} data - Additional data
- * @returns {Object|null} Created notification or null
- */
-function createNotification(candidateId, type, title, message, data = null) {
-  try {
-    const id = Date.now();
-    
-    db.prepare(`
-      INSERT INTO notifications (id, candidate_id, type, title, message, data, read, created_at)
-      VALUES (?, ?, ?, ?, ?, ?, 0, datetime('now'))
-    `).run(id, candidateId, type, title, message, data ? JSON.stringify(data) : null);
-
-    const notification = db.prepare('SELECT * FROM notifications WHERE id = ?').get(id);
-
-    logger.info('Notification created', {
-      candidateId,
-      type,
-      notificationId: id
-    });
-
-    // Send to candidate if online
-    const clientWs = clientStore.getCandidateClient(candidateId);
-    if (clientWs?.readyState === 1) { // OPEN
-      clientWs.send(JSON.stringify({
-        type: EventTypes.NOTIFICATION,
-        notification
-      }));
-    }
-
-    return notification;
-  } catch (error) {
-    logger.error('Failed to create notification', {
-      candidateId,
-      type,
-      error: error.message
-    });
-    return null;
-  }
-}
+// createNotification is imported from ../broadcasting/event-notifiers.js
+// which is the canonical implementation for the WebSocket layer.
 
 /**
  * Send unread notifications to a candidate

@@ -7,6 +7,8 @@
 
 const path = require('path');
 const fs = require('fs');
+const { createLogger } = require('../../utils/structured-logger');
+const logger = createLogger('db-helpers');
 
 /**
  * Get database configuration
@@ -31,7 +33,7 @@ function getDatabaseConfig() {
 function ensureDataDirectory(dataDir) {
   if (!fs.existsSync(dataDir)) {
     fs.mkdirSync(dataDir, { recursive: true });
-    console.log(`📁 Created data directory: ${dataDir}`);
+    logger.info(`Created data directory: ${dataDir}`);
   }
 }
 
@@ -42,7 +44,7 @@ function ensureDataDirectory(dataDir) {
 function configurePragmas(db) {
   db.pragma('journal_mode = WAL');
   db.pragma('foreign_keys = ON');
-  console.log('✅ Database pragmas configured (WAL mode, foreign keys ON)');
+  logger.info('Database pragmas configured (WAL mode, foreign keys ON)');
 }
 
 /**
@@ -57,7 +59,7 @@ function executeSQLFile(db, sqlFilePath) {
 
   const sql = fs.readFileSync(sqlFilePath, 'utf8');
   db.exec(sql);
-  console.log(`✅ Executed SQL file: ${path.basename(sqlFilePath)}`);
+  logger.info(`Executed SQL file: ${path.basename(sqlFilePath)}`);
 }
 
 /**
@@ -76,13 +78,25 @@ function tableExists(db, tableName) {
 }
 
 /**
+ * Validate table name to prevent SQL injection
+ * @param {string} tableName - Table name to validate
+ * @returns {boolean} True if valid
+ */
+function isValidTableName(tableName) {
+  return /^[a-zA-Z_][a-zA-Z0-9_]*$/.test(tableName);
+}
+
+/**
  * Get table count
  * @param {Database} db - better-sqlite3 database instance
  * @param {string} tableName - Table name
  * @returns {number} Row count
  */
 function getTableCount(db, tableName) {
-  const result = db.prepare(`SELECT COUNT(*) as count FROM ${tableName}`).get();
+  if (!isValidTableName(tableName)) {
+    throw new Error(`Invalid table name: ${tableName}`);
+  }
+  const result = db.prepare(`SELECT COUNT(*) as count FROM "${tableName}"`).get();
   return result.count;
 }
 
@@ -92,8 +106,11 @@ function getTableCount(db, tableName) {
  * @param {string} tableName - Table name to truncate
  */
 function truncateTable(db, tableName) {
-  db.prepare(`DELETE FROM ${tableName}`).run();
-  console.log(`🗑️  Truncated table: ${tableName}`);
+  if (!isValidTableName(tableName)) {
+    throw new Error(`Invalid table name: ${tableName}`);
+  }
+  db.prepare(`DELETE FROM "${tableName}"`).run();
+  logger.info(`Truncated table: ${tableName}`);
 }
 
 /**
@@ -102,13 +119,14 @@ function truncateTable(db, tableName) {
  */
 function dropAllTables(db) {
   const tables = db.prepare(`
-    SELECT name FROM sqlite_master 
+    SELECT name FROM sqlite_master
     WHERE type='table' AND name NOT LIKE 'sqlite_%'
   `).all();
 
   for (const table of tables) {
-    db.prepare(`DROP TABLE IF EXISTS ${table.name}`).run();
-    console.log(`🗑️  Dropped table: ${table.name}`);
+    if (!isValidTableName(table.name)) continue;
+    db.prepare(`DROP TABLE IF EXISTS "${table.name}"`).run();
+    logger.info(`Dropped table: ${table.name}`);
   }
 }
 
@@ -140,6 +158,21 @@ function getDatabaseStats(db) {
   return stats;
 }
 
+/**
+ * Safely parse JSON with fallback value
+ * @param {string} value - JSON string to parse
+ * @param {*} fallback - Fallback value if parsing fails
+ * @returns {*} Parsed value or fallback
+ */
+function safeJsonParse(value, fallback = null) {
+  if (!value) return fallback;
+  try {
+    return JSON.parse(value);
+  } catch {
+    return fallback;
+  }
+}
+
 module.exports = {
   getDatabaseConfig,
   ensureDataDirectory,
@@ -150,4 +183,5 @@ module.exports = {
   truncateTable,
   dropAllTables,
   getDatabaseStats,
+  safeJsonParse,
 };

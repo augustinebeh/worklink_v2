@@ -49,24 +49,13 @@ class ApiClient {
       return config;
     });
 
-    // Log requests in development
-    if (import.meta.env.DEV) {
-      this.requestInterceptors.push((config) => {
-        console.log(`🔄 API Request: ${config.method?.toUpperCase() || 'GET'} ${config.url}`);
-        return config;
-      });
-    }
+    // Request interceptors can be added here
 
     // Handle response errors
     this.responseInterceptors.push(async (response, config) => {
       if (!response.ok) {
         const error = await this.handleErrorResponse(response, config);
         throw error;
-      }
-
-      // Log successful responses in development
-      if (import.meta.env.DEV) {
-        console.log(`✅ API Response: ${response.status} ${config.method?.toUpperCase() || 'GET'} ${config.url}`);
       }
 
       return response;
@@ -92,7 +81,7 @@ class ApiClient {
         error.message = 'Authentication required. Please log in again.';
         // Could trigger logout here
         if (typeof window !== 'undefined' && window.location.pathname !== '/login') {
-          console.warn('🔐 Authentication error detected');
+          // Authentication error detected
           sessionStorage.removeItem('admin_token');
           sessionStorage.removeItem('admin_user');
         }
@@ -115,10 +104,6 @@ class ApiClient {
       case 503:
         error.message = 'Service temporarily unavailable. Please try again later.';
         break;
-    }
-
-    if (import.meta.env.DEV) {
-      console.error(`❌ API Error: ${response.status} ${config.method?.toUpperCase() || 'GET'} ${config.url}`, error);
     }
 
     return error;
@@ -174,7 +159,7 @@ class ApiClient {
 
           // Only retry on network errors or 5xx server errors
           if (attempt < this.retryAttempts) {
-            console.warn(`🔄 Retrying request (${attempt}/${this.retryAttempts}): ${config.url}`);
+            // Retrying request
             await new Promise(resolve => setTimeout(resolve, this.retryDelay * attempt));
           }
         }

@@ -8,6 +8,9 @@
 const express = require('express');
 const router = express.Router();
 const { db } = require('../../../../../db');
+const { createLogger } = require('../../../../../utils/structured-logger');
+const { authenticateAdmin } = require('../../../../../middleware/auth');
+const logger = createLogger('ai-automation:analytics');
 
 // Import analytics utilities
 const {
@@ -20,7 +23,7 @@ const {
  * GET /campaign/:campaignId
  * Get comprehensive campaign analytics
  */
-router.get('/campaign/:campaignId', (req, res) => {
+router.get('/campaign/:campaignId', authenticateAdmin, (req, res) => {
   try {
     const { campaignId } = req.params;
     const {
@@ -47,8 +50,8 @@ router.get('/campaign/:campaignId', (req, res) => {
       data: analytics
     });
   } catch (error) {
-    console.error('Error getting campaign analytics:', error);
-    res.status(500).json({ success: false, error: error.message });
+    logger.error('Error getting campaign analytics', { error: error.message });
+    res.status(500).json({ success: false, error: 'Internal server error' });
   }
 });
 
@@ -56,7 +59,7 @@ router.get('/campaign/:campaignId', (req, res) => {
  * GET /dashboard
  * Get acquisition dashboard overview
  */
-router.get('/dashboard', async (req, res) => {
+router.get('/dashboard', authenticateAdmin, async (req, res) => {
   try {
     const {
       timeframe = '30_days',
@@ -73,8 +76,8 @@ router.get('/dashboard', async (req, res) => {
       data: dashboard
     });
   } catch (error) {
-    console.error('Error generating analytics dashboard:', error);
-    res.status(500).json({ success: false, error: error.message });
+    logger.error('Error generating analytics dashboard', { error: error.message });
+    res.status(500).json({ success: false, error: 'Internal server error' });
   }
 });
 
@@ -82,7 +85,7 @@ router.get('/dashboard', async (req, res) => {
  * GET /compare
  * Get campaign performance comparison
  */
-router.get('/compare', (req, res) => {
+router.get('/compare', authenticateAdmin, (req, res) => {
   try {
     const { campaignIds, metrics = 'response_rate,conversion_rate' } = req.query;
 
@@ -128,7 +131,7 @@ router.get('/compare', (req, res) => {
 
         return comparison;
       } catch (error) {
-        console.warn(`Failed to get analytics for campaign ${campaignId}:`, error.message);
+        logger.warn('Failed to get analytics for campaign', { campaignId, error: error.message });
         return null;
       }
     }).filter(Boolean);
@@ -142,8 +145,8 @@ router.get('/compare', (req, res) => {
       }
     });
   } catch (error) {
-    console.error('Error comparing campaigns:', error);
-    res.status(500).json({ success: false, error: error.message });
+    logger.error('Error comparing campaigns', { error: error.message });
+    res.status(500).json({ success: false, error: 'Internal server error' });
   }
 });
 
@@ -151,7 +154,7 @@ router.get('/compare', (req, res) => {
  * GET /kpis
  * Get KPI definitions and benchmarks
  */
-router.get('/kpis', (req, res) => {
+router.get('/kpis', authenticateAdmin, (req, res) => {
   try {
     // Get industry benchmarks (could be from external data or historical averages)
     const industryBenchmarks = {
@@ -171,7 +174,7 @@ router.get('/kpis', (req, res) => {
       }
     });
   } catch (error) {
-    res.status(500).json({ success: false, error: error.message });
+    res.status(500).json({ success: false, error: 'Internal server error' });
   }
 });
 
@@ -179,7 +182,7 @@ router.get('/kpis', (req, res) => {
  * GET /export/:campaignId
  * Export campaign analytics data
  */
-router.get('/export/:campaignId', async (req, res) => {
+router.get('/export/:campaignId', authenticateAdmin, async (req, res) => {
   try {
     const { campaignId } = req.params;
     const { format = 'json' } = req.query;
@@ -225,8 +228,8 @@ router.get('/export/:campaignId', async (req, res) => {
       });
     }
   } catch (error) {
-    console.error('Error exporting analytics:', error);
-    res.status(500).json({ success: false, error: error.message });
+    logger.error('Error exporting analytics', { error: error.message });
+    res.status(500).json({ success: false, error: 'Internal server error' });
   }
 });
 
@@ -234,7 +237,7 @@ router.get('/export/:campaignId', async (req, res) => {
  * GET /realtime/:campaignId
  * Get real-time campaign metrics
  */
-router.get('/realtime/:campaignId', (req, res) => {
+router.get('/realtime/:campaignId', authenticateAdmin, (req, res) => {
   try {
     const { campaignId } = req.params;
 
@@ -285,8 +288,8 @@ router.get('/realtime/:campaignId', (req, res) => {
       }
     });
   } catch (error) {
-    console.error('Error getting realtime metrics:', error);
-    res.status(500).json({ success: false, error: error.message });
+    logger.error('Error getting realtime metrics', { error: error.message });
+    res.status(500).json({ success: false, error: 'Internal server error' });
   }
 });
 

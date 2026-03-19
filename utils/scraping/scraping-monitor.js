@@ -3,6 +3,10 @@
  * Monitors scraping operations and provides detailed status reporting
  */
 
+
+const { createLogger } = require('../structured-logger');
+const logger = createLogger('scraping-monitor');
+
 const fs = require('fs').promises;
 const path = require('path');
 
@@ -72,7 +76,7 @@ class ScrapingMonitor {
     };
 
     session.milestones.push(milestone);
-    console.log(`[${sessionId}] ${type}: ${message}`);
+    logger.info('[${sessionId}] ${type}: ${message}');
     return true;
   }
 
@@ -102,7 +106,7 @@ class ScrapingMonitor {
     }
 
     this.globalStats.totalErrors++;
-    console.error(`[${sessionId}] ERROR:`, error.message || error);
+    logger.error('[${sessionId}] ERROR:', { error: error.message || error });
   }
 
   reportCaptcha(sessionId, solved = false) {
@@ -286,7 +290,7 @@ class ScrapingMonitor {
 
       await fs.writeFile(this.logFilePath, JSON.stringify(logData, null, 2));
     } catch (error) {
-      console.error('Failed to persist scraping logs:', error);
+      logger.error('Failed to persist scraping logs:', { error: error });
     }
   }
 
@@ -303,9 +307,9 @@ class ScrapingMonitor {
         this.errorLog = logData.recentErrors;
       }
 
-      console.log('Loaded persisted scraping logs');
+      logger.info('Loaded persisted scraping logs');
     } catch (error) {
-      console.log('No persisted scraping logs found, starting fresh');
+      logger.info('No persisted scraping logs found, starting fresh');
     }
   }
 
@@ -320,7 +324,7 @@ class ScrapingMonitor {
       }
     }
 
-    console.log(`Cleaned up ${cleaned} old scraping sessions`);
+    logger.info('Cleaned up ${cleaned} old scraping sessions');
     return cleaned;
   }
 }
@@ -329,7 +333,7 @@ class ScrapingMonitor {
 const scrapingMonitor = new ScrapingMonitor();
 
 // Load persisted data on startup
-scrapingMonitor.loadPersistedLogs().catch(console.error);
+scrapingMonitor.loadPersistedLogs().catch(err => logger.error('Failed to load persisted logs', { error: err.message }));
 
 // Cleanup old sessions every hour
 setInterval(() => {

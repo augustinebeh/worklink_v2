@@ -11,6 +11,7 @@ const { createLogger } = require('../../../../../utils/structured-logger');
 const { parseQuests, updateQuestProgress } = require('../helpers/quest-processor');
 const { processLevelUp } = require('../helpers/xp-calculator');
 const { getCandidateQuests, createXPTransaction } = require('../helpers/database-queries');
+const { authenticateToken, authenticateAdmin } = require('../../../../../middleware/auth');
 
 const logger = createLogger('gamification-quests');
 
@@ -18,7 +19,7 @@ const logger = createLogger('gamification-quests');
  * GET /quests
  * Get all quests with pagination and filtering
  */
-router.get('/quests', (req, res) => {
+router.get('/quests', authenticateToken, (req, res) => {
   try {
     const { page = 1, limit = 20, type } = req.query;
     const offset = (parseInt(page) - 1) * parseInt(limit);
@@ -61,7 +62,7 @@ router.get('/quests', (req, res) => {
     logger.error('Failed to get quests', { error: error.message });
     res.status(500).json({
       success: false,
-      error: error.message
+      error: 'Internal server error'
     });
   }
 });
@@ -70,7 +71,7 @@ router.get('/quests', (req, res) => {
  * POST /quests/:questId/start
  * Start a quest for a candidate
  */
-router.post('/quests/:questId/start', (req, res) => {
+router.post('/quests/:questId/start', authenticateToken, (req, res) => {
   try {
     const { candidate_id } = req.body;
     const questId = req.params.questId;
@@ -114,7 +115,7 @@ router.post('/quests/:questId/start', (req, res) => {
     logger.business('quest_started', {
       candidate_id,
       quest_id: questId,
-      quest_name: quest.name,
+      quest_name: quest.title,
       target: requirement.count || 1
     });
 
@@ -136,7 +137,7 @@ router.post('/quests/:questId/start', (req, res) => {
     });
     res.status(500).json({
       success: false,
-      error: error.message
+      error: 'Internal server error'
     });
   }
 });
@@ -145,7 +146,7 @@ router.post('/quests/:questId/start', (req, res) => {
  * POST /quests/:questId/progress
  * Update quest progress (for check-in type quests)
  */
-router.post('/quests/:questId/progress', (req, res) => {
+router.post('/quests/:questId/progress', authenticateToken, (req, res) => {
   try {
     const { candidateId, increment = 1 } = req.body;
     const questId = req.params.questId;
@@ -173,7 +174,7 @@ router.post('/quests/:questId/progress', (req, res) => {
     });
     res.status(500).json({
       success: false,
-      error: error.message
+      error: 'Internal server error'
     });
   }
 });
@@ -182,7 +183,7 @@ router.post('/quests/:questId/progress', (req, res) => {
  * POST /quests/:questId/complete
  * Complete quest (mark progress as complete, not yet claimed)
  */
-router.post('/quests/:questId/complete', (req, res) => {
+router.post('/quests/:questId/complete', authenticateToken, (req, res) => {
   try {
     const { candidateId } = req.body;
     const questId = req.params.questId;
@@ -244,7 +245,7 @@ router.post('/quests/:questId/complete', (req, res) => {
     });
     res.status(500).json({
       success: false,
-      error: error.message
+      error: 'Internal server error'
     });
   }
 });
@@ -253,7 +254,7 @@ router.post('/quests/:questId/complete', (req, res) => {
  * POST /quests/:questId/claim
  * Claim quest reward (award XP)
  */
-router.post('/quests/:questId/claim', (req, res) => {
+router.post('/quests/:questId/claim', authenticateToken, (req, res) => {
   try {
     const { candidateId } = req.body;
     const questId = req.params.questId;
@@ -308,7 +309,7 @@ router.post('/quests/:questId/claim', (req, res) => {
           candidateId: candidateId,
           actionType: 'quest',
           amount: quest.xp_reward,
-          reason: `Quest completed: ${quest.name}`,
+          reason: `Quest completed: ${quest.title}`,
           referenceId: questId
         });
       }
@@ -325,7 +326,7 @@ router.post('/quests/:questId/claim', (req, res) => {
     logger.business('quest_reward_claimed', {
       candidate_id: candidateId,
       quest_id: questId,
-      quest_name: result.quest.name,
+      quest_name: result.quest.title,
       xp_awarded: result.quest.xp_reward,
       leveled_up: result.levelResult.leveledUp
     });
@@ -350,8 +351,111 @@ router.post('/quests/:questId/claim', (req, res) => {
     });
     res.status(500).json({
       success: false,
-      error: error.message
+      error: 'Internal server error'
     });
+  }
+});
+
+/**
+ * POST /quests
+ * Create a new quest (Admin only)
+ */
+router.post('/quests', authenticateAdmin, (req, res) => {
+  try {
+    const { title, description, type, requirement, xp_reward, bonus_reward } = req.body;
+
+    if (!title) {
+      return res.status(400).json({ success: false, error: 'title is required' });
+    }
+
+    const id = 'QST' + Date.now().toString(36).toUpperCase();
+    const reqStr = typeof requirement === 'object' ? JSON.stringify(requirement) : (requirement || '{}');
+
+    db.prepare(`
+      INSERT INTO quests (id, title, description, type, requirement, xp_reward, bonus_reward, active)
+      VALUES (?, ?, ?, ?, ?, ?, ?, 1)
+    `).run(id, title, description || null, type || null, reqStr, xp_reward || 0, bonus_reward || 0);
+
+    const quest = db.prepare('SELECT * FROM quests WHERE id = ?').get(id);
+
+    logger.business('quest_created', { id, title, type });
+
+    res.status(201).json({ success: true, data: quest });
+  } catch (error) {
+    logger.error('Failed to create quest', { error: error.message });
+    res.status(500).json({ success: false, error: 'Internal server error' });
+  }
+});
+
+/**
+ * PUT /quests/:id
+ * Update a quest (Admin only)
+ */
+router.put('/quests/:id', authenticateAdmin, (req, res) => {
+  try {
+    const { id } = req.params;
+    const existing = db.prepare('SELECT * FROM quests WHERE id = ?').get(id);
+    if (!existing) {
+      return res.status(404).json({ success: false, error: 'Quest not found' });
+    }
+
+    const allowedFields = ['title', 'description', 'type', 'xp_reward', 'bonus_reward', 'active'];
+    const updates = [];
+    const values = [];
+
+    for (const field of allowedFields) {
+      if (req.body[field] !== undefined) {
+        updates.push(`${field} = ?`);
+        values.push(req.body[field]);
+      }
+    }
+
+    // Handle requirement separately (JSON)
+    if (req.body.requirement !== undefined) {
+      updates.push('requirement = ?');
+      values.push(typeof req.body.requirement === 'object' ? JSON.stringify(req.body.requirement) : req.body.requirement);
+    }
+
+    if (updates.length === 0) {
+      return res.status(400).json({ success: false, error: 'No fields to update' });
+    }
+
+    values.push(id);
+    db.prepare(`UPDATE quests SET ${updates.join(', ')} WHERE id = ?`).run(...values);
+
+    const updated = db.prepare('SELECT * FROM quests WHERE id = ?').get(id);
+
+    logger.business('quest_updated', { id, fields: updates.length });
+
+    res.json({ success: true, data: updated });
+  } catch (error) {
+    logger.error('Failed to update quest', { id: req.params.id, error: error.message });
+    res.status(500).json({ success: false, error: 'Internal server error' });
+  }
+});
+
+/**
+ * DELETE /quests/:id
+ * Delete a quest (Admin only)
+ */
+router.delete('/quests/:id', authenticateAdmin, (req, res) => {
+  try {
+    const { id } = req.params;
+    const existing = db.prepare('SELECT * FROM quests WHERE id = ?').get(id);
+    if (!existing) {
+      return res.status(404).json({ success: false, error: 'Quest not found' });
+    }
+
+    // Remove candidate associations first
+    db.prepare('DELETE FROM candidate_quests WHERE quest_id = ?').run(id);
+    db.prepare('DELETE FROM quests WHERE id = ?').run(id);
+
+    logger.business('quest_deleted', { id, title: existing.title });
+
+    res.json({ success: true, message: 'Quest deleted successfully' });
+  } catch (error) {
+    logger.error('Failed to delete quest', { id: req.params.id, error: error.message });
+    res.status(500).json({ success: false, error: 'Internal server error' });
   }
 });
 
@@ -359,7 +463,7 @@ router.post('/quests/:questId/claim', (req, res) => {
  * GET /quests/user/:candidateId
  * Get user's quests with progress
  */
-router.get('/quests/user/:candidateId', (req, res) => {
+router.get('/quests/user/:candidateId', authenticateToken, (req, res) => {
   try {
     const candidateId = req.params.candidateId;
     const { page = 1, limit = 20, completed, claimed } = req.query;
@@ -390,7 +494,7 @@ router.get('/quests/user/:candidateId', (req, res) => {
 
     // Get user's quests with progress
     const userQuestsQuery = `
-      SELECT cq.*, q.name, q.description, q.xp_reward, q.type, q.requirement
+      SELECT cq.*, q.title, q.description, q.xp_reward, q.type, q.requirement
       FROM candidate_quests cq
       JOIN quests q ON cq.quest_id = q.id
       ${whereClause}
@@ -419,7 +523,7 @@ router.get('/quests/user/:candidateId', (req, res) => {
     });
     res.status(500).json({
       success: false,
-      error: error.message
+      error: 'Internal server error'
     });
   }
 });

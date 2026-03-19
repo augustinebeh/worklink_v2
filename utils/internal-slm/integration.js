@@ -3,6 +3,10 @@
  * Connects the internal SLM to the existing WorkLink chat and scheduling systems
  */
 
+
+const { createLogger } = require('../structured-logger');
+const logger = createLogger('slm-integration');
+
 const InternalSLM = require('./index');
 const { analyzeIntent } = require('./intent-analyzer');
 const { generateResponse } = require('./response-generator');
@@ -51,7 +55,7 @@ class InternalSLMIntegration {
       return this.formatResponseForSystem(response, candidateData);
 
     } catch (error) {
-      console.error('Internal SLM integration error:', error);
+      logger.error('Internal SLM integration error:', { error: error });
       this.performanceMetrics.errors++;
 
       // Return fallback response

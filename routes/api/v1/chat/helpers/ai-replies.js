@@ -46,6 +46,9 @@ If it's a greeting, include friendly responses.
 
 Return ONLY a JSON array of strings, nothing else. Example: ["Yes, I can", "What time?", "Not available", "Tell me more"]`;
 
+    const controller = new AbortController();
+    const timeout = setTimeout(() => controller.abort(), 15000);
+
     const response = await fetch(GROQ_API_URL, {
       method: 'POST',
       headers: {
@@ -67,7 +70,10 @@ Return ONLY a JSON array of strings, nothing else. Example: ["Yes, I can", "What
         temperature: 0.7,
         max_tokens: 100,
       }),
+      signal: controller.signal,
     });
+
+    clearTimeout(timeout);
 
     if (!response.ok) {
       logger.warn('Groq API request failed', {

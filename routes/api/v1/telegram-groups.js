@@ -8,6 +8,7 @@ const express = require('express');
 const router = express.Router();
 const telegramPosting = require('../../../services/telegram-posting');
 const { db } = require('../../../db');
+const { authenticateAdmin } = require('../../../middleware/auth');
 
 // =====================================================
 // GROUPS MANAGEMENT
@@ -24,7 +25,7 @@ router.get('/', (req, res) => {
 
     res.json({ success: true, data: groups });
   } catch (error) {
-    res.status(500).json({ success: false, error: error.message });
+    res.status(500).json({ success: false, error: 'Internal server error' });
   }
 });
 
@@ -32,7 +33,7 @@ router.get('/', (req, res) => {
  * POST /api/v1/telegram-groups
  * Add a new Telegram group
  */
-router.post('/', (req, res) => {
+router.post('/', authenticateAdmin, (req, res) => {
   try {
     const { chatId, name, type = 'job_posting' } = req.body;
 
@@ -51,7 +52,7 @@ router.post('/', (req, res) => {
       message: 'Group added successfully',
     });
   } catch (error) {
-    res.status(500).json({ success: false, error: error.message });
+    res.status(500).json({ success: false, error: 'Internal server error' });
   }
 });
 
@@ -59,7 +60,7 @@ router.post('/', (req, res) => {
  * PUT /api/v1/telegram-groups/:id
  * Update a Telegram group
  */
-router.put('/:id', (req, res) => {
+router.put('/:id', authenticateAdmin, (req, res) => {
   try {
     const { name, active, type } = req.body;
 
@@ -67,7 +68,7 @@ router.put('/:id', (req, res) => {
 
     res.json({ success: true, message: 'Group updated' });
   } catch (error) {
-    res.status(500).json({ success: false, error: error.message });
+    res.status(500).json({ success: false, error: 'Internal server error' });
   }
 });
 
@@ -75,12 +76,12 @@ router.put('/:id', (req, res) => {
  * DELETE /api/v1/telegram-groups/:id
  * Delete a Telegram group
  */
-router.delete('/:id', (req, res) => {
+router.delete('/:id', authenticateAdmin, (req, res) => {
   try {
     telegramPosting.removeGroup(req.params.id);
     res.json({ success: true, message: 'Group deleted' });
   } catch (error) {
-    res.status(500).json({ success: false, error: error.message });
+    res.status(500).json({ success: false, error: 'Internal server error' });
   }
 });
 
@@ -105,7 +106,7 @@ router.get('/settings', (req, res) => {
       },
     });
   } catch (error) {
-    res.status(500).json({ success: false, error: error.message });
+    res.status(500).json({ success: false, error: 'Internal server error' });
   }
 });
 
@@ -113,7 +114,7 @@ router.get('/settings', (req, res) => {
  * PUT /api/v1/telegram-groups/settings
  * Update auto-post settings
  */
-router.put('/settings', (req, res) => {
+router.put('/settings', authenticateAdmin, (req, res) => {
   try {
     const { enabled, post_on_job_create, default_groups } = req.body;
 
@@ -125,7 +126,7 @@ router.put('/settings', (req, res) => {
 
     res.json({ success: true, message: 'Settings updated' });
   } catch (error) {
-    res.status(500).json({ success: false, error: error.message });
+    res.status(500).json({ success: false, error: 'Internal server error' });
   }
 });
 
@@ -137,7 +138,7 @@ router.put('/settings', (req, res) => {
  * POST /api/v1/telegram-groups/:groupId/post/:jobId
  * Post a job to a specific group
  */
-router.post('/:groupId/post/:jobId', async (req, res) => {
+router.post('/:groupId/post/:jobId', authenticateAdmin, async (req, res) => {
   try {
     const { groupId, jobId } = req.params;
     const { content } = req.body; // Optional custom content
@@ -160,7 +161,7 @@ router.post('/:groupId/post/:jobId', async (req, res) => {
       res.status(500).json({ success: false, error: result.error });
     }
   } catch (error) {
-    res.status(500).json({ success: false, error: error.message });
+    res.status(500).json({ success: false, error: 'Internal server error' });
   }
 });
 
@@ -168,7 +169,7 @@ router.post('/:groupId/post/:jobId', async (req, res) => {
  * POST /api/v1/telegram-groups/post-all/:jobId
  * Post a job to all active groups
  */
-router.post('/post-all/:jobId', async (req, res) => {
+router.post('/post-all/:jobId', authenticateAdmin, async (req, res) => {
   try {
     const { jobId } = req.params;
     const { useABTesting = true, scheduleOptimal = false } = req.body;
@@ -189,7 +190,7 @@ router.post('/post-all/:jobId', async (req, res) => {
       data: result,
     });
   } catch (error) {
-    res.status(500).json({ success: false, error: error.message });
+    res.status(500).json({ success: false, error: 'Internal server error' });
   }
 });
 
@@ -197,7 +198,7 @@ router.post('/post-all/:jobId', async (req, res) => {
  * POST /api/v1/telegram-groups/preview/:jobId
  * Preview a job post (without actually posting)
  */
-router.post('/preview/:jobId', async (req, res) => {
+router.post('/preview/:jobId', authenticateAdmin, async (req, res) => {
   try {
     const { jobId } = req.params;
     const { optimized = false } = req.body;
@@ -221,7 +222,7 @@ router.post('/preview/:jobId', async (req, res) => {
       data: { content, optimized },
     });
   } catch (error) {
-    res.status(500).json({ success: false, error: error.message });
+    res.status(500).json({ success: false, error: 'Internal server error' });
   }
 });
 
@@ -240,7 +241,7 @@ router.get('/history', (req, res) => {
 
     res.json({ success: true, data: posts });
   } catch (error) {
-    res.status(500).json({ success: false, error: error.message });
+    res.status(500).json({ success: false, error: 'Internal server error' });
   }
 });
 
@@ -253,7 +254,7 @@ router.get('/history/:jobId', (req, res) => {
     const posts = telegramPosting.getJobPostHistory(req.params.jobId);
     res.json({ success: true, data: posts });
   } catch (error) {
-    res.status(500).json({ success: false, error: error.message });
+    res.status(500).json({ success: false, error: 'Internal server error' });
   }
 });
 
@@ -261,12 +262,12 @@ router.get('/history/:jobId', (req, res) => {
  * DELETE /api/v1/telegram-groups/history/:postId
  * Mark a post as deleted
  */
-router.delete('/history/:postId', (req, res) => {
+router.delete('/history/:postId', authenticateAdmin, (req, res) => {
   try {
     telegramPosting.deletePost(req.params.postId);
     res.json({ success: true, message: 'Post marked as deleted' });
   } catch (error) {
-    res.status(500).json({ success: false, error: error.message });
+    res.status(500).json({ success: false, error: 'Internal server error' });
   }
 });
 
@@ -278,7 +279,7 @@ router.delete('/history/:postId', (req, res) => {
  * POST /api/v1/telegram-groups/track-response
  * Track a candidate response from an ad
  */
-router.post('/track-response', async (req, res) => {
+router.post('/track-response', authenticateAdmin, async (req, res) => {
   try {
     const { jobId, groupId, candidateId } = req.body;
 
@@ -293,7 +294,7 @@ router.post('/track-response', async (req, res) => {
 
     res.json({ success: true, data: result });
   } catch (error) {
-    res.status(500).json({ success: false, error: error.message });
+    res.status(500).json({ success: false, error: 'Internal server error' });
   }
 });
 

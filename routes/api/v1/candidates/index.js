@@ -16,6 +16,8 @@
 
 const express = require('express');
 const router = express.Router();
+const { createLogger } = require('../../../../utils/structured-logger');
+const logger = createLogger('api:candidates');
 
 // Import route modules
 const listRoutes = require('./routes/list');
@@ -107,11 +109,11 @@ router.get('/stats', (req, res) => {
     });
 
   } catch (error) {
-    console.error('Error fetching candidate stats:', error);
+    logger.error('Error fetching candidate stats', { error: error.message });
     res.status(500).json({
       success: false,
       error: 'Failed to retrieve candidate statistics',
-      details: error.message
+      details: 'Internal server error'
     });
   }
 });

@@ -20,7 +20,11 @@ export function WebSocketProvider({ children }) {
     if (wsRef.current?.readyState === WebSocket.OPEN) return;
 
     // Get admin token from sessionStorage for authentication
-    const token = sessionStorage.getItem('admin_token') || 'demo-admin-token';
+    const token = sessionStorage.getItem('admin_token');
+    if (!token) {
+      logger.log('No admin token found, skipping WebSocket connection');
+      return;
+    }
 
     const protocol = window.location.protocol === 'https:' ? 'wss:' : 'ws:';
     const wsUrl = `${protocol}//${window.location.host}/ws?admin=true&token=${encodeURIComponent(token)}`;
@@ -37,18 +41,12 @@ export function WebSocketProvider({ children }) {
           reconnectTimeoutRef.current = null;
         }
 
-        // Debug: Log connection success
-        console.log('🔌 [ADMIN WS] WebSocket connection established, ready to receive messages');
+        // Connection established
       };
 
       wsRef.current.onmessage = (event) => {
         try {
           const data = JSON.parse(event.data);
-          console.log('📥 [ADMIN WS] Received message:', {
-            type: data.type,
-            candidateId: data.candidateId,
-            timestamp: new Date().toISOString()
-          });
           setLastMessage(data);
           handleMessage(data);
         } catch (error) {
@@ -97,12 +95,6 @@ export function WebSocketProvider({ children }) {
         break;
 
       case 'new_message':
-        console.log('🔔 [ADMIN WS] Processing new_message from candidate:', {
-          candidateId: data.candidateId,
-          messageId: data.message?.id,
-          content: data.message?.content?.substring(0, 50) + '...',
-          isUrgent: data.isUrgent
-        });
         setUnreadTotal(prev => prev + 1);
         notifyListeners('new_message', data);
         break;
@@ -228,7 +220,7 @@ export function WebSocketProvider({ children }) {
         setUnreadTotal(total);
       }
     } catch (error) {
-      console.error('Failed to fetch unread total:', error);
+      // Failed to fetch unread total
     }
   }, []);
 

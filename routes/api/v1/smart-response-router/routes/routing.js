@@ -64,7 +64,7 @@ router.post('/analyze', authenticateAny, async (req, res) => {
     res.status(500).json({
       success: false,
       error: 'Failed to analyze message',
-      details: error.message
+      details: 'Internal server error'
     });
   }
 });
@@ -134,7 +134,7 @@ router.post('/route', authenticateAny, async (req, res) => {
     res.status(500).json({
       success: false,
       error: 'Failed to route message',
-      details: error.message
+      details: 'Internal server error'
     });
   }
 });
@@ -237,7 +237,7 @@ router.post('/batch-route', authenticateAdmin, async (req, res) => {
     res.status(500).json({
       success: false,
       error: 'Failed to process batch routing',
-      details: error.message
+      details: 'Internal server error'
     });
   }
 });
@@ -287,7 +287,7 @@ router.get('/routing-options', authenticateAdmin, (req, res) => {
     res.status(500).json({
       success: false,
       error: 'Failed to retrieve routing options',
-      details: error.message
+      details: 'Internal server error'
     });
   }
 });

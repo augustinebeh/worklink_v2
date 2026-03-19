@@ -11,6 +11,7 @@ const { createLogger } = require('../../../../../utils/structured-logger');
 const { processLevelUp, calculateLevel } = require('../helpers/xp-calculator');
 const { checkAndUnlockAchievements, unlockAchievement } = require('../helpers/achievement-checker');
 const { getCandidateAchievements, createXPTransaction, updateCandidateXP } = require('../helpers/database-queries');
+const { authenticateToken, authenticateAdmin } = require('../../../../../middleware/auth');
 
 const logger = createLogger('gamification-achievements');
 
@@ -18,10 +19,12 @@ const logger = createLogger('gamification-achievements');
  * GET /achievements
  * Get all achievements with pagination and filtering
  */
-router.get('/achievements', (req, res) => {
+router.get('/achievements', authenticateToken, (req, res) => {
   try {
-    const { page = 1, limit = 50, category } = req.query;
-    const offset = (parseInt(page) - 1) * parseInt(limit);
+    const { category } = req.query;
+    const page = Math.max(1, parseInt(req.query.page) || 1);
+    const limit = Math.min(Math.max(1, parseInt(req.query.limit) || 50), 500);
+    const offset = (page - 1) * limit;
 
     // Build WHERE clause for category filter
     let whereClause = '';
@@ -42,16 +45,16 @@ router.get('/achievements', (req, res) => {
       ORDER BY category, rarity
       LIMIT ? OFFSET ?
     `;
-    const achievements = db.prepare(achievementsQuery).all(...params, parseInt(limit), offset);
+    const achievements = db.prepare(achievementsQuery).all(...params, limit, offset);
 
     res.json({
       success: true,
       data: achievements,
       pagination: {
-        page: parseInt(page),
-        limit: parseInt(limit),
+        page,
+        limit,
         total,
-        pages: Math.ceil(total / parseInt(limit))
+        pages: Math.ceil(total / limit)
       }
     });
 
@@ -59,7 +62,7 @@ router.get('/achievements', (req, res) => {
     logger.error('Failed to get achievements', { error: error.message });
     res.status(500).json({
       success: false,
-      error: error.message
+      error: 'Internal server error'
     });
   }
 });
@@ -68,7 +71,7 @@ router.get('/achievements', (req, res) => {
  * GET /achievements/user/:candidateId
  * Get user's achievements with claimed status
  */
-router.get('/achievements/user/:candidateId', (req, res) => {
+router.get('/achievements/user/:candidateId', authenticateToken, (req, res) => {
   try {
     const candidateId = req.params.candidateId;
     const { page = 1, limit = 50, category, claimed } = req.query;
@@ -112,10 +115,10 @@ router.get('/achievements/user/:candidateId', (req, res) => {
       success: true,
       data: userAchievements,
       pagination: {
-        page: parseInt(page),
-        limit: parseInt(limit),
+        page,
+        limit,
         total,
-        pages: Math.ceil(total / parseInt(limit))
+        pages: Math.ceil(total / limit)
       }
     });
 
@@ -126,7 +129,7 @@ router.get('/achievements/user/:candidateId', (req, res) => {
     });
     res.status(500).json({
       success: false,
-      error: error.message
+      error: 'Internal server error'
     });
   }
 });
@@ -135,7 +138,7 @@ router.get('/achievements/user/:candidateId', (req, res) => {
  * POST /achievements/unlock
  * Unlock achievement (does NOT auto-award XP - must be claimed separately)
  */
-router.post('/achievements/unlock', (req, res) => {
+router.post('/achievements/unlock', authenticateToken, (req, res) => {
   try {
     const { candidate_id, achievement_id } = req.body;
 
@@ -197,7 +200,7 @@ router.post('/achievements/unlock', (req, res) => {
     });
     res.status(500).json({
       success: false,
-      error: error.message
+      error: 'Internal server error'
     });
   }
 });
@@ -206,7 +209,7 @@ router.post('/achievements/unlock', (req, res) => {
  * POST /achievements/:achievementId/claim
  * Claim achievement XP reward
  */
-router.post('/achievements/:achievementId/claim', (req, res) => {
+router.post('/achievements/:achievementId/claim', authenticateToken, (req, res) => {
   try {
     const { candidateId, candidate_id } = req.body;
     const finalCandidateId = candidateId || candidate_id;
@@ -219,26 +222,6 @@ router.post('/achievements/:achievementId/claim', (req, res) => {
       });
     }
 
-    // Check if achievement is unlocked
-    const userAchievement = db.prepare(`
-      SELECT * FROM candidate_achievements
-      WHERE candidate_id = ? AND achievement_id = ?
-    `).get(finalCandidateId, achievementId);
-
-    if (!userAchievement) {
-      return res.status(400).json({
-        success: false,
-        error: 'Achievement not unlocked'
-      });
-    }
-
-    if (userAchievement.claimed === 1) {
-      return res.status(400).json({
-        success: false,
-        error: 'Achievement already claimed'
-      });
-    }
-
     // Get achievement XP reward
     const achievement = db.prepare('SELECT * FROM achievements WHERE id = ?').get(achievementId);
     if (!achievement) {
@@ -248,8 +231,22 @@ router.post('/achievements/:achievementId/claim', (req, res) => {
       });
     }
 
-    // Use transaction for claiming
+    // Use transaction for claiming - check + claim inside transaction to prevent race condition
     const transaction = db.transaction(() => {
+      // Check if achievement is unlocked (inside transaction to prevent concurrent claims)
+      const userAchievement = db.prepare(`
+        SELECT * FROM candidate_achievements
+        WHERE candidate_id = ? AND achievement_id = ?
+      `).get(finalCandidateId, achievementId);
+
+      if (!userAchievement) {
+        return { error: 'Achievement not unlocked', status: 400 };
+      }
+
+      if (userAchievement.claimed === 1) {
+        return { error: 'Achievement already claimed', status: 400 };
+      }
+
       // Mark as claimed
       db.prepare(`
         UPDATE candidate_achievements
@@ -270,10 +267,19 @@ router.post('/achievements/:achievementId/claim', (req, res) => {
       }
 
       // Check for level up
-      return processLevelUp(db, finalCandidateId);
+      return { levelResult: processLevelUp(db, finalCandidateId) };
     });
 
-    const levelResult = transaction();
+    const txResult = transaction();
+
+    if (txResult.error) {
+      return res.status(txResult.status).json({
+        success: false,
+        error: txResult.error
+      });
+    }
+
+    const levelResult = txResult.levelResult;
     const candidate = db.prepare('SELECT xp, level FROM candidates WHERE id = ?').get(finalCandidateId);
 
     logger.business('achievement_claimed', {
@@ -304,8 +310,104 @@ router.post('/achievements/:achievementId/claim', (req, res) => {
     });
     res.status(500).json({
       success: false,
-      error: error.message
+      error: 'Internal server error'
     });
+  }
+});
+
+/**
+ * POST /achievements
+ * Create a new achievement (Admin only)
+ */
+router.post('/achievements', authenticateAdmin, (req, res) => {
+  try {
+    const { code, name, description, icon, category, requirement_type, requirement_value, xp_reward, rarity } = req.body;
+
+    if (!name) {
+      return res.status(400).json({ success: false, error: 'name is required' });
+    }
+
+    const id = 'ACH' + Date.now().toString(36).toUpperCase();
+
+    db.prepare(`
+      INSERT INTO achievements (id, code, name, description, icon, category, requirement_type, requirement_value, xp_reward, rarity)
+      VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+    `).run(id, code || null, name, description || null, icon || null, category || null, requirement_type || null, requirement_value || 0, xp_reward || 0, rarity || 'common');
+
+    const achievement = db.prepare('SELECT * FROM achievements WHERE id = ?').get(id);
+
+    logger.business('achievement_created', { id, name, category });
+
+    res.status(201).json({ success: true, data: achievement });
+  } catch (error) {
+    logger.error('Failed to create achievement', { error: error.message });
+    res.status(500).json({ success: false, error: 'Internal server error' });
+  }
+});
+
+/**
+ * PUT /achievements/:id
+ * Update an achievement (Admin only)
+ */
+router.put('/achievements/:id', authenticateAdmin, (req, res) => {
+  try {
+    const { id } = req.params;
+    const existing = db.prepare('SELECT * FROM achievements WHERE id = ?').get(id);
+    if (!existing) {
+      return res.status(404).json({ success: false, error: 'Achievement not found' });
+    }
+
+    const allowedFields = ['code', 'name', 'description', 'icon', 'category', 'requirement_type', 'requirement_value', 'xp_reward', 'rarity'];
+    const updates = [];
+    const values = [];
+
+    for (const field of allowedFields) {
+      if (req.body[field] !== undefined) {
+        updates.push(`${field} = ?`);
+        values.push(req.body[field]);
+      }
+    }
+
+    if (updates.length === 0) {
+      return res.status(400).json({ success: false, error: 'No fields to update' });
+    }
+
+    values.push(id);
+    db.prepare(`UPDATE achievements SET ${updates.join(', ')} WHERE id = ?`).run(...values);
+
+    const updated = db.prepare('SELECT * FROM achievements WHERE id = ?').get(id);
+
+    logger.business('achievement_updated', { id, fields: updates.length });
+
+    res.json({ success: true, data: updated });
+  } catch (error) {
+    logger.error('Failed to update achievement', { id: req.params.id, error: error.message });
+    res.status(500).json({ success: false, error: 'Internal server error' });
+  }
+});
+
+/**
+ * DELETE /achievements/:id
+ * Delete an achievement (Admin only)
+ */
+router.delete('/achievements/:id', authenticateAdmin, (req, res) => {
+  try {
+    const { id } = req.params;
+    const existing = db.prepare('SELECT * FROM achievements WHERE id = ?').get(id);
+    if (!existing) {
+      return res.status(404).json({ success: false, error: 'Achievement not found' });
+    }
+
+    // Remove candidate associations first
+    db.prepare('DELETE FROM candidate_achievements WHERE achievement_id = ?').run(id);
+    db.prepare('DELETE FROM achievements WHERE id = ?').run(id);
+
+    logger.business('achievement_deleted', { id, name: existing.name });
+
+    res.json({ success: true, message: 'Achievement deleted successfully' });
+  } catch (error) {
+    logger.error('Failed to delete achievement', { id: req.params.id, error: error.message });
+    res.status(500).json({ success: false, error: 'Internal server error' });
   }
 });
 
@@ -313,7 +415,7 @@ router.post('/achievements/:achievementId/claim', (req, res) => {
  * POST /achievements/check/:candidateId
  * Check and unlock automatic achievements (Career Ladder Strategy)
  */
-router.post('/achievements/check/:candidateId', (req, res) => {
+router.post('/achievements/check/:candidateId', authenticateToken, (req, res) => {
   try {
     const candidateId = req.params.candidateId;
 
@@ -336,7 +438,7 @@ router.post('/achievements/check/:candidateId', (req, res) => {
     });
     res.status(500).json({
       success: false,
-      error: error.message
+      error: 'Internal server error'
     });
   }
 });

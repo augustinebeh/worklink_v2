@@ -14,6 +14,8 @@
 
 const { db } = require('../../db');
 const embeddings = require('./embeddings');
+const { createLogger } = require('../../utils/structured-logger');
+const logger = createLogger('ml-service');
 
 /**
  * Get ML settings
@@ -198,7 +200,7 @@ async function learn(question, answer, metadata = {}) {
       }
     }
     // For other errors, just log and continue (don't break the response)
-    console.error('ML learn error (non-fatal):', e.message);
+    logger.error('ML learn error (non-fatal)', { error: e.message });
     return null;
   }
 }
@@ -726,12 +728,12 @@ async function processImplicitFeedback(candidateId, message) {
       // Worker is satisfied - implicit approval
       action = 'implicit_approved';
       confidenceChange = 0.08; // Slightly less than explicit approval
-      console.log(`[ML] Implicit APPROVAL detected for log ${record.log_id}: "${message.substring(0, 50)}..."`);
+      logger.info('Implicit approval detected', { log_id: record.log_id, message_preview: message.substring(0, 50) });
     } else if (feedback.signal === 'negative' || isRepeat) {
       // Worker is confused/frustrated or repeating - implicit rejection
       action = 'implicit_rejected';
       confidenceChange = -0.1;
-      console.log(`[ML] Implicit REJECTION detected for log ${record.log_id}: "${message.substring(0, 50)}..."`);
+      logger.info('Implicit rejection detected', { log_id: record.log_id, message_preview: message.substring(0, 50) });
     }
 
     if (action) {

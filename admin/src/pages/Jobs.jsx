@@ -59,7 +59,7 @@ export default function Jobs() {
         setAllJobs(data.data);
       }
     } catch (error) {
-      console.error('Failed to fetch jobs:', error);
+      // Failed to fetch jobs
     } finally {
       setLoading(false);
     }
@@ -72,7 +72,7 @@ export default function Jobs() {
         setClients(data.data);
       }
     } catch (error) {
-      console.error('Failed to fetch clients:', error);
+      // Failed to fetch clients
     }
   };
 
@@ -102,7 +102,7 @@ export default function Jobs() {
         fetchJobs();
       }
     } catch (error) {
-      console.error('Failed to create job:', error);
+      // Failed to create job
     }
   };
 

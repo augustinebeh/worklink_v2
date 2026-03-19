@@ -6,9 +6,13 @@
 const express = require('express');
 const router = express.Router();
 const { getEmailConfig, updateEmailConfig, testEmailConfig, validateEmailConfig } = require('../../../config/email');
+const { authenticateAdmin } = require('../../../middleware/auth');
+const { createLogger } = require('../../../utils/structured-logger');
+
+const logger = createLogger('api:email-config');
 
 // Get current email configuration
-router.get('/', (req, res) => {
+router.get('/', authenticateAdmin, (req, res) => {
   try {
     const config = getEmailConfig();
 
@@ -50,16 +54,16 @@ router.get('/', (req, res) => {
       data: safeConfig
     });
   } catch (error) {
-    console.error('Error getting email configuration:', error);
+    logger.error('Error getting email configuration', { error: error.message });
     res.status(500).json({
       success: false,
-      error: error.message
+      error: 'Internal server error'
     });
   }
 });
 
 // Update email configuration
-router.patch('/', (req, res) => {
+router.patch('/', authenticateAdmin, (req, res) => {
   try {
     const newConfig = req.body;
 
@@ -100,16 +104,16 @@ router.patch('/', (req, res) => {
       message: 'Email configuration updated successfully'
     });
   } catch (error) {
-    console.error('Error updating email configuration:', error);
+    logger.error('Error updating email configuration', { error: error.message });
     res.status(500).json({
       success: false,
-      error: error.message
+      error: 'Internal server error'
     });
   }
 });
 
 // Test email configuration
-router.post('/test', async (req, res) => {
+router.post('/test', authenticateAdmin, async (req, res) => {
   try {
     const { config, testEmail } = req.body;
 
@@ -130,16 +134,16 @@ router.post('/test', async (req, res) => {
       data: result
     });
   } catch (error) {
-    console.error('Error testing email configuration:', error);
+    logger.error('Error testing email configuration', { error: error.message });
     res.status(500).json({
       success: false,
-      error: error.message
+      error: 'Internal server error'
     });
   }
 });
 
 // Send test email with current configuration
-router.post('/send-test', async (req, res) => {
+router.post('/send-test', authenticateAdmin, async (req, res) => {
   try {
     const { to, subject, message } = req.body;
 
@@ -165,16 +169,16 @@ router.post('/send-test', async (req, res) => {
       message: 'Test email sent successfully'
     });
   } catch (error) {
-    console.error('Error sending test email:', error);
+    logger.error('Error sending test email', { error: error.message });
     res.status(500).json({
       success: false,
-      error: error.message
+      error: 'Internal server error'
     });
   }
 });
 
 // Get email service status and health
-router.get('/health', async (req, res) => {
+router.get('/health', authenticateAdmin, async (req, res) => {
   try {
     const config = getEmailConfig();
     const emailService = require('../../../services/email');
@@ -214,16 +218,16 @@ router.get('/health', async (req, res) => {
       }
     });
   } catch (error) {
-    console.error('Error checking email service health:', error);
+    logger.error('Error checking email service health', { error: error.message });
     res.status(500).json({
       success: false,
-      error: error.message
+      error: 'Internal server error'
     });
   }
 });
 
 // Get available email templates
-router.get('/templates', (req, res) => {
+router.get('/templates', authenticateAdmin, (req, res) => {
   try {
     const EmailTemplates = require('../../../services/email/templates');
     const templates = new EmailTemplates();
@@ -267,16 +271,16 @@ router.get('/templates', (req, res) => {
       data: availableTemplates
     });
   } catch (error) {
-    console.error('Error getting email templates:', error);
+    logger.error('Error getting email templates', { error: error.message });
     res.status(500).json({
       success: false,
-      error: error.message
+      error: 'Internal server error'
     });
   }
 });
 
 // Preview email template
-router.post('/templates/:templateName/preview', async (req, res) => {
+router.post('/templates/:templateName/preview', authenticateAdmin, async (req, res) => {
   try {
     const { templateName } = req.params;
     const { data = {} } = req.body;
@@ -354,16 +358,16 @@ router.post('/templates/:templateName/preview', async (req, res) => {
       }
     });
   } catch (error) {
-    console.error('Error previewing email template:', error);
+    logger.error('Error previewing email template', { error: error.message });
     res.status(500).json({
       success: false,
-      error: error.message
+      error: 'Internal server error'
     });
   }
 });
 
 // Reset email configuration to defaults
-router.post('/reset', (req, res) => {
+router.post('/reset', authenticateAdmin, (req, res) => {
   try {
     const { DEFAULT_CONFIG } = require('../../../config/email');
 
@@ -387,10 +391,10 @@ router.post('/reset', (req, res) => {
       message: 'Email configuration reset to defaults'
     });
   } catch (error) {
-    console.error('Error resetting email configuration:', error);
+    logger.error('Error resetting email configuration', { error: error.message });
     res.status(500).json({
       success: false,
-      error: error.message
+      error: 'Internal server error'
     });
   }
 });

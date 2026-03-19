@@ -40,7 +40,7 @@ export default function BPOTenderLifecycle() {
           });
         }
       } catch (e) {
-        console.error('Error fetching pipeline stats:', e);
+        // Error fetching pipeline stats:
       }
     };
     fetchStats();
@@ -52,7 +52,7 @@ export default function BPOTenderLifecycle() {
   };
 
   const handleStageChange = (tenderId, newStage) => {
-    console.log(`Tender ${tenderId} moved to ${newStage}`);
+    // Tender stage changed - optimistic updates handle this
     // No need to refresh - optimistic updates handle this
     // Toast is already shown in useKanbanDnd hook
   };
@@ -66,13 +66,13 @@ export default function BPOTenderLifecycle() {
   };
 
   const handleCreateSuccess = (newTender) => {
-    console.log('New tender created:', newTender);
+    // New tender created:
     // Refresh the pipeline to show the new tender
     setRefreshKey(prev => prev + 1);
   };
 
   const handleTenderUpdate = (tenderId, updateData) => {
-    console.log('Tender updated:', tenderId, updateData);
+    // Tender updated:
     // Refresh the pipeline to show updated data
     setRefreshKey(prev => prev + 1);
   };

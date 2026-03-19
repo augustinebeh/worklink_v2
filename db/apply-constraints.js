@@ -6,7 +6,8 @@
 const Database = require('better-sqlite3');
 const fs = require('fs');
 const path = require('path');
-const logger = require('../utils/logger');
+const { createLogger } = require('../utils/structured-logger');
+const logger = createLogger('apply-constraints');
 
 // Get database path
 const isDev = process.env.NODE_ENV !== 'production';
@@ -18,14 +19,14 @@ function applyConstraintsAndIndexes() {
   let db;
 
   try {
-    console.log(`📊 Connecting to database at: ${dbPath}`);
+    logger.info(`Connecting to database at: ${dbPath}`);
     db = new Database(dbPath);
 
     // Enable WAL mode and foreign keys
     db.pragma('journal_mode = WAL');
     db.pragma('foreign_keys = ON');
 
-    console.log('📊 Reading migration SQL file...');
+    logger.info('Reading migration SQL file...');
     const sqlFile = path.join(__dirname, 'add-constraints-and-indexes.sql');
     const migrationSQL = fs.readFileSync(sqlFile, 'utf8');
 
@@ -36,7 +37,7 @@ function applyConstraintsAndIndexes() {
       .filter(s => s.length > 0 && !s.startsWith('--'))
       .map(s => s + ';');
 
-    console.log(`📊 Found ${statements.length} SQL statements to execute`);
+    logger.info(`Found ${statements.length} SQL statements to execute`);
 
     let successCount = 0;
     let skipCount = 0;
@@ -55,12 +56,12 @@ function applyConstraintsAndIndexes() {
           if (statement.includes('ADD CONSTRAINT')) {
             const constraintMatch = statement.match(/ADD CONSTRAINT (\w+)/);
             if (constraintMatch) {
-              console.log(`  ✅ Added constraint: ${constraintMatch[1]}`);
+              logger.info(`Added constraint: ${constraintMatch[1]}`);
             }
           } else if (statement.includes('CREATE INDEX')) {
             const indexMatch = statement.match(/CREATE INDEX[^\\s]*\\s+([\\w_]+)/);
             if (indexMatch) {
-              console.log(`  ✅ Added index: ${indexMatch[1]}`);
+              logger.info(`Added index: ${indexMatch[1]}`);
             }
           }
         } catch (error) {
@@ -68,39 +69,32 @@ function applyConstraintsAndIndexes() {
               error.message.includes('duplicate column name') ||
               error.message.includes('UNIQUE constraint failed')) {
             skipCount++;
-            console.log(`  ⚠️  Skipped (already exists): ${statement.substring(0, 50)}...`);
+            logger.warn(`Skipped (already exists): ${statement.substring(0, 50)}...`);
           } else {
             errorCount++;
-            console.error(`  ❌ Error executing: ${statement.substring(0, 50)}...`);
-            console.error(`     Error: ${error.message}`);
+            logger.error(`Error executing: ${statement.substring(0, 50)}...`, { error: error.message });
 
             // For critical constraints, we might want to fail
             if (statement.includes('CHECK') &&
                 (statement.includes('charge_rate') || statement.includes('pay_rate'))) {
-              console.error('     ⚠️  Critical constraint failed - this may indicate data integrity issues');
+              logger.error('Critical constraint failed - this may indicate data integrity issues');
             }
           }
         }
       }
     });
 
-    console.log('📊 Applying constraints and indexes...');
+    logger.info('Applying constraints and indexes...');
     transaction();
 
-    console.log(`\\n📊 Migration completed:`);
-    console.log(`   ✅ Successful: ${successCount}`);
-    console.log(`   ⚠️  Skipped: ${skipCount}`);
-    console.log(`   ❌ Errors: ${errorCount}`);
+    logger.info('Migration completed', { successful: successCount, skipped: skipCount, errors: errorCount });
 
     if (errorCount > 0) {
-      console.warn('\\n⚠️  Some constraints could not be applied. This might be due to:');
-      console.warn('   - Existing data that violates the constraints');
-      console.warn('   - SQLite limitations with ALTER TABLE');
-      console.warn('   - Constraints already existing');
+      logger.warn('Some constraints could not be applied. This might be due to existing data violations, SQLite limitations, or constraints already existing');
     }
 
     // Verify some critical constraints were applied
-    console.log('\\n📊 Verifying constraint application...');
+    logger.info('Verifying constraint application...');
 
     try {
       // Try to insert invalid data to test constraints
@@ -128,26 +122,26 @@ function applyConstraintsAndIndexes() {
         testResults.push('✅ Rate markup constraint working (blocked charge_rate < pay_rate)');
       }
 
-      testResults.forEach(result => console.log(`   ${result}`));
+      testResults.forEach(result => logger.info(result));
 
     } catch (error) {
-      console.warn('   ⚠️  Could not verify constraints:', error.message);
+      logger.warn('Could not verify constraints', { error: error.message });
     }
 
   } catch (error) {
-    console.error('❌ Migration failed:', error);
+    logger.error('Migration failed', { error: error.message });
     process.exit(1);
   } finally {
     if (db) {
       db.close();
-      console.log('📊 Database connection closed');
+      logger.info('Database connection closed');
     }
   }
 }
 
 // Run the migration if this file is executed directly
 if (require.main === module) {
-  console.log('🚀 Starting database constraints and indexes migration...');
+  logger.info('Starting database constraints and indexes migration...');
   applyConstraintsAndIndexes();
 }
 

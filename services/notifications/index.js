@@ -7,10 +7,9 @@
 const emailService = require('./emailService');
 const smsService = require('./smsService');
 const slackService = require('./slackService');
-const Database = require('better-sqlite3');
-const path = require('path');
-
-const DB_PATH = path.join(__dirname, '../../database/gebiz_intelligence.db');
+const { db } = require('../../db');
+const { createLogger } = require('../../utils/structured-logger');
+const logger = createLogger('notification-router');
 
 class NotificationRouter {
   constructor() {
@@ -21,7 +20,7 @@ class NotificationRouter {
    * Initialize all notification services
    */
   initialize() {
-    console.log('🎯 Initializing Notification Router...');
+    logger.info('Initializing Notification Router');
     
     const emailInit = emailService.initialize();
     const smsInit = smsService.initialize();
@@ -29,7 +28,7 @@ class NotificationRouter {
     
     this.initialized = true;
     
-    console.log(`✅ Notification Router ready (Email: ${emailInit}, SMS: ${smsInit}, Slack: ${slackInit})`);
+    logger.info('Notification Router ready', { email: emailInit, sms: smsInit, slack: slackInit });
     return true;
   }
 
@@ -38,7 +37,7 @@ class NotificationRouter {
    */
   async routeHighValueTenderAlert(tender, rule) {
     if (!this.initialized) {
-      console.warn('Notification router not initialized');
+      logger.warn('Notification router not initialized');
       return { success: false, error: 'Not initialized' };
     }
     
@@ -175,11 +174,9 @@ class NotificationRouter {
     };
     
     try {
-      const db = new Database(DB_PATH, { readonly: true });
-      
       // Parse recipient config
-      const config = typeof recipientConfig === 'string' 
-        ? JSON.parse(recipientConfig) 
+      const config = typeof recipientConfig === 'string'
+        ? JSON.parse(recipientConfig)
         : recipientConfig;
       
       // Direct email addresses
@@ -244,15 +241,13 @@ class NotificationRouter {
         }
       }
       
-      db.close();
-      
       // Deduplicate
       recipients.emails = [...new Set(recipients.emails)].filter(Boolean);
       recipients.phones = [...new Set(recipients.phones)].filter(Boolean);
       recipients.slackChannels = [...new Set(recipients.slackChannels)].filter(Boolean);
       
     } catch (error) {
-      console.error('Error getting recipients:', error);
+      logger.error('Error getting recipients', { error: error.message });
     }
     
     return recipients;

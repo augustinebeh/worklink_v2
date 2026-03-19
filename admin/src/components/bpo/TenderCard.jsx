@@ -59,12 +59,14 @@ export default function TenderCard({
     willChange: 'transform, opacity',
   };
 
-  // Calculate deadline info
+  // Calculate deadline info (compare dates at midnight to avoid off-by-one at day boundaries)
   const getDeadlineInfo = (date) => {
     if (!date) return null;
     const deadline = new Date(date);
     const now = new Date();
-    const diffDays = Math.ceil((deadline - now) / (1000 * 60 * 60 * 24));
+    deadline.setHours(0, 0, 0, 0);
+    now.setHours(0, 0, 0, 0);
+    const diffDays = Math.round((deadline - now) / (1000 * 60 * 60 * 24));
 
     if (diffDays < 0) return { text: 'Overdue', color: 'text-red-600', urgent: true };
     if (diffDays === 0) return { text: 'Today', color: 'text-red-600', urgent: true };

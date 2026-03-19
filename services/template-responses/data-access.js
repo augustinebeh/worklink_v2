@@ -5,6 +5,9 @@
  * Replaces unreliable seed data with actual database information
  */
 
+const { createLogger } = require('../../utils/structured-logger');
+const logger = createLogger('template-data-access');
+
 class DataAccess {
   constructor(db) {
     this.db = db;
@@ -31,7 +34,7 @@ class DataAccess {
 
       return candidate;
     } catch (error) {
-      console.error('❌ [Data Access] Error getting candidate profile:', error);
+      logger.error('Error getting candidate profile', { error: error.message });
       return null;
     }
   }
@@ -81,7 +84,7 @@ class DataAccess {
         withdrawal_history: withdrawalHistory || []
       };
     } catch (error) {
-      console.error('❌ [Data Access] Error getting payment data:', error);
+      logger.error('Error getting payment data', { error: error.message });
       return {
         pending_earnings: 0,
         total_paid: 0,
@@ -156,7 +159,7 @@ class DataAccess {
         }
       };
     } catch (error) {
-      console.error('❌ [Data Access] Error getting job data:', error);
+      logger.error('Error getting job data', { error: error.message });
       return {
         upcoming_jobs: [],
         completed_jobs: [],
@@ -210,7 +213,7 @@ class DataAccess {
         interviews: interviews || []
       };
     } catch (error) {
-      console.error('❌ [Data Access] Error getting verification data:', error);
+      logger.error('Error getting verification data', { error: error.message });
       return {
         account_status: 'unknown',
         profile_completion: 0,
@@ -249,7 +252,7 @@ class DataAccess {
 
       return realData;
     } catch (error) {
-      console.error('❌ [Data Access] Error getting real-time data:', error);
+      logger.error('Error getting real-time data', { error: error.message });
       return {};
     }
   }
@@ -286,7 +289,7 @@ class DataAccess {
         LIMIT 5
       `).all(candidateId);
     } catch (error) {
-      console.error('❌ [Data Access] Error getting recent activity:', error);
+      logger.error('Error getting recent activity', { error: error.message });
       return [];
     }
   }
@@ -313,7 +316,7 @@ class DataAccess {
         LIMIT ?
       `).all(candidate?.location ? [candidate.location, limit] : [limit]);
     } catch (error) {
-      console.error('❌ [Data Access] Error getting available jobs:', error);
+      logger.error('Error getting available jobs', { error: error.message });
       return [];
     }
   }
@@ -329,7 +332,7 @@ class DataAccess {
       `).run(candidateId, dataType, source);
     } catch (error) {
       // Fail silently for logging
-      console.error('❌ [Data Access] Failed to log access:', error);
+      logger.error('Failed to log access', { error: error.message });
     }
   }
 }

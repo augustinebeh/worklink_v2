@@ -37,7 +37,7 @@ export default function RenewalTimeline({ monthsAhead = 12, onRenewalClick }) {
         setError('Failed to load timeline');
       }
     } catch (err) {
-      console.error('Error fetching renewal timeline:', err);
+      // Error fetching renewal timeline
       setError(err.message);
     } finally {
       setLoading(false);

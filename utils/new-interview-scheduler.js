@@ -5,6 +5,10 @@
  * Philosophy: Conversational Agent (not state machine)
  */
 
+
+const { createLogger } = require('./structured-logger');
+const logger = createLogger('new-interview-scheduler');
+
 const { callGroqAPI } = require('./internal-slm/groq-fallback');
 const chrono = require('chrono-node');
 
@@ -219,7 +223,7 @@ Return JSON with:
       return JSON.parse(cleaned);
       
     } catch (error) {
-      console.error('LLM intent detection failed:', error);
+      logger.error('LLM intent detection failed:', { error: error });
       
       // Fallback: treat as question
       return {
@@ -358,11 +362,11 @@ class ConversationManager {
 
   async handleMessage(message) {
     try {
-      console.log(`[ConversationManager] Processing: "${message}"`);
+      logger.info('[ConversationManager] Processing: "${message}"');
       
       // Analyze intent
       const intent = await this.intentDetector.analyze(message, this.context);
-      console.log('[ConversationManager] Intent:', intent);
+      logger.info('[ConversationManager] Intent:', { data: intent });
 
       // Route to appropriate handler
       let response;
@@ -403,7 +407,7 @@ class ConversationManager {
       return response;
       
     } catch (error) {
-      console.error('[ConversationManager] Error:', error);
+      logger.error('[ConversationManager] Error:', { error: error });
       return this.handleError(error);
     }
   }
@@ -505,7 +509,7 @@ class ConversationManager {
   }
 
   async handleError(error) {
-    console.error('[ConversationManager] Handling error:', error);
+    logger.error('[ConversationManager] Handling error:', { error: error });
     return this.responseGenerator.generateError(this.context);
   }
 
@@ -538,9 +542,9 @@ class ConversationManager {
         `Interview scheduled via chatbot at ${slot.formatted}`
       );
       
-      console.log('[ConversationManager] Booking created:', booking);
+      logger.info('[ConversationManager] Booking created:', { data: booking });
     } catch (error) {
-      console.error('[ConversationManager] Database error:', error);
+      logger.error('[ConversationManager] Database error:', { error: error });
     }
     
     return booking;

@@ -75,7 +75,7 @@ const CalendarAnalytics = ({
       }
 
       setAnalyticsData(mockData);
-      console.log('Analytics data loaded (frontend-only):', mockData);
+      // Analytics data loaded (frontend-only)
     } catch (err) {
       setError('Failed to fetch analytics data');
     } finally {

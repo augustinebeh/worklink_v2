@@ -6,32 +6,16 @@
 
 const express = require('express');
 const router = express.Router();
-const Database = require('better-sqlite3');
-const path = require('path');
+const { db } = require('../../../../db');
 const { v4: uuidv4 } = require('uuid');
-const fs = require('fs');
+const { createLogger } = require('../../../../utils/structured-logger');
+const { safeJsonParse } = require('../../../../db/utils/db-helpers');
+const logger = createLogger('alerts');
 
-// Railway-compatible database path configuration
-const getDbPath = () => {
-  // Try GeBIZ intelligence database first (local development)
-  const gebizDbPath = path.join(__dirname, '../../../../database/gebiz_intelligence.db');
-
-  // If GeBIZ database exists, use it
-  if (fs.existsSync(gebizDbPath)) {
-    return gebizDbPath;
-  }
-
-  // Fallback to main database for Railway deployment
-  const mainDbPath = path.join(__dirname, '../../../../data/worklink.db');
-  if (fs.existsSync(mainDbPath)) {
-    return mainDbPath;
-  }
-
-  // Final fallback for Railway with different structure
-  return process.env.DATABASE_URL || '/opt/render/project/src/data/worklink.db';
-};
-
-const DB_PATH = getDbPath();
+// Helper: check if a table exists (Railway compatibility)
+function tableExists(tableName) {
+  return !!db.prepare("SELECT name FROM sqlite_master WHERE type='table' AND name=?").get(tableName);
+}
 
 // ============================================================================
 // ALERT RULES MANAGEMENT
@@ -40,12 +24,7 @@ const DB_PATH = getDbPath();
 // GET /api/v1/alerts/rules - List all alert rules
 router.get('/rules', (req, res) => {
   try {
-    const db = new Database(DB_PATH, { readonly: true });
-
-    // Check if alert_rules table exists (Railway compatibility)
-    const tableCheck = db.prepare("SELECT name FROM sqlite_master WHERE type='table' AND name='alert_rules'").get();
-    if (!tableCheck) {
-      db.close();
+    if (!tableExists('alert_rules')) {
       return res.json({
         success: true,
         data: [],
@@ -65,32 +44,27 @@ router.get('/rules', (req, res) => {
 
     // Parse JSON fields
     rules.forEach(rule => {
-      rule.conditions = JSON.parse(rule.conditions || '{}');
-      rule.notification_channels = JSON.parse(rule.notification_channels || '[]');
-      rule.recipients = JSON.parse(rule.recipients || '{}');
+      rule.conditions = safeJsonParse(rule.conditions, {});
+      rule.notification_channels = safeJsonParse(rule.notification_channels, []);
+      rule.recipients = safeJsonParse(rule.recipients, {});
       if (rule.escalation_recipients) {
-        rule.escalation_recipients = JSON.parse(rule.escalation_recipients);
+        rule.escalation_recipients = safeJsonParse(rule.escalation_recipients, {});
       }
     });
 
-    db.close();
+
 
     res.json({ success: true, data: rules });
   } catch (error) {
-    console.error('Error fetching alert rules:', error);
-    res.status(500).json({ success: false, error: error.message });
+    logger.error('Error fetching alert rules', { error: error.message });
+    res.status(500).json({ success: false, error: 'Internal server error' });
   }
 });
 
 // POST /api/v1/alerts/rules - Create alert rule
 router.post('/rules', (req, res) => {
   try {
-    const db = new Database(DB_PATH);
-
-    // Check if alert_rules table exists (Railway compatibility)
-    const tableCheck = db.prepare("SELECT name FROM sqlite_master WHERE type='table' AND name='alert_rules'").get();
-    if (!tableCheck) {
-      db.close();
+    if (!tableExists('alert_rules')) {
       return res.status(503).json({
         success: false,
         error: 'Alert system not available on this deployment',
@@ -116,7 +90,7 @@ router.post('/rules', (req, res) => {
     } = req.body;
     
     if (!rule_name || !rule_type || !conditions || !notification_channels || !recipients) {
-      db.close();
+  
       return res.status(400).json({ 
         success: false, 
         error: 'Missing required fields' 
@@ -152,7 +126,7 @@ router.post('/rules', (req, res) => {
     );
     
     const rule = db.prepare('SELECT * FROM alert_rules WHERE id = ?').get(id);
-    db.close();
+
     
     res.status(201).json({
       success: true,
@@ -160,19 +134,17 @@ router.post('/rules', (req, res) => {
       message: 'Alert rule created successfully'
     });
   } catch (error) {
-    console.error('Error creating alert rule:', error);
-    res.status(500).json({ success: false, error: error.message });
+    logger.error('Error creating alert rule', { error: error.message });
+    res.status(500).json({ success: false, error: 'Internal server error' });
   }
 });
 
 // PATCH /api/v1/alerts/rules/:id - Update alert rule
 router.patch('/rules/:id', (req, res) => {
   try {
-    const db = new Database(DB_PATH);
-    
     const updates = [];
     const params = [];
-    
+
     const allowedFields = [
       'rule_name', 'conditions', 'priority', 'notification_channels',
       'recipients', 'escalation_enabled', 'escalation_after_minutes',
@@ -196,7 +168,7 @@ router.patch('/rules/:id', (req, res) => {
     }
     
     if (updates.length === 0) {
-      db.close();
+  
       return res.status(400).json({ success: false, error: 'No valid fields to update' });
     }
     
@@ -206,12 +178,12 @@ router.patch('/rules/:id', (req, res) => {
     const result = db.prepare(`UPDATE alert_rules SET ${updates.join(', ')} WHERE id = ?`).run(...params);
     
     if (result.changes === 0) {
-      db.close();
+  
       return res.status(404).json({ success: false, error: 'Alert rule not found' });
     }
     
     const rule = db.prepare('SELECT * FROM alert_rules WHERE id = ?').get(req.params.id);
-    db.close();
+
     
     res.json({
       success: true,
@@ -219,19 +191,17 @@ router.patch('/rules/:id', (req, res) => {
       message: 'Alert rule updated successfully'
     });
   } catch (error) {
-    console.error('Error updating alert rule:', error);
-    res.status(500).json({ success: false, error: error.message });
+    logger.error('Error updating alert rule', { error: error.message });
+    res.status(500).json({ success: false, error: 'Internal server error' });
   }
 });
 
 // DELETE /api/v1/alerts/rules/:id - Delete alert rule
 router.delete('/rules/:id', (req, res) => {
   try {
-    const db = new Database(DB_PATH);
-    
     const result = db.prepare('DELETE FROM alert_rules WHERE id = ?').run(req.params.id);
     
-    db.close();
+
     
     if (result.changes === 0) {
       return res.status(404).json({ success: false, error: 'Alert rule not found' });
@@ -242,8 +212,8 @@ router.delete('/rules/:id', (req, res) => {
       message: 'Alert rule deleted successfully'
     });
   } catch (error) {
-    console.error('Error deleting alert rule:', error);
-    res.status(500).json({ success: false, error: error.message });
+    logger.error('Error deleting alert rule', { error: error.message });
+    res.status(500).json({ success: false, error: 'Internal server error' });
   }
 });
 
@@ -254,12 +224,8 @@ router.delete('/rules/:id', (req, res) => {
 // GET /api/v1/alerts/history - Get alert history
 router.get('/history', (req, res) => {
   try {
-    const db = new Database(DB_PATH, { readonly: true });
-
-    // Check if alert_history table exists (Railway compatibility)
-    const tableCheck = db.prepare("SELECT name FROM sqlite_master WHERE type='table' AND name='alert_history'").get();
-    if (!tableCheck) {
-      db.close();
+    if (!tableExists('alert_history')) {
+  
       return res.json({
         success: true,
         data: [],
@@ -299,17 +265,17 @@ router.get('/history', (req, res) => {
     
     // Parse JSON fields
     alerts.forEach(alert => {
-      alert.alert_data = JSON.parse(alert.alert_data || '{}');
-      alert.delivered_channels = JSON.parse(alert.delivered_channels || '[]');
+      alert.alert_data = safeJsonParse(alert.alert_data, {});
+      alert.delivered_channels = safeJsonParse(alert.delivered_channels, []);
       if (alert.delivery_errors) {
-        alert.delivery_errors = JSON.parse(alert.delivery_errors);
+        alert.delivery_errors = safeJsonParse(alert.delivery_errors, []);
       }
     });
     
     // Get unread count
     const unreadCount = db.prepare('SELECT COUNT(*) as count FROM alert_history WHERE acknowledged = 0').get();
     
-    db.close();
+
     
     res.json({
       success: true,
@@ -321,20 +287,16 @@ router.get('/history', (req, res) => {
       }
     });
   } catch (error) {
-    console.error('Error fetching alert history:', error);
-    res.status(500).json({ success: false, error: error.message });
+    logger.error('Error fetching alert history', { error: error.message });
+    res.status(500).json({ success: false, error: 'Internal server error' });
   }
 });
 
 // POST /api/v1/alerts/history/:id/acknowledge - Mark alert as read
 router.post('/history/:id/acknowledge', (req, res) => {
   try {
-    const db = new Database(DB_PATH);
-
-    // Check if alert_history table exists (Railway compatibility)
-    const tableCheck = db.prepare("SELECT name FROM sqlite_master WHERE type='table' AND name='alert_history'").get();
-    if (!tableCheck) {
-      db.close();
+    if (!tableExists('alert_history')) {
+  
       return res.json({
         success: true,
         message: 'Alert system not available on this deployment'
@@ -354,7 +316,7 @@ router.post('/history/:id/acknowledge', (req, res) => {
       WHERE id = ?
     `).run(user_id || 'unknown', action_taken || null, action_notes || null, req.params.id);
     
-    db.close();
+
     
     if (result.changes === 0) {
       return res.status(404).json({ success: false, error: 'Alert not found' });
@@ -365,20 +327,16 @@ router.post('/history/:id/acknowledge', (req, res) => {
       message: 'Alert acknowledged successfully'
     });
   } catch (error) {
-    console.error('Error acknowledging alert:', error);
-    res.status(500).json({ success: false, error: error.message });
+    logger.error('Error acknowledging alert', { error: error.message });
+    res.status(500).json({ success: false, error: 'Internal server error' });
   }
 });
 
 // POST /api/v1/alerts/history/mark-all-read - Mark all as read
 router.post('/history/mark-all-read', (req, res) => {
   try {
-    const db = new Database(DB_PATH);
-
-    // Check if alert_history table exists (Railway compatibility)
-    const tableCheck = db.prepare("SELECT name FROM sqlite_master WHERE type='table' AND name='alert_history'").get();
-    if (!tableCheck) {
-      db.close();
+    if (!tableExists('alert_history')) {
+  
       return res.json({
         success: true,
         message: 'Alert system not available on this deployment'
@@ -395,27 +353,23 @@ router.post('/history/mark-all-read', (req, res) => {
       WHERE acknowledged = 0
     `).run(user_id || 'unknown');
     
-    db.close();
+
     
     res.json({
       success: true,
       message: `Marked ${result.changes} alerts as read`
     });
   } catch (error) {
-    console.error('Error marking all as read:', error);
-    res.status(500).json({ success: false, error: error.message });
+    logger.error('Error marking all as read', { error: error.message });
+    res.status(500).json({ success: false, error: 'Internal server error' });
   }
 });
 
 // GET /api/v1/alerts/unread-count - Get unread count only
 router.get('/unread-count', (req, res) => {
   try {
-    const db = new Database(DB_PATH, { readonly: true });
-
-    // Check if alert_history table exists (Railway compatibility)
-    const tableCheck = db.prepare("SELECT name FROM sqlite_master WHERE type='table' AND name='alert_history'").get();
-    if (!tableCheck) {
-      db.close();
+    if (!tableExists('alert_history')) {
+  
       return res.json({
         success: true,
         data: {
@@ -427,7 +381,7 @@ router.get('/unread-count', (req, res) => {
 
     const result = db.prepare('SELECT COUNT(*) as count FROM alert_history WHERE acknowledged = 0').get();
 
-    db.close();
+
 
     res.json({
       success: true,
@@ -436,8 +390,8 @@ router.get('/unread-count', (req, res) => {
       }
     });
   } catch (error) {
-    console.error('Error fetching unread count:', error);
-    res.status(500).json({ success: false, error: error.message });
+    logger.error('Error fetching unread count', { error: error.message });
+    res.status(500).json({ success: false, error: 'Internal server error' });
   }
 });
 
@@ -448,8 +402,6 @@ router.get('/unread-count', (req, res) => {
 // POST /api/v1/alerts/trigger - Manually trigger alert evaluation
 router.post('/trigger', (req, res) => {
   try {
-    const db = new Database(DB_PATH);
-    
     const { tender_id, renewal_id, trigger_type } = req.body;
     
     // Get all active alert rules
@@ -458,7 +410,7 @@ router.post('/trigger', (req, res) => {
     const triggered = [];
     
     for (const rule of rules) {
-      const conditions = JSON.parse(rule.conditions);
+      const conditions = safeJsonParse(rule.conditions, {});
       
       let shouldTrigger = false;
       let alertData = {};
@@ -529,8 +481,20 @@ router.post('/trigger', (req, res) => {
       }
       
       if (shouldTrigger) {
+        // Deduplication: skip if same rule+tender/renewal triggered in last 5 minutes
+        const recentDupe = db.prepare(`
+          SELECT id FROM alert_history
+          WHERE rule_id = ? AND trigger_type = ?
+            AND COALESCE(tender_id, '') = COALESCE(?, '')
+            AND COALESCE(renewal_id, '') = COALESCE(?, '')
+            AND triggered_at >= datetime('now', '-5 minutes')
+          LIMIT 1
+        `).get(rule.id, trigger_type, tender_id || '', renewal_id || '');
+
+        if (recentDupe) continue;
+
         const alertId = uuidv4();
-        
+
         db.prepare(`
           INSERT INTO alert_history (
             id, rule_id, trigger_type, tender_id, renewal_id,
@@ -560,7 +524,7 @@ router.post('/trigger', (req, res) => {
       }
     }
     
-    db.close();
+
     
     res.json({
       success: true,
@@ -571,8 +535,8 @@ router.post('/trigger', (req, res) => {
       message: `Triggered ${triggered.length} alerts`
     });
   } catch (error) {
-    console.error('Error triggering alerts:', error);
-    res.status(500).json({ success: false, error: error.message });
+    logger.error('Error triggering alerts', { error: error.message });
+    res.status(500).json({ success: false, error: 'Internal server error' });
   }
 });
 
@@ -583,55 +547,42 @@ router.post('/trigger', (req, res) => {
 // GET /api/v1/alerts/preferences - Get user preferences
 router.get('/preferences', (req, res) => {
   try {
-    const db = new Database(DB_PATH, { readonly: true });
-    
     const { user_id } = req.query;
-    
+
     if (!user_id) {
-      db.close();
       return res.status(400).json({ success: false, error: 'user_id required' });
     }
-    
+
     let prefs = db.prepare('SELECT * FROM user_alert_preferences WHERE user_id = ?').get(user_id);
-    
+
     // Create default if doesn't exist
     if (!prefs) {
-      db.close();
-      const writeDb = new Database(DB_PATH);
       const id = uuidv4();
-      
-      writeDb.prepare(`
+      db.prepare(`
         INSERT INTO user_alert_preferences (id, user_id, email_enabled, sms_enabled, slack_enabled, in_app_enabled)
         VALUES (?, ?, 1, 0, 1, 1)
       `).run(id, user_id);
-      
-      prefs = writeDb.prepare('SELECT * FROM user_alert_preferences WHERE id = ?').get(id);
-      writeDb.close();
-    } else {
-      db.close();
+      prefs = db.prepare('SELECT * FROM user_alert_preferences WHERE id = ?').get(id);
     }
     
     // Parse JSON fields
     if (prefs.digest_days) {
-      prefs.digest_days = JSON.parse(prefs.digest_days);
+      prefs.digest_days = safeJsonParse(prefs.digest_days, []);
     }
     
     res.json({ success: true, data: prefs });
   } catch (error) {
-    console.error('Error fetching preferences:', error);
-    res.status(500).json({ success: false, error: error.message });
+    logger.error('Error fetching preferences', { error: error.message });
+    res.status(500).json({ success: false, error: 'Internal server error' });
   }
 });
 
 // PATCH /api/v1/alerts/preferences - Update user preferences
 router.patch('/preferences', (req, res) => {
   try {
-    const db = new Database(DB_PATH);
-    
     const { user_id } = req.body;
-    
+
     if (!user_id) {
-      db.close();
       return res.status(400).json({ success: false, error: 'user_id required' });
     }
     
@@ -662,7 +613,7 @@ router.patch('/preferences', (req, res) => {
     }
     
     if (updates.length === 0) {
-      db.close();
+  
       return res.status(400).json({ success: false, error: 'No valid fields to update' });
     }
     
@@ -673,7 +624,7 @@ router.patch('/preferences', (req, res) => {
     
     const prefs = db.prepare('SELECT * FROM user_alert_preferences WHERE user_id = ?').get(user_id);
     
-    db.close();
+
     
     res.json({
       success: true,
@@ -681,8 +632,8 @@ router.patch('/preferences', (req, res) => {
       message: 'Preferences updated successfully'
     });
   } catch (error) {
-    console.error('Error updating preferences:', error);
-    res.status(500).json({ success: false, error: error.message });
+    logger.error('Error updating preferences', { error: error.message });
+    res.status(500).json({ success: false, error: 'Internal server error' });
   }
 });
 

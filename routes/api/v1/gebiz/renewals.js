@@ -6,43 +6,24 @@
 
 const express = require('express');
 const router = express.Router();
-const Database = require('better-sqlite3');
-const path = require('path');
 const { v4: uuidv4 } = require('uuid');
-const fs = require('fs');
+const { db } = require('../../../../db');
+const { safeJsonParse } = require('../../../../db/utils/db-helpers');
+const { createLogger } = require('../../../../utils/structured-logger');
+const logger = createLogger('gebiz-renewals');
 
-// Railway-compatible database path configuration
-const getDbPath = () => {
-  // Try GeBIZ intelligence database first (local development)
-  const gebizDbPath = path.join(__dirname, '../../../../database/gebiz_intelligence.db');
-
-  // If GeBIZ database exists, use it
-  if (fs.existsSync(gebizDbPath)) {
-    return gebizDbPath;
-  }
-
-  // Fallback to main database for Railway deployment
-  const mainDbPath = path.join(__dirname, '../../../../data/worklink.db');
-  if (fs.existsSync(mainDbPath)) {
-    return mainDbPath;
-  }
-
-  // Final fallback for Railway with different structure
-  return process.env.DATABASE_URL || '/opt/render/project/src/data/worklink.db';
-};
-
-const DB_PATH = getDbPath();
+// Helper to check if a table exists in the database
+function tableExists(tableName) {
+  return !!db.prepare("SELECT name FROM sqlite_master WHERE type='table' AND name=?").get(tableName);
+}
 
 // ============================================================================
 // GET /api/v1/gebiz/renewals - List all renewal predictions
 // ============================================================================
 router.get('/', (req, res) => {
   try {
-    const db = new Database(DB_PATH, { readonly: true });
-
     // Check if renewal tables exist (Railway compatibility)
-    const tableCheck = db.prepare("SELECT name FROM sqlite_master WHERE type='table' AND name='renewals'").get();
-    if (!tableCheck) {
+    if (!tableExists('renewals')) {
       // Return empty data with success flag for Railway deployment
       return res.json({
         success: true,
@@ -116,8 +97,8 @@ router.get('/', (req, res) => {
     
     // Parse JSON fields
     renewals.forEach(r => {
-      if (r.reasoning) r.reasoning = JSON.parse(r.reasoning);
-      if (r.action_items) r.action_items = JSON.parse(r.action_items);
+      if (r.reasoning) r.reasoning = safeJsonParse(r.reasoning, null);
+      if (r.action_items) r.action_items = safeJsonParse(r.action_items, []);
     });
     
     // Get counts
@@ -130,8 +111,6 @@ router.get('/', (req, res) => {
       FROM contract_renewals
       WHERE contract_end_date >= date('now')
     `).get();
-    
-    db.close();
     
     res.json({
       success: true,
@@ -146,8 +125,8 @@ router.get('/', (req, res) => {
       }
     });
   } catch (error) {
-    console.error('Error fetching renewals:', error);
-    res.status(500).json({ success: false, error: error.message });
+    logger.error('Error fetching renewals', { error: error.message });
+    res.status(500).json({ success: false, error: 'Internal server error' });
   }
 });
 
@@ -156,12 +135,8 @@ router.get('/', (req, res) => {
 // ============================================================================
 router.get('/:id', (req, res) => {
   try {
-    const db = new Database(DB_PATH, { readonly: true });
-
     // Check if renewal tables exist (Railway compatibility)
-    const tableCheck = db.prepare("SELECT name FROM sqlite_master WHERE type='table' AND name='contract_renewals'").get();
-    if (!tableCheck) {
-      db.close();
+    if (!tableExists('contract_renewals')) {
       return res.status(404).json({
         success: false,
         error: 'Renewal not found',
@@ -184,13 +159,12 @@ router.get('/:id', (req, res) => {
     `).get(req.params.id);
     
     if (!renewal) {
-      db.close();
       return res.status(404).json({ success: false, error: 'Renewal not found' });
     }
     
     // Parse JSON fields
-    if (renewal.reasoning) renewal.reasoning = JSON.parse(renewal.reasoning);
-    if (renewal.action_items) renewal.action_items = JSON.parse(renewal.action_items);
+    if (renewal.reasoning) renewal.reasoning = safeJsonParse(renewal.reasoning, null);
+    if (renewal.action_items) renewal.action_items = safeJsonParse(renewal.action_items, []);
     
     // Get engagement activities
     const activities = db.prepare(`
@@ -201,8 +175,8 @@ router.get('/:id', (req, res) => {
     
     // Parse JSON in activities
     activities.forEach(a => {
-      if (a.participants) a.participants = JSON.parse(a.participants);
-      if (a.attachments) a.attachments = JSON.parse(a.attachments);
+      if (a.participants) a.participants = safeJsonParse(a.participants, []);
+      if (a.attachments) a.attachments = safeJsonParse(a.attachments, []);
     });
     
     // Get similar historical tenders
@@ -215,8 +189,6 @@ router.get('/:id', (req, res) => {
       LIMIT 5
     `).all(renewal.agency, renewal.original_category, renewal.original_tender_id);
     
-    db.close();
-    
     res.json({
       success: true,
       data: {
@@ -226,8 +198,8 @@ router.get('/:id', (req, res) => {
       }
     });
   } catch (error) {
-    console.error('Error fetching renewal:', error);
-    res.status(500).json({ success: false, error: error.message });
+    logger.error('Error fetching renewal', { error: error.message });
+    res.status(500).json({ success: false, error: 'Internal server error' });
   }
 });
 
@@ -236,12 +208,8 @@ router.get('/:id', (req, res) => {
 // ============================================================================
 router.post('/', (req, res) => {
   try {
-    const db = new Database(DB_PATH);
-
     // Check if renewal tables exist (Railway compatibility)
-    const tableCheck = db.prepare("SELECT name FROM sqlite_master WHERE type='table' AND name='contract_renewals'").get();
-    if (!tableCheck) {
-      db.close();
+    if (!tableExists('contract_renewals')) {
       return res.status(503).json({
         success: false,
         error: 'Renewal tracking not available on this deployment',
@@ -266,8 +234,7 @@ router.post('/', (req, res) => {
     
     // Validate required fields
     if (!agency || !contract_end_date) {
-      db.close();
-      return res.status(400).json({ 
+      return res.status(400).json({
         success: false, 
         error: 'Missing required fields: agency, contract_end_date' 
       });
@@ -319,17 +286,15 @@ router.post('/', (req, res) => {
     );
     
     const renewal = db.prepare('SELECT * FROM contract_renewals WHERE id = ?').get(id);
-    
-    db.close();
-    
+
     res.status(201).json({
       success: true,
       data: renewal,
       message: 'Renewal prediction created successfully'
     });
   } catch (error) {
-    console.error('Error creating renewal:', error);
-    res.status(500).json({ success: false, error: error.message });
+    logger.error('Error creating renewal', { error: error.message });
+    res.status(500).json({ success: false, error: 'Internal server error' });
   }
 });
 
@@ -338,12 +303,8 @@ router.post('/', (req, res) => {
 // ============================================================================
 router.patch('/:id', (req, res) => {
   try {
-    const db = new Database(DB_PATH);
-
     // Check if renewal tables exist (Railway compatibility)
-    const tableCheck = db.prepare("SELECT name FROM sqlite_master WHERE type='table' AND name='contract_renewals'").get();
-    if (!tableCheck) {
-      db.close();
+    if (!tableExists('contract_renewals')) {
       return res.status(503).json({
         success: false,
         error: 'Renewal tracking not available on this deployment',
@@ -383,7 +344,6 @@ router.patch('/:id', (req, res) => {
     }
     
     if (updates.length === 0) {
-      db.close();
       return res.status(400).json({ success: false, error: 'No valid fields to update' });
     }
     
@@ -394,22 +354,19 @@ router.patch('/:id', (req, res) => {
     const result = db.prepare(query).run(...params);
     
     if (result.changes === 0) {
-      db.close();
       return res.status(404).json({ success: false, error: 'Renewal not found' });
     }
-    
+
     const renewal = db.prepare('SELECT * FROM contract_renewals WHERE id = ?').get(req.params.id);
-    
-    db.close();
-    
+
     res.json({
       success: true,
       data: renewal,
       message: 'Renewal updated successfully'
     });
   } catch (error) {
-    console.error('Error updating renewal:', error);
-    res.status(500).json({ success: false, error: error.message });
+    logger.error('Error updating renewal', { error: error.message });
+    res.status(500).json({ success: false, error: 'Internal server error' });
   }
 });
 
@@ -418,12 +375,8 @@ router.patch('/:id', (req, res) => {
 // ============================================================================
 router.delete('/:id', (req, res) => {
   try {
-    const db = new Database(DB_PATH);
-
     // Check if renewal tables exist (Railway compatibility)
-    const tableCheck = db.prepare("SELECT name FROM sqlite_master WHERE type='table' AND name='contract_renewals'").get();
-    if (!tableCheck) {
-      db.close();
+    if (!tableExists('contract_renewals')) {
       return res.status(503).json({
         success: false,
         error: 'Renewal tracking not available on this deployment',
@@ -433,11 +386,9 @@ router.delete('/:id', (req, res) => {
 
     // Delete activities first (foreign key)
     db.prepare('DELETE FROM renewal_engagement_activities WHERE renewal_id = ?').run(req.params.id);
-    
+
     // Delete renewal
     const result = db.prepare('DELETE FROM contract_renewals WHERE id = ?').run(req.params.id);
-    
-    db.close();
     
     if (result.changes === 0) {
       return res.status(404).json({ success: false, error: 'Renewal not found' });
@@ -448,8 +399,8 @@ router.delete('/:id', (req, res) => {
       message: 'Renewal deleted successfully'
     });
   } catch (error) {
-    console.error('Error deleting renewal:', error);
-    res.status(500).json({ success: false, error: error.message });
+    logger.error('Error deleting renewal', { error: error.message });
+    res.status(500).json({ success: false, error: 'Internal server error' });
   }
 });
 
@@ -458,12 +409,8 @@ router.delete('/:id', (req, res) => {
 // ============================================================================
 router.post('/:id/activities', (req, res) => {
   try {
-    const db = new Database(DB_PATH);
-
     // Check if renewal tables exist (Railway compatibility)
-    const tableCheck = db.prepare("SELECT name FROM sqlite_master WHERE type='table' AND name='renewal_engagement_activities'").get();
-    if (!tableCheck) {
-      db.close();
+    if (!tableExists('renewal_engagement_activities')) {
       return res.status(503).json({
         success: false,
         error: 'Renewal tracking not available on this deployment',
@@ -483,8 +430,7 @@ router.post('/:id/activities', (req, res) => {
     } = req.body;
     
     if (!activity_type || !activity_date) {
-      db.close();
-      return res.status(400).json({ 
+      return res.status(400).json({
         success: false, 
         error: 'Missing required fields: activity_type, activity_date' 
       });
@@ -513,19 +459,17 @@ router.post('/:id/activities', (req, res) => {
     const activity = db.prepare('SELECT * FROM renewal_engagement_activities WHERE id = ?').get(activityId);
     
     // Parse JSON
-    if (activity.participants) activity.participants = JSON.parse(activity.participants);
-    if (activity.attachments) activity.attachments = JSON.parse(activity.attachments);
-    
-    db.close();
-    
+    if (activity.participants) activity.participants = safeJsonParse(activity.participants, []);
+    if (activity.attachments) activity.attachments = safeJsonParse(activity.attachments, []);
+
     res.status(201).json({
       success: true,
       data: activity,
       message: 'Activity logged successfully'
     });
   } catch (error) {
-    console.error('Error logging activity:', error);
-    res.status(500).json({ success: false, error: error.message });
+    logger.error('Error logging activity', { error: error.message });
+    res.status(500).json({ success: false, error: 'Internal server error' });
   }
 });
 
@@ -534,12 +478,8 @@ router.post('/:id/activities', (req, res) => {
 // ============================================================================
 router.get('/dashboard/timeline', (req, res) => {
   try {
-    const db = new Database(DB_PATH, { readonly: true });
-
     // Check if renewal tables exist (Railway compatibility)
-    const tableCheck = db.prepare("SELECT name FROM sqlite_master WHERE type='table' AND name='contract_renewals'").get();
-    if (!tableCheck) {
-      db.close();
+    if (!tableExists('contract_renewals')) {
       return res.json({
         success: true,
         data: {
@@ -579,9 +519,7 @@ router.get('/dashboard/timeline', (req, res) => {
       if (!grouped[month]) grouped[month] = [];
       grouped[month].push(item);
     });
-    
-    db.close();
-    
+
     res.json({
       success: true,
       data: {
@@ -595,8 +533,8 @@ router.get('/dashboard/timeline', (req, res) => {
       }
     });
   } catch (error) {
-    console.error('Error fetching timeline:', error);
-    res.status(500).json({ success: false, error: error.message });
+    logger.error('Error fetching timeline', { error: error.message });
+    res.status(500).json({ success: false, error: 'Internal server error' });
   }
 });
 
@@ -605,12 +543,8 @@ router.get('/dashboard/timeline', (req, res) => {
 // ============================================================================
 router.post('/predict', (req, res) => {
   try {
-    const db = new Database(DB_PATH);
-
     // Check if renewal tables exist (Railway compatibility)
-    const tableCheck = db.prepare("SELECT name FROM sqlite_master WHERE type='table' AND name='contract_renewals'").get();
-    if (!tableCheck) {
-      db.close();
+    if (!tableExists('contract_renewals')) {
       return res.status(503).json({
         success: false,
         error: 'Renewal tracking not available on this deployment',
@@ -724,8 +658,6 @@ router.post('/predict', (req, res) => {
       created++;
     }
     
-    db.close();
-    
     res.json({
       success: true,
       data: {
@@ -737,8 +669,8 @@ router.post('/predict', (req, res) => {
       message: `Created ${created} new renewal predictions`
     });
   } catch (error) {
-    console.error('Error running prediction:', error);
-    res.status(500).json({ success: false, error: error.message });
+    logger.error('Error running prediction', { error: error.message });
+    res.status(500).json({ success: false, error: 'Internal server error' });
   }
 });
 
@@ -747,12 +679,8 @@ router.post('/predict', (req, res) => {
 // ============================================================================
 router.get('/dashboard/stats', (req, res) => {
   try {
-    const db = new Database(DB_PATH, { readonly: true });
-
     // Check if renewal tables exist (Railway compatibility)
-    const tableCheck = db.prepare("SELECT name FROM sqlite_master WHERE type='table' AND name='contract_renewals'").get();
-    if (!tableCheck) {
-      db.close();
+    if (!tableExists('contract_renewals')) {
       return res.json({
         success: true,
         data: {
@@ -788,7 +716,7 @@ router.get('/dashboard/stats', (req, res) => {
     `).get();
     
     const byAgency = db.prepare(`
-      SELECT 
+      SELECT
         agency,
         COUNT(*) as count,
         SUM(contract_value) as total_value,
@@ -800,9 +728,7 @@ router.get('/dashboard/stats', (req, res) => {
       ORDER BY count DESC
       LIMIT 5
     `).all();
-    
-    db.close();
-    
+
     res.json({
       success: true,
       data: {
@@ -811,8 +737,8 @@ router.get('/dashboard/stats', (req, res) => {
       }
     });
   } catch (error) {
-    console.error('Error fetching stats:', error);
-    res.status(500).json({ success: false, error: error.message });
+    logger.error('Error fetching stats', { error: error.message });
+    res.status(500).json({ success: false, error: 'Internal server error' });
   }
 });
 

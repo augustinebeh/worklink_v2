@@ -119,7 +119,7 @@ export function useCreateCandidate() {
       queryInvalidations.invalidateCandidates();
     },
     onError: (error) => {
-      console.error('Failed to create candidate:', error);
+      // Failed to create candidate:
     },
   });
 }

@@ -9,6 +9,8 @@
  */
 
 const { db } = require('../../db');
+const { createLogger } = require('../../utils/structured-logger');
+const logger = createLogger('interview-scheduler-v2');
 
 class InterviewSchedulerV2 {
   constructor() {
@@ -62,7 +64,7 @@ class InterviewSchedulerV2 {
         );
       `);
     } catch (error) {
-      console.error('❌ Error creating state table:', error);
+      logger.error('Error creating state table', { error: error.message });
     }
   }
 
@@ -70,7 +72,7 @@ class InterviewSchedulerV2 {
    * MAIN ENTRY POINT - Process incoming message
    */
   async processMessage(candidateId, message, candidate) {
-    console.log(`\n🎯 [SCHEDULER V2] Processing: "${message}" for ${candidateId}`);
+    logger.info('Processing message', { candidate_id: candidateId, message: message.substring(0, 50) });
 
     try {
       // Get or initialize state
@@ -80,11 +82,11 @@ class InterviewSchedulerV2 {
         state = this.initializeState(candidateId);
       }
 
-      console.log(`📊 [STATE] Current stage: ${state.current_stage}`);
+      logger.debug('Current stage', { stage: state.current_stage });
 
       // Parse user intent
       const intent = this.parseIntent(message, state);
-      console.log(`🧠 [INTENT] Detected: ${intent.type}`);
+      logger.debug('Intent detected', { type: intent.type });
 
       // Handle based on current stage and intent
       let response;
@@ -114,7 +116,7 @@ class InterviewSchedulerV2 {
         response = await this.handleStageFlow(candidateId, candidate, message, intent, state);
       }
 
-      console.log(`✅ [RESPONSE] Stage: ${state.current_stage}, Type: ${response.type}`);
+      logger.debug('Response generated', { stage: state.current_stage, type: response.type });
 
       return {
         content: response.content,
@@ -124,7 +126,7 @@ class InterviewSchedulerV2 {
       };
 
     } catch (error) {
-      console.error('❌ [SCHEDULER V2] Error:', error);
+      logger.error('Scheduler error', { error: error.message });
       return {
         content: "I'm having trouble right now. Let me get the team to help you schedule the interview! 🙏",
         type: 'error',
@@ -410,7 +412,7 @@ class InterviewSchedulerV2 {
       };
 
     } catch (error) {
-      console.error('❌ Booking error:', error);
+      logger.error('Booking error', { error: error.message });
       return {
         content: `Oops! There was an error booking your interview. Let me get the team to help! 🙏`,
         type: 'booking_error',

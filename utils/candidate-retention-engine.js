@@ -6,6 +6,10 @@
  * Automated nurturing, value delivery, and retention prediction.
  */
 
+
+const { createLogger } = require('./structured-logger');
+const logger = createLogger('candidate-retention-engine');
+
 const { db } = require('../db');
 
 class CandidateRetentionEngine {
@@ -382,7 +386,7 @@ class CandidateRetentionEngine {
    */
   async sendMessage(candidate, messageType, content) {
     // Integration with WhatsApp/SMS/Email systems
-    console.log(`Sending ${messageType} to ${candidate.name}: ${content}`);
+    logger.info('Sending ${messageType} to ${candidate.name}: ${content}');
 
     // Log the message
     db.prepare(`

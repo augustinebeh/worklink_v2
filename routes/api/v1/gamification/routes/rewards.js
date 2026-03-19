@@ -8,6 +8,7 @@ const express = require('express');
 const router = express.Router();
 const { db } = require('../../../../../db');
 const { createLogger } = require('../../../../../utils/structured-logger');
+const { authenticateToken } = require('../../../../../middleware/auth');
 
 const logger = createLogger('gamification-rewards');
 
@@ -15,7 +16,7 @@ const logger = createLogger('gamification-rewards');
  * GET /rewards
  * Get all active rewards with pagination and filtering
  */
-router.get('/rewards', (req, res) => {
+router.get('/rewards', authenticateToken, (req, res) => {
   try {
     const { page = 1, limit = 20, category, tier_required } = req.query;
     const offset = (parseInt(page) - 1) * parseInt(limit);
@@ -62,7 +63,7 @@ router.get('/rewards', (req, res) => {
     logger.error('Failed to get rewards', { error: error.message });
     res.status(500).json({
       success: false,
-      error: error.message
+      error: 'Internal server error'
     });
   }
 });
@@ -71,7 +72,7 @@ router.get('/rewards', (req, res) => {
  * GET /rewards/user/:candidateId
  * Get user's available and purchased rewards
  */
-router.get('/rewards/user/:candidateId', (req, res) => {
+router.get('/rewards/user/:candidateId', authenticateToken, (req, res) => {
   try {
     const candidateId = req.params.candidateId;
     const { category } = req.query;
@@ -144,7 +145,7 @@ router.get('/rewards/user/:candidateId', (req, res) => {
         purchased,
         purchaseCount,
         canPurchase,
-        statusMessage: getStatusMessage(meetsRequirement, canAfford, inStock, purchased, reward)
+        statusMessage: getStatusMessage(meetsRequirement, canAfford, inStock, purchased, reward, candidate.current_points)
       };
     });
 
@@ -176,7 +177,7 @@ router.get('/rewards/user/:candidateId', (req, res) => {
     });
     res.status(500).json({
       success: false,
-      error: error.message
+      error: 'Internal server error'
     });
   }
 });
@@ -185,7 +186,7 @@ router.get('/rewards/user/:candidateId', (req, res) => {
  * POST /rewards/:rewardId/purchase
  * Purchase a reward
  */
-router.post('/rewards/:rewardId/purchase', (req, res) => {
+router.post('/rewards/:rewardId/purchase', authenticateToken, (req, res) => {
   try {
     const { candidateId, candidate_id } = req.body;
     const finalCandidateId = candidateId || candidate_id;
@@ -297,7 +298,7 @@ router.post('/rewards/:rewardId/purchase', (req, res) => {
     });
     res.status(500).json({
       success: false,
-      error: error.message
+      error: 'Internal server error'
     });
   }
 });
@@ -305,7 +306,7 @@ router.post('/rewards/:rewardId/purchase', (req, res) => {
 /**
  * Helper function to get status message for rewards
  */
-function getStatusMessage(meetsRequirement, canAfford, inStock, purchased, reward) {
+function getStatusMessage(meetsRequirement, canAfford, inStock, purchased, reward, candidatePoints) {
   if (purchased && reward.max_per_user === 1) {
     return 'Already purchased';
   }
@@ -313,7 +314,8 @@ function getStatusMessage(meetsRequirement, canAfford, inStock, purchased, rewar
     return `Requires ${reward.tier_required} tier`;
   }
   if (!canAfford) {
-    return `Need ${reward.point_cost - candidate?.current_points || 0} more points`;
+    const needed = reward.point_cost - (candidatePoints || 0);
+    return `Need ${needed} more points`;
   }
   if (!inStock) {
     return 'Out of stock';

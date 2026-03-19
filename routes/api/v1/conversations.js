@@ -76,7 +76,7 @@ router.get('/', (req, res) => {
 
     res.json({ success: true, data: conversations });
   } catch (error) {
-    res.status(500).json({ success: false, error: error.message });
+    res.status(500).json({ success: false, error: 'Internal server error' });
   }
 });
 
@@ -91,7 +91,7 @@ router.get('/:candidateId', (req, res) => {
 
     res.json({ success: true, data: metadata });
   } catch (error) {
-    res.status(500).json({ success: false, error: error.message });
+    res.status(500).json({ success: false, error: 'Internal server error' });
   }
 });
 
@@ -117,7 +117,7 @@ router.put('/:candidateId/status', (req, res) => {
 
     res.json({ success: true, data: metadata });
   } catch (error) {
-    res.status(500).json({ success: false, error: error.message });
+    res.status(500).json({ success: false, error: 'Internal server error' });
   }
 });
 
@@ -143,7 +143,7 @@ router.put('/:candidateId/priority', (req, res) => {
 
     res.json({ success: true, data: metadata });
   } catch (error) {
-    res.status(500).json({ success: false, error: error.message });
+    res.status(500).json({ success: false, error: 'Internal server error' });
   }
 });
 
@@ -159,7 +159,7 @@ router.post('/:candidateId/resolve', (req, res) => {
 
     res.json({ success: true, data: metadata, message: 'Conversation resolved' });
   } catch (error) {
-    res.status(500).json({ success: false, error: error.message });
+    res.status(500).json({ success: false, error: 'Internal server error' });
   }
 });
 
@@ -177,7 +177,7 @@ router.post('/:candidateId/escalate', (req, res) => {
 
     res.json({ success: true, data: metadata, message: 'Conversation escalated' });
   } catch (error) {
-    res.status(500).json({ success: false, error: error.message });
+    res.status(500).json({ success: false, error: 'Internal server error' });
   }
 });
 
@@ -195,7 +195,7 @@ router.put('/:candidateId/assign', (req, res) => {
 
     res.json({ success: true, data: metadata });
   } catch (error) {
-    res.status(500).json({ success: false, error: error.message });
+    res.status(500).json({ success: false, error: 'Internal server error' });
   }
 });
 
@@ -217,7 +217,7 @@ router.post('/:candidateId/tags', (req, res) => {
 
     res.json({ success: true, data: metadata });
   } catch (error) {
-    res.status(500).json({ success: false, error: error.message });
+    res.status(500).json({ success: false, error: 'Internal server error' });
   }
 });
 
@@ -233,7 +233,7 @@ router.delete('/:candidateId/tags/:tag', (req, res) => {
 
     res.json({ success: true, data: metadata });
   } catch (error) {
-    res.status(500).json({ success: false, error: error.message });
+    res.status(500).json({ success: false, error: 'Internal server error' });
   }
 });
 
@@ -262,7 +262,7 @@ router.get('/search/messages', (req, res) => {
       total: results.length,
     });
   } catch (error) {
-    res.status(500).json({ success: false, error: error.message });
+    res.status(500).json({ success: false, error: 'Internal server error' });
   }
 });
 
@@ -281,7 +281,7 @@ router.get('/stats/summary', (req, res) => {
 
     res.json({ success: true, data: stats });
   } catch (error) {
-    res.status(500).json({ success: false, error: error.message });
+    res.status(500).json({ success: false, error: 'Internal server error' });
   }
 });
 

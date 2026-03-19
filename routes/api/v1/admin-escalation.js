@@ -66,7 +66,7 @@ router.get('/queue', (req, res) => {
 
   } catch (error) {
     logger.error('Failed to get escalation queue', { error: error.message });
-    res.status(500).json({ success: false, error: error.message });
+    res.status(500).json({ success: false, error: 'Internal server error' });
   }
 });
 
@@ -98,7 +98,7 @@ router.get('/queue/:escalationId', (req, res) => {
       escalation_id: req.params.escalationId,
       error: error.message
     });
-    res.status(500).json({ success: false, error: error.message });
+    res.status(500).json({ success: false, error: 'Internal server error' });
   }
 });
 
@@ -142,7 +142,7 @@ router.post('/create', (req, res) => {
       candidate_id: req.body.candidateId,
       error: error.message
     });
-    res.status(500).json({ success: false, error: error.message });
+    res.status(500).json({ success: false, error: 'Internal server error' });
   }
 });
 
@@ -178,7 +178,7 @@ router.post('/manual', (req, res) => {
       candidate_id: req.body.candidateId,
       error: error.message
     });
-    res.status(500).json({ success: false, error: error.message });
+    res.status(500).json({ success: false, error: 'Internal server error' });
   }
 });
 
@@ -208,7 +208,7 @@ router.put('/assign/:escalationId', (req, res) => {
       admin_id: req.body.adminId,
       error: error.message
     });
-    res.status(500).json({ success: false, error: error.message });
+    res.status(500).json({ success: false, error: 'Internal server error' });
   }
 });
 
@@ -247,7 +247,7 @@ router.put('/status/:escalationId', (req, res) => {
       status: req.body.status,
       error: error.message
     });
-    res.status(500).json({ success: false, error: error.message });
+    res.status(500).json({ success: false, error: 'Internal server error' });
   }
 });
 
@@ -283,7 +283,7 @@ router.post('/feedback/:escalationId', (req, res) => {
       escalation_id: req.params.escalationId,
       error: error.message
     });
-    res.status(500).json({ success: false, error: error.message });
+    res.status(500).json({ success: false, error: 'Internal server error' });
   }
 });
 
@@ -315,7 +315,7 @@ router.post('/analyze', (req, res) => {
       candidate_id: req.body.candidateId,
       error: error.message
     });
-    res.status(500).json({ success: false, error: error.message });
+    res.status(500).json({ success: false, error: 'Internal server error' });
   }
 });
 
@@ -359,7 +359,7 @@ router.get('/analytics', (req, res) => {
 
   } catch (error) {
     logger.error('Failed to get escalation analytics', { error: error.message });
-    res.status(500).json({ success: false, error: error.message });
+    res.status(500).json({ success: false, error: 'Internal server error' });
   }
 });
 
@@ -395,7 +395,7 @@ router.get('/summary', (req, res) => {
 
   } catch (error) {
     logger.error('Failed to get escalation summary', { error: error.message });
-    res.status(500).json({ success: false, error: error.message });
+    res.status(500).json({ success: false, error: 'Internal server error' });
   }
 });
 
@@ -436,7 +436,7 @@ router.get('/my-queue/:adminId', (req, res) => {
       admin_id: req.params.adminId,
       error: error.message
     });
-    res.status(500).json({ success: false, error: error.message });
+    res.status(500).json({ success: false, error: 'Internal server error' });
   }
 });
 
@@ -495,7 +495,7 @@ router.put('/admin-status/:adminId', (req, res) => {
       admin_id: req.params.adminId,
       error: error.message
     });
-    res.status(500).json({ success: false, error: error.message });
+    res.status(500).json({ success: false, error: 'Internal server error' });
   }
 });
 
@@ -522,7 +522,7 @@ router.post('/bulk-assign', (req, res) => {
         const result = escalationSystem.assignEscalation(escalationId, adminId);
         results.push(result);
       } catch (error) {
-        errors.push({ escalationId, error: error.message });
+        errors.push({ escalationId, error: 'Internal server error' });
       }
     }
 
@@ -545,7 +545,7 @@ router.post('/bulk-assign', (req, res) => {
       admin_id: req.body.adminId,
       error: error.message
     });
-    res.status(500).json({ success: false, error: error.message });
+    res.status(500).json({ success: false, error: 'Internal server error' });
   }
 });
 
@@ -586,7 +586,7 @@ router.get('/health', (req, res) => {
     res.status(500).json({
       success: false,
       error: 'System health check failed',
-      details: error.message
+      details: 'Internal server error'
     });
   }
 });

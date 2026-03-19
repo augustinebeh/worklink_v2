@@ -142,12 +142,10 @@ describe('verifyToken', () => {
     expect(result).toBeNull();
   });
 
-  test('handles demo-admin-token (legacy)', () => {
+  test('rejects demo-admin-token (backdoor removed)', () => {
     const result = verifyToken('demo-admin-token');
 
-    expect(result).not.toBeNull();
-    expect(result.id).toBe('ADM_DEV');
-    expect(result.role).toBe('admin');
+    expect(result).toBeNull();
   });
 
   test('returns null for null input', () => {

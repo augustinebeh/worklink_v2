@@ -15,6 +15,8 @@
 
 const express = require('express');
 const router = express.Router();
+const { createLogger } = require('../../../../utils/structured-logger');
+const logger = createLogger('smart-response-router');
 
 // Import route modules
 const adminRoutes = require('./routes/admin');
@@ -75,11 +77,11 @@ router.get('/stats', async (req, res) => {
     });
 
   } catch (error) {
-    console.error('Error fetching smart router stats:', error);
+    logger.error('Error fetching smart router stats', { error: error.message });
     res.status(500).json({
       success: false,
       error: 'Failed to retrieve smart router statistics',
-      details: error.message
+      details: 'Internal server error'
     });
   }
 });

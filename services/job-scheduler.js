@@ -340,7 +340,7 @@ class JobScheduler {
       await this.executeJob(jobName);
       return { success: true, message: 'Job executed successfully' };
     } catch (error) {
-      return { success: false, error: error.message };
+      return { success: false, error: 'Internal server error' };
     }
   }
 

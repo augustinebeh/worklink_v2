@@ -349,6 +349,14 @@ function validateRequestFrequency(windowMs = 60000, maxRequests = 100) {
     const key = req.ip || 'anonymous';
     const now = Date.now();
 
+    // Cleanup stale entries to prevent unbounded Map growth
+    if (requests.size > 1000) {
+      const cutoff = Date.now() - windowMs;
+      for (const [ip, data] of requests.entries()) {
+        if (data.resetTime < cutoff) requests.delete(ip);
+      }
+    }
+
     if (!requests.has(key)) {
       requests.set(key, { count: 0, resetTime: now + windowMs });
     }

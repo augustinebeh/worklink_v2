@@ -1,26 +1,32 @@
 /**
- * 🕷️ RSS SCRAPER API
+ * RSS SCRAPER API
  * Manual trigger and status monitoring for GeBIZ RSS scraping
  * Integrates with existing gebiz-scraping service
  */
 
 const express = require('express');
 const router = express.Router();
-const Database = require('better-sqlite3');
-const path = require('path');
 const { v4: uuidv4 } = require('uuid');
+const { db } = require('../../../db');
+const { createLogger } = require('../../../utils/structured-logger');
+const logger = createLogger('scraping');
 
 // Import scraping services
 const dataGovSGClient = require('../../../services/gebiz-scraping/datagovsg-client');
 
-const DB_PATH = path.join(__dirname, '../../../database/gebiz_intelligence.db');
+// Helper to check if a table exists in the database
+function tableExists(tableName) {
+  return !!db.prepare("SELECT name FROM sqlite_master WHERE type='table' AND name=?").get(tableName);
+}
 
 // ============================================================================
 // POST /api/v1/scraping/run - Manual trigger RSS scraping
 // ============================================================================
 router.post('/run', async (req, res) => {
   try {
-    const db = new Database(DB_PATH);
+    if (!tableExists('scraping_sessions')) {
+      return res.status(503).json({ success: false, error: 'Scraping sessions table not available on this deployment' });
+    }
 
     const {
       source = 'datagovsg',
@@ -45,8 +51,6 @@ router.post('/run', async (req, res) => {
       max_results
     );
 
-    db.close();
-
     // Start scraping in background
     res.status(202).json({
       success: true,
@@ -59,13 +63,12 @@ router.post('/run', async (req, res) => {
 
     // Run scraping asynchronously
     (async () => {
-      const db = new Database(DB_PATH);
       let scraped = 0;
       let inserted = 0;
       let errors = 0;
 
       try {
-        console.log(`🚀 Starting scraping session ${sessionId}`);
+        logger.info('Starting scraping session', { sessionId });
 
         // Update status to running
         db.prepare(`
@@ -78,7 +81,7 @@ router.post('/run', async (req, res) => {
           const records = await dataGovSGClient.searchByKeywords(keywords, max_results);
           scraped = records.length;
 
-          console.log(`📊 Retrieved ${scraped} records from Data.gov.sg`);
+          logger.info('Retrieved records from Data.gov.sg', { count: scraped });
 
           for (const record of records) {
             try {
@@ -116,7 +119,7 @@ router.post('/run', async (req, res) => {
                 inserted++;
               }
             } catch (recordError) {
-              console.error(`❌ Error processing record:`, recordError.message);
+              logger.error('Error processing record', { error: recordError.message });
               errors++;
             }
           }
@@ -134,10 +137,10 @@ router.post('/run', async (req, res) => {
           WHERE id = ?
         `).run(scraped, inserted, errors, sessionId);
 
-        console.log(`✅ Scraping session ${sessionId} completed: ${inserted}/${scraped} records inserted`);
+        logger.info('Scraping session completed', { sessionId, inserted, scraped });
 
       } catch (error) {
-        console.error(`❌ Scraping session ${sessionId} failed:`, error);
+        logger.error('Scraping session failed', { sessionId, error: error.message });
 
         db.prepare(`
           UPDATE scraping_sessions
@@ -151,13 +154,11 @@ router.post('/run', async (req, res) => {
           WHERE id = ?
         `).run(error.message, scraped, inserted, errors, sessionId);
       }
-
-      db.close();
     })();
 
   } catch (error) {
-    console.error('Error starting scraping session:', error);
-    res.status(500).json({ success: false, error: error.message });
+    logger.error('Error starting scraping session', { error: error.message });
+    res.status(500).json({ success: false, error: 'Internal server error' });
   }
 });
 
@@ -166,7 +167,9 @@ router.post('/run', async (req, res) => {
 // ============================================================================
 router.get('/status', (req, res) => {
   try {
-    const db = new Database(DB_PATH, { readonly: true });
+    if (!tableExists('scraping_sessions')) {
+      return res.json({ success: true, data: { is_running: false, current_session: null, recent_sessions: [], statistics: {} } });
+    }
 
     const { session_id, limit = 10 } = req.query;
 
@@ -177,14 +180,12 @@ router.get('/status', (req, res) => {
       `).get(session_id);
 
       if (!session) {
-        db.close();
         return res.status(404).json({ success: false, error: 'Session not found' });
       }
 
       // Parse JSON fields
       if (session.keywords) session.keywords = JSON.parse(session.keywords);
 
-      db.close();
       return res.json({ success: true, data: session });
     }
 
@@ -222,8 +223,6 @@ router.get('/status', (req, res) => {
       LIMIT 1
     `).get();
 
-    db.close();
-
     res.json({
       success: true,
       data: {
@@ -234,8 +233,8 @@ router.get('/status', (req, res) => {
       }
     });
   } catch (error) {
-    console.error('Error fetching scraping status:', error);
-    res.status(500).json({ success: false, error: error.message });
+    logger.error('Error fetching scraping status', { error: error.message });
+    res.status(500).json({ success: false, error: 'Internal server error' });
   }
 });
 
@@ -244,7 +243,9 @@ router.get('/status', (req, res) => {
 // ============================================================================
 router.get('/sessions', (req, res) => {
   try {
-    const db = new Database(DB_PATH, { readonly: true });
+    if (!tableExists('scraping_sessions')) {
+      return res.json({ success: true, data: [], meta: { total: 0, limit: 50, offset: 0 } });
+    }
 
     const {
       status,
@@ -314,8 +315,6 @@ router.get('/sessions', (req, res) => {
 
     const { total } = db.prepare(countQuery).get(...countParams);
 
-    db.close();
-
     res.json({
       success: true,
       data: sessions,
@@ -326,8 +325,8 @@ router.get('/sessions', (req, res) => {
       }
     });
   } catch (error) {
-    console.error('Error fetching scraping sessions:', error);
-    res.status(500).json({ success: false, error: error.message });
+    logger.error('Error fetching scraping sessions', { error: error.message });
+    res.status(500).json({ success: false, error: 'Internal server error' });
   }
 });
 
@@ -336,18 +335,18 @@ router.get('/sessions', (req, res) => {
 // ============================================================================
 router.delete('/sessions/:id', (req, res) => {
   try {
-    const db = new Database(DB_PATH);
+    if (!tableExists('scraping_sessions')) {
+      return res.status(503).json({ success: false, error: 'Scraping sessions table not available on this deployment' });
+    }
 
     // Check if session is running
     const session = db.prepare('SELECT status FROM scraping_sessions WHERE id = ?').get(req.params.id);
 
     if (!session) {
-      db.close();
       return res.status(404).json({ success: false, error: 'Session not found' });
     }
 
     if (session.status === 'running') {
-      db.close();
       return res.status(400).json({
         success: false,
         error: 'Cannot delete running session'
@@ -355,8 +354,6 @@ router.delete('/sessions/:id', (req, res) => {
     }
 
     const result = db.prepare('DELETE FROM scraping_sessions WHERE id = ?').run(req.params.id);
-
-    db.close();
 
     if (result.changes === 0) {
       return res.status(404).json({ success: false, error: 'Session not found' });
@@ -367,8 +364,8 @@ router.delete('/sessions/:id', (req, res) => {
       message: 'Scraping session deleted successfully'
     });
   } catch (error) {
-    console.error('Error deleting scraping session:', error);
-    res.status(500).json({ success: false, error: error.message });
+    logger.error('Error deleting scraping session', { error: error.message });
+    res.status(500).json({ success: false, error: 'Internal server error' });
   }
 });
 

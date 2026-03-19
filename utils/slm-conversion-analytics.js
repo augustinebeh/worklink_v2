@@ -3,6 +3,10 @@
  * Comprehensive tracking and analysis of conversion funnel performance
  */
 
+
+const { createLogger } = require('./structured-logger');
+const logger = createLogger('slm-conversion-analytics');
+
 class SLMConversionAnalytics {
   constructor() {
     this.conversionStages = [
@@ -71,7 +75,7 @@ class SLMConversionAnalytics {
       await this.recordConversion(candidateId, progression);
     }
 
-    console.log(`📊 Tracked progression: ${candidateId} from ${fromStage} to ${toStage}`);
+    logger.info('Tracked progression: ${candidateId} from ${fromStage} to ${toStage}');
     return progression;
   }
 
@@ -434,12 +438,12 @@ class SLMConversionAnalytics {
    */
   async storeProgressionEvent(progression) {
     // Store in analytics database
-    console.log('Storing progression event:', progression);
+    logger.info('Storing progression event:', { data: progression });
   }
 
   async storePrediction(prediction) {
     // Store prediction for model learning
-    console.log('Storing prediction:', prediction);
+    logger.info('Storing prediction:', { data: prediction });
   }
 
   async getCandidateData(candidateId) {

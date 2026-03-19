@@ -51,7 +51,7 @@ export default function useScanner(toast) {
         });
       }
     } catch (err) {
-      console.error('Error fetching feed stats:', err);
+      // Error fetching feed stats
     }
   }, []);
 
@@ -63,7 +63,7 @@ export default function useScanner(toast) {
         setUnreadCount(data.count || 0);
       }
     } catch (err) {
-      console.error('Error fetching unread matches:', err);
+      // Error fetching unread matches
     }
   }, []);
 
@@ -75,7 +75,7 @@ export default function useScanner(toast) {
         setScraperStatus(data.data || null);
       }
     } catch (err) {
-      console.error('Error fetching scraper status:', err);
+      // Error fetching scraper status
     }
   }, []);
 
@@ -91,7 +91,7 @@ export default function useScanner(toast) {
         setFeedTenders(data.data?.tenders || []);
       }
     } catch (err) {
-      console.error('Error fetching feed:', err);
+      // Error fetching feed
       toast.error('Feed Error', 'Failed to load tender feed');
     } finally {
       setLoading(false);
@@ -112,7 +112,7 @@ export default function useScanner(toast) {
         setAlerts(mapped);
       }
     } catch (err) {
-      console.error('Error fetching alerts:', err);
+      // Error fetching alerts
       toast.error('Alerts Error', 'Failed to load keyword alerts');
     } finally {
       setLoading(false);
@@ -128,7 +128,7 @@ export default function useScanner(toast) {
         setScraperLogs(data.data?.logs || []);
       }
     } catch (err) {
-      console.error('Error fetching scraper logs:', err);
+      // Error fetching scraper logs
     } finally {
       setLoading(false);
     }
@@ -143,7 +143,7 @@ export default function useScanner(toast) {
         setPortals(data.data || []);
       }
     } catch (err) {
-      console.error('Error fetching portals:', err);
+      // Error fetching portals
     } finally {
       setPortalsLoading(false);
     }
@@ -160,7 +160,7 @@ export default function useScanner(toast) {
         enabledCategoriesRef.current = enabled;
       }
     } catch (err) {
-      console.error('Error fetching categories:', err);
+      // Error fetching categories
     }
   }, []);
 

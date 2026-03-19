@@ -167,7 +167,7 @@ export default function Training() {
       const data = await res.json();
       if (data.success) setTrainings(data.data);
     } catch (error) {
-      console.error('Failed to fetch trainings:', error);
+      // Failed to fetch trainings:
     } finally {
       setLoading(false);
     }
@@ -190,7 +190,7 @@ export default function Training() {
       setShowModal(false);
       setEditingTraining(null);
     } catch (error) {
-      console.error('Failed to save training:', error);
+      // Failed to save training:
     }
   };
 
@@ -201,7 +201,7 @@ export default function Training() {
       await fetch(`/api/v1/training/${id}`, { method: 'DELETE' });
       fetchTrainings();
     } catch (error) {
-      console.error('Failed to delete training:', error);
+      // Failed to delete training:
     }
   };
 

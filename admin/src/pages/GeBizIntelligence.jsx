@@ -1,183 +1,18 @@
 import React, { useState, useEffect, useRef, useCallback } from 'react';
 import {
   DatabaseIcon,
-  RefreshCwIcon,
-  SearchIcon,
   DownloadIcon,
   TrendingUpIcon,
   UsersIcon,
   DollarSignIcon,
   ActivityIcon,
   Building2Icon,
-  CheckCircleIcon,
-  AlertCircleIcon,
-  ClockIcon,
-  Loader2Icon,
-  PlayIcon,
-  BarChart3Icon
+  BarChart3Icon,
 } from 'lucide-react';
 import { useToast } from '../components/ui/Toast';
+import GeBizDashboard from '../components/gebiz/GeBizDashboard';
+import GeBizTenderList from '../components/gebiz/GeBizTenderList';
 
-// ============================================================================
-// SYNC STATUS PANEL — replaces the old modal
-// ============================================================================
-function SyncStatusPanel({ syncStatus, onStartSync, syncing }) {
-  const { is_running, stage, progress, message, stats, elapsed_seconds, error_messages } = syncStatus;
-
-  const formatElapsed = (seconds) => {
-    if (!seconds) return '00:00';
-    const m = Math.floor(seconds / 60);
-    const s = seconds % 60;
-    return `${m.toString().padStart(2, '0')}:${s.toString().padStart(2, '0')}`;
-  };
-
-  const getProgressColor = () => {
-    if (stage === 'error') return 'bg-red-500';
-    if (stage === 'complete') return 'bg-green-500';
-    return 'bg-indigo-500';
-  };
-
-  const getStageLabel = () => {
-    const labels = {
-      idle: 'Idle',
-      initializing: 'Initializing',
-      starting: 'Starting',
-      checking: 'Checking DB',
-      fetching: 'Fetching Data',
-      processing: 'Processing',
-      importing: 'Importing',
-      complete: 'Complete',
-      error: 'Error'
-    };
-    return labels[stage] || stage;
-  };
-
-  const getStageIcon = () => {
-    if (stage === 'complete') return <CheckCircleIcon className="h-5 w-5 text-green-500" />;
-    if (stage === 'error') return <AlertCircleIcon className="h-5 w-5 text-red-500" />;
-    if (is_running) return <Loader2Icon className="h-5 w-5 text-indigo-500 animate-spin" />;
-    return <DatabaseIcon className="h-5 w-5 text-slate-400 dark:text-slate-500" />;
-  };
-
-  return (
-    <div className="space-y-4">
-      {/* Sync Control Bar */}
-      <div className="bg-white dark:bg-slate-800 rounded-lg border border-slate-200 dark:border-slate-700 p-5">
-        <div className="flex items-center justify-between mb-4">
-          <div className="flex items-center space-x-3">
-            {getStageIcon()}
-            <div>
-              <h3 className="text-base font-semibold text-slate-900 dark:text-white">
-                Data.gov.sg Sync
-              </h3>
-              <p className="text-xs text-slate-500 dark:text-slate-400">
-                {is_running ? message || 'Syncing historical tender data...' : stage === 'complete' ? 'Last sync completed successfully' : stage === 'error' ? 'Last sync encountered an error' : 'Sync GeBIZ historical tender data from Data.gov.sg'}
-              </p>
-            </div>
-          </div>
-          <button
-            onClick={onStartSync}
-            disabled={is_running || syncing}
-            className="px-4 py-2 text-sm font-medium text-white bg-indigo-600 dark:bg-indigo-500 rounded-lg hover:bg-indigo-700 dark:hover:bg-indigo-600 flex items-center space-x-2 disabled:opacity-50 disabled:cursor-not-allowed transition-colors"
-          >
-            {is_running ? (
-              <>
-                <Loader2Icon className="h-4 w-4 animate-spin" />
-                <span>Syncing...</span>
-              </>
-            ) : (
-              <>
-                <PlayIcon className="h-4 w-4" />
-                <span>Start Sync</span>
-              </>
-            )}
-          </button>
-        </div>
-
-        {/* Progress Bar — always visible when running or recently completed */}
-        {(is_running || stage === 'complete' || stage === 'error') && (
-          <div>
-            <div className="flex items-center justify-between mb-1.5">
-              <span className="text-xs font-medium text-slate-600 dark:text-slate-400">
-                {getStageLabel()}
-              </span>
-              <span className="text-xs font-mono text-slate-500 dark:text-slate-400">
-                {progress}%
-              </span>
-            </div>
-            <div className="w-full bg-slate-200 dark:bg-slate-700 rounded-full h-2">
-              <div
-                className={`h-2 rounded-full transition-all duration-500 ${getProgressColor()}`}
-                style={{ width: `${progress}%` }}
-              />
-            </div>
-          </div>
-        )}
-      </div>
-
-      {/* Live Stats Cards — visible when running or recently completed */}
-      {(is_running || stage === 'complete' || stage === 'error') && (
-        <div className="grid grid-cols-2 md:grid-cols-4 gap-3">
-          <div className="bg-white dark:bg-slate-800 rounded-lg border border-slate-200 dark:border-slate-700 p-4">
-            <div className="flex items-center space-x-2 mb-1">
-              <ActivityIcon className="h-4 w-4 text-blue-500" />
-              <span className="text-xs text-slate-500 dark:text-slate-400">Fetched</span>
-            </div>
-            <p className="text-lg font-bold text-slate-900 dark:text-white">
-              {(stats?.total_fetched || 0).toLocaleString()}
-            </p>
-          </div>
-
-          <div className="bg-white dark:bg-slate-800 rounded-lg border border-slate-200 dark:border-slate-700 p-4">
-            <div className="flex items-center space-x-2 mb-1">
-              <DatabaseIcon className="h-4 w-4 text-green-500" />
-              <span className="text-xs text-slate-500 dark:text-slate-400">Inserted</span>
-            </div>
-            <p className="text-lg font-bold text-slate-900 dark:text-white">
-              {(stats?.total_inserted || 0).toLocaleString()}
-            </p>
-          </div>
-
-          <div className="bg-white dark:bg-slate-800 rounded-lg border border-slate-200 dark:border-slate-700 p-4">
-            <div className="flex items-center space-x-2 mb-1">
-              <ClockIcon className="h-4 w-4 text-orange-500" />
-              <span className="text-xs text-slate-500 dark:text-slate-400">Elapsed</span>
-            </div>
-            <p className="text-lg font-bold text-slate-900 dark:text-white">
-              {formatElapsed(elapsed_seconds)}
-            </p>
-          </div>
-
-          <div className="bg-white dark:bg-slate-800 rounded-lg border border-slate-200 dark:border-slate-700 p-4">
-            <div className="flex items-center space-x-2 mb-1">
-              <AlertCircleIcon className="h-4 w-4 text-red-500" />
-              <span className="text-xs text-slate-500 dark:text-slate-400">Errors</span>
-            </div>
-            <p className="text-lg font-bold text-slate-900 dark:text-white">
-              {stats?.errors || 0}
-            </p>
-          </div>
-        </div>
-      )}
-
-      {/* Error messages */}
-      {error_messages && error_messages.length > 0 && stage === 'error' && (
-        <div className="bg-red-50 dark:bg-red-900/20 border border-red-200 dark:border-red-800 rounded-lg p-4">
-          <p className="text-sm font-medium text-red-800 dark:text-red-300 mb-2">Recent Errors</p>
-          <ul className="text-xs text-red-700 dark:text-red-400 space-y-1">
-            {error_messages.map((err, i) => (
-              <li key={i} className="truncate">• {err}</li>
-            ))}
-          </ul>
-        </div>
-      )}
-    </div>
-  );
-}
-
-// ============================================================================
-// MAIN PAGE
-// ============================================================================
 export default function GeBizIntelligence() {
   const toast = useToast();
   const [activeTab, setActiveTab] = useState('dashboard');
@@ -235,7 +70,6 @@ export default function GeBizIntelligence() {
       const data = await res.json();
       if (data.success && data.data) {
         setSyncStatus(data.data);
-        // If sync just finished, refresh dashboard data
         if (wasRunningRef.current && !data.data.is_running) {
           fetchStats();
           fetchFilters();
@@ -244,22 +78,17 @@ export default function GeBizIntelligence() {
         wasRunningRef.current = data.data.is_running;
       }
     } catch {
-      // Silently fail — don't disrupt the UI
+      // Silently fail
     }
   }, []);
 
-  // Start polling on mount, speed up when running
   useEffect(() => {
-    // Immediate fetch on mount
     fetchSyncStatus();
-
     const startPolling = () => {
       if (pollRef.current) clearInterval(pollRef.current);
-      // Poll every 2s when running, every 30s when idle
       const interval = syncStatus.is_running ? 2000 : 30000;
       pollRef.current = setInterval(fetchSyncStatus, interval);
     };
-
     startPolling();
     return () => { if (pollRef.current) clearInterval(pollRef.current); };
   }, [syncStatus.is_running, fetchSyncStatus]);
@@ -278,7 +107,7 @@ export default function GeBizIntelligence() {
         });
       }
     } catch (error) {
-      console.error('Error fetching stats:', error);
+      // Error fetching stats
     }
   };
 
@@ -291,7 +120,7 @@ export default function GeBizIntelligence() {
       const data = await response.json();
       if (data.success) setCompetitors(data.competitors || []);
     } catch (error) {
-      console.error('Error fetching competitors:', error);
+      // Error fetching competitors
     } finally {
       setLoading(false);
     }
@@ -309,7 +138,7 @@ export default function GeBizIntelligence() {
         setTendersTotalPages(data.pagination?.totalPages || 1);
       }
     } catch (error) {
-      console.error('Error fetching tenders:', error);
+      // Error fetching tenders
     } finally {
       setLoading(false);
     }
@@ -326,11 +155,10 @@ export default function GeBizIntelligence() {
       if (categoriesData.success) setCategories(categoriesData.categories || []);
       if (agenciesData.success) setAgencies(agenciesData.agencies || []);
     } catch (error) {
-      console.error('Error fetching filters:', error);
+      // Error fetching filters
     }
   };
 
-  // Trigger sync
   const handleSync = async () => {
     setSyncing(true);
     try {
@@ -338,20 +166,17 @@ export default function GeBizIntelligence() {
       const data = await response.json();
       if (data.success) {
         toast.success('Sync Started', 'Fetching data from Data.gov.sg — progress shown below');
-        // Immediately fetch status to show running state
         setTimeout(fetchSyncStatus, 500);
       } else {
         toast.error('Sync Failed', data.message || data.error || 'Unknown error');
       }
     } catch (error) {
-      console.error('Error triggering sync:', error);
       toast.error('Sync Error', 'Failed to start sync. Check server logs.');
     } finally {
       setSyncing(false);
     }
   };
 
-  // Export to CSV
   const exportToCSV = () => {
     let csvContent = '';
     let filename = '';
@@ -491,52 +316,15 @@ export default function GeBizIntelligence() {
       {/* Tab Content */}
       <div className="flex-1 min-h-0 mt-4 overflow-y-auto">
 
-        {/* Dashboard Tab — sync status + overview */}
+        {/* Dashboard Tab */}
         {activeTab === 'dashboard' && (
-          <div className="space-y-4">
-            {/* Sync Status Panel (inline, not modal) */}
-            <SyncStatusPanel
-              syncStatus={syncStatus}
-              onStartSync={handleSync}
-              syncing={syncing}
-            />
-
-            {/* Quick overview when data exists */}
-            {stats.totalTenders > 0 && (
-              <div className="bg-white dark:bg-slate-800 rounded-lg border border-slate-200 dark:border-slate-700 p-5">
-                <h3 className="text-base font-semibold text-slate-900 dark:text-white mb-3">Quick Overview</h3>
-                <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
-                  <div className="text-center p-4 bg-slate-50 dark:bg-slate-900 rounded-lg">
-                    <p className="text-2xl font-bold text-indigo-600 dark:text-indigo-400">{stats.totalTenders.toLocaleString()}</p>
-                    <p className="text-xs text-slate-500 dark:text-slate-400 mt-1">Historical records in database</p>
-                  </div>
-                  <div className="text-center p-4 bg-slate-50 dark:bg-slate-900 rounded-lg">
-                    <p className="text-2xl font-bold text-green-600 dark:text-green-400">{stats.totalSuppliers.toLocaleString()}</p>
-                    <p className="text-xs text-slate-500 dark:text-slate-400 mt-1">Unique suppliers tracked</p>
-                  </div>
-                  <div className="text-center p-4 bg-slate-50 dark:bg-slate-900 rounded-lg">
-                    <p className="text-2xl font-bold text-blue-600 dark:text-blue-400">{agencies.length}</p>
-                    <p className="text-xs text-slate-500 dark:text-slate-400 mt-1">Government agencies</p>
-                  </div>
-                </div>
-                <p className="text-xs text-slate-400 dark:text-slate-500 mt-3 text-center">
-                  Use Competitors, Tenders, and Agencies tabs to explore the data
-                </p>
-              </div>
-            )}
-
-            {/* Empty state when no data */}
-            {stats.totalTenders === 0 && !syncStatus.is_running && (
-              <div className="bg-white dark:bg-slate-800 rounded-lg border border-slate-200 dark:border-slate-700 p-8 text-center">
-                <DatabaseIcon className="h-12 w-12 mx-auto mb-4 text-slate-300 dark:text-slate-600" />
-                <p className="text-lg font-medium text-slate-700 dark:text-slate-300 mb-2">No Historical Data Yet</p>
-                <p className="text-sm text-slate-500 dark:text-slate-400 max-w-md mx-auto">
-                  Click "Start Sync" above to import historical GeBIZ tender data from Data.gov.sg.
-                  This will populate the Competitors, Tenders, and Agencies tabs.
-                </p>
-              </div>
-            )}
-          </div>
+          <GeBizDashboard
+            syncStatus={syncStatus}
+            onStartSync={handleSync}
+            syncing={syncing}
+            stats={stats}
+            agencies={agencies}
+          />
         )}
 
         {/* Competitors Tab */}
@@ -594,77 +382,15 @@ export default function GeBizIntelligence() {
 
         {/* Tenders Tab */}
         {activeTab === 'tenders' && (
-          <div className="flex flex-col h-full min-h-0">
-            <div className="flex items-center space-x-4 flex-shrink-0 mb-4">
-              <div className="flex-1">
-                <div className="relative">
-                  <SearchIcon className="absolute left-3 top-1/2 transform -translate-y-1/2 h-5 w-5 text-slate-400 dark:text-slate-500" />
-                  <input
-                    type="text"
-                    value={tendersSearch}
-                    onChange={(e) => setTendersSearch(e.target.value)}
-                    placeholder="Search tenders..."
-                    className="w-full pl-10 pr-4 py-2 border border-slate-300 dark:border-slate-600 bg-white dark:bg-slate-800 text-slate-900 dark:text-white placeholder:text-slate-400 dark:placeholder:text-slate-500 rounded-lg focus:ring-2 focus:ring-indigo-500 dark:focus:ring-indigo-400 focus:border-indigo-500 dark:focus:border-indigo-400"
-                  />
-                </div>
-              </div>
-            </div>
-
-            <div className="bg-white dark:bg-slate-800 rounded-lg border border-slate-200 dark:border-slate-700 overflow-hidden flex-1 min-h-0 flex flex-col">
-              <div className="overflow-y-auto flex-1 min-h-0">
-                <table className="min-w-full divide-y divide-slate-200 dark:divide-slate-700">
-                  <thead className="bg-slate-50 dark:bg-slate-900 sticky top-0 z-10">
-                    <tr>
-                      <th className="px-6 py-3 text-left text-xs font-medium text-slate-500 dark:text-slate-400 uppercase tracking-wider">Tender No</th>
-                      <th className="px-6 py-3 text-left text-xs font-medium text-slate-500 dark:text-slate-400 uppercase tracking-wider">Description</th>
-                      <th className="px-6 py-3 text-left text-xs font-medium text-slate-500 dark:text-slate-400 uppercase tracking-wider">Supplier</th>
-                      <th className="px-6 py-3 text-left text-xs font-medium text-slate-500 dark:text-slate-400 uppercase tracking-wider">Value</th>
-                      <th className="px-6 py-3 text-left text-xs font-medium text-slate-500 dark:text-slate-400 uppercase tracking-wider">Award Date</th>
-                    </tr>
-                  </thead>
-                  <tbody className="bg-white dark:bg-slate-800 divide-y divide-slate-200 dark:divide-slate-700">
-                    {loading ? (
-                      <tr><td colSpan="5" className="px-6 py-4 text-center text-slate-500 dark:text-slate-400">Loading...</td></tr>
-                    ) : tenders.length === 0 ? (
-                      <tr><td colSpan="5" className="px-6 py-4 text-center text-slate-500 dark:text-slate-400">No tenders found</td></tr>
-                    ) : (
-                      tenders.map((tender, idx) => (
-                        <tr key={idx} className="hover:bg-slate-50 dark:hover:bg-slate-700">
-                          <td className="px-6 py-4 whitespace-nowrap text-sm font-medium text-slate-900 dark:text-white">{tender.tender_no}</td>
-                          <td className="px-6 py-4 text-sm text-slate-500 dark:text-slate-400 max-w-md truncate">{tender.description}</td>
-                          <td className="px-6 py-4 whitespace-nowrap text-sm text-slate-500 dark:text-slate-400">{tender.supplier_name}</td>
-                          <td className="px-6 py-4 whitespace-nowrap text-sm text-slate-500 dark:text-slate-400">${tender.awarded_amount?.toLocaleString() || 'N/A'}</td>
-                          <td className="px-6 py-4 whitespace-nowrap text-sm text-slate-500 dark:text-slate-400">{tender.award_date}</td>
-                        </tr>
-                      ))
-                    )}
-                  </tbody>
-                </table>
-              </div>
-
-              {tendersTotalPages > 1 && (
-                <div className="px-6 py-4 border-t border-slate-200 dark:border-slate-700 flex items-center justify-between flex-shrink-0">
-                  <button
-                    onClick={() => setTendersPage(Math.max(1, tendersPage - 1))}
-                    disabled={tendersPage === 1}
-                    className="px-4 py-2 text-sm font-medium text-slate-700 dark:text-slate-300 bg-white dark:bg-slate-800 border border-slate-300 dark:border-slate-600 rounded-lg hover:bg-slate-50 dark:hover:bg-slate-700 disabled:opacity-50 disabled:cursor-not-allowed"
-                  >
-                    Previous
-                  </button>
-                  <span className="text-sm text-slate-700 dark:text-slate-300">
-                    Page {tendersPage} of {tendersTotalPages}
-                  </span>
-                  <button
-                    onClick={() => setTendersPage(Math.min(tendersTotalPages, tendersPage + 1))}
-                    disabled={tendersPage === tendersTotalPages}
-                    className="px-4 py-2 text-sm font-medium text-slate-700 dark:text-slate-300 bg-white dark:bg-slate-800 border border-slate-300 dark:border-slate-600 rounded-lg hover:bg-slate-50 dark:hover:bg-slate-700 disabled:opacity-50 disabled:cursor-not-allowed"
-                  >
-                    Next
-                  </button>
-                </div>
-              )}
-            </div>
-          </div>
+          <GeBizTenderList
+            tenders={tenders}
+            loading={loading}
+            tendersSearch={tendersSearch}
+            onSearchChange={setTendersSearch}
+            tendersPage={tendersPage}
+            tendersTotalPages={tendersTotalPages}
+            onPageChange={setTendersPage}
+          />
         )}
 
         {/* Agencies Tab */}

@@ -52,7 +52,7 @@ export default function AlertDropdown({
         setError('Failed to fetch alerts');
       }
     } catch (err) {
-      console.error('Error fetching alerts:', err);
+      // Error fetching alerts
       setError('Failed to load alerts');
     } finally {
       setLoading(false);
@@ -79,7 +79,7 @@ export default function AlertDropdown({
         onUnreadCountChange(unreadCount);
       }
     } catch (err) {
-      console.error('Error acknowledging alert:', err);
+      // Error acknowledging alert
     }
   };
 
@@ -100,7 +100,7 @@ export default function AlertDropdown({
         onUnreadCountChange(0);
       }
     } catch (err) {
-      console.error('Error marking all read:', err);
+      // Error marking all read
     }
   };
 

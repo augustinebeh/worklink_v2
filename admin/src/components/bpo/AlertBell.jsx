@@ -69,7 +69,7 @@ export default function AlertBell() {
         setLastCheckTime(currentTime);
       }
     } catch (err) {
-      console.error('Error fetching unread count:', err);
+      // Error fetching unread count
     }
   };
 

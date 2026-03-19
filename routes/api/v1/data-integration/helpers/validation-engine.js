@@ -6,6 +6,8 @@
  */
 
 const { db } = require('../../../../../db');
+const { createLogger } = require('../../../../../utils/structured-logger');
+const logger = createLogger('data-integration:validation-engine');
 
 class ValidationEngine {
   constructor() {
@@ -27,7 +29,7 @@ class ValidationEngine {
 
       return user && this.adminRoles.includes(user.role);
     } catch (error) {
-      console.error('Error checking admin status:', error);
+      logger.error('Error checking admin status', { error: error.message });
       return false;
     }
   }
@@ -48,7 +50,7 @@ class ValidationEngine {
         this.supportRoles.includes(user.role)
       );
     } catch (error) {
-      console.error('Error checking support staff status:', error);
+      logger.error('Error checking support staff status', { error: error.message });
       return false;
     }
   }
@@ -81,7 +83,7 @@ class ValidationEngine {
       return this.hasSpecificPermission(userId, candidateId, dataType);
 
     } catch (error) {
-      console.error('Error checking permissions:', error);
+      logger.error('Error checking permissions', { error: error.message });
       return false;
     }
   }
@@ -128,7 +130,7 @@ class ValidationEngine {
       return false;
 
     } catch (error) {
-      console.error('Error checking specific permissions:', error);
+      logger.error('Error checking specific permissions', { error: error.message });
       return false;
     }
   }
@@ -166,7 +168,7 @@ class ValidationEngine {
       };
 
     } catch (error) {
-      console.error('Error validating candidate existence:', error);
+      logger.error('Error validating candidate existence', { error: error.message });
       return {
         valid: false,
         error: 'Database error during validation',
@@ -202,7 +204,7 @@ class ValidationEngine {
       };
 
     } catch (error) {
-      console.error('Error validating payment ownership:', error);
+      logger.error('Error validating payment ownership', { error: error.message });
       return {
         valid: false,
         error: 'Database error during payment validation',
@@ -298,7 +300,7 @@ class ValidationEngine {
       };
 
     } catch (error) {
-      console.error('Error validating withdrawal eligibility:', error);
+      logger.error('Error validating withdrawal eligibility', { error: error.message });
       return {
         valid: false,
         error: 'Database error during withdrawal validation',
@@ -378,7 +380,7 @@ class ValidationEngine {
       };
 
     } catch (error) {
-      console.error('Error validating interview scheduling:', error);
+      logger.error('Error validating interview scheduling', { error: error.message });
       return {
         valid: false,
         error: 'Database error during interview validation',
@@ -422,7 +424,7 @@ class ValidationEngine {
       };
 
     } catch (error) {
-      console.error('Error validating rate limit:', error);
+      logger.error('Error validating rate limit', { error: error.message });
       return {
         valid: true // Allow request on validation error
       };
@@ -470,7 +472,7 @@ class ValidationEngine {
         new Date().toISOString()
       );
     } catch (error) {
-      console.error('Error logging data access:', error);
+      logger.error('Error logging data access', { error: error.message });
       // Don't throw - logging failure shouldn't break the request
     }
   }

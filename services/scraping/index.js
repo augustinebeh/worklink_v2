@@ -8,6 +8,8 @@ const GeBIZRSSParser = require('./gebizRssParser');
 const DataLifecycleManager = require('./dataLifecycleManager');
 const GeBIZRSSOrchestrator = require('./gebizRssOrchestrator');
 const GeBIZRSSScheduler = require('./gebizRssScheduler');
+const { createLogger } = require('../../utils/structured-logger');
+const logger = createLogger('gebiz-scraping');
 
 class GeBIZScrapingService {
   constructor() {
@@ -31,7 +33,7 @@ class GeBIZScrapingService {
     }
 
     try {
-      console.log('🚀 Initializing GeBIZ RSS Scraping Service...');
+      logger.info('Initializing GeBIZ RSS Scraping Service');
 
       // Start scheduler if auto-start is enabled (default: true)
       if (options.autoStartScheduler !== false) {
@@ -42,18 +44,17 @@ class GeBIZScrapingService {
       }
 
       this.isInitialized = true;
-      console.log('✅ GeBIZ RSS Scraping Service initialized successfully');
+      logger.info('GeBIZ RSS Scraping Service initialized successfully');
 
       // Log the service status
       const status = this.getStatus();
-      console.log(`📊 Service Status: Scheduler ${status.scheduler.isRunning ? 'Running' : 'Stopped'}`);
-      console.log(`⏰ Next Execution: ${status.scheduler.nextExecution}`);
+      logger.info('Service status', { scheduler_running: status.scheduler.isRunning, next_execution: status.scheduler.nextExecution });
 
       return true;
 
     } catch (error) {
       this.initializationError = error;
-      console.error('❌ Failed to initialize GeBIZ RSS Scraping Service:', error.message);
+      logger.error('Failed to initialize GeBIZ RSS Scraping Service', { error: error.message });
       return false;
     }
   }
@@ -63,7 +64,7 @@ class GeBIZScrapingService {
    */
   async shutdown() {
     try {
-      console.log('🛑 Shutting down GeBIZ RSS Scraping Service...');
+      logger.info('Shutting down GeBIZ RSS Scraping Service');
 
       // Stop scheduler
       if (this.scheduler) {
@@ -72,7 +73,7 @@ class GeBIZScrapingService {
 
       // Wait for any running operations to complete
       if (this.orchestrator.isRunning) {
-        console.log('⏳ Waiting for running operations to complete...');
+        logger.info('Waiting for running operations to complete');
         // Give it up to 30 seconds to complete
         let waitTime = 0;
         while (this.orchestrator.isRunning && waitTime < 30000) {
@@ -82,10 +83,10 @@ class GeBIZScrapingService {
       }
 
       this.isInitialized = false;
-      console.log('✅ GeBIZ RSS Scraping Service shutdown complete');
+      logger.info('GeBIZ RSS Scraping Service shutdown complete');
 
     } catch (error) {
-      console.error('❌ Error during service shutdown:', error.message);
+      logger.error('Error during service shutdown', { error: error.message });
     }
   }
 
@@ -146,7 +147,7 @@ class GeBIZScrapingService {
    * @returns {Object} Scraping results
    */
   async manualScrape(options = {}) {
-    console.log('🔧 Manual scraping triggered');
+    logger.info('Manual scraping triggered');
     return this.orchestrator.manualTrigger(options);
   }
 

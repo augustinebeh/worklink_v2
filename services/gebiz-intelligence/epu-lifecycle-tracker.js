@@ -12,9 +12,9 @@
  */
 
 const EPUSer19Monitor = require('./epu-ser-19-monitor');
-const Database = require('better-sqlite3');
-const path = require('path');
-const fs = require('fs');
+const { db } = require('../../db');
+const { createLogger } = require('../../utils/structured-logger');
+const logger = createLogger('epu-lifecycle-tracker');
 
 class EPULifecycleTracker {
   constructor() {
@@ -72,20 +72,7 @@ class EPULifecycleTracker {
    */
   initDB() {
     if (!this.db) {
-      const IS_RAILWAY = !!process.env.RAILWAY_ENVIRONMENT;
-      const DB_DIR = IS_RAILWAY
-        ? (process.env.RAILWAY_VOLUME_MOUNT_PATH || '/app/data')
-        : path.join(__dirname, '../../database');
-
-      if (!fs.existsSync(DB_DIR)) {
-        fs.mkdirSync(DB_DIR, { recursive: true });
-      }
-
-      const dbPath = path.join(DB_DIR, 'gebiz_intelligence.db');
-      this.db = new Database(dbPath);
-      this.db.pragma('journal_mode = WAL');
-      this.db.pragma('foreign_keys = ON');
-
+      this.db = db;
       this.ensureLifecycleTables();
     }
   }
@@ -207,9 +194,9 @@ class EPULifecycleTracker {
       this.db.exec(createRenewalTableSQL);
       this.db.exec(createMilestonesTableSQL);
 
-      console.log('✅ EPU lifecycle tracking tables created');
+      logger.info('EPU lifecycle tracking tables created');
     } catch (error) {
-      console.error('❌ Failed to create lifecycle tables:', error.message);
+      logger.error('Failed to create lifecycle tables', { error: error.message });
       throw error;
     }
   }
@@ -263,11 +250,11 @@ class EPULifecycleTracker {
         await this.createRenewalOpportunity(tender);
       }
 
-      console.log(`📋 Lifecycle tracking initialized for tender ${tender.tender_no}`);
+      logger.info('Lifecycle tracking initialized for tender', { tender_no: tender.tender_no });
       return lifecycleId;
 
     } catch (error) {
-      console.error('Failed to initialize tender lifecycle:', error.message);
+      logger.error('Failed to initialize tender lifecycle', { error: error.message });
       throw error;
     }
   }
@@ -521,7 +508,7 @@ class EPULifecycleTracker {
           dateInfo.impact
         );
       } catch (error) {
-        console.log(`Warning: Could not create critical date ${dateInfo.type}:`, error.message);
+        logger.warn('Could not create critical date', { type: dateInfo.type, error: error.message });
       }
     }
   }
@@ -566,10 +553,10 @@ class EPULifecycleTracker {
         tender.intelligence_score || 50
       );
 
-      console.log(`🔄 Renewal opportunity created for ${tender.tender_no}`);
+      logger.info('Renewal opportunity created', { tender_no: tender.tender_no });
 
     } catch (error) {
-      console.log('Warning: Could not create renewal opportunity:', error.message);
+      logger.warn('Could not create renewal opportunity', { error: error.message });
     }
   }
 
@@ -612,10 +599,10 @@ class EPULifecycleTracker {
         );
       }
 
-      console.log(`📅 Tender ${tenderId} stage updated to ${newStage}`);
+      logger.info('Tender stage updated', { tender_id: tenderId, new_stage: newStage });
 
     } catch (error) {
-      console.error('Failed to update tender stage:', error.message);
+      logger.error('Failed to update tender stage', { error: error.message });
       throw error;
     }
   }
@@ -755,13 +742,10 @@ class EPULifecycleTracker {
   }
 
   /**
-   * Close database connection
+   * Close database connection (no-op: using singleton)
    */
   closeDB() {
-    if (this.db) {
-      this.db.close();
-      this.db = null;
-    }
+    // No-op: singleton db connection is managed by db/index.js
   }
 }
 

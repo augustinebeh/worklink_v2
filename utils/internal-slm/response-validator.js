@@ -3,6 +3,10 @@
  * Ensures all SLM responses meet quality and safety standards
  */
 
+
+const { createLogger } = require('../structured-logger');
+const logger = createLogger('response-validator');
+
 class ResponseValidator {
   constructor() {
     this.validationRules = this.buildValidationRules();
@@ -55,7 +59,7 @@ class ResponseValidator {
       return true;
 
     } catch (error) {
-      console.error('Response validation error:', error);
+      logger.error('Response validation error:', { error: error });
       return false;
     }
   }
@@ -152,7 +156,7 @@ class ResponseValidator {
     // Check required fields
     for (const field of this.requiredFields) {
       if (!(field in response)) {
-        console.warn(`Missing required field: ${field}`);
+        logger.warn('Missing required field: ${field}');
         return false;
       }
     }
@@ -175,13 +179,13 @@ class ResponseValidator {
 
     // Check character set (allow emojis)
     if (!this.validationRules.content.allowedCharacters.test(content)) {
-      console.warn('Content contains invalid characters');
+      logger.warn('Content contains invalid characters');
       return false;
     }
 
     // Check for repetitive content
     if (this.isRepetitive(content)) {
-      console.warn('Content appears repetitive');
+      logger.warn('Content appears repetitive');
       return false;
     }
 
@@ -197,7 +201,7 @@ class ResponseValidator {
     // Check for banned phrases
     for (const phrase of this.bannedPhrases) {
       if (lowerContent.includes(phrase.toLowerCase())) {
-        console.warn(`Banned phrase detected: "${phrase}"`);
+        logger.warn('Banned phrase detected: "${phrase}"');
         return false;
       }
     }
@@ -212,7 +216,7 @@ class ResponseValidator {
 
     for (const pattern of timingPatterns) {
       if (pattern.test(content)) {
-        console.warn('Timing commitment detected');
+        logger.warn('Timing commitment detected');
         return false;
       }
     }
@@ -226,7 +230,7 @@ class ResponseValidator {
 
     for (const pattern of actionPatterns) {
       if (pattern.test(content)) {
-        console.warn('Action claim detected');
+        logger.warn('Action claim detected');
         return false;
       }
     }
@@ -272,14 +276,14 @@ class ResponseValidator {
 
     for (const pattern of inappropriatePatterns) {
       if (pattern.test(content)) {
-        console.warn('Inappropriate content detected');
+        logger.warn('Inappropriate content detected');
         return false;
       }
     }
 
     // Check for spam-like content
     if (this.isSpamLike(content)) {
-      console.warn('Spam-like content detected');
+      logger.warn('Spam-like content detected');
       return false;
     }
 

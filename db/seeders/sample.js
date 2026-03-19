@@ -5,6 +5,8 @@
  */
 
 const { generateAvatar, IS_PRODUCTION } = require('../connection');
+const { createLogger } = require('../../utils/structured-logger');
+const logger = createLogger('seeder-sample');
 
 /**
  * Seed comprehensive sample data - ONLY in development
@@ -12,17 +14,17 @@ const { generateAvatar, IS_PRODUCTION } = require('../connection');
  */
 function seedSampleData(db) {
   if (IS_PRODUCTION) {
-    console.log('⚠️ Production environment - skipping sample data');
+    logger.warn('Production environment - skipping sample data');
     return;
   }
 
   const candidateCount = db.prepare('SELECT COUNT(*) as c FROM candidates').get().c;
   if (candidateCount > 1) { // Skip if more than just demo account
-    console.log('⚠️ Database already has data, skipping sample seed');
+    logger.warn('Database already has data, skipping sample seed');
     return;
   }
 
-  console.log('🌱 Seeding COMPREHENSIVE sample data for development...');
+  logger.info('Seeding COMPREHENSIVE sample data for development...');
 
   const addDays = (d, n) => { const r = new Date(d); r.setDate(r.getDate() + n); return r.toISOString().split('T')[0]; };
   const today = new Date();
@@ -239,7 +241,7 @@ function seedSampleData(db) {
     `).run(...g);
   });
 
-  console.log(`✅ Comprehensive data seeded: ${candidates.length} candidates, ${clients.length} clients, ${jobN - 1} jobs`);
+  logger.info(`Comprehensive data seeded: ${candidates.length} candidates, ${clients.length} clients, ${jobN - 1} jobs`);
 }
 
 /**
@@ -248,11 +250,11 @@ function seedSampleData(db) {
  */
 function resetToSampleData(db) {
   if (IS_PRODUCTION) {
-    console.log('❌ Cannot reset in production');
+    logger.error('Cannot reset in production');
     return;
   }
 
-  console.log('🔄 Resetting database...');
+  logger.info('Resetting database...');
   const tables = [
     'push_queue', 'job_match_scores', 'notifications', 'messages', 'tender_matches',
     'xp_transactions', 'candidate_quests', 'candidate_achievements', 'candidate_availability',
@@ -267,7 +269,7 @@ function resetToSampleData(db) {
     try {
       db.prepare(`DELETE FROM ${table}`).run();
     } catch (e) {
-      console.warn(`Warning deleting ${table}:`, e.message);
+      logger.warn(`Warning deleting ${table}`, { error: e.message });
     }
   });
 
@@ -277,7 +279,7 @@ function resetToSampleData(db) {
   ensureDemoAccount(db);
   seedSampleData(db);
 
-  console.log('✅ Database reset complete');
+  logger.info('Database reset complete');
 }
 
 module.exports = {

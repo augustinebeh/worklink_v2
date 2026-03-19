@@ -13,9 +13,9 @@
  */
 
 const EPUSer19Monitor = require('./epu-ser-19-monitor');
-const Database = require('better-sqlite3');
-const path = require('path');
-const fs = require('fs');
+const { db } = require('../../db');
+const { createLogger } = require('../../utils/structured-logger');
+const logger = createLogger('epu-competitor-analyzer');
 
 class EPUCompetitorAnalyzer {
   constructor() {
@@ -58,20 +58,7 @@ class EPUCompetitorAnalyzer {
    */
   initDB() {
     if (!this.db) {
-      const IS_RAILWAY = !!process.env.RAILWAY_ENVIRONMENT;
-      const DB_DIR = IS_RAILWAY
-        ? (process.env.RAILWAY_VOLUME_MOUNT_PATH || '/app/data')
-        : path.join(__dirname, '../../database');
-
-      if (!fs.existsSync(DB_DIR)) {
-        fs.mkdirSync(DB_DIR, { recursive: true });
-      }
-
-      const dbPath = path.join(DB_DIR, 'gebiz_intelligence.db');
-      this.db = new Database(dbPath);
-      this.db.pragma('journal_mode = WAL');
-      this.db.pragma('foreign_keys = ON');
-
+      this.db = db;
       this.ensureCompetitorTables();
     }
   }
@@ -216,9 +203,9 @@ class EPUCompetitorAnalyzer {
       this.db.exec(createPositioningSQL);
       this.db.exec(createCompetitiveAlertsSQL);
 
-      console.log('✅ EPU competitor analysis tables created');
+      logger.info('EPU competitor analysis tables created');
     } catch (error) {
-      console.error('❌ Failed to create competitor tables:', error.message);
+      logger.error('Failed to create competitor tables', { error: error.message });
       throw error;
     }
   }
@@ -247,7 +234,7 @@ class EPUCompetitorAnalyzer {
       return true;
 
     } catch (error) {
-      console.error('Failed to analyze tender competitors:', error.message);
+      logger.error('Failed to analyze tender competitors', { error: error.message });
       return false;
     }
   }
@@ -274,7 +261,7 @@ class EPUCompetitorAnalyzer {
     // Record bid history
     await this.recordBidHistory(competitorId, tender, true);
 
-    console.log(`🏆 Analyzed winning supplier: ${supplierName} for ${tender.tender_no}`);
+    logger.info('Analyzed winning supplier', { supplier: supplierName, tender_no: tender.tender_no });
   }
 
   /**
@@ -304,7 +291,7 @@ class EPUCompetitorAnalyzer {
       'medium' // Default size
     );
 
-    console.log(`👤 Created new competitor profile: ${supplierName}`);
+    logger.info('Created new competitor profile', { supplier: supplierName });
     return result.lastInsertRowid;
   }
 
@@ -614,7 +601,7 @@ class EPUCompetitorAnalyzer {
 
     updateStmt.run(threatScore, threatLevel, competitorId);
 
-    console.log(`🎯 Updated threat score for competitor ${competitorId}: ${threatScore}/100 (${threatLevel})`);
+    logger.info('Updated threat score', { competitor_id: competitorId, threat_score: threatScore, threat_level: threatLevel });
   }
 
   /**
@@ -670,7 +657,7 @@ class EPUCompetitorAnalyzer {
       0.8
     );
 
-    console.log(`🚨 Created competitive alert: ${alertData.title}`);
+    logger.info('Created competitive alert', { title: alertData.title });
   }
 
   /**
@@ -761,13 +748,10 @@ class EPUCompetitorAnalyzer {
   }
 
   /**
-   * Close database connection
+   * Close database connection (no-op: using singleton)
    */
   closeDB() {
-    if (this.db) {
-      this.db.close();
-      this.db = null;
-    }
+    // No-op: singleton db connection is managed by db/index.js
   }
 }
 

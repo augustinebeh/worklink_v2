@@ -9,6 +9,7 @@ const express = require('express');
 const router = express.Router();
 const { db } = require('../../../../../db');
 const { CandidatePrequalificationEngine } = require('../../../../../utils/candidate-prequalification');
+const { authenticateAdmin } = require('../../../../../middleware/auth');
 
 const prequalificationEngine = new CandidatePrequalificationEngine();
 
@@ -16,7 +17,7 @@ const prequalificationEngine = new CandidatePrequalificationEngine();
  * POST /prequalify
  * Pre-qualify a new candidate
  */
-router.post('/', async (req, res) => {
+router.post('/', authenticateAdmin, async (req, res) => {
   try {
     const candidateData = req.body;
     const result = await prequalificationEngine.preQualifyCandidate(candidateData);
@@ -26,7 +27,7 @@ router.post('/', async (req, res) => {
       data: result
     });
   } catch (error) {
-    res.status(500).json({ success: false, error: error.message });
+    res.status(500).json({ success: false, error: 'Internal server error' });
   }
 });
 
@@ -34,7 +35,7 @@ router.post('/', async (req, res) => {
  * GET /prequalify/stats
  * Get pre-qualification statistics
  */
-router.get('/stats', async (req, res) => {
+router.get('/stats', authenticateAdmin, async (req, res) => {
   try {
     const { days = 7 } = req.query;
     const stats = await prequalificationEngine.getPrequalificationStats(days);
@@ -44,7 +45,7 @@ router.get('/stats', async (req, res) => {
       data: stats
     });
   } catch (error) {
-    res.status(500).json({ success: false, error: error.message });
+    res.status(500).json({ success: false, error: 'Internal server error' });
   }
 });
 
@@ -52,7 +53,7 @@ router.get('/stats', async (req, res) => {
  * GET /prequalify/pending-review
  * Get candidates pending human review
  */
-router.get('/pending-review', async (req, res) => {
+router.get('/pending-review', authenticateAdmin, async (req, res) => {
   try {
     const pendingReview = db.prepare(`
       SELECT pl.*, c.name, c.email, c.phone
@@ -71,7 +72,7 @@ router.get('/pending-review', async (req, res) => {
       }
     });
   } catch (error) {
-    res.status(500).json({ success: false, error: error.message });
+    res.status(500).json({ success: false, error: 'Internal server error' });
   }
 });
 

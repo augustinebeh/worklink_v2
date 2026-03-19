@@ -7,9 +7,10 @@ const express = require('express');
 const router = express.Router();
 const { db } = require('../../../db');
 const { getSGDateString } = require('../../../shared/constants');
+const { authenticateAny, authenticateToken } = require('../../../middleware/auth');
 
 // Get candidate availability for a date range
-router.get('/:candidateId', (req, res) => {
+router.get('/:candidateId', authenticateToken, (req, res) => {
   try {
     const { start_date, end_date, days = 30 } = req.query;
     const candidateId = req.params.candidateId;
@@ -55,12 +56,12 @@ router.get('/:candidateId', (req, res) => {
       },
     });
   } catch (error) {
-    res.status(500).json({ success: false, error: error.message });
+    res.status(500).json({ success: false, error: 'Internal server error' });
   }
 });
 
 // Set availability for specific dates
-router.post('/:candidateId', (req, res) => {
+router.post('/:candidateId', authenticateToken, (req, res) => {
   try {
     const candidateId = req.params.candidateId;
     const { dates } = req.body; // Array of { date, status, start_time?, end_time?, notes? }
@@ -80,17 +81,20 @@ router.post('/:candidateId', (req, res) => {
     `);
 
     const results = [];
-    for (const d of dates) {
-      insertStmt.run(
-        candidateId,
-        d.date,
-        d.status || 'available',
-        d.start_time || null,
-        d.end_time || null,
-        d.notes || null
-      );
-      results.push({ date: d.date, status: d.status || 'available' });
-    }
+    const bulkInsert = db.transaction(() => {
+      for (const d of dates) {
+        insertStmt.run(
+          candidateId,
+          d.date,
+          d.status || 'available',
+          d.start_time || null,
+          d.end_time || null,
+          d.notes || null
+        );
+        results.push({ date: d.date, status: d.status || 'available' });
+      }
+    });
+    bulkInsert();
 
     // Trigger job matching for available dates
     const availableDates = dates.filter(d => d.status === 'available').map(d => d.date);
@@ -100,12 +104,12 @@ router.post('/:candidateId', (req, res) => {
 
     res.json({ success: true, data: results });
   } catch (error) {
-    res.status(500).json({ success: false, error: error.message });
+    res.status(500).json({ success: false, error: 'Internal server error' });
   }
 });
 
 // Set availability for a date range (bulk)
-router.post('/:candidateId/range', (req, res) => {
+router.post('/:candidateId/range', authenticateToken, (req, res) => {
   try {
     const candidateId = req.params.candidateId;
     const { start_date, end_date, status, start_time, end_time, exclude_days = [] } = req.body;
@@ -140,30 +144,33 @@ router.post('/:candidateId/range', (req, res) => {
         end_time = excluded.end_time
     `);
 
-    for (const d of dates) {
-      insertStmt.run(candidateId, d.date, d.status, d.start_time || null, d.end_time || null);
-    }
+    const bulkInsertRange = db.transaction(() => {
+      for (const d of dates) {
+        insertStmt.run(candidateId, d.date, d.status, d.start_time || null, d.end_time || null);
+      }
+    });
+    bulkInsertRange();
 
     res.json({ success: true, data: { datesSet: dates.length, dates } });
   } catch (error) {
-    res.status(500).json({ success: false, error: error.message });
+    res.status(500).json({ success: false, error: 'Internal server error' });
   }
 });
 
 // Delete availability for a date
-router.delete('/:candidateId/:date', (req, res) => {
+router.delete('/:candidateId/:date', authenticateToken, (req, res) => {
   try {
     db.prepare('DELETE FROM candidate_availability WHERE candidate_id = ? AND date = ?')
       .run(req.params.candidateId, req.params.date);
 
     res.json({ success: true });
   } catch (error) {
-    res.status(500).json({ success: false, error: error.message });
+    res.status(500).json({ success: false, error: 'Internal server error' });
   }
 });
 
 // Get available candidates for a specific job date
-router.get('/match/job/:jobId', (req, res) => {
+router.get('/match/job/:jobId', authenticateToken, (req, res) => {
   try {
     const job = db.prepare('SELECT * FROM jobs WHERE id = ?').get(req.params.jobId);
     if (!job) {
@@ -206,7 +213,7 @@ router.get('/match/job/:jobId', (req, res) => {
       },
     });
   } catch (error) {
-    res.status(500).json({ success: false, error: error.message });
+    res.status(500).json({ success: false, error: 'Internal server error' });
   }
 });
 

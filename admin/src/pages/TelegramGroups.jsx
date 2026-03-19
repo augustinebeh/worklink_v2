@@ -2,21 +2,17 @@ import { useState, useEffect } from 'react';
 import {
   Send as TelegramIcon,
   Plus,
-  Trash2,
-  Edit3,
   RefreshCw,
   Settings,
   MessageSquare,
-  ExternalLink,
   Clock,
-  Check,
-  X,
-  Eye,
   Zap,
 } from 'lucide-react';
 import Card from '../components/ui/Card';
 import Badge from '../components/ui/Badge';
 import { clsx } from 'clsx';
+import TelegramGroupCard from '../components/telegram/TelegramGroupCard';
+import TelegramGroupForm from '../components/telegram/TelegramGroupForm';
 
 export default function TelegramGroups() {
   const [groups, setGroups] = useState([]);
@@ -50,7 +46,7 @@ export default function TelegramGroups() {
       const data = await res.json();
       if (data.success) setGroups(data.data);
     } catch (error) {
-      console.error('Failed to fetch groups:', error);
+      // Failed to fetch groups
     }
   };
 
@@ -60,7 +56,7 @@ export default function TelegramGroups() {
       const data = await res.json();
       if (data.success) setSettings(data.data);
     } catch (error) {
-      console.error('Failed to fetch settings:', error);
+      // Failed to fetch settings
     }
   };
 
@@ -70,7 +66,7 @@ export default function TelegramGroups() {
       const data = await res.json();
       if (data.success) setPostHistory(data.data);
     } catch (error) {
-      console.error('Failed to fetch history:', error);
+      // Failed to fetch history
     }
   };
 
@@ -83,7 +79,7 @@ export default function TelegramGroups() {
       });
       setSettings(prev => ({ ...prev, ...updates }));
     } catch (error) {
-      console.error('Failed to update settings:', error);
+      // Failed to update settings
     }
   };
 
@@ -107,7 +103,7 @@ export default function TelegramGroups() {
       setFormData({ chatId: '', name: '', type: 'job_posting' });
       fetchGroups();
     } catch (error) {
-      console.error('Failed to save group:', error);
+      // Failed to save group
     }
   };
 
@@ -127,7 +123,7 @@ export default function TelegramGroups() {
       await fetch(`/api/v1/telegram-groups/${id}`, { method: 'DELETE' });
       fetchGroups();
     } catch (error) {
-      console.error('Failed to delete group:', error);
+      // Failed to delete group
     }
   };
 
@@ -140,7 +136,7 @@ export default function TelegramGroups() {
       });
       fetchGroups();
     } catch (error) {
-      console.error('Failed to toggle group:', error);
+      // Failed to toggle group
     }
   };
 
@@ -233,58 +229,13 @@ export default function TelegramGroups() {
           ) : (
             <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
               {groups.map(group => (
-                <Card key={group.id} className="relative">
-                  <div className="flex items-start justify-between mb-3">
-                    <div className="flex items-center gap-3">
-                      <div className={clsx(
-                        'w-10 h-10 rounded-full flex items-center justify-center',
-                        group.active ? 'bg-sky-100 dark:bg-sky-900/30' : 'bg-slate-100 dark:bg-slate-800'
-                      )}>
-                        <TelegramIcon className={clsx(
-                          'h-5 w-5',
-                          group.active ? 'text-sky-500' : 'text-slate-400'
-                        )} />
-                      </div>
-                      <div>
-                        <h3 className="font-semibold text-slate-900 dark:text-white">
-                          {group.name}
-                        </h3>
-                        <p className="text-xs text-slate-400 font-mono">
-                          {group.chat_id}
-                        </p>
-                      </div>
-                    </div>
-                    <Badge variant={group.active ? 'success' : 'default'} size="xs">
-                      {group.active ? 'Active' : 'Inactive'}
-                    </Badge>
-                  </div>
-
-                  <div className="flex items-center gap-2 pt-3 border-t border-slate-100 dark:border-slate-800">
-                    <button
-                      onClick={() => toggleGroupActive(group)}
-                      className={clsx(
-                        'flex-1 flex items-center justify-center gap-1.5 px-3 py-1.5 rounded-lg text-sm transition-colors',
-                        group.active
-                          ? 'bg-slate-100 dark:bg-slate-800 text-slate-600 dark:text-slate-400 hover:bg-slate-200 dark:hover:bg-slate-700'
-                          : 'bg-emerald-50 dark:bg-emerald-900/20 text-emerald-600 dark:text-emerald-400 hover:bg-emerald-100 dark:hover:bg-emerald-900/30'
-                      )}
-                    >
-                      {group.active ? 'Disable' : 'Enable'}
-                    </button>
-                    <button
-                      onClick={() => handleEdit(group)}
-                      className="p-1.5 rounded-lg text-slate-400 hover:text-slate-600 hover:bg-slate-100 dark:hover:bg-slate-800 transition-colors"
-                    >
-                      <Edit3 className="h-4 w-4" />
-                    </button>
-                    <button
-                      onClick={() => handleDelete(group.id)}
-                      className="p-1.5 rounded-lg text-red-400 hover:text-red-600 hover:bg-red-50 dark:hover:bg-red-900/20 transition-colors"
-                    >
-                      <Trash2 className="h-4 w-4" />
-                    </button>
-                  </div>
-                </Card>
+                <TelegramGroupCard
+                  key={group.id}
+                  group={group}
+                  onEdit={handleEdit}
+                  onDelete={handleDelete}
+                  onToggleActive={toggleGroupActive}
+                />
               ))}
             </div>
           )}
@@ -407,80 +358,13 @@ export default function TelegramGroups() {
 
       {/* Add/Edit Form Modal */}
       {showForm && (
-        <div className="fixed inset-0 bg-slate-900/50 backdrop-blur-sm flex items-center justify-center z-50">
-          <div className="bg-white dark:bg-slate-900 rounded-2xl w-full max-w-md max-h-[90vh] overflow-hidden shadow-xl border border-slate-200 dark:border-slate-800">
-            <div className="p-4 border-b border-slate-200 dark:border-slate-800 flex items-center justify-between">
-              <h3 className="text-lg font-semibold text-slate-900 dark:text-white">
-                {editingGroup ? 'Edit Group' : 'Add Telegram Group'}
-              </h3>
-              <button
-                onClick={() => setShowForm(false)}
-                className="p-1 rounded-lg text-slate-400 hover:text-slate-600 hover:bg-slate-100 dark:hover:bg-slate-800 transition-colors"
-              >
-                <X className="h-5 w-5" />
-              </button>
-            </div>
-            <div className="p-4 space-y-4">
-              <div>
-                <label className="block text-sm font-medium text-slate-700 dark:text-slate-300 mb-1">
-                  Group Name
-                </label>
-                <input
-                  type="text"
-                  value={formData.name}
-                  onChange={(e) => setFormData(prev => ({ ...prev, name: e.target.value }))}
-                  placeholder="e.g., WorkLink Jobs Channel"
-                  className="w-full px-4 py-2 rounded-lg bg-slate-50 dark:bg-slate-800 border border-slate-200 dark:border-slate-700 text-slate-900 dark:text-white"
-                />
-              </div>
-              <div>
-                <label className="block text-sm font-medium text-slate-700 dark:text-slate-300 mb-1">
-                  Chat ID
-                </label>
-                <input
-                  type="text"
-                  value={formData.chatId}
-                  onChange={(e) => setFormData(prev => ({ ...prev, chatId: e.target.value }))}
-                  placeholder="e.g., -1001234567890"
-                  className="w-full px-4 py-2 rounded-lg bg-slate-50 dark:bg-slate-800 border border-slate-200 dark:border-slate-700 text-slate-900 dark:text-white font-mono"
-                />
-                <p className="text-xs text-slate-400 mt-1">
-                  You can get this by adding @userinfobot to your group
-                </p>
-              </div>
-              <div>
-                <label className="block text-sm font-medium text-slate-700 dark:text-slate-300 mb-1">
-                  Type
-                </label>
-                <select
-                  value={formData.type}
-                  onChange={(e) => setFormData(prev => ({ ...prev, type: e.target.value }))}
-                  className="w-full px-4 py-2 rounded-lg bg-slate-50 dark:bg-slate-800 border border-slate-200 dark:border-slate-700 text-slate-900 dark:text-white"
-                >
-                  <option value="job_posting">Job Posting</option>
-                  <option value="announcements">Announcements</option>
-                  <option value="other">Other</option>
-                </select>
-              </div>
-            </div>
-            <div className="p-4 border-t border-slate-200 dark:border-slate-800 flex items-center justify-end gap-2">
-              <button
-                onClick={() => setShowForm(false)}
-                className="px-4 py-2 rounded-lg text-slate-600 dark:text-slate-400 hover:bg-slate-100 dark:hover:bg-slate-800 transition-colors"
-              >
-                Cancel
-              </button>
-              <button
-                onClick={handleSubmit}
-                disabled={!formData.name || !formData.chatId}
-                className="flex items-center gap-2 px-4 py-2 rounded-lg bg-sky-500 text-white hover:bg-sky-600 transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
-              >
-                <Check className="h-4 w-4" />
-                {editingGroup ? 'Save Changes' : 'Add Group'}
-              </button>
-            </div>
-          </div>
-        </div>
+        <TelegramGroupForm
+          formData={formData}
+          setFormData={setFormData}
+          editingGroup={editingGroup}
+          onSubmit={handleSubmit}
+          onClose={() => setShowForm(false)}
+        />
       )}
     </div>
   );

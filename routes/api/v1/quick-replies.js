@@ -90,7 +90,7 @@ router.post('/:candidateId/track', async (req, res) => {
 
     res.json({ success: true, message: 'Usage tracked' });
   } catch (error) {
-    res.status(500).json({ success: false, error: error.message });
+    res.status(500).json({ success: false, error: 'Internal server error' });
   }
 });
 
@@ -111,7 +111,7 @@ router.post('/:candidateId/frequent', async (req, res) => {
 
     res.json({ success: true, message: 'Frequent reply added' });
   } catch (error) {
-    res.status(500).json({ success: false, error: error.message });
+    res.status(500).json({ success: false, error: 'Internal server error' });
   }
 });
 
@@ -139,7 +139,7 @@ router.post('/detect-context', (req, res) => {
       },
     });
   } catch (error) {
-    res.status(500).json({ success: false, error: error.message });
+    res.status(500).json({ success: false, error: 'Internal server error' });
   }
 });
 

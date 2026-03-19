@@ -4,6 +4,8 @@
  */
 
 const { db } = require('../db');
+const { createLogger } = require('../utils/structured-logger');
+const logger = createLogger('email-config');
 
 /**
  * Default email configuration
@@ -88,7 +90,7 @@ function getEmailConfig() {
       };
     }
   } catch (error) {
-    console.warn('Error loading email config from database, using defaults:', error.message);
+    logger.warn('Error loading email config from database, using defaults', { error: error.message });
   }
 
   return DEFAULT_CONFIG;

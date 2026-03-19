@@ -8,6 +8,8 @@
 const { db } = require('../../db');
 const fs = require('fs').promises;
 const path = require('path');
+const { createLogger } = require('../../utils/structured-logger');
+const slogger = createLogger('audit-logger');
 
 class AuditLogger {
   constructor() {
@@ -90,7 +92,7 @@ class AuditLogger {
       `);
 
     } catch (error) {
-      console.error('Failed to initialize audit tables:', error);
+      slogger.error('Failed to initialize audit tables', { error: error.message });
     }
   }
 
@@ -101,7 +103,7 @@ class AuditLogger {
     try {
       await fs.mkdir(this.logDirectory, { recursive: true });
     } catch (error) {
-      console.error('Failed to create audit log directory:', error);
+      slogger.error('Failed to create audit log directory', { error: error.message });
     }
   }
 
@@ -177,7 +179,7 @@ class AuditLogger {
       await this.checkSuspiciousActivity(userId, candidateId, requestType);
 
     } catch (error) {
-      console.error('Failed to log data access:', error);
+      slogger.error('Failed to log data access', { error: error.message });
       // Write to emergency log file
       await this.writeEmergencyLog('audit_error', { error: error.message });
     }
@@ -233,7 +235,7 @@ class AuditLogger {
       }
 
     } catch (error) {
-      console.error('Failed to log security event:', error);
+      slogger.error('Failed to log security event', { error: error.message });
       await this.writeEmergencyLog('security_error', { error: error.message });
     }
   }
@@ -359,7 +361,7 @@ class AuditLogger {
       };
 
     } catch (error) {
-      console.error('Failed to get access statistics:', error);
+      slogger.error('Failed to get access statistics', { error: error.message });
       throw error;
     }
   }
@@ -413,7 +415,7 @@ class AuditLogger {
       }
 
     } catch (error) {
-      console.error('Failed to update access statistics:', error);
+      slogger.error('Failed to update access statistics', { error: error.message });
     }
   }
 
@@ -479,7 +481,7 @@ class AuditLogger {
       }
 
     } catch (error) {
-      console.error('Failed to check suspicious activity:', error);
+      slogger.error('Failed to check suspicious activity', { error: error.message });
     }
   }
 
@@ -501,7 +503,7 @@ class AuditLogger {
       await fs.appendFile(logFile, logEntry);
 
     } catch (error) {
-      console.error('Failed to write file log:', error);
+      slogger.error('Failed to write file log', { error: error.message });
     }
   }
 
@@ -522,7 +524,7 @@ class AuditLogger {
       await fs.appendFile(emergencyFile, logEntry);
 
     } catch (error) {
-      console.error('Failed to write emergency log:', error);
+      slogger.error('Failed to write emergency log', { error: error.message });
     }
   }
 
@@ -535,7 +537,7 @@ class AuditLogger {
   async sendSecurityAlert(eventType, description, options) {
     try {
       // In a real implementation, this would send alerts via email, SMS, Slack, etc.
-      console.warn(`🚨 SECURITY ALERT: ${eventType}`, {
+      slogger.warn(`SECURITY ALERT: ${eventType}`, {
         description,
         timestamp: new Date().toISOString(),
         ...options
@@ -550,7 +552,7 @@ class AuditLogger {
       });
 
     } catch (error) {
-      console.error('Failed to send security alert:', error);
+      slogger.error('Failed to send security alert', { error: error.message });
     }
   }
 
@@ -642,7 +644,7 @@ class AuditLogger {
         WHERE timestamp < ? AND sensitive_data = 0
       `).run(cutoffDate.toISOString());
 
-      console.log(`Cleaned up ${deleted.changes} old audit log entries`);
+      slogger.info(`Cleaned up ${deleted.changes} old audit log entries`);
 
       // Clean up old log files
       const files = await fs.readdir(this.logDirectory);
@@ -657,11 +659,11 @@ class AuditLogger {
 
       for (const file of oldFiles) {
         await fs.unlink(path.join(this.logDirectory, file));
-        console.log(`Deleted old log file: ${file}`);
+        slogger.info(`Deleted old log file: ${file}`);
       }
 
     } catch (error) {
-      console.error('Failed to cleanup old logs:', error);
+      slogger.error('Failed to cleanup old logs', { error: error.message });
     }
   }
 }

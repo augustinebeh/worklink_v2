@@ -25,7 +25,7 @@ export function DataProvider({ children }) {
       setter(data.data || data);
     } catch (err) {
       setError(err.message);
-      console.error(`Error fetching ${key}:`, err);
+      // Error fetching data
     } finally {
       setLoading(prev => ({ ...prev, [key]: false }));
     }

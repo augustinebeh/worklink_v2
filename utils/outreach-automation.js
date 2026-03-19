@@ -11,6 +11,10 @@
  * - Campaign analytics and performance tracking
  */
 
+
+const { createLogger } = require('./structured-logger');
+const logger = createLogger('outreach-automation');
+
 const { db } = require('../db');
 const { generateOutreachMessage } = require('./claude');
 const { enhancedMatchCandidates } = require('./candidate-matching');
@@ -88,7 +92,7 @@ async function createOutreachCampaign(campaignData) {
       JSON.stringify(template || {})
     );
 
-    console.log(`📢 [Outreach] Created campaign: ${name} (${campaignId})`);
+    logger.info('[Outreach] Created campaign: ${name} (${campaignId})');
 
     if (autoStart) {
       await executeCampaign(campaignId);
@@ -96,7 +100,7 @@ async function createOutreachCampaign(campaignData) {
 
     return { campaignId, status: autoStart ? 'started' : 'created' };
   } catch (error) {
-    console.error('Failed to create outreach campaign:', error);
+    logger.error('Failed to create outreach campaign:', { error: error });
     throw error;
   }
 }
@@ -111,14 +115,14 @@ async function executeCampaign(campaignId) {
       throw new Error('Campaign not found');
     }
 
-    console.log(`📢 [Outreach] Executing campaign: ${campaign.name}`);
+    logger.info('[Outreach] Executing campaign: ${campaign.name}');
 
     // Mark campaign as active
     updateCampaignStatus(campaignId, 'active');
 
     // Find target candidates
     const targetCandidates = await findTargetCandidates(campaign);
-    console.log(`📢 [Outreach] Found ${targetCandidates.length} target candidates`);
+    logger.info('[Outreach] Found ${targetCandidates.length} target candidates');
 
     if (targetCandidates.length === 0) {
       updateCampaignStatus(campaignId, 'completed');
@@ -142,7 +146,7 @@ async function executeCampaign(campaignId) {
       campaignId
     );
 
-    console.log(`📢 [Outreach] Campaign completed: ${results.sent}/${targetCandidates.length} messages sent`);
+    logger.info('[Outreach] Campaign completed: ${results.sent}/${targetCandidates.length} messages sent');
 
     return {
       success: true,
@@ -152,7 +156,7 @@ async function executeCampaign(campaignId) {
       errors: results.errors,
     };
   } catch (error) {
-    console.error(`Failed to execute campaign ${campaignId}:`, error);
+    logger.error('Failed to execute campaign ${campaignId}:', { error: error });
     updateCampaignStatus(campaignId, 'failed', error.message);
     throw error;
   }
@@ -317,7 +321,7 @@ async function sendCampaignMessages(campaign, candidates) {
           logOutreachMessage(campaign, candidate, channel, message, 'sent');
           sent++;
         } catch (sendError) {
-          console.error(`Failed to send ${channel} message to ${candidate.name}:`, sendError);
+          logger.error('Failed to send ${channel} message to ${candidate.name}:', { error: sendError });
           logOutreachMessage(campaign, candidate, channel, message, 'failed', sendError.message);
           errors.push({ candidateId: candidate.id, channel, error: sendError.message });
         }
@@ -326,7 +330,7 @@ async function sendCampaignMessages(campaign, candidates) {
       // Small delay between messages to avoid rate limiting
       await new Promise(resolve => setTimeout(resolve, 100));
     } catch (messageError) {
-      console.error(`Failed to generate message for ${candidate.name}:`, messageError);
+      logger.error('Failed to generate message for ${candidate.name}:', { error: messageError });
       errors.push({ candidateId: candidate.id, error: messageError.message });
     }
   }
@@ -432,7 +436,7 @@ async function sendWhatsAppMessage(candidate, message, campaign) {
   }
 
   // TODO: Integrate with WhatsApp Business API
-  console.log(`📱 [WhatsApp] Sending to ${candidate.name} (${candidate.phone}): ${message.substring(0, 50)}...`);
+  logger.info('[WhatsApp] Sending to ${candidate.name} (${candidate.phone}): ${message.substring(0, 50)}...');
 
   // Simulate API call
   await new Promise(resolve => setTimeout(resolve, 100));
@@ -449,7 +453,7 @@ async function sendEmailMessage(candidate, message, campaign) {
   }
 
   // TODO: Use email service
-  console.log(`📧 [Email] Sending to ${candidate.name} (${candidate.email}): ${message.substring(0, 50)}...`);
+  logger.info('[Email] Sending to ${candidate.name} (${candidate.email}): ${message.substring(0, 50)}...');
 
   return { success: true, messageId: `email_${Date.now()}` };
 }
@@ -463,7 +467,7 @@ async function sendSMSMessage(candidate, message, campaign) {
   }
 
   // TODO: Integrate with SMS service
-  console.log(`📱 [SMS] Sending to ${candidate.name} (${candidate.phone}): ${message.substring(0, 50)}...`);
+  logger.info('[SMS] Sending to ${candidate.name} (${candidate.phone}): ${message.substring(0, 50)}...');
 
   return { success: true, messageId: `sms_${Date.now()}` };
 }

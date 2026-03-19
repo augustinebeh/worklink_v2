@@ -11,6 +11,7 @@ const logger = createLogger('websocket:interview-scheduling');
 
 // Store active interview conversations (one per candidate)
 const activeInterviewConversations = new Map();
+const MAX_ACTIVE_CONVERSATIONS = 1000;
 
 /**
  * Get or create interview conversation manager for candidate
@@ -19,6 +20,17 @@ const activeInterviewConversations = new Map();
  */
 function getOrCreateInterviewConversation(candidateId) {
   if (!activeInterviewConversations.has(candidateId)) {
+    // Enforce size limit to prevent memory leaks
+    if (activeInterviewConversations.size >= MAX_ACTIVE_CONVERSATIONS) {
+      // Evict the oldest conversation
+      const oldestKey = activeInterviewConversations.keys().next().value;
+      logger.warn('Interview conversations map at capacity, evicting oldest', {
+        evictedCandidateId: oldestKey,
+        mapSize: activeInterviewConversations.size
+      });
+      activeInterviewConversations.delete(oldestKey);
+    }
+
     logger.info('Creating new interview conversation', { candidateId });
     
     // Try to load the ConversationManager if available
@@ -155,7 +167,7 @@ async function handleInterviewSchedulingMessage(ws, message, candidateId, broadc
       content: `I encountered a small issue, but don't worry! 😊\n\nLet me connect you with our team directly for interview scheduling assistance.`,
       metadata: {
         responseType: 'error',
-        error: error.message
+        error: 'Internal server error'
       }
     }));
     
@@ -163,7 +175,7 @@ async function handleInterviewSchedulingMessage(ws, message, candidateId, broadc
     broadcastToAdmins({
       type: 'interview_scheduling_error',
       candidateId: candidateId,
-      error: error.message,
+      error: 'Internal server error',
       timestamp: new Date().toISOString()
     });
   }

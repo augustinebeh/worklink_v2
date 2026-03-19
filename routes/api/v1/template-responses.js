@@ -8,6 +8,10 @@
 const express = require('express');
 const router = express.Router();
 const FactBasedTemplateSystem = require('../../../services/template-responses');
+const { authenticateAdmin } = require('../../../middleware/auth');
+const { createLogger } = require('../../../utils/structured-logger');
+
+const logger = createLogger('api:template-responses');
 
 // Initialize template system
 const templateSystem = new FactBasedTemplateSystem();
@@ -16,7 +20,7 @@ const templateSystem = new FactBasedTemplateSystem();
  * Process a message using the fact-based template system
  * POST /api/v1/template-responses/process
  */
-router.post('/process', async (req, res) => {
+router.post('/process', authenticateAdmin, async (req, res) => {
   try {
     const { candidateId, message, channel = 'app', adminMode = 'auto' } = req.body;
 
@@ -38,10 +42,10 @@ router.post('/process', async (req, res) => {
     });
 
   } catch (error) {
-    console.error('❌ [Template API] Process error:', error);
+    logger.error('Template process error', { error: error.message });
     res.status(500).json({
       success: false,
-      error: error.message
+      error: 'Internal server error'
     });
   }
 });
@@ -50,7 +54,7 @@ router.post('/process', async (req, res) => {
  * Get escalation queue for admin dashboard
  * GET /api/v1/template-responses/escalations
  */
-router.get('/escalations', async (req, res) => {
+router.get('/escalations', authenticateAdmin, async (req, res) => {
   try {
     const {
       status = 'pending',
@@ -68,10 +72,10 @@ router.get('/escalations', async (req, res) => {
     });
 
   } catch (error) {
-    console.error('❌ [Template API] Escalation queue error:', error);
+    logger.error('Escalation queue error', { error: error.message });
     res.status(500).json({
       success: false,
-      error: error.message
+      error: 'Internal server error'
     });
   }
 });
@@ -80,7 +84,7 @@ router.get('/escalations', async (req, res) => {
  * Assign escalation to admin
  * POST /api/v1/template-responses/escalations/:id/assign
  */
-router.post('/escalations/:id/assign', async (req, res) => {
+router.post('/escalations/:id/assign', authenticateAdmin, async (req, res) => {
   try {
     const { id } = req.params;
     const { adminId } = req.body;
@@ -107,10 +111,10 @@ router.post('/escalations/:id/assign', async (req, res) => {
     }
 
   } catch (error) {
-    console.error('❌ [Template API] Assign escalation error:', error);
+    logger.error('Assign escalation error', { error: error.message });
     res.status(500).json({
       success: false,
-      error: error.message
+      error: 'Internal server error'
     });
   }
 });
@@ -119,7 +123,7 @@ router.post('/escalations/:id/assign', async (req, res) => {
  * Resolve escalation
  * POST /api/v1/template-responses/escalations/:id/resolve
  */
-router.post('/escalations/:id/resolve', async (req, res) => {
+router.post('/escalations/:id/resolve', authenticateAdmin, async (req, res) => {
   try {
     const { id } = req.params;
     const { adminId, resolutionNotes } = req.body;
@@ -146,10 +150,10 @@ router.post('/escalations/:id/resolve', async (req, res) => {
     }
 
   } catch (error) {
-    console.error('❌ [Template API] Resolve escalation error:', error);
+    logger.error('Resolve escalation error', { error: error.message });
     res.status(500).json({
       success: false,
-      error: error.message
+      error: 'Internal server error'
     });
   }
 });
@@ -170,10 +174,10 @@ router.get('/analytics', async (req, res) => {
     });
 
   } catch (error) {
-    console.error('❌ [Template API] Analytics error:', error);
+    logger.error('Template analytics error', { error: error.message });
     res.status(500).json({
       success: false,
-      error: error.message
+      error: 'Internal server error'
     });
   }
 });
@@ -182,7 +186,7 @@ router.get('/analytics', async (req, res) => {
  * Record admin feedback on template effectiveness
  * POST /api/v1/template-responses/feedback
  */
-router.post('/feedback', async (req, res) => {
+router.post('/feedback', authenticateAdmin, async (req, res) => {
   try {
     const { usageLogId, feedback, effectivenessScore } = req.body;
 
@@ -201,10 +205,10 @@ router.post('/feedback', async (req, res) => {
     });
 
   } catch (error) {
-    console.error('❌ [Template API] Feedback error:', error);
+    logger.error('Template feedback error', { error: error.message });
     res.status(500).json({
       success: false,
-      error: error.message
+      error: 'Internal server error'
     });
   }
 });
@@ -247,10 +251,10 @@ router.post('/test', async (req, res) => {
     });
 
   } catch (error) {
-    console.error('❌ [Template API] Test error:', error);
+    logger.error('Template test error', { error: error.message });
     res.status(500).json({
       success: false,
-      error: error.message
+      error: 'Internal server error'
     });
   }
 });
@@ -286,7 +290,7 @@ router.get('/status', (req, res) => {
   } catch (error) {
     res.status(500).json({
       success: false,
-      error: error.message
+      error: 'Internal server error'
     });
   }
 });
@@ -318,10 +322,10 @@ router.post('/ab-test', async (req, res) => {
     });
 
   } catch (error) {
-    console.error('❌ [Template API] A/B test error:', error);
+    logger.error('Template A/B test error', { error: error.message });
     res.status(500).json({
       success: false,
-      error: error.message
+      error: 'Internal server error'
     });
   }
 });

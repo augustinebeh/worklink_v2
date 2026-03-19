@@ -7,12 +7,12 @@
 const { generateToken, generateAdminToken, authenticateToken } = require('../../../../../middleware/auth');
 
 /**
- * Generate a demo token for development purposes
- * @param {object} user - User object
- * @returns {string} Demo token
+ * Generate token for user (delegates to JWT-based generateToken)
+ * Kept for backward compatibility - callers that used generateDemoToken
+ * now get real JWT tokens instead of predictable demo tokens.
  */
 function generateDemoToken(user) {
-  return `demo-token-${user.id}`;
+  return generateToken(user);
 }
 
 module.exports = {

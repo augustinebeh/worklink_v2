@@ -182,7 +182,7 @@ router.get('/stats', (req, res) => {
       data: stats
     });
   } catch (error) {
-    res.status(500).json({ success: false, error: error.message });
+    res.status(500).json({ success: false, error: 'Internal server error' });
   }
 });
 
@@ -214,7 +214,7 @@ router.get('/ai-status', async (req, res) => {
         aiAvailable: false,
         service: 'Claude AI',
         status: 'unavailable',
-        error: error.message,
+        error: 'Internal server error',
         timestamp: new Date().toISOString()
       }
     });

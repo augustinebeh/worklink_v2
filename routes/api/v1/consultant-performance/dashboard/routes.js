@@ -13,6 +13,7 @@ const { CandidatePrequalificationEngine } = require('../../../../../utils/candid
 const { CandidateRetentionEngine } = require('../../../../../utils/candidate-retention-engine');
 const { ReliabilityScoringSystem } = require('../../../../../utils/reliability-scoring-system');
 const { calculatePerformanceMultiplier } = require('../utils/helpers');
+const { authenticateAdmin } = require('../../../../../middleware/auth');
 
 const capacityManager = new CapacityManagementSystem();
 const prequalificationEngine = new CandidatePrequalificationEngine();
@@ -23,7 +24,7 @@ const reliabilitySystem = new ReliabilityScoringSystem();
  * GET /dashboard
  * Get comprehensive performance dashboard
  */
-router.get('/', async (req, res) => {
+router.get('/', authenticateAdmin, async (req, res) => {
   try {
     const [
       capacityStatus,
@@ -55,7 +56,7 @@ router.get('/', async (req, res) => {
       }
     });
   } catch (error) {
-    res.status(500).json({ success: false, error: error.message });
+    res.status(500).json({ success: false, error: 'Internal server error' });
   }
 });
 
@@ -63,7 +64,7 @@ router.get('/', async (req, res) => {
  * GET /dashboard/metrics
  * Get key performance metrics
  */
-router.get('/metrics', async (req, res) => {
+router.get('/metrics', authenticateAdmin, async (req, res) => {
   try {
     const { days = 7 } = req.query;
     const since = new Date(Date.now() - days * 24 * 60 * 60 * 1000).toISOString();
@@ -116,7 +117,7 @@ router.get('/metrics', async (req, res) => {
       }
     });
   } catch (error) {
-    res.status(500).json({ success: false, error: error.message });
+    res.status(500).json({ success: false, error: 'Internal server error' });
   }
 });
 
@@ -124,7 +125,7 @@ router.get('/metrics', async (req, res) => {
  * POST /dashboard/run-all-systems
  * Run all automated systems (capacity check, campaigns, scoring)
  */
-router.post('/run-all-systems', async (req, res) => {
+router.post('/run-all-systems', authenticateAdmin, async (req, res) => {
   try {
     const results = await Promise.all([
       capacityManager.logCapacityMetrics(),
@@ -142,7 +143,7 @@ router.post('/run-all-systems', async (req, res) => {
       }
     });
   } catch (error) {
-    res.status(500).json({ success: false, error: error.message });
+    res.status(500).json({ success: false, error: 'Internal server error' });
   }
 });
 

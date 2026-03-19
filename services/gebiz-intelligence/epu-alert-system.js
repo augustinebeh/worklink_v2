@@ -15,6 +15,8 @@ const EPUSer19Monitor = require('./epu-ser-19-monitor');
 const EPUSer19Scraper = require('./epu-ser-19-scraper');
 const nodemailer = require('nodemailer');
 const axios = require('axios');
+const { createLogger } = require('../../utils/structured-logger');
+const logger = createLogger('epu-alert-system');
 
 class EPUAlertSystem {
   constructor(options = {}) {
@@ -85,7 +87,7 @@ class EPUAlertSystem {
       });
     }
 
-    console.log('📧 Notification services initialized');
+    logger.info('Notification services initialized');
   }
 
   /**
@@ -93,12 +95,12 @@ class EPUAlertSystem {
    */
   start() {
     if (this.isRunning) {
-      console.log('⚠️  EPU Alert System is already running');
+      logger.warn('EPU Alert System is already running');
       return;
     }
 
     this.isRunning = true;
-    console.log(`🚀 Starting EPU/SER/19 real-time monitoring (${this.config.scanInterval} min intervals)`);
+    logger.info(`Starting EPU/SER/19 real-time monitoring (${this.config.scanInterval} min intervals)`);
 
     // Immediate scan
     this.performScan();
@@ -111,7 +113,7 @@ class EPUAlertSystem {
     // Daily market reports
     this.scheduleMarketReports();
 
-    console.log('✅ EPU Alert System started successfully');
+    logger.info('EPU Alert System started successfully');
   }
 
   /**
@@ -129,7 +131,7 @@ class EPUAlertSystem {
       this.scanInterval = null;
     }
 
-    console.log('🛑 EPU Alert System stopped');
+    logger.info('EPU Alert System stopped');
   }
 
   /**
@@ -139,7 +141,7 @@ class EPUAlertSystem {
     const scanStartTime = Date.now();
 
     try {
-      console.log('🔍 Starting EPU/SER/19 scan...');
+      logger.info('Starting EPU/SER/19 scan...');
 
       this.stats.totalScans++;
       this.stats.lastScanTime = new Date().toISOString();
@@ -147,7 +149,7 @@ class EPUAlertSystem {
       // Run specialized scraper
       const tenders = await this.scraper.scrapeEPUTenders();
 
-      console.log(`📊 Found ${tenders.length} potential EPU tenders`);
+      logger.info(`Found ${tenders.length} potential EPU tenders`);
 
       // Process each tender for alerts
       const newAlerts = [];
@@ -166,7 +168,7 @@ class EPUAlertSystem {
       this.stats.averageResponseTime = (this.stats.averageResponseTime + scanDuration) / 2;
       this.stats.opportunitiesDetected += tenders.length;
 
-      console.log(`✅ Scan completed in ${scanDuration}ms - ${newAlerts.length} alerts generated`);
+      logger.info(`Scan completed in ${scanDuration}ms - ${newAlerts.length} alerts generated`);
 
       // Broadcast scan results via WebSocket
       this.broadcastScanResults({
@@ -178,7 +180,7 @@ class EPUAlertSystem {
       });
 
     } catch (error) {
-      console.error('❌ EPU scan failed:', error.message);
+      logger.error('EPU scan failed', { error: error.message });
 
       // Send error alert to admins
       await this.sendAlert({
@@ -248,7 +250,7 @@ class EPUAlertSystem {
       return alerts;
 
     } catch (error) {
-      console.error('Error processing tender for alerts:', error.message);
+      logger.error('Error processing tender for alerts', { error: error.message });
       return [];
     }
   }
@@ -441,7 +443,7 @@ class EPUAlertSystem {
         await this.sendSMSAlert(alert);
       }
 
-      console.log(`📨 Alert sent: ${alert.title} (${alert.priority})`);
+      logger.info(`Alert sent: ${alert.title} (${alert.priority})`);
 
       // Update alert history
       const tenderKey = alert.tender?.tender_no || alert.tender?.title || alert.title;
@@ -450,7 +452,7 @@ class EPUAlertSystem {
       }
 
     } catch (error) {
-      console.error('Failed to send alert:', error.message);
+      logger.error('Failed to send alert', { error: error.message });
     }
   }
 
@@ -512,10 +514,10 @@ class EPUAlertSystem {
       };
 
       await this.emailTransporter.sendMail(mailOptions);
-      console.log(`📧 Email alert sent to ${recipients.length} recipients`);
+      logger.info(`Email alert sent to ${recipients.length} recipients`);
 
     } catch (error) {
-      console.error('Failed to send email alert:', error.message);
+      logger.error('Failed to send email alert', { error: error.message });
     }
   }
 
@@ -537,10 +539,10 @@ class EPUAlertSystem {
         timeout: 5000
       });
 
-      console.log('🔗 Webhook alert sent');
+      logger.info('Webhook alert sent');
 
     } catch (error) {
-      console.error('Failed to send webhook alert:', error.message);
+      logger.error('Failed to send webhook alert', { error: error.message });
     }
   }
 
@@ -563,10 +565,10 @@ class EPUAlertSystem {
         data: alert
       });
 
-      console.log('🌐 WebSocket alert broadcasted');
+      logger.info('WebSocket alert broadcasted');
 
     } catch (error) {
-      console.error('Failed to broadcast WebSocket alert:', error.message);
+      logger.error('Failed to broadcast WebSocket alert', { error: error.message });
     }
   }
 
@@ -589,7 +591,7 @@ class EPUAlertSystem {
       });
 
     } catch (error) {
-      console.error('Failed to broadcast scan results:', error.message);
+      logger.error('Failed to broadcast scan results', { error: error.message });
     }
   }
 
@@ -597,7 +599,7 @@ class EPUAlertSystem {
    * Send SMS alert (placeholder - implement with SMS service)
    */
   async sendSMSAlert(alert) {
-    console.log('📱 SMS alert would be sent:', alert.title);
+    logger.info(`SMS alert would be sent: ${alert.title}`);
     // Implement SMS service integration here
   }
 
@@ -624,7 +626,7 @@ class EPUAlertSystem {
       }, 24 * 60 * 60 * 1000);
     }, msToSchedule);
 
-    console.log(`📅 Daily market reports scheduled for ${scheduleTime.toLocaleString()}`);
+    logger.info(`Daily market reports scheduled for ${scheduleTime.toLocaleString()}`);
   }
 
   /**
@@ -646,7 +648,7 @@ class EPUAlertSystem {
       await this.sendAlert(marketAlert);
 
     } catch (error) {
-      console.error('Failed to send market report:', error.message);
+      logger.error('Failed to send market report', { error: error.message });
     }
   }
 

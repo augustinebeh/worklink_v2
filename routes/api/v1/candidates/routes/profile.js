@@ -8,6 +8,8 @@ const express = require('express');
 const { db } = require('../../../../../db');
 const { authenticateAdmin, authenticateCandidateOwnership, authenticateAdminOrOwner } = require('../../../../../middleware/auth');
 const { parseJSONFields, prepareCandidateForDB } = require('../helpers/avatar-utils');
+const { createLogger } = require('../../../../../utils/structured-logger');
+const logger = createLogger('candidate-profile');
 
 const router = express.Router();
 
@@ -72,7 +74,7 @@ router.get('/:id', authenticateAdminOrOwner, (req, res) => {
           }
         };
       } catch (statsError) {
-        console.warn('Error loading candidate stats:', statsError);
+        logger.warn('Error loading candidate stats', { error: statsError.message });
         // Continue without stats if there's an error
       }
     }
@@ -84,12 +86,57 @@ router.get('/:id', authenticateAdminOrOwner, (req, res) => {
     });
 
   } catch (error) {
-    console.error('Error fetching candidate:', error);
+    logger.error('Error fetching candidate', { error: error.message });
     res.status(500).json({
       success: false,
       error: 'Failed to retrieve candidate',
-      details: error.message
+      details: 'Internal server error'
     });
+  }
+});
+
+/**
+ * GET /:id/deployments
+ * Get deployments for a candidate (worker portal compatibility)
+ */
+router.get('/:id/deployments', authenticateAdminOrOwner, (req, res) => {
+  try {
+    const { id } = req.params;
+    const { status, limit = 50, offset = 0 } = req.query;
+
+    const candidate = db.prepare('SELECT id FROM candidates WHERE id = ?').get(id);
+    if (!candidate) {
+      return res.status(404).json({ success: false, error: 'Candidate not found' });
+    }
+
+    let query = `
+      SELECT d.*, j.title as job_title, j.location, j.job_date, j.start_time, j.end_time,
+             j.pay_rate, j.status as job_status, c.company_name as client_name
+      FROM deployments d
+      JOIN jobs j ON d.job_id = j.id
+      LEFT JOIN clients c ON j.client_id = c.id
+      WHERE d.candidate_id = ?
+    `;
+    const params = [id];
+
+    if (status && status !== 'all') {
+      query += ' AND d.status = ?';
+      params.push(status);
+    }
+
+    query += ' ORDER BY d.created_at DESC LIMIT ? OFFSET ?';
+    params.push(parseInt(limit), parseInt(offset));
+
+    const deployments = db.prepare(query).all(...params);
+
+    res.json({
+      success: true,
+      data: deployments,
+      candidateId: id
+    });
+  } catch (error) {
+    logger.error('Error fetching candidate deployments', { error: error.message });
+    res.status(500).json({ success: false, error: 'Failed to retrieve deployments', details: 'Internal server error' });
   }
 });
 
@@ -153,11 +200,11 @@ router.put('/:id', authenticateAdminOrOwner, (req, res) => {
     });
 
   } catch (error) {
-    console.error('Error updating candidate:', error);
+    logger.error('Error updating candidate', { error: error.message });
     res.status(500).json({
       success: false,
       error: 'Failed to update candidate',
-      details: error.message
+      details: 'Internal server error'
     });
   }
 });
@@ -207,11 +254,11 @@ router.delete('/:id', authenticateAdmin, (req, res) => {
     });
 
   } catch (error) {
-    console.error('Error deleting candidate:', error);
+    logger.error('Error deleting candidate', { error: error.message });
     res.status(500).json({
       success: false,
       error: 'Failed to delete candidate',
-      details: error.message
+      details: 'Internal server error'
     });
   }
 });
@@ -265,11 +312,11 @@ router.get('/:id/jobs', authenticateAdminOrOwner, (req, res) => {
     });
 
   } catch (error) {
-    console.error('Error fetching candidate jobs:', error);
+    logger.error('Error fetching candidate jobs', { error: error.message });
     res.status(500).json({
       success: false,
       error: 'Failed to retrieve candidate jobs',
-      details: error.message
+      details: 'Internal server error'
     });
   }
 });
@@ -321,7 +368,7 @@ const statusUpdateHandler = (req, res) => {
           VALUES (?, ?, ?, ?)
         `).run(id, `Status changed to ${status}: ${reason}`, req.user?.id || 'system', new Date().toISOString());
       } catch (noteError) {
-        console.warn('Failed to log status change:', noteError);
+        logger.warn('Failed to log status change', { error: noteError.message });
         // Continue without logging
       }
     }
@@ -334,11 +381,11 @@ const statusUpdateHandler = (req, res) => {
     });
 
   } catch (error) {
-    console.error('Error updating candidate status:', error);
+    logger.error('Error updating candidate status', { error: error.message });
     res.status(500).json({
       success: false,
       error: 'Failed to update candidate status',
-      details: error.message
+      details: 'Internal server error'
     });
   }
 };
@@ -346,5 +393,54 @@ const statusUpdateHandler = (req, res) => {
 // Support both POST and PATCH for status updates
 router.post('/:id/status', authenticateAdmin, statusUpdateHandler);
 router.patch('/:id/status', authenticateAdmin, statusUpdateHandler);
+
+/**
+ * PATCH /:id
+ * Partial update candidate (worker portal compatibility - delegates to PUT logic)
+ */
+router.patch('/:id', authenticateAdminOrOwner, (req, res) => {
+  try {
+    const { id } = req.params;
+    const updateData = req.body;
+
+    const existingCandidate = db.prepare('SELECT * FROM candidates WHERE id = ?').get(id);
+    if (!existingCandidate) {
+      return res.status(404).json({ success: false, error: 'Candidate not found' });
+    }
+
+    const preparedData = prepareCandidateForDB({
+      ...updateData,
+      updated_at: new Date().toISOString()
+    }, false);
+
+    delete preparedData.id;
+    delete preparedData.avatar_url;
+    delete preparedData.created_at;
+    if (!updateData.profile_photo && !updateData.avatar_url) {
+      delete preparedData.profile_photo;
+    }
+
+    const fields = Object.keys(preparedData);
+    if (fields.length === 0) {
+      return res.status(400).json({ success: false, error: 'No fields to update' });
+    }
+
+    const setClause = fields.map(field => `${field} = ?`).join(', ');
+    const values = fields.map(field => preparedData[field]);
+
+    db.prepare(`UPDATE candidates SET ${setClause} WHERE id = ?`).run(...values, id);
+
+    const updatedCandidate = db.prepare('SELECT * FROM candidates WHERE id = ?').get(id);
+
+    res.json({
+      success: true,
+      data: parseJSONFields(updatedCandidate),
+      message: 'Candidate updated successfully'
+    });
+  } catch (error) {
+    logger.error('Error patching candidate', { error: error.message });
+    res.status(500).json({ success: false, error: 'Failed to update candidate', details: 'Internal server error' });
+  }
+});
 
 module.exports = router;

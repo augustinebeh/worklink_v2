@@ -47,7 +47,7 @@ router.get('/status', authenticateAdmin, async (req, res) => {
     res.status(500).json({
       success: false,
       error: 'Failed to retrieve system status',
-      details: error.message
+      details: 'Internal server error'
     });
   }
 });
@@ -95,7 +95,7 @@ router.post('/migration/start', authenticateAdmin, async (req, res) => {
     res.status(500).json({
       success: false,
       error: 'Failed to start migration',
-      details: error.message
+      details: 'Internal server error'
     });
   }
 });
@@ -123,7 +123,7 @@ router.post('/migration/rollback', authenticateAdmin, async (req, res) => {
     res.status(500).json({
       success: false,
       error: 'Failed to rollback migration',
-      details: error.message
+      details: 'Internal server error'
     });
   }
 });
@@ -160,7 +160,7 @@ router.get('/analytics/performance', authenticateAdmin, async (req, res) => {
     res.status(500).json({
       success: false,
       error: 'Failed to retrieve performance analytics',
-      details: error.message
+      details: 'Internal server error'
     });
   }
 });
@@ -190,7 +190,7 @@ router.get('/analytics/ab-testing', authenticateAdmin, async (req, res) => {
     res.status(500).json({
       success: false,
       error: 'Failed to retrieve A/B testing results',
-      details: error.message
+      details: 'Internal server error'
     });
   }
 });
@@ -220,7 +220,7 @@ router.post('/analytics/ab-testing', authenticateAdmin, async (req, res) => {
     res.status(500).json({
       success: false,
       error: 'Failed to start A/B test',
-      details: error.message
+      details: 'Internal server error'
     });
   }
 });
@@ -255,7 +255,7 @@ router.get('/analytics/escalations', authenticateAdmin, async (req, res) => {
     res.status(500).json({
       success: false,
       error: 'Failed to retrieve escalation analytics',
-      details: error.message
+      details: 'Internal server error'
     });
   }
 });
@@ -308,7 +308,7 @@ router.get('/config', authenticateAdmin, (req, res) => {
     res.status(500).json({
       success: false,
       error: 'Failed to retrieve system configuration',
-      details: error.message
+      details: 'Internal server error'
     });
   }
 });
@@ -338,7 +338,7 @@ router.put('/config', authenticateAdmin, (req, res) => {
     res.status(500).json({
       success: false,
       error: 'Failed to update system configuration',
-      details: error.message
+      details: 'Internal server error'
     });
   }
 });
@@ -375,7 +375,7 @@ router.get('/health', (req, res) => {
     res.status(500).json({
       success: false,
       error: 'Health check failed',
-      details: error.message
+      details: 'Internal server error'
     });
   }
 });

@@ -12,6 +12,8 @@ const { db } = require('../../db');
 const { broadcastToCandidate, broadcastToAdmins, createNotification, EventTypes, isCandidateOnline } = require('../../websocket');
 const telegram = require('./telegram');
 const webpush = require('web-push');
+const { createLogger } = require('../../utils/structured-logger');
+const logger = createLogger('messaging');
 
 // Channel types
 const Channels = {
@@ -78,7 +80,7 @@ async function sendToCandidate(candidateId, content, options = {}) {
     targetChannel = replyToChannel || getLastCandidateMessageChannel(candidateId);
   }
 
-  console.log(`📤 [Messaging] Sending to ${candidateId} via ${targetChannel} (requested: ${channel})`);
+  logger.info(`Sending to ${candidateId} via ${targetChannel} (requested: ${channel})`);
 
   let externalId = null;
   let deliveryMethod = [];
@@ -116,9 +118,9 @@ async function sendToCandidate(candidateId, content, options = {}) {
       deliveryMethod.push('telegram');
       sentToTelegram = true;
       db.prepare(`UPDATE messages SET external_id = ? WHERE id = ?`).run(externalId, messageId);
-      console.log(`✅ [Telegram] Message sent to ${candidateId}${telegramButtons ? ' with buttons' : ''}`);
+      logger.info(`Telegram message sent to ${candidateId}${telegramButtons ? ' with buttons' : ''}`);
     } else {
-      console.error(`❌ [Telegram] Failed to send to ${candidateId}:`, telegramResult.error);
+      logger.error(`Telegram failed to send to ${candidateId}`, { error: telegramResult.error });
     }
   }
 
@@ -139,7 +141,7 @@ async function sendToCandidate(candidateId, content, options = {}) {
     });
     deliveryMethod.push('websocket');
     sentToApp = true;
-    console.log(`✅ [WebSocket] Message broadcast to ${candidateId}`);
+    logger.info(`WebSocket message broadcast to ${candidateId}`);
 
     // Create in-app notification
     createNotification(candidateId, 'chat', 'New message from WorkLink', content);
@@ -150,7 +152,7 @@ async function sendToCandidate(candidateId, content, options = {}) {
       const pushSent = await sendPushNotification(candidate, 'New Message', content);
       if (pushSent) {
         deliveryMethod.push('push');
-        console.log(`✅ [Push] Notification sent to ${candidateId}`);
+        logger.info(`Push notification sent to ${candidateId}`);
       }
     }
   }
@@ -193,7 +195,7 @@ async function sendPushNotification(candidate, title, body) {
     }));
     return true;
   } catch (error) {
-    console.error('Push notification failed:', error.message);
+    logger.error('Push notification failed', { error: error.message });
     if (error.statusCode === 410 || error.statusCode === 404) {
       db.prepare('UPDATE candidates SET push_token = NULL WHERE id = ?').run(candidate.id);
     }
@@ -271,25 +273,25 @@ async function handleIncomingMessage(channel, data) {
   });
 
   // Trigger AI processing with the channel info
-  console.log(`📨 [${channel}] Candidate ${candidateId} sent: "${content.substring(0, 50)}..."`);
+  logger.info(`[${channel}] Candidate ${candidateId} sent message`, { preview: content.substring(0, 50) });
   try {
     const aiChat = require('../ai-chat');
-    console.log(`🤖 [${channel}] Triggering AI processing (will reply on ${channel})...`);
+    logger.info(`[${channel}] Triggering AI processing (will reply on ${channel})`);
     
     // Pass channel to AI so it knows where to reply
     aiChat.processIncomingMessage(candidateId, content, channel)
       .then(result => {
         if (result) {
-          console.log(`🤖 [${channel}] AI result: mode=${result.mode}`);
+          logger.info(`[${channel}] AI result: mode=${result.mode}`);
         } else {
-          console.log(`🤖 [${channel}] AI mode is off for ${candidateId}`);
+          logger.info(`[${channel}] AI mode is off for ${candidateId}`);
         }
       })
       .catch(err => {
-        console.error('AI processing error:', err.message);
+        logger.error('AI processing error', { error: err.message });
       });
   } catch (error) {
-    console.error('Failed to load AI chat service:', error.message);
+    logger.error('Failed to load AI chat service', { error: error.message });
   }
 
   return { success: true, message, candidateId, channel };

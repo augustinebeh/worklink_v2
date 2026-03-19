@@ -22,6 +22,10 @@ const logger = createLogger('websocket:admin-handler');
 function handleAdminConnection(ws, options = {}) {
   const { ip = 'unknown', connectionId } = options;
 
+  // Mark connection as alive for ping/pong heartbeat
+  ws.isAlive = true;
+  ws.on('pong', () => { ws.isAlive = true; });
+
   // Add admin client to store
   clientStore.addAdminClient(ws);
   

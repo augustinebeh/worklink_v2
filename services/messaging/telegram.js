@@ -3,6 +3,9 @@
  * Handles sending and receiving messages via Telegram Bot API
  */
 
+const { createLogger } = require('../../utils/structured-logger');
+const logger = createLogger('telegram-messaging');
+
 const TELEGRAM_BOT_TOKEN = process.env.TELEGRAM_BOT_TOKEN;
 const TELEGRAM_API_URL = `https://api.telegram.org/bot${TELEGRAM_BOT_TOKEN}`;
 
@@ -14,7 +17,7 @@ const TELEGRAM_API_URL = `https://api.telegram.org/bot${TELEGRAM_BOT_TOKEN}`;
  */
 async function sendMessage(chatId, text, options = {}) {
   if (!TELEGRAM_BOT_TOKEN) {
-    console.error('TELEGRAM_BOT_TOKEN not configured');
+    logger.error('TELEGRAM_BOT_TOKEN not configured');
     return { success: false, error: 'Telegram not configured' };
   }
 
@@ -33,7 +36,7 @@ async function sendMessage(chatId, text, options = {}) {
     const result = await response.json();
 
     if (!result.ok) {
-      console.error('Telegram API error:', result);
+      logger.error('Telegram API error', { description: result.description });
       return { success: false, error: result.description };
     }
 
@@ -43,7 +46,7 @@ async function sendMessage(chatId, text, options = {}) {
       data: result.result
     };
   } catch (error) {
-    console.error('Telegram send error:', error);
+    logger.error('Telegram send error', { error: error.message });
     return { success: false, error: error.message };
   }
 }
@@ -136,7 +139,7 @@ async function setWebhook(webhookUrl) {
     });
 
     const result = await response.json();
-    console.log('Telegram webhook set:', result);
+    logger.info('Telegram webhook set', { ok: result.ok });
     return result.ok
       ? { success: true }
       : { success: false, error: result.description };

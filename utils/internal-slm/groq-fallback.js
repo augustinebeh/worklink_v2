@@ -4,6 +4,10 @@
  * Uses Groq API as the external LLM when internal SLM can't handle requests
  */
 
+
+const { createLogger } = require('../structured-logger');
+const logger = createLogger('groq-fallback');
+
 const axios = require('axios');
 
 class GroqService {
@@ -56,7 +60,7 @@ class GroqService {
       return formattedResponse;
 
     } catch (error) {
-      console.error('Groq fallback error:', error);
+      logger.error('Groq fallback error:', { error: error });
       return this.generateGroqErrorResponse(candidateData);
     }
   }
@@ -238,7 +242,7 @@ ESCALATION: For specific account, payment, or job questions, connect with admin 
 
     } catch (error) {
       if (attempt <= this.config.retries) {
-        console.log(`Groq API attempt ${attempt} failed, retrying...`);
+        logger.info('Groq API attempt ${attempt} failed, retrying...');
         await this.delay(1000 * attempt); // Progressive delay
         return this.callGroqAPI(messages, attempt + 1);
       }

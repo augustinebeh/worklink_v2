@@ -34,13 +34,7 @@ class ErrorBoundary extends React.Component {
       errorInfo
     });
 
-    // Log to console in development
-    if (import.meta.env.DEV) {
-      console.group('🔥 Error Boundary Caught Error');
-      console.error('Error:', error);
-      console.error('Error Info:', errorInfo);
-      console.groupEnd();
-    }
+    // Error boundary caught an error - logged to service below
 
     // In production, you might want to log to an error reporting service
     this.logErrorToService(error, errorInfo);
@@ -60,9 +54,8 @@ class ErrorBoundary extends React.Component {
         buildVersion: import.meta.env.VITE_BUILD_VERSION || 'unknown'
       };
 
-      // In development, just log to console
+      // In development, skip sending to service
       if (import.meta.env.DEV) {
-        console.log('📊 Error Report:', errorReport);
         return;
       }
 
@@ -77,11 +70,11 @@ class ErrorBoundary extends React.Component {
         },
         body: JSON.stringify(errorReport)
       }).catch(err => {
-        console.warn('Failed to report error:', err);
+        // Failed to report error
       });
       */
     } catch (reportError) {
-      console.warn('Failed to create error report:', reportError);
+      // Failed to create error report
     }
   };
 
@@ -279,7 +272,7 @@ export class AsyncErrorBoundary extends React.Component {
   }
 
   componentDidCatch(error, errorInfo) {
-    console.error('Async Error Boundary caught error:', error, errorInfo);
+    // Async Error Boundary caught error
   }
 
   componentDidMount() {
@@ -292,7 +285,7 @@ export class AsyncErrorBoundary extends React.Component {
   }
 
   handleUnhandledRejection = (event) => {
-    console.error('Unhandled promise rejection:', event.reason);
+    // Unhandled promise rejection caught by error boundary
     this.setState({ hasError: true });
 
     // Prevent the default browser behavior

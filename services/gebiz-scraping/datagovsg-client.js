@@ -7,6 +7,8 @@
  */
 
 const axios = require('axios');
+const { createLogger } = require('../../utils/structured-logger');
+const logger = createLogger('datagovsg-client');
 
 class DataGovSGClient {
   constructor() {
@@ -53,7 +55,7 @@ class DataGovSGClient {
           ...filters
         };
 
-        console.log(`🔍 Fetching procurement data: offset=${offset}, limit=${limit}${attempt > 1 ? ` (retry ${attempt})` : ''}`);
+        logger.info('Fetching procurement data', { offset, limit, attempt });
 
         const headers = {};
         if (this.apiKey) {
@@ -85,11 +87,11 @@ class DataGovSGClient {
         // Retry on 429 (rate limit) or 5xx (server error) with exponential backoff
         if ((status === 429 || (status >= 500 && status < 600)) && attempt < this.maxRetries) {
           const backoff = Math.pow(2, attempt) * 5000; // 10s, 20s, 40s
-          console.warn(`⚠️ Data.gov.sg ${status} error, retrying in ${backoff / 1000}s... (attempt ${attempt}/${this.maxRetries})`);
+          logger.warn('Data.gov.sg error, retrying', { status, backoff_seconds: backoff / 1000, attempt, max_retries: this.maxRetries });
           await new Promise(resolve => setTimeout(resolve, backoff));
           continue;
         }
-        console.error('❌ Data.gov.sg API error:', error.message);
+        logger.error('Data.gov.sg API error', { error: error.message });
         return {
           success: false,
           error: error.message
@@ -102,7 +104,7 @@ class DataGovSGClient {
    * Search by keywords
    */
   async searchByKeywords(keywords, maxResults = 10000) {
-    console.log(`🔍 Searching for keywords: ${keywords.join(', ')}`);
+    logger.info('Searching for keywords', { keywords });
 
     const query = keywords.join(' OR ');
     
@@ -124,7 +126,7 @@ class DataGovSGClient {
       allRecords = allRecords.concat(result.records);
       offset += limit;
       
-      console.log(`  ✅ Fetched ${allRecords.length}/${Math.min(result.total, maxResults)} records`);
+      logger.info('Fetched records', { fetched: allRecords.length, total: Math.min(result.total, maxResults) });
       
       if (allRecords.length >= result.total || allRecords.length >= maxResults) {
         break;
@@ -166,7 +168,7 @@ class DataGovSGClient {
       return { success: false };
 
     } catch (error) {
-      console.error('❌ Error fetching metadata:', error.message);
+      logger.error('Error fetching metadata', { error: error.message });
       return { success: false, error: error.message };
     }
   }

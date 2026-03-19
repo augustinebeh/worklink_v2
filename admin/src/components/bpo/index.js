@@ -13,5 +13,11 @@ export { default as RenewalDetailModal } from './RenewalDetailModal';
 // Kanban Board Components
 export { default as KanbanBoard } from './KanbanBoard';
 export { default as KanbanColumn } from './KanbanColumn';
+export { default as KanbanHeader, KanbanFooter, STAGES, BD_MANAGERS } from './KanbanHeader';
 export { default as TenderCard } from './TenderCard';
 export { default as ViewToggle, useViewMode } from './ViewToggle';
+
+// Dashboard Sub-components
+export { default as BPOStatsCards } from './BPOStatsCards';
+export { default as BPOPipelineChart } from './BPOPipelineChart';
+export { default as BPORecentTenders } from './BPORecentTenders';

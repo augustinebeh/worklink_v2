@@ -7,13 +7,14 @@
  */
 
 const { ConversationManager } = require('../../utils/new-interview-scheduler');
-const Database = require('better-sqlite3');
 const path = require('path');
+const { createLogger } = require('../../utils/structured-logger');
+const logger = createLogger('improved-chat-engine');
 
 class ImprovedChatEngine {
   constructor() {
-    const dbPath = path.resolve(__dirname, '../../db/database.db');
-    this.db = new Database(dbPath);
+    const { db } = require('../../db');
+    this.db = db;
     
     // Store active conversation managers (one per candidate)
     this.activeConversations = new Map();
@@ -39,7 +40,7 @@ class ImprovedChatEngine {
     if (!this.activeConversations.has(candidateId)) {
       const conversation = new ConversationManager(candidateId, this.db);
       this.activeConversations.set(candidateId, conversation);
-      console.log(`✨ Created new ConversationManager for candidate: ${candidateId}`);
+      logger.debug('Created new ConversationManager', { candidateId });
     }
     return this.activeConversations.get(candidateId);
   }
@@ -119,7 +120,7 @@ class ImprovedChatEngine {
    */
   async processMessage(candidateId, message, adminMode = 'auto') {
     try {
-      console.log(`🤖 Processing message for candidate ${candidateId}: ${message.substring(0, 50)}...`);
+      logger.info('Processing message', { candidateId, messagePreview: message.substring(0, 50) });
 
       // Get candidate information
       const candidate = await this.getCandidateInfo(candidateId);
@@ -130,13 +131,13 @@ class ImprovedChatEngine {
 
       // PRIORITY 1: Handle pending candidates with NEW interview scheduling V2
       if (candidate.status === 'pending') {
-        console.log(`🎯 Pending candidate detected - routing to NEW interview scheduler V2`);
+        logger.info('Pending candidate detected, routing to interview scheduler V2');
         return await this.handlePendingCandidateWithScheduling(candidateId, message, candidate);
       }
 
       // PRIORITY 2: Check for escalation triggers
       if (this.needsEscalation(message)) {
-        console.log(`🚨 Escalation trigger detected`);
+        logger.info('Escalation trigger detected');
         return this.generateEscalationResponse(candidate, message);
       }
 
@@ -146,7 +147,7 @@ class ImprovedChatEngine {
       // PRIORITY 4: Try fact-based FAQ matching
       const faqResponse = this.matchFactBasedFAQ(message, realData, candidate);
       if (faqResponse) {
-        console.log(`📚 Fact-based FAQ match found`);
+        logger.debug('Fact-based FAQ match found');
         return faqResponse;
       }
 
@@ -154,7 +155,7 @@ class ImprovedChatEngine {
       return await this.generateLLMResponse(message, realData, candidate);
 
     } catch (error) {
-      console.error('❌ Chat processing error:', error);
+      logger.error('Chat processing error', { error: error.message });
       return this.generateErrorResponse('processing_error');
     }
   }
@@ -165,7 +166,7 @@ class ImprovedChatEngine {
    */
   async handlePendingCandidateWithScheduling(candidateId, message, candidate) {
     try {
-      console.log(`✨ Using NEW ConversationManager (100% tested) for pending candidate`);
+      logger.info('Using NEW ConversationManager for pending candidate');
       
       // Get conversation manager for this candidate
       const conversationManager = this.getConversationManager(candidateId);
@@ -192,7 +193,7 @@ class ImprovedChatEngine {
       return this.generateEnhancedPendingResponse(candidate, message);
 
     } catch (error) {
-      console.error('❌ ConversationManager error:', error);
+      logger.error('ConversationManager error', { error: error.message });
       return this.generateEnhancedPendingResponse(candidate, message);
     }
   }
@@ -270,7 +271,7 @@ class ImprovedChatEngine {
       };
 
     } catch (error) {
-      console.error('Error getting real candidate data:', error);
+      logger.error('Error getting real candidate data', { error: error.message });
       return null;
     }
   }
@@ -375,7 +376,7 @@ Respond to the candidate's message using ONLY the real data provided:`;
       };
 
     } catch (error) {
-      console.error('LLM generation error:', error);
+      logger.error('LLM generation error', { error: error.message });
       return {
         content: "I'm having trouble processing your request right now. I've flagged this for admin attention and they'll get back to you soon.",
         source: 'llm_error_fallback',
@@ -398,10 +399,9 @@ Respond to the candidate's message using ONLY the real data provided:`;
   }
 
   async callLLMWithContext(prompt, context) {
-    // Integration with your existing Claude LLM call
-    // This would call your existing askClaude function
+    // Integration with Claude LLM - import directly from utils to avoid circular dependency
     try {
-      const { askClaude } = require('./index'); // Your existing LLM integration
+      const { askClaude } = require('../../utils/claude');
       return await askClaude(prompt + '\n\n' + context);
     } catch (error) {
       throw error;

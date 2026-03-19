@@ -8,6 +8,9 @@
 const express = require('express');
 const router = express.Router();
 const { db } = require('../../../../../db');
+const { createLogger } = require('../../../../../utils/structured-logger');
+const { authenticateAdmin } = require('../../../../../middleware/auth');
+const logger = createLogger('ai-automation:sourcing');
 const {
   generateJobPostings,
   generateOutreachMessage
@@ -25,7 +28,7 @@ const { generatePersonalizedOutreach } = require('../utils/message-templates');
  * POST /generate-posting
  * Generate job postings for multiple platforms using AI
  */
-router.post('/generate-posting', async (req, res) => {
+router.post('/generate-posting', authenticateAdmin, async (req, res) => {
   try {
     const { jobTitle, payRate, location, requirements, slots } = req.body;
 
@@ -58,7 +61,7 @@ router.post('/generate-posting', async (req, res) => {
       });
       aiPowered = true;
     } catch (aiError) {
-      console.warn('Claude AI unavailable, using template postings:', aiError.message);
+      logger.warn('Claude AI unavailable, using template postings', { error: aiError.message });
       // Fallback to template-based generation
       postings = generateAllPostings(jobTitle, payRate, location, requirements, slots);
     }
@@ -71,7 +74,7 @@ router.post('/generate-posting', async (req, res) => {
   } catch (error) {
     res.status(500).json({
       success: false,
-      error: error.message
+      error: 'Internal server error'
     });
   }
 });
@@ -80,7 +83,7 @@ router.post('/generate-posting', async (req, res) => {
  * POST /generate-outreach
  * Generate personalized outreach messages for candidates
  */
-router.post('/generate-outreach', async (req, res) => {
+router.post('/generate-outreach', authenticateAdmin, async (req, res) => {
   try {
     const { jobId, candidateIds } = req.body;
 
@@ -168,7 +171,7 @@ router.post('/generate-outreach', async (req, res) => {
   } catch (error) {
     res.status(500).json({
       success: false,
-      error: error.message
+      error: 'Internal server error'
     });
   }
 });
@@ -177,7 +180,7 @@ router.post('/generate-outreach', async (req, res) => {
  * GET /recommend/:jobId
  * Get AI-powered candidate recommendations for a job
  */
-router.get('/recommend/:jobId', async (req, res) => {
+router.get('/recommend/:jobId', authenticateAdmin, async (req, res) => {
   try {
     const { useAI = 'true', minScore = '30', maxResults = '10' } = req.query;
 
@@ -204,7 +207,7 @@ router.get('/recommend/:jobId', async (req, res) => {
       ORDER BY c.last_seen DESC
     `).all();
 
-    console.log(`🤖 [Recommendations] Processing ${candidates.length} active candidates for job: ${job.title}`);
+    logger.info('Processing candidate recommendations', { candidateCount: candidates.length, jobTitle: job.title });
 
     // Use enhanced matching system
     const matchingResults = await enhancedMatchCandidates(job, candidates, {
@@ -235,7 +238,7 @@ router.get('/recommend/:jobId', async (req, res) => {
           }
         });
       } catch (dbError) {
-        console.warn('Failed to store match scores:', dbError.message);
+        logger.warn('Failed to store match scores', { error: dbError.message });
       }
     }
 
@@ -250,10 +253,10 @@ router.get('/recommend/:jobId', async (req, res) => {
       }
     });
   } catch (error) {
-    console.error('Recommendation error:', error);
+    logger.error('Recommendation error', { error: error.message });
     res.status(500).json({
       success: false,
-      error: error.message
+      error: 'Internal server error'
     });
   }
 });
@@ -262,7 +265,7 @@ router.get('/recommend/:jobId', async (req, res) => {
  * POST /batch-recommend
  * Get recommendations for multiple jobs at once
  */
-router.post('/batch-recommend', async (req, res) => {
+router.post('/batch-recommend', authenticateAdmin, async (req, res) => {
   try {
     const { jobIds, useAI = true, minScore = 30, maxResults = 5 } = req.body;
 
@@ -309,7 +312,7 @@ router.post('/batch-recommend', async (req, res) => {
   } catch (error) {
     res.status(500).json({
       success: false,
-      error: error.message
+      error: 'Internal server error'
     });
   }
 });

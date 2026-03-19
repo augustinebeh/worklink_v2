@@ -43,7 +43,12 @@ data/*.db-wal
 # Keep data directory structure
 !data/.gitkeep
 
+# Credentials directory
+credentials_n_infomation/
+
 # Build outputs (regenerated on deploy)
+dist/
+build/
 admin/dist/
 worker/dist/
 admin/.vite/

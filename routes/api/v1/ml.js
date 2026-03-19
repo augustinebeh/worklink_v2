@@ -23,7 +23,7 @@ router.get('/settings', (req, res) => {
     const settings = ml.getSettings();
     res.json({ success: true, data: settings });
   } catch (error) {
-    res.status(500).json({ success: false, error: error.message });
+    res.status(500).json({ success: false, error: 'Internal server error' });
   }
 });
 
@@ -42,7 +42,7 @@ router.put('/settings', (req, res) => {
     ml.updateSetting(key, value);
     res.json({ success: true, message: 'Setting updated' });
   } catch (error) {
-    res.status(500).json({ success: false, error: error.message });
+    res.status(500).json({ success: false, error: 'Internal server error' });
   }
 });
 
@@ -67,7 +67,7 @@ router.get('/stats', (req, res) => {
       },
     });
   } catch (error) {
-    res.status(500).json({ success: false, error: error.message });
+    res.status(500).json({ success: false, error: 'Internal server error' });
   }
 });
 
@@ -92,7 +92,7 @@ router.get('/knowledge-base', (req, res) => {
 
     res.json({ success: true, data: entries });
   } catch (error) {
-    res.status(500).json({ success: false, error: error.message });
+    res.status(500).json({ success: false, error: 'Internal server error' });
   }
 });
 
@@ -105,7 +105,7 @@ router.delete('/knowledge-base/:id', (req, res) => {
     ml.deleteKBEntry(req.params.id);
     res.json({ success: true, message: 'Entry deleted' });
   } catch (error) {
-    res.status(500).json({ success: false, error: error.message });
+    res.status(500).json({ success: false, error: 'Internal server error' });
   }
 });
 
@@ -131,7 +131,7 @@ router.post('/knowledge-base/test', async (req, res) => {
       },
     });
   } catch (error) {
-    res.status(500).json({ success: false, error: error.message });
+    res.status(500).json({ success: false, error: 'Internal server error' });
   }
 });
 
@@ -149,7 +149,7 @@ router.get('/faq', (req, res) => {
     const faqs = ml.getFAQs(activeOnly === 'true');
     res.json({ success: true, data: faqs });
   } catch (error) {
-    res.status(500).json({ success: false, error: error.message });
+    res.status(500).json({ success: false, error: 'Internal server error' });
   }
 });
 
@@ -171,7 +171,7 @@ router.post('/faq', (req, res) => {
     const id = ml.addFAQ(category, question, answer, keywords, priority);
     res.json({ success: true, data: { id }, message: 'FAQ added' });
   } catch (error) {
-    res.status(500).json({ success: false, error: error.message });
+    res.status(500).json({ success: false, error: 'Internal server error' });
   }
 });
 
@@ -194,7 +194,7 @@ router.put('/faq/:id', (req, res) => {
 
     res.json({ success: true, message: 'FAQ updated' });
   } catch (error) {
-    res.status(500).json({ success: false, error: error.message });
+    res.status(500).json({ success: false, error: 'Internal server error' });
   }
 });
 
@@ -207,7 +207,7 @@ router.delete('/faq/:id', (req, res) => {
     ml.deleteFAQ(req.params.id);
     res.json({ success: true, message: 'FAQ deleted' });
   } catch (error) {
-    res.status(500).json({ success: false, error: error.message });
+    res.status(500).json({ success: false, error: 'Internal server error' });
   }
 });
 
@@ -232,7 +232,7 @@ router.get('/logs', (req, res) => {
 
     res.json({ success: true, data: logs });
   } catch (error) {
-    res.status(500).json({ success: false, error: error.message });
+    res.status(500).json({ success: false, error: 'Internal server error' });
   }
 });
 
@@ -262,7 +262,7 @@ router.post('/logs/:id/feedback', async (req, res) => {
 
     res.json({ success: true, message: 'Feedback recorded' });
   } catch (error) {
-    res.status(500).json({ success: false, error: error.message });
+    res.status(500).json({ success: false, error: 'Internal server error' });
   }
 });
 
@@ -292,7 +292,7 @@ router.get('/training-data', (req, res) => {
 
     res.json({ success: true, data });
   } catch (error) {
-    res.status(500).json({ success: false, error: error.message });
+    res.status(500).json({ success: false, error: 'Internal server error' });
   }
 });
 
@@ -305,7 +305,7 @@ router.get('/training-data/stats', (req, res) => {
     const stats = trainer.getTrainingStats();
     res.json({ success: true, data: stats });
   } catch (error) {
-    res.status(500).json({ success: false, error: error.message });
+    res.status(500).json({ success: false, error: 'Internal server error' });
   }
 });
 
@@ -332,7 +332,7 @@ router.post('/training-data', (req, res) => {
 
     res.json({ success: true, data: { id }, message: 'Training example added' });
   } catch (error) {
-    res.status(500).json({ success: false, error: error.message });
+    res.status(500).json({ success: false, error: 'Internal server error' });
   }
 });
 
@@ -345,7 +345,7 @@ router.delete('/training-data/:id', (req, res) => {
     trainer.deleteTrainingExample(req.params.id);
     res.json({ success: true, message: 'Training example deleted' });
   } catch (error) {
-    res.status(500).json({ success: false, error: error.message });
+    res.status(500).json({ success: false, error: 'Internal server error' });
   }
 });
 
@@ -386,7 +386,7 @@ router.post('/training-data/export', (req, res) => {
 
     res.send(result.content);
   } catch (error) {
-    res.status(500).json({ success: false, error: error.message });
+    res.status(500).json({ success: false, error: 'Internal server error' });
   }
 });
 
@@ -413,7 +413,7 @@ router.post('/training-data/import', (req, res) => {
       message: `Imported ${result.imported} examples (${result.errors} errors)`,
     });
   } catch (error) {
-    res.status(500).json({ success: false, error: error.message });
+    res.status(500).json({ success: false, error: 'Internal server error' });
   }
 });
 

@@ -21,7 +21,7 @@ router.post('/run-daily', async (req, res) => {
     const result = await sourcingEngine.runDailySourcing();
     res.json({ success: true, data: result });
   } catch (error) {
-    res.status(500).json({ success: false, error: error.message });
+    res.status(500).json({ success: false, error: 'Internal server error' });
   }
 });
 
@@ -35,7 +35,7 @@ router.get('/analytics', async (req, res) => {
     const analytics = sourcingEngine.getSourcingAnalytics(parseInt(days));
     res.json({ success: true, data: analytics });
   } catch (error) {
-    res.status(500).json({ success: false, error: error.message });
+    res.status(500).json({ success: false, error: 'Internal server error' });
   }
 });
 
@@ -67,7 +67,7 @@ router.get('/discovery-queue', async (req, res) => {
       }
     });
   } catch (error) {
-    res.status(500).json({ success: false, error: error.message });
+    res.status(500).json({ success: false, error: 'Internal server error' });
   }
 });
 
@@ -107,7 +107,7 @@ router.get('/active-postings', async (req, res) => {
       }
     });
   } catch (error) {
-    res.status(500).json({ success: false, error: error.message });
+    res.status(500).json({ success: false, error: 'Internal server error' });
   }
 });
 
@@ -150,7 +150,7 @@ router.get('/outreach-campaigns', async (req, res) => {
       }
     });
   } catch (error) {
-    res.status(500).json({ success: false, error: error.message });
+    res.status(500).json({ success: false, error: 'Internal server error' });
   }
 });
 
@@ -163,7 +163,7 @@ router.post('/emergency-stop', async (req, res) => {
     const result = await sourcingEngine.emergencyStopSourcing();
     res.json({ success: true, data: result });
   } catch (error) {
-    res.status(500).json({ success: false, error: error.message });
+    res.status(500).json({ success: false, error: 'Internal server error' });
   }
 });
 
@@ -176,7 +176,7 @@ router.post('/resume', async (req, res) => {
     const result = await sourcingEngine.resumeSourcing();
     res.json({ success: true, data: result });
   } catch (error) {
-    res.status(500).json({ success: false, error: error.message });
+    res.status(500).json({ success: false, error: 'Internal server error' });
   }
 });
 
@@ -222,7 +222,7 @@ router.get('/status', async (req, res) => {
       }
     });
   } catch (error) {
-    res.status(500).json({ success: false, error: error.message });
+    res.status(500).json({ success: false, error: 'Internal server error' });
   }
 });
 

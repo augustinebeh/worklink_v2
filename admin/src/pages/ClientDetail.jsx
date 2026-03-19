@@ -110,7 +110,7 @@ export default function ClientDetail() {
         setStats({ totalJobs, totalRevenue, activeJobs });
       }
     } catch (error) {
-      console.error('Failed to fetch client:', error);
+      // Failed to fetch client:
     } finally {
       setLoading(false);
     }
@@ -128,7 +128,7 @@ export default function ClientDetail() {
         fetchClientData();
       }
     } catch (error) {
-      console.error('Failed to update client:', error);
+      // Failed to update client:
     } finally {
       setSaving(false);
     }

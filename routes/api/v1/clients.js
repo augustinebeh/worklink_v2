@@ -1,9 +1,10 @@
 const express = require('express');
 const router = express.Router();
 const { db } = require('../../../db');
+const { authenticateAdmin } = require('../../../middleware/auth');
 
 // Get all clients
-router.get('/', (req, res) => {
+router.get('/', authenticateAdmin, (req, res) => {
   try {
     const { status, industry, search } = req.query;
 
@@ -39,12 +40,12 @@ router.get('/', (req, res) => {
 
     res.json({ success: true, data: clients });
   } catch (error) {
-    res.status(500).json({ success: false, error: error.message });
+    res.status(500).json({ success: false, error: 'Internal server error' });
   }
 });
 
 // Get client by ID
-router.get('/:id', (req, res) => {
+router.get('/:id', authenticateAdmin, (req, res) => {
   try {
     const client = db.prepare('SELECT * FROM clients WHERE id = ?').get(req.params.id);
     if (!client) {
@@ -53,12 +54,12 @@ router.get('/:id', (req, res) => {
 
     res.json({ success: true, data: client });
   } catch (error) {
-    res.status(500).json({ success: false, error: error.message });
+    res.status(500).json({ success: false, error: 'Internal server error' });
   }
 });
 
 // Get client's jobs
-router.get('/:id/jobs', (req, res) => {
+router.get('/:id/jobs', authenticateAdmin, (req, res) => {
   try {
     const jobs = db.prepare(`
       SELECT * FROM jobs WHERE client_id = ? ORDER BY job_date DESC
@@ -66,12 +67,12 @@ router.get('/:id/jobs', (req, res) => {
 
     res.json({ success: true, data: jobs });
   } catch (error) {
-    res.status(500).json({ success: false, error: error.message });
+    res.status(500).json({ success: false, error: 'Internal server error' });
   }
 });
 
 // Create client
-router.post('/', (req, res) => {
+router.post('/', authenticateAdmin, (req, res) => {
   try {
     const { company_name, uen, industry, contact_name, contact_email, contact_phone, payment_terms, notes } = req.body;
     const id = 'CLT' + Date.now().toString(36).toUpperCase();
@@ -84,12 +85,12 @@ router.post('/', (req, res) => {
     const client = db.prepare('SELECT * FROM clients WHERE id = ?').get(id);
     res.status(201).json({ success: true, data: client });
   } catch (error) {
-    res.status(500).json({ success: false, error: error.message });
+    res.status(500).json({ success: false, error: 'Internal server error' });
   }
 });
 
 // Update client
-router.put('/:id', (req, res) => {
+router.put('/:id', authenticateAdmin, (req, res) => {
   try {
     const allowedFields = ['company_name', 'uen', 'industry', 'contact_name', 'contact_email', 'contact_phone', 'payment_terms', 'status', 'notes'];
     
@@ -111,7 +112,7 @@ router.put('/:id', (req, res) => {
     const client = db.prepare('SELECT * FROM clients WHERE id = ?').get(req.params.id);
     res.json({ success: true, data: client });
   } catch (error) {
-    res.status(500).json({ success: false, error: error.message });
+    res.status(500).json({ success: false, error: 'Internal server error' });
   }
 });
 

@@ -47,7 +47,7 @@ router.post('/', (req, res) => {
         message: 'File uploaded successfully',
       });
     } catch (error) {
-      res.status(500).json({ success: false, error: error.message });
+      res.status(500).json({ success: false, error: 'Internal server error' });
     }
   });
 });
@@ -67,7 +67,7 @@ router.get('/:id', (req, res) => {
 
     res.json({ success: true, data: attachment });
   } catch (error) {
-    res.status(500).json({ success: false, error: error.message });
+    res.status(500).json({ success: false, error: 'Internal server error' });
   }
 });
 
@@ -82,7 +82,7 @@ router.get('/candidate/:candidateId', (req, res) => {
 
     res.json({ success: true, data: attachments });
   } catch (error) {
-    res.status(500).json({ success: false, error: error.message });
+    res.status(500).json({ success: false, error: 'Internal server error' });
   }
 });
 
@@ -97,7 +97,7 @@ router.get('/message/:messageId', (req, res) => {
 
     res.json({ success: true, data: attachments });
   } catch (error) {
-    res.status(500).json({ success: false, error: error.message });
+    res.status(500).json({ success: false, error: 'Internal server error' });
   }
 });
 
@@ -118,7 +118,7 @@ router.put('/:id/link', (req, res) => {
 
     res.json({ success: true, message: 'Attachment linked to message' });
   } catch (error) {
-    res.status(500).json({ success: false, error: error.message });
+    res.status(500).json({ success: false, error: 'Internal server error' });
   }
 });
 
@@ -137,7 +137,7 @@ router.delete('/:id', (req, res) => {
 
     res.json({ success: true, message: 'Attachment deleted' });
   } catch (error) {
-    res.status(500).json({ success: false, error: error.message });
+    res.status(500).json({ success: false, error: 'Internal server error' });
   }
 });
 

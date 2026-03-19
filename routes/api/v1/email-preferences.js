@@ -6,6 +6,10 @@
 const express = require('express');
 const router = express.Router();
 const { db } = require('../../../db');
+const { authenticateToken, authenticateAdmin } = require('../../../middleware/auth');
+const { createLogger } = require('../../../utils/structured-logger');
+
+const logger = createLogger('api:email-preferences');
 // Lazy load EmailDeliveryTracker to prevent startup hanging
 let EmailDeliveryTracker = null;
 let deliveryTracker = null;
@@ -19,7 +23,7 @@ function getDeliveryTracker() {
 }
 
 // Get email preferences for current user
-router.get('/', (req, res) => {
+router.get('/', authenticateToken, (req, res) => {
   try {
     const { email, userType = 'admin' } = req.query;
 
@@ -37,16 +41,16 @@ router.get('/', (req, res) => {
       data: preferences
     });
   } catch (error) {
-    console.error('Error getting email preferences:', error);
+    logger.error('Error getting email preferences', { error: error.message });
     res.status(500).json({
       success: false,
-      error: error.message
+      error: 'Internal server error'
     });
   }
 });
 
 // Update email preferences
-router.patch('/', (req, res) => {
+router.patch('/', authenticateToken, (req, res) => {
   try {
     const { email, userType = 'admin', ...preferences } = req.body;
 
@@ -107,16 +111,16 @@ router.patch('/', (req, res) => {
       message: 'Email preferences updated successfully'
     });
   } catch (error) {
-    console.error('Error updating email preferences:', error);
+    logger.error('Error updating email preferences', { error: error.message });
     res.status(500).json({
       success: false,
-      error: error.message
+      error: 'Internal server error'
     });
   }
 });
 
 // Get all email preferences (admin only)
-router.get('/all', (req, res) => {
+router.get('/all', authenticateAdmin, (req, res) => {
   try {
     const preferences = db.prepare(`
       SELECT * FROM email_preferences
@@ -128,16 +132,16 @@ router.get('/all', (req, res) => {
       data: preferences
     });
   } catch (error) {
-    console.error('Error getting all preferences:', error);
+    logger.error('Error getting all preferences', { error: error.message });
     res.status(500).json({
       success: false,
-      error: error.message
+      error: 'Internal server error'
     });
   }
 });
 
 // Bulk update preferences
-router.post('/bulk-update', (req, res) => {
+router.post('/bulk-update', authenticateAdmin, (req, res) => {
   try {
     const { updates } = req.body;
 
@@ -163,7 +167,7 @@ router.post('/bulk-update', (req, res) => {
         results.push({
           email: update.email,
           success: false,
-          error: error.message
+          error: 'Internal server error'
         });
       }
     }
@@ -173,10 +177,10 @@ router.post('/bulk-update', (req, res) => {
       data: results
     });
   } catch (error) {
-    console.error('Error bulk updating preferences:', error);
+    logger.error('Error bulk updating preferences', { error: error.message });
     res.status(500).json({
       success: false,
-      error: error.message
+      error: 'Internal server error'
     });
   }
 });
@@ -208,16 +212,16 @@ router.post('/test', async (req, res) => {
       }
     });
   } catch (error) {
-    console.error('Error testing email preferences:', error);
+    logger.error('Error testing email preferences', { error: error.message });
     res.status(500).json({
       success: false,
-      error: error.message
+      error: 'Internal server error'
     });
   }
 });
 
 // Get email delivery statistics
-router.get('/delivery-stats', (req, res) => {
+router.get('/delivery-stats', authenticateAdmin, (req, res) => {
   try {
     const { timeframe = '24h' } = req.query;
 
@@ -228,10 +232,10 @@ router.get('/delivery-stats', (req, res) => {
       data: stats
     });
   } catch (error) {
-    console.error('Error getting delivery stats:', error);
+    logger.error('Error getting delivery stats', { error: error.message });
     res.status(500).json({
       success: false,
-      error: error.message
+      error: 'Internal server error'
     });
   }
 });
@@ -255,16 +259,16 @@ router.get('/delivery-status/:trackingId', (req, res) => {
       data: status
     });
   } catch (error) {
-    console.error('Error getting delivery status:', error);
+    logger.error('Error getting delivery status', { error: error.message });
     res.status(500).json({
       success: false,
-      error: error.message
+      error: 'Internal server error'
     });
   }
 });
 
 // Retry failed emails
-router.post('/retry-failed', async (req, res) => {
+router.post('/retry-failed', authenticateAdmin, async (req, res) => {
   try {
     const { limit = 50 } = req.body;
 
@@ -309,7 +313,7 @@ router.post('/retry-failed', async (req, res) => {
         results.push({
           trackingId: emailRecord.tracking_id,
           success: false,
-          error: error.message
+          error: 'Internal server error'
         });
       }
     }
@@ -323,16 +327,16 @@ router.post('/retry-failed', async (req, res) => {
       }
     });
   } catch (error) {
-    console.error('Error retrying failed emails:', error);
+    logger.error('Error retrying failed emails', { error: error.message });
     res.status(500).json({
       success: false,
-      error: error.message
+      error: 'Internal server error'
     });
   }
 });
 
 // Clean old delivery records
-router.post('/cleanup', (req, res) => {
+router.post('/cleanup', authenticateAdmin, (req, res) => {
   try {
     const { daysToKeep = 30 } = req.body;
 
@@ -351,16 +355,16 @@ router.post('/cleanup', (req, res) => {
       message: `Cleaned records older than ${daysToKeep} days`
     });
   } catch (error) {
-    console.error('Error cleaning old records:', error);
+    logger.error('Error cleaning old records', { error: error.message });
     res.status(500).json({
       success: false,
-      error: error.message
+      error: 'Internal server error'
     });
   }
 });
 
 // Export unsubscribe preferences for GDPR compliance
-router.get('/export/:email', (req, res) => {
+router.get('/export/:email', authenticateAdmin, (req, res) => {
   try {
     const { email } = req.params;
 
@@ -385,10 +389,10 @@ router.get('/export/:email', (req, res) => {
       }
     });
   } catch (error) {
-    console.error('Error exporting preferences:', error);
+    logger.error('Error exporting preferences', { error: error.message });
     res.status(500).json({
       success: false,
-      error: error.message
+      error: 'Internal server error'
     });
   }
 });
@@ -423,10 +427,10 @@ router.post('/unsubscribe', (req, res) => {
       message: `Successfully unsubscribed ${email} from all email notifications`
     });
   } catch (error) {
-    console.error('Error unsubscribing:', error);
+    logger.error('Error unsubscribing', { error: error.message });
     res.status(500).json({
       success: false,
-      error: error.message
+      error: 'Internal server error'
     });
   }
 });

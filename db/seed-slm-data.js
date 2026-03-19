@@ -7,6 +7,9 @@
  * Usage: node db/seed-slm-data.js
  */
 
+const { createLogger } = require('../utils/structured-logger');
+const logger = createLogger('seed-slm-data');
+
 // Database instance - set lazily or passed in
 let _db = null;
 
@@ -653,7 +656,7 @@ function similarity(a, b) {
  * Keeps the entry with highest confidence/use_count
  */
 function deduplicateKnowledgeBase() {
-  console.log('\n🧹 Deduplicating knowledge base...');
+  logger.info('Deduplicating knowledge base...');
 
   const entries = getDb().prepare(`
     SELECT id, question, question_normalized, answer, intent, confidence, use_count, source
@@ -705,8 +708,7 @@ function deduplicateKnowledgeBase() {
     }
   }
 
-  console.log(`   ✅ Removed ${toDelete.length} duplicates`);
-  console.log(`   📊 Remaining entries: ${entries.length - toDelete.length}`);
+  logger.info(`Removed ${toDelete.length} KB duplicates`, { remaining: entries.length - toDelete.length });
 
   return toDelete.length;
 }
@@ -715,7 +717,7 @@ function deduplicateKnowledgeBase() {
  * Remove duplicates from training data
  */
 function deduplicateTrainingData() {
-  console.log('\n🧹 Deduplicating training data...');
+  logger.info('Deduplicating training data...');
 
   const entries = getDb().prepare(`
     SELECT id, input_text, output_text, quality_score, admin_approved
@@ -743,8 +745,7 @@ function deduplicateTrainingData() {
     }
   }
 
-  console.log(`   ✅ Removed ${toDelete.length} duplicates`);
-  console.log(`   📊 Remaining entries: ${entries.length - toDelete.length}`);
+  logger.info(`Removed ${toDelete.length} TD duplicates`, { remaining: entries.length - toDelete.length });
 
   return toDelete.length;
 }
@@ -753,7 +754,7 @@ function deduplicateTrainingData() {
  * Import to knowledge base (ADDITIVE - only adds new entries)
  */
 function importToKnowledgeBase(entries) {
-  console.log(`\n📚 Importing ${entries.length} entries to knowledge base (additive)...`);
+  logger.info(`Importing ${entries.length} entries to knowledge base (additive)...`);
 
   // Get existing normalized questions
   const existing = new Set(
@@ -799,8 +800,7 @@ function importToKnowledgeBase(entries) {
     }
   }
 
-  console.log(`   ✅ Added: ${imported} new entries`);
-  console.log(`   ⏭️  Skipped: ${skipped} (already exist)`);
+  logger.info(`KB import complete`, { added: imported, skipped });
 
   return imported;
 }
@@ -809,7 +809,7 @@ function importToKnowledgeBase(entries) {
  * Import to training data (ADDITIVE - only adds new entries)
  */
 function importToTrainingData(entries) {
-  console.log(`\n🎓 Importing ${entries.length} entries to training data (additive)...`);
+  logger.info(`Importing ${entries.length} entries to training data (additive)...`);
 
   // Get existing normalized inputs
   const existing = new Set(
@@ -849,14 +849,13 @@ function importToTrainingData(entries) {
     }
   }
 
-  console.log(`   ✅ Added: ${imported} new entries`);
-  console.log(`   ⏭️  Skipped: ${skipped} (already exist)`);
+  logger.info(`TD import complete`, { added: imported, skipped });
 
   return imported;
 }
 
 function importToFAQ(entries) {
-  console.log(`\n❓ Importing unique intents to FAQ...`);
+  logger.info('Importing unique intents to FAQ...');
 
   // Get unique entries by intent (one per intent)
   const byIntent = {};
@@ -895,7 +894,7 @@ function importToFAQ(entries) {
     }
   }
 
-  console.log(`   ✅ Imported: ${imported} FAQ entries`);
+  logger.info(`Imported ${imported} FAQ entries`);
 
   return imported;
 }
@@ -909,41 +908,39 @@ function main() {
   const dedupeOnly = args.includes('--dedupe');
   const skipDedupe = args.includes('--no-dedupe');
 
-  console.log('🚀 WorkLink SLM Training Data Generator');
-  console.log('========================================');
-  console.log('Mode: ADDITIVE (preserves learned data)\n');
+  logger.info('WorkLink SLM Training Data Generator');
+  logger.info('Mode: ADDITIVE (preserves learned data)');
 
   // Dedupe only mode
   if (dedupeOnly) {
-    console.log('🧹 Running deduplication only...');
+    logger.info('Running deduplication only...');
     const kbRemoved = deduplicateKnowledgeBase();
     const tdRemoved = deduplicateTrainingData();
-    console.log(`\n✅ Deduplication complete: removed ${kbRemoved + tdRemoved} total duplicates`);
+    logger.info(`Deduplication complete: removed ${kbRemoved + tdRemoved} total duplicates`);
     return;
   }
 
   // Phase 1: Deduplicate existing data first
   if (!skipDedupe) {
-    console.log('📋 Phase 1: Cleaning up existing data...');
+    logger.info('Phase 1: Cleaning up existing data...');
     deduplicateKnowledgeBase();
     deduplicateTrainingData();
   }
 
   // Phase 2: Seed data
-  console.log('\n📝 Phase 2: Loading seed data...');
-  console.log(`   Found ${seedData.length} seed entries`);
+  logger.info('Phase 2: Loading seed data...', { entries: seedData.length });
 
   // Phase 3: Generate variations
-  console.log('\n🔄 Phase 3: Generating template variations...');
+  logger.info('Phase 3: Generating template variations...');
   const generated = generateFromTemplates(500);
-  console.log(`   Generated ${generated.length} variations`);
+  logger.info(`Generated ${generated.length} variations`);
 
   // Combine all data
   const allData = [...seedData, ...generated];
-  console.log(`\n📊 Total new entries to process: ${allData.length}`);
+  logger.info(`Total new entries to process: ${allData.length}`);
 
   // Phase 4: Import to databases (ADDITIVE)
-  console.log('\n💾 Phase 4: Merging into database (additive)...');
+  logger.info('Phase 4: Merging into database (additive)...');
 
   const kbCount = importToKnowledgeBase(seedData); // Only seed data for KB (high quality)
   const tdCount = importToTrainingData(allData);    // All data for training
@@ -955,19 +952,18 @@ function main() {
   const totalFAQ = getDb().prepare('SELECT COUNT(*) as c FROM ai_faq WHERE active = 1').get().c;
 
   // Summary
-  console.log('\n========================================');
-  console.log('✨ Merge Complete!');
-  console.log('========================================');
-  console.log(`📚 Knowledge Base: +${kbCount} new (${totalKB} total)`);
-  console.log(`🎓 Training Data: +${tdCount} new (${totalTD} total)`);
-  console.log(`❓ FAQ: +${faqCount} new (${totalFAQ} total)`);
+  logger.info('Merge Complete!', {
+    knowledgeBase: { added: kbCount, total: totalKB },
+    trainingData: { added: tdCount, total: totalTD },
+    faq: { added: faqCount, total: totalFAQ }
+  });
 
   // Show learned data preserved
   const learnedCount = getDb().prepare(`
     SELECT COUNT(*) as c FROM ml_knowledge_base
     WHERE source NOT IN ('seed', 'singlish_seed')
   `).get().c;
-  console.log(`\n🧠 Learned entries preserved: ${learnedCount}`);
+  logger.info(`Learned entries preserved: ${learnedCount}`);
 
   // Show intent distribution
   const intentCounts = {};
@@ -975,16 +971,11 @@ function main() {
     intentCounts[entry.intent] = (intentCounts[entry.intent] || 0) + 1;
   }
 
-  console.log('\n📈 Intent Distribution (seed data):');
   const sorted = Object.entries(intentCounts).sort((a, b) => b[1] - a[1]);
-  for (const [intent, count] of sorted.slice(0, 10)) {
-    console.log(`   ${intent}: ${count}`);
-  }
+  const topIntents = Object.fromEntries(sorted.slice(0, 10));
+  logger.info('Intent Distribution (seed data)', topIntents);
 
-  console.log('\n🎯 Usage:');
-  console.log('   node db/seed-slm-data.js           # Add new + dedupe');
-  console.log('   node db/seed-slm-data.js --dedupe  # Dedupe only');
-  console.log('   node db/seed-slm-data.js --no-dedupe # Add without deduping');
+  logger.info('Usage: node db/seed-slm-data.js [--dedupe | --no-dedupe]');
 }
 
 // Run if called directly

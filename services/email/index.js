@@ -9,6 +9,8 @@ const { db } = require('../../db');
 const { getEmailConfig } = require('../../config/email');
 const EmailTemplates = require('./templates');
 const EmailDeliveryTracker = require('./delivery-tracker');
+const { createLogger } = require('../../utils/structured-logger');
+const logger = createLogger('email-service');
 
 class EmailService {
   constructor() {
@@ -27,9 +29,9 @@ class EmailService {
       this.config = getEmailConfig();
       await this.setupProvider();
       this.isInitialized = true;
-      console.log(`Email service initialized with provider: ${this.config.provider}`);
+      logger.info('Email service initialized', { provider: this.config.provider });
     } catch (error) {
-      console.error('Failed to initialize email service:', error);
+      logger.error('Failed to initialize email service', { error: error.message });
       throw error;
     }
   }
@@ -138,7 +140,7 @@ class EmailService {
 
     for (let attempt = 1; attempt <= maxAttempts; attempt++) {
       try {
-        console.log(`Sending email attempt ${attempt}/${maxAttempts} for tracking ID: ${trackingId}`);
+        logger.info('Sending email attempt', { attempt, max_attempts: maxAttempts, tracking_id: trackingId });
 
         const result = await this.sendEmailViaProvider(message);
 
@@ -149,7 +151,7 @@ class EmailService {
           provider: this.config.provider
         });
 
-        console.log(`Email sent successfully on attempt ${attempt}. Message ID: ${result.messageId}`);
+        logger.info('Email sent successfully', { attempt, message_id: result.messageId });
 
         return {
           success: true,
@@ -160,7 +162,7 @@ class EmailService {
 
       } catch (error) {
         lastError = error;
-        console.error(`Email send attempt ${attempt} failed:`, error.message);
+        logger.error('Email send attempt failed', { attempt, error: error.message });
 
         // Update delivery tracking
         this.deliveryTracker.markAsFailed(trackingId, {
@@ -176,7 +178,7 @@ class EmailService {
         // Wait before retrying (with exponential backoff)
         if (attempt < maxAttempts) {
           const delay = this.calculateRetryDelay(attempt);
-          console.log(`Retrying in ${delay}ms...`);
+          logger.info('Retrying email send', { delay_ms: delay });
           await this.sleep(delay);
         }
       }

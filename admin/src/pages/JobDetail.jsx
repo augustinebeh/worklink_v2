@@ -1,114 +1,13 @@
 import { useState, useEffect } from 'react';
-import { useParams, useNavigate, Link } from 'react-router-dom';
-import {
-  ArrowLeftIcon,
-  CalendarIcon,
-  ClockIcon,
-  MapPinIcon,
-  UsersIcon,
-  DollarSignIcon,
-  ZapIcon,
-  EditIcon,
-  TrashIcon,
-  PlusIcon,
-  CheckCircleIcon,
-  XCircleIcon,
-  UserIcon,
-  StarIcon,
-  PhoneIcon,
-  MailIcon,
-  SearchIcon,
-} from 'lucide-react';
+import { useParams, useNavigate } from 'react-router-dom';
 import { api } from '../shared/services/api';
 import Card, { CardHeader, CardTitle, CardContent } from '../components/ui/Card';
-import Badge, { StatusBadge } from '../components/ui/Badge';
 import Button from '../components/ui/Button';
 import Modal, { ModalFooter } from '../components/ui/Modal';
 import Input from '../components/ui/Input';
-import Select from '../components/ui/Select';
-import { clsx } from 'clsx';
-
-function StatCard({ icon: Icon, label, value, color = 'primary' }) {
-  const colorClasses = {
-    primary: 'bg-primary-100 dark:bg-primary-900/30 text-primary-600 dark:text-primary-400',
-    success: 'bg-emerald-100 dark:bg-emerald-900/30 text-emerald-600 dark:text-emerald-400',
-    warning: 'bg-amber-100 dark:bg-amber-900/30 text-amber-600 dark:text-amber-400',
-    info: 'bg-blue-100 dark:bg-blue-900/30 text-blue-600 dark:text-blue-400',
-  };
-
-  return (
-    <div className="flex items-center gap-3 p-4 rounded-xl bg-slate-50 dark:bg-slate-800/50">
-      <div className={clsx('p-2 rounded-lg', colorClasses[color])}>
-        <Icon className="h-5 w-5" />
-      </div>
-      <div>
-        <p className="text-sm text-slate-500 dark:text-slate-400">{label}</p>
-        <p className="text-lg font-semibold text-slate-900 dark:text-white">{value}</p>
-      </div>
-    </div>
-  );
-}
-
-function DeploymentRow({ deployment, onStatusChange }) {
-  const statusConfig = {
-    pending: { color: 'warning', label: 'Pending' },
-    confirmed: { color: 'info', label: 'Confirmed' },
-    completed: { color: 'success', label: 'Completed' },
-    cancelled: { color: 'error', label: 'Cancelled' },
-    no_show: { color: 'error', label: 'No Show' },
-  };
-
-  const config = statusConfig[deployment.status] || statusConfig.pending;
-
-  return (
-    <div className="flex items-center justify-between p-4 rounded-xl bg-slate-50 dark:bg-slate-800/50 border border-slate-200 dark:border-slate-700">
-      <div className="flex items-center gap-4">
-        <div className="w-10 h-10 rounded-full bg-primary-500 flex items-center justify-center">
-          <span className="text-white font-semibold">{deployment.candidate_name?.charAt(0)}</span>
-        </div>
-        <div>
-          <Link 
-            to={`/candidates/${deployment.candidate_id}`}
-            className="font-medium text-slate-900 dark:text-white hover:text-primary-600"
-          >
-            {deployment.candidate_name}
-          </Link>
-          <div className="flex items-center gap-3 text-sm text-slate-500">
-            <span>{deployment.candidate_email}</span>
-            {deployment.candidate_phone && <span>{deployment.candidate_phone}</span>}
-          </div>
-        </div>
-      </div>
-      
-      <div className="flex items-center gap-4">
-        {deployment.rating && (
-          <div className="flex items-center gap-1 text-gold-500">
-            <StarIcon className="h-4 w-4 fill-gold-400" />
-            <span className="font-medium">{deployment.rating}</span>
-          </div>
-        )}
-        <StatusBadge status={deployment.status} />
-        
-        {deployment.status === 'pending' && (
-          <div className="flex items-center gap-2">
-            <button
-              onClick={() => onStatusChange(deployment.id, 'confirmed')}
-              className="p-2 rounded-lg bg-emerald-100 text-emerald-600 hover:bg-emerald-200"
-            >
-              <CheckCircleIcon className="h-4 w-4" />
-            </button>
-            <button
-              onClick={() => onStatusChange(deployment.id, 'cancelled')}
-              className="p-2 rounded-lg bg-red-100 text-red-600 hover:bg-red-200"
-            >
-              <XCircleIcon className="h-4 w-4" />
-            </button>
-          </div>
-        )}
-      </div>
-    </div>
-  );
-}
+import JobDetailHeader, { QuickActions } from '../components/jobs/JobDetailHeader';
+import { StatsGrid, JobDescription, FinancialSummary, ClientInfo } from '../components/jobs/JobDetailInfo';
+import JobDeploymentList, { AssignWorkerModal } from '../components/jobs/JobDeploymentList';
 
 export default function JobDetail() {
   const { id } = useParams();
@@ -159,7 +58,6 @@ export default function JobDetail() {
 
   const fetchJobData = async () => {
     try {
-      // TODO: Add getDeployments method to jobs service - using raw client for deployments endpoint
       const [jobData, deploymentsData] = await Promise.all([
         api.jobs.getById(id),
         api.client.get(`/jobs/${id}/deployments`),
@@ -168,7 +66,7 @@ export default function JobDetail() {
       if (jobData.success) setJob(jobData.data);
       if (deploymentsData.success) setDeployments(deploymentsData.data || []);
     } catch (error) {
-      console.error('Failed to fetch job:', error);
+      // Failed to fetch job
     } finally {
       setLoading(false);
     }
@@ -176,27 +74,22 @@ export default function JobDetail() {
 
   const handleStatusChange = async (deploymentId, newStatus) => {
     try {
-      // TODO: Create deploymentsService - using raw client for now
       await api.client.patch(`/deployments/${deploymentId}`, { status: newStatus });
       fetchJobData();
     } catch (error) {
-      console.error('Failed to update deployment:', error);
+      // Failed to update deployment
     }
   };
 
   const fetchAvailableCandidates = async () => {
     try {
-      const data = await api.candidates.getAll({
-        status: 'active',
-        limit: 50
-      });
+      const data = await api.candidates.getAll({ status: 'active', limit: 50 });
       if (data.success) {
-        // Filter out already assigned candidates
         const assignedIds = deployments.map(d => d.candidate_id);
         setAvailableCandidates(data.data.filter(c => !assignedIds.includes(c.id)));
       }
     } catch (error) {
-      console.error('Failed to fetch candidates:', error);
+      // Failed to fetch candidates
     }
   };
 
@@ -209,7 +102,6 @@ export default function JobDetail() {
     if (!selectedCandidate) return;
     setSaving(true);
     try {
-      // TODO: Create deploymentsService - using raw client for now
       const data = await api.client.post('/deployments', {
         job_id: id,
         candidate_id: selectedCandidate,
@@ -221,7 +113,7 @@ export default function JobDetail() {
         fetchJobData();
       }
     } catch (error) {
-      console.error('Failed to assign worker:', error);
+      // Failed to assign worker
     } finally {
       setSaving(false);
     }
@@ -242,7 +134,7 @@ export default function JobDetail() {
         fetchJobData();
       }
     } catch (error) {
-      console.error('Failed to update job:', error);
+      // Failed to update job
     } finally {
       setSaving(false);
     }
@@ -257,13 +149,13 @@ export default function JobDetail() {
         fetchJobData();
       }
     } catch (error) {
-      console.error('Failed to cancel job:', error);
+      // Failed to cancel job
     } finally {
       setSaving(false);
     }
   };
 
-  const formatCurrency = (value) => 
+  const formatCurrency = (value) =>
     new Intl.NumberFormat('en-SG', { style: 'currency', currency: 'SGD' }).format(value || 0);
 
   const formatDate = (date) =>
@@ -299,165 +191,40 @@ export default function JobDetail() {
 
   return (
     <div className="space-y-6">
-      {/* Header */}
-      <div className="flex items-center justify-between">
-        <div className="flex items-center gap-4">
-          <button
-            onClick={() => navigate('/jobs')}
-            className="p-2 rounded-lg hover:bg-slate-100 dark:hover:bg-slate-800"
-          >
-            <ArrowLeftIcon className="h-5 w-5 text-slate-500" />
-          </button>
-          <div>
-            <h1 className="text-2xl font-bold text-slate-900 dark:text-white">{job.title}</h1>
-            <p className="text-slate-500">{job.company_name}</p>
-          </div>
-        </div>
-        <div className="flex items-center gap-3">
-          <StatusBadge status={job.status} />
-          <Button variant="secondary" size="sm" icon={EditIcon} onClick={() => setShowEditModal(true)}>Edit</Button>
-        </div>
-      </div>
+      <JobDetailHeader
+        job={job}
+        onEdit={() => setShowEditModal(true)}
+        onCancel={() => setShowCancelModal(true)}
+      />
 
-      {/* Stats Grid */}
-      <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
-        <StatCard icon={CalendarIcon} label="Date" value={formatDate(job.job_date)} color="info" />
-        <StatCard icon={ClockIcon} label="Time" value={`${startTime} - ${endTime}`} color="primary" />
-        <StatCard icon={UsersIcon} label="Workers" value={`${job.filled_slots}/${job.total_slots}`} color="warning" />
-        <StatCard icon={MapPinIcon} label="Location" value={job.location} color="success" />
-      </div>
+      <StatsGrid job={job} startTime={startTime} endTime={endTime} formatDate={formatDate} />
 
       <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
-        {/* Main Info */}
+        {/* Main content */}
         <div className="lg:col-span-2 space-y-6">
-          {/* Description */}
-          <Card>
-            <CardHeader>
-              <CardTitle>Job Details</CardTitle>
-            </CardHeader>
-            <CardContent>
-              <p className="text-slate-600 dark:text-slate-400">{job.description || 'No description provided.'}</p>
-              
-              <div className="grid grid-cols-2 gap-4 mt-6">
-                <div>
-                  <p className="text-sm text-slate-500">Charge Rate</p>
-                  <p className="text-lg font-semibold text-slate-900 dark:text-white">{formatCurrency(job.charge_rate)}/hr</p>
-                </div>
-                <div>
-                  <p className="text-sm text-slate-500">Pay Rate</p>
-                  <p className="text-lg font-semibold text-slate-900 dark:text-white">{formatCurrency(job.pay_rate)}/hr</p>
-                </div>
-                <div>
-                  <p className="text-sm text-slate-500">Break Time</p>
-                  <p className="text-lg font-semibold text-slate-900 dark:text-white">{job.break_minutes || 0} min</p>
-                </div>
-                <div>
-                  <p className="text-sm text-slate-500">XP Bonus</p>
-                  <p className="text-lg font-semibold text-primary-600">{job.xp_bonus || 0} XP</p>
-                </div>
-              </div>
-            </CardContent>
-          </Card>
-
-          {/* Assigned Workers */}
-          <Card>
-            <CardHeader>
-              <div className="flex items-center justify-between">
-                <CardTitle>Assigned Workers ({deployments.length})</CardTitle>
-                <Button size="sm" icon={PlusIcon} onClick={handleOpenAssignModal}>
-                  Assign Worker
-                </Button>
-              </div>
-            </CardHeader>
-            <CardContent>
-              {deployments.length === 0 ? (
-                <p className="text-slate-500 text-center py-8">No workers assigned yet</p>
-              ) : (
-                <div className="space-y-3">
-                  {deployments.map(d => (
-                    <DeploymentRow 
-                      key={d.id} 
-                      deployment={d} 
-                      onStatusChange={handleStatusChange}
-                    />
-                  ))}
-                </div>
-              )}
-            </CardContent>
-          </Card>
+          <JobDescription job={job} formatCurrency={formatCurrency} />
+          <JobDeploymentList
+            deployments={deployments}
+            onStatusChange={handleStatusChange}
+            onOpenAssign={handleOpenAssignModal}
+          />
         </div>
 
         {/* Sidebar */}
         <div className="space-y-6">
-          {/* Financial Summary */}
-          <Card>
-            <CardHeader>
-              <CardTitle>Financial Summary</CardTitle>
-            </CardHeader>
-            <CardContent>
-              <div className="space-y-4">
-                <div className="flex justify-between">
-                  <span className="text-slate-500">Revenue</span>
-                  <span className="font-semibold text-slate-900 dark:text-white">{formatCurrency(totalRevenue)}</span>
-                </div>
-                <div className="flex justify-between">
-                  <span className="text-slate-500">Worker Pay</span>
-                  <span className="font-semibold text-slate-900 dark:text-white">-{formatCurrency(totalCost)}</span>
-                </div>
-                <div className="border-t pt-4 flex justify-between">
-                  <span className="font-medium text-slate-700 dark:text-slate-300">Gross Profit</span>
-                  <span className={clsx(
-                    'font-bold',
-                    grossProfit >= 0 ? 'text-emerald-600' : 'text-red-600'
-                  )}>
-                    {formatCurrency(grossProfit)}
-                  </span>
-                </div>
-                <div className="flex justify-between text-sm">
-                  <span className="text-slate-500">Margin</span>
-                  <span className="text-slate-600">
-                    {totalRevenue > 0 ? ((grossProfit / totalRevenue) * 100).toFixed(1) : 0}%
-                  </span>
-                </div>
-              </div>
-            </CardContent>
-          </Card>
-
-          {/* Client Info */}
-          <Card>
-            <CardHeader>
-              <CardTitle>Client</CardTitle>
-            </CardHeader>
-            <CardContent>
-              <Link 
-                to={`/clients/${job.client_id}`}
-                className="block p-4 rounded-xl bg-slate-50 dark:bg-slate-800 hover:bg-slate-100 dark:hover:bg-slate-700 transition-colors"
-              >
-                <p className="font-semibold text-slate-900 dark:text-white">{job.company_name}</p>
-                <p className="text-sm text-slate-500 mt-1">{job.industry}</p>
-              </Link>
-            </CardContent>
-          </Card>
-
-          {/* Quick Actions */}
+          <FinancialSummary
+            totalRevenue={totalRevenue}
+            totalCost={totalCost}
+            grossProfit={grossProfit}
+            formatCurrency={formatCurrency}
+          />
+          <ClientInfo job={job} />
           <Card>
             <CardHeader>
               <CardTitle>Quick Actions</CardTitle>
             </CardHeader>
             <CardContent>
-              <div className="space-y-2">
-                <Button variant="secondary" className="w-full justify-start" icon={UsersIcon} onClick={() => navigate(`/ai-sourcing?job=${id}`)}>
-                  Find Candidates
-                </Button>
-                <Button variant="secondary" className="w-full justify-start" icon={MailIcon} onClick={() => navigate(`/chat?job=${id}`)}>
-                  Message Workers
-                </Button>
-                {job.status === 'open' && (
-                  <Button variant="danger" className="w-full justify-start" icon={XCircleIcon} onClick={() => setShowCancelModal(true)}>
-                    Cancel Job
-                  </Button>
-                )}
-              </div>
+              <QuickActions job={job} jobId={id} onCancel={() => setShowCancelModal(true)} />
             </CardContent>
           </Card>
         </div>
@@ -543,58 +310,17 @@ export default function JobDetail() {
       </Modal>
 
       {/* Assign Worker Modal */}
-      <Modal
+      <AssignWorkerModal
         isOpen={showAssignModal}
         onClose={() => setShowAssignModal(false)}
-        title="Assign Worker"
-        description="Select a candidate to assign to this job"
-      >
-        <div className="space-y-4">
-          <Input
-            placeholder="Search candidates..."
-            icon={SearchIcon}
-            value={candidateSearch}
-            onChange={(e) => setCandidateSearch(e.target.value)}
-          />
-          <div className="max-h-64 overflow-y-auto space-y-2">
-            {availableCandidates
-              .filter(c => c.name.toLowerCase().includes(candidateSearch.toLowerCase()))
-              .map((candidate) => (
-              <div
-                key={candidate.id}
-                onClick={() => setSelectedCandidate(candidate.id)}
-                className={clsx(
-                  'p-3 rounded-lg cursor-pointer transition-colors flex items-center gap-3',
-                  selectedCandidate === candidate.id
-                    ? 'bg-primary-100 dark:bg-primary-900/30 border border-primary-300 dark:border-primary-700'
-                    : 'bg-slate-50 dark:bg-slate-800/50 hover:bg-slate-100 dark:hover:bg-slate-800'
-                )}
-              >
-                <div className="w-10 h-10 rounded-full bg-primary-500 flex items-center justify-center">
-                  <span className="text-white font-semibold">{candidate.name?.charAt(0)}</span>
-                </div>
-                <div className="flex-1">
-                  <p className="font-medium text-slate-900 dark:text-white">{candidate.name}</p>
-                  <p className="text-sm text-slate-500">Level {candidate.level || 1} • {candidate.total_jobs_completed || 0} jobs</p>
-                </div>
-                {candidate.rating > 0 && (
-                  <div className="flex items-center gap-1 text-amber-500">
-                    <StarIcon className="h-4 w-4 fill-amber-400" />
-                    <span>{candidate.rating.toFixed(1)}</span>
-                  </div>
-                )}
-              </div>
-            ))}
-            {availableCandidates.length === 0 && (
-              <p className="text-center text-slate-500 py-8">No available candidates</p>
-            )}
-          </div>
-        </div>
-        <ModalFooter>
-          <Button variant="secondary" onClick={() => setShowAssignModal(false)}>Cancel</Button>
-          <Button onClick={handleAssignWorker} loading={saving} disabled={!selectedCandidate}>Assign Worker</Button>
-        </ModalFooter>
-      </Modal>
+        candidates={availableCandidates}
+        candidateSearch={candidateSearch}
+        onSearchChange={setCandidateSearch}
+        selectedCandidate={selectedCandidate}
+        onSelectCandidate={setSelectedCandidate}
+        onAssign={handleAssignWorker}
+        saving={saving}
+      />
 
       {/* Cancel Job Modal */}
       <Modal

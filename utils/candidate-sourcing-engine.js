@@ -9,13 +9,14 @@
  * - Maintains continuous candidate pipeline
  */
 
-const Database = require('better-sqlite3');
-const path = require('path');
+
+const { createLogger } = require('./structured-logger');
+const logger = createLogger('candidate-sourcing-engine');
 
 class CandidateSourcingEngine {
   constructor() {
-    const dbPath = path.resolve(__dirname, '../db/database.db');
-    this.db = new Database(dbPath);
+    const { db } = require('../db');
+    this.db = db;
 
     // Sourcing configuration
     this.sourcingConfig = {
@@ -133,13 +134,13 @@ class CandidateSourcingEngine {
    */
   async runDailySourcing() {
     try {
-      console.log('🚀 Starting daily candidate sourcing...');
+      logger.info('Starting daily candidate sourcing...');
 
       // Check current capacity to determine sourcing intensity
       const capacityStatus = await this.checkCapacityStatus();
       const sourcingTarget = this.calculateSourcingTarget(capacityStatus);
 
-      console.log(`📊 Capacity: ${capacityStatus.utilization}% - Target: ${sourcingTarget} candidates`);
+      logger.info('Capacity: ${capacityStatus.utilization}% - Target: ${sourcingTarget} candidates');
 
       // Execute sourcing strategy
       const results = await Promise.all([
@@ -153,7 +154,7 @@ class CandidateSourcingEngine {
       const totalCandidatesSourced = results.reduce((sum, result) => sum + (result.candidatesFound || 0), 0);
       await this.logSourcingSession(totalCandidatesSourced, sourcingTarget, results);
 
-      console.log(`✅ Daily sourcing complete: ${totalCandidatesSourced} candidates sourced`);
+      logger.info('Daily sourcing complete: ${totalCandidatesSourced} candidates sourced');
 
       return {
         success: true,
@@ -163,7 +164,7 @@ class CandidateSourcingEngine {
       };
 
     } catch (error) {
-      console.error('❌ Daily sourcing failed:', error);
+      logger.error('Daily sourcing failed:', { error: error });
       return { success: false, error: error.message };
     }
   }
@@ -172,7 +173,7 @@ class CandidateSourcingEngine {
    * Automated job posting across multiple platforms
    */
   async executeJobPostingStrategy(targetCandidates) {
-    console.log('📝 Executing job posting strategy...');
+    logger.info('Executing job posting strategy...');
 
     try {
       const activePostings = this.getActiveJobPostings();
@@ -197,7 +198,7 @@ class CandidateSourcingEngine {
       };
 
     } catch (error) {
-      console.error('❌ Job posting failed:', error);
+      logger.error('Job posting failed:', { error: error });
       return { action: 'job_posting', error: error.message };
     }
   }
@@ -206,7 +207,7 @@ class CandidateSourcingEngine {
    * Active candidate discovery from various sources
    */
   async executeCandidateDiscovery(targetCandidates) {
-    console.log('🔍 Executing candidate discovery...');
+    logger.info('Executing candidate discovery...');
 
     try {
       const discoveryMethods = [
@@ -233,7 +234,7 @@ class CandidateSourcingEngine {
       };
 
     } catch (error) {
-      console.error('❌ Candidate discovery failed:', error);
+      logger.error('Candidate discovery failed:', { error: error });
       return { action: 'candidate_discovery', error: error.message };
     }
   }
@@ -242,7 +243,7 @@ class CandidateSourcingEngine {
    * Automated outreach to discovered candidates
    */
   async executeAutomatedOutreach(targetCandidates) {
-    console.log('📧 Executing automated outreach...');
+    logger.info('Executing automated outreach...');
 
     try {
       // Get pending candidates from discovery queue
@@ -253,7 +254,7 @@ class CandidateSourcingEngine {
         LIMIT ?
       `).all(targetCandidates);
 
-      console.log(`📋 Found ${pendingCandidates.length} candidates for outreach`);
+      logger.info('Found ${pendingCandidates.length} candidates for outreach');
 
       const outreachResults = [];
 
@@ -275,7 +276,7 @@ class CandidateSourcingEngine {
       };
 
     } catch (error) {
-      console.error('❌ Automated outreach failed:', error);
+      logger.error('Automated outreach failed:', { error: error });
       return { action: 'automated_outreach', error: error.message };
     }
   }
@@ -302,7 +303,7 @@ class CandidateSourcingEngine {
    * LinkedIn candidate discovery (simulated - requires actual LinkedIn API integration)
    */
   async discoverLinkedInCandidates(quota) {
-    console.log(`🔗 Discovering LinkedIn candidates (target: ${quota})`);
+    logger.info('Discovering LinkedIn candidates (target: ${quota})');
 
     // Simulate LinkedIn search results
     const searchQueries = [
@@ -360,7 +361,7 @@ class CandidateSourcingEngine {
    * Indeed candidate discovery (simulated)
    */
   async discoverIndeedCandidates(quota) {
-    console.log(`💼 Discovering Indeed candidates (target: ${quota})`);
+    logger.info('Discovering Indeed candidates (target: ${quota})');
 
     const candidates = [];
 
@@ -409,7 +410,7 @@ class CandidateSourcingEngine {
    * Telegram group mining for candidates (simulated)
    */
   async discoverTelegramCandidates(quota) {
-    console.log(`💬 Discovering Telegram candidates (target: ${quota})`);
+    logger.info('Discovering Telegram candidates (target: ${quota})');
 
     const candidates = [];
 
@@ -458,7 +459,7 @@ class CandidateSourcingEngine {
    * Referral network discovery (simulated)
    */
   async discoverReferralCandidates(quota) {
-    console.log(`🤝 Discovering referral candidates (target: ${quota})`);
+    logger.info('Discovering referral candidates (target: ${quota})');
 
     const candidates = [];
 
@@ -508,7 +509,7 @@ class CandidateSourcingEngine {
    * Post job to specific platform (simulated)
    */
   async postJobToPlatform(platform, template) {
-    console.log(`📝 Posting job to ${platform}...`);
+    logger.info('Posting job to ${platform}...');
 
     const posting = {
       platform,
@@ -549,7 +550,7 @@ class CandidateSourcingEngine {
    * Execute outreach campaign for specific platform
    */
   async executeOutreachCampaign(platform, candidates) {
-    console.log(`📧 Executing outreach campaign for ${platform} (${candidates.length} candidates)`);
+    logger.info('Executing outreach campaign for ${platform} (${candidates.length} candidates)');
 
     const templates = this.getOutreachTemplates(platform);
     let contacted = 0;
@@ -577,7 +578,7 @@ class CandidateSourcingEngine {
           }
         }
       } catch (error) {
-        console.error(`Failed to contact candidate ${candidate.id}:`, error);
+        logger.error('Failed to contact candidate ${candidate.id}:', { error: error });
       }
     }
 
@@ -700,7 +701,7 @@ class CandidateSourcingEngine {
 
   async sendOutreachMessage(candidate, template) {
     // Simulate sending outreach message
-    console.log(`📧 Sending outreach to ${JSON.parse(candidate.candidate_data).name}`);
+    logger.info('Sending outreach to ${JSON.parse(candidate.candidate_data).name}');
 
     // Simulate success rate based on platform and candidate quality
     const successRate = this.calculateOutreachSuccessRate(candidate);
@@ -753,7 +754,7 @@ class CandidateSourcingEngine {
 
   optimizeSourcingChannels() {
     // Analyze performance and adjust strategy
-    console.log('📊 Optimizing sourcing channels...');
+    logger.info('Optimizing sourcing channels...');
 
     const performanceData = this.db.prepare(`
       SELECT platform, AVG(success_rate) as avg_success, AVG(cost_per_candidate) as avg_cost
@@ -765,7 +766,7 @@ class CandidateSourcingEngine {
     // Simple optimization: prioritize high-success, low-cost platforms
     performanceData.forEach(platform => {
       const efficiency = platform.avg_success / (platform.avg_cost + 1);
-      console.log(`📈 ${platform.platform}: Success ${(platform.avg_success * 100).toFixed(1)}%, Cost $${platform.avg_cost.toFixed(2)}, Efficiency: ${efficiency.toFixed(2)}`);
+      logger.info('${platform.platform}: Success ${(platform.avg_success * 100).toFixed(1)}%, Cost $${platform.avg_cost.toFixed(2)}, Efficiency: ${efficiency.toFixed(2)}');
     });
 
     return { optimizationCompleted: true, performanceData };
@@ -819,7 +820,7 @@ class CandidateSourcingEngine {
    * Emergency stop for sourcing (when capacity is exceeded)
    */
   async emergencyStopSourcing() {
-    console.log('🛑 Emergency stop activated - Pausing all sourcing activities');
+    logger.info('Emergency stop activated - Pausing all sourcing activities');
 
     // Pause active job postings
     this.db.prepare(`
@@ -842,7 +843,7 @@ class CandidateSourcingEngine {
    * Resume sourcing after emergency stop
    */
   async resumeSourcing() {
-    console.log('▶️ Resuming sourcing activities');
+    logger.info('▶️ Resuming sourcing activities');
 
     // Resume job postings
     this.db.prepare(`

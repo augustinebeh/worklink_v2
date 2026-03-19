@@ -48,7 +48,7 @@ const PerformanceScores = ({ candidateId }) => {
       }
 
     } catch (error) {
-      console.error('Error loading performance scores:', error);
+      // Error loading performance scores
       setError('Failed to load performance scores');
     } finally {
       setLoading(false);

@@ -5,8 +5,10 @@
  * Features: Auto-priority detection, source tracking, staging & promotion flow
  */
 
-const { db } = require('../../db/database');
+const { db } = require('../../db');
 const { v4: uuidv4 } = require('uuid');
+const { createLogger } = require('../../utils/structured-logger');
+const logger = createLogger('data-lifecycle-manager');
 
 class DataLifecycleManager {
   constructor() {
@@ -37,7 +39,7 @@ class DataLifecycleManager {
       errorDetails: []
     };
 
-    console.log(`📝 Inserting ${validatedTenders.length} tenders into staging table (gebiz_active_tenders)...`);
+    logger.info('Inserting tenders into staging table', { count: validatedTenders.length });
 
     const insertStmt = db.prepare(`
       INSERT OR IGNORE INTO gebiz_active_tenders (
@@ -52,7 +54,7 @@ class DataLifecycleManager {
         // Pre-check: skip if already in staging OR already in pipeline
         if (await this.stagingTenderExists(tender.tender_no)) {
           results.skipped++;
-          console.log(`⏭️  Skipped tender: ${tender.tender_no} (already in staging table)`);
+          logger.debug('Skipped tender (already in staging table)', { tenderNo: tender.tender_no });
           continue;
         }
 
@@ -75,11 +77,11 @@ class DataLifecycleManager {
         if (result.changes === 1) {
           results.created++;
           results.createdIds.push(result.lastInsertRowid);
-          console.log(`✅ Staged tender: ${tender.tender_no} (id ${result.lastInsertRowid})`);
+          logger.info('Staged tender', { tenderNo: tender.tender_no, id: result.lastInsertRowid });
         } else {
           // INSERT OR IGNORE hit a duplicate at the DB level
           results.skipped++;
-          console.log(`⏭️  Skipped tender: ${tender.tender_no} (duplicate, INSERT OR IGNORE)`);
+          logger.debug('Skipped tender (duplicate, INSERT OR IGNORE)', { tenderNo: tender.tender_no });
         }
 
       } catch (error) {
@@ -88,11 +90,11 @@ class DataLifecycleManager {
           tender_no: tender.tender_no || 'Unknown',
           error: error.message
         });
-        console.error(`❌ Failed to stage tender ${tender.tender_no}: ${error.message}`);
+        logger.error('Failed to stage tender', { tenderNo: tender.tender_no, error: error.message });
       }
     }
 
-    console.log(`📊 Staging complete: ${results.created} created, ${results.skipped} skipped, ${results.errors} errors`);
+    logger.info('Staging complete', { created: results.created, skipped: results.skipped, errors: results.errors });
 
     return results;
   }
@@ -235,7 +237,7 @@ class DataLifecycleManager {
       }
 
     } catch (error) {
-      console.error('Error creating lifecycle card:', error);
+      logger.error('Error creating lifecycle card', { error: error.message });
       throw error;
     }
   }
@@ -259,7 +261,7 @@ class DataLifecycleManager {
 
       return existing.count > 0;
     } catch (error) {
-      console.error('Error checking staging tender existence:', error);
+      logger.error('Error checking staging tender existence', { error: error.message });
       return false;
     }
   }
@@ -279,7 +281,7 @@ class DataLifecycleManager {
 
       return existing.count > 0;
     } catch (error) {
-      console.error('Error checking lifecycle card existence:', error);
+      logger.error('Error checking lifecycle card existence', { error: error.message });
       return false;
     }
   }
@@ -498,7 +500,7 @@ class DataLifecycleManager {
       };
 
     } catch (error) {
-      console.error('Error getting lifecycle stats:', error);
+      logger.error('Error getting lifecycle stats', { error: error.message });
       return {
         total_cards: 0,
         rss_imports: 0,
@@ -538,7 +540,7 @@ class DataLifecycleManager {
       return result.changes === 1;
 
     } catch (error) {
-      console.error('Error updating lifecycle stage:', error);
+      logger.error('Error updating lifecycle stage', { error: error.message });
       return false;
     }
   }

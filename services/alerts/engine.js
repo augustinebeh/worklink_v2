@@ -5,12 +5,11 @@
  */
 
 const cron = require('node-cron');
-const Database = require('better-sqlite3');
-const path = require('path');
 const { v4: uuidv4 } = require('uuid');
 const notificationRouter = require('../notifications');
-
-const DB_PATH = path.join(__dirname, '../../database/gebiz_intelligence.db');
+const { db } = require('../../db');
+const { createLogger } = require('../../utils/structured-logger');
+const logger = createLogger('alert-engine');
 
 class AlertEngine {
   constructor() {
@@ -26,11 +25,11 @@ class AlertEngine {
    */
   start() {
     if (this.isRunning) {
-      console.warn('⚠️  Alert Engine already running');
+      logger.warn('Alert Engine already running');
       return;
     }
 
-    console.log('🔔 Starting Alert Engine...');
+    logger.info('Starting Alert Engine...');
 
     // Run every 5 minutes
     this.cronJob = cron.schedule('*/5 * * * *', async () => {
@@ -38,7 +37,7 @@ class AlertEngine {
     });
 
     this.isRunning = true;
-    console.log('✅ Alert Engine started (runs every 5 minutes)');
+    logger.info('Alert Engine started (runs every 5 minutes)');
 
     // Run immediately on startup
     this.evaluateAllRules();
@@ -49,7 +48,7 @@ class AlertEngine {
    */
   stop() {
     if (!this.isRunning) {
-      console.warn('⚠️  Alert Engine not running');
+      logger.warn('Alert Engine not running');
       return;
     }
 
@@ -59,7 +58,7 @@ class AlertEngine {
     }
 
     this.isRunning = false;
-    console.log('🛑 Alert Engine stopped');
+    logger.info('Alert Engine stopped');
   }
 
   /**
@@ -80,24 +79,21 @@ class AlertEngine {
    */
   async evaluateAllRules() {
     if (!this.isRunning && this.cronJob) {
-      console.log('⏸️  Alert Engine paused, skipping evaluation');
+      logger.info('Alert Engine paused, skipping evaluation');
       return;
     }
 
     this.lastRun = new Date();
     this.runsCount++;
 
-    console.log(`🔍 Alert Engine: Evaluating rules (Run #${this.runsCount})`);
+    logger.info(`Alert Engine: Evaluating rules (Run #${this.runsCount})`);
 
     try {
-      const db = new Database(DB_PATH);
-
       // Get all active alert rules
       const rules = db.prepare('SELECT * FROM alert_rules WHERE active = 1').all();
 
       if (rules.length === 0) {
-        console.log('ℹ️  No active alert rules to evaluate');
-        db.close();
+        logger.info('No active alert rules to evaluate');
         return;
       }
 
@@ -108,7 +104,7 @@ class AlertEngine {
           const count = await this.evaluateRule(db, rule);
           triggered += count;
         } catch (error) {
-          console.error(`❌ Error evaluating rule ${rule.rule_name}:`, error.message);
+          logger.error(`Error evaluating rule ${rule.rule_name}`, { error: error.message });
         }
       }
 
@@ -118,13 +114,11 @@ class AlertEngine {
       // Process digest batches
       await this.processDailyDigest(db);
 
-      db.close();
-
       this.alertsTriggered += triggered;
-      console.log(`✅ Alert Engine: ${triggered} alerts triggered`);
+      logger.info(`Alert Engine: ${triggered} alerts triggered`);
 
     } catch (error) {
-      console.error('❌ Alert Engine error:', error);
+      logger.error('Alert Engine error', { error: error.message });
     }
   }
 
@@ -157,7 +151,7 @@ class AlertEngine {
         break;
 
       default:
-        console.warn(`Unknown rule type: ${rule.rule_type}`);
+        logger.warn(`Unknown rule type: ${rule.rule_type}`);
     }
 
     // Update rule's last triggered time if any alerts fired
@@ -507,7 +501,6 @@ class AlertEngine {
       }
 
       // Update alert with delivery results
-      const db = new Database(DB_PATH);
       db.prepare(`
         UPDATE alert_history
         SET delivered_channels = ?,
@@ -520,10 +513,9 @@ class AlertEngine {
         result.failed_channels.length > 0 ? JSON.stringify(result.failed_channels) : null,
         alert.id
       );
-      db.close();
 
     } catch (error) {
-      console.error('Error sending notification:', error);
+      logger.error('Error sending notification', { error: error.message });
     }
   }
 
@@ -548,7 +540,7 @@ class AlertEngine {
 
     for (const alert of alerts) {
       try {
-        console.log(`⏫ Escalating alert: ${alert.alert_title}`);
+        logger.info(`Escalating alert: ${alert.alert_title}`);
 
         // Send escalation notification
         const escalationRecipients = JSON.parse(alert.escalation_recipients || '{}');
@@ -566,7 +558,7 @@ class AlertEngine {
         // This would use the notification router with escalation-specific templates
 
       } catch (error) {
-        console.error('Error handling escalation:', error);
+        logger.error('Error handling escalation', { error: error.message });
       }
     }
   }
@@ -617,7 +609,7 @@ class AlertEngine {
         `).run(...alertIds);
 
       } catch (error) {
-        console.error('Error processing digest for user:', error);
+        logger.error('Error processing digest for user', { error: error.message });
       }
     }
   }

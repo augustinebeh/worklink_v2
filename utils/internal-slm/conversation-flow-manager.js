@@ -3,6 +3,10 @@
  * Manages conversation state and integrates with interview scheduling system
  */
 
+
+const { createLogger } = require('../structured-logger');
+const logger = createLogger('conversation-flow-manager');
+
 const axios = require('axios');
 const { format, addDays, addHours, setHours, setMinutes } = require('date-fns');
 
@@ -58,7 +62,7 @@ class ConversationFlowManager {
       };
 
     } catch (error) {
-      console.error('Error checking interview queue:', error);
+      logger.error('Error checking interview queue:', { error: error });
       return {
         inQueue: false,
         scheduled: false,
@@ -93,7 +97,7 @@ class ConversationFlowManager {
       }));
 
     } catch (error) {
-      console.error('Error finding matching slots:', error);
+      logger.error('Error finding matching slots:', { error: error });
       return [];
     }
   }
@@ -167,7 +171,7 @@ class ConversationFlowManager {
       }
 
     } catch (error) {
-      console.error('Error booking interview:', error);
+      logger.error('Error booking interview:', { error: error });
 
       if (error.response?.status === 409) {
         return {
@@ -204,7 +208,7 @@ class ConversationFlowManager {
       }));
 
     } catch (error) {
-      console.error('Error generating alternative slots:', error);
+      logger.error('Error generating alternative slots:', { error: error });
 
       // Return fallback slots
       return [
@@ -355,7 +359,7 @@ class ConversationFlowManager {
         recentMessages: []
       };
     } catch (error) {
-      console.error('Error getting conversation context:', error);
+      logger.error('Error getting conversation context:', { error: error });
       return {};
     }
   }
@@ -367,10 +371,10 @@ class ConversationFlowManager {
     try {
       // This would typically update a conversation context store
       // For now, just log the update
-      console.log('Updating conversation context:', { candidateId, updates });
+      logger.info('Updating conversation context:', { data: { candidateId, updates } });
       return true;
     } catch (error) {
-      console.error('Error updating conversation context:', error);
+      logger.error('Error updating conversation context:', { error: error });
       return false;
     }
   }

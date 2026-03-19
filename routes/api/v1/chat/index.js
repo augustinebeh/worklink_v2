@@ -15,14 +15,72 @@
 
 const express = require('express');
 const router = express.Router();
+const { db } = require('../../../../db');
+const { authenticateAny, authenticateAdmin } = require('../../../../middleware/auth');
+const { createLogger } = require('../../../../utils/structured-logger');
+
+const logger = createLogger('api:chat');
 
 // Import route modules
 const messagesRoutes = require('./routes/messages');
 const conversationsRoutes = require('./routes/conversations');
+const chatAttachmentsRoutes = require('../chat-attachments');
 
 // Mount route modules
 router.use('/messages', messagesRoutes);        // Message CRUD operations
 router.use('/conversations', conversationsRoutes);  // Conversation management
+router.use('/attachments', chatAttachmentsRoutes);  // File attachments
+
+/**
+ * GET /templates
+ * Get message templates for quick replies
+ * (Mounted at /chat/templates for frontend compatibility)
+ */
+router.get('/templates', authenticateAny, (req, res) => {
+  try {
+    const tableExists = db.prepare("SELECT name FROM sqlite_master WHERE type='table' AND name='message_templates'").get();
+
+    if (!tableExists) {
+      return res.json({
+        success: true,
+        data: [
+          { id: 'welcome', name: 'Welcome', content: 'Welcome to WorkLink! How can we help you today?' },
+          { id: 'job_update', name: 'Job Update', content: 'We have new job opportunities that match your profile.' },
+          { id: 'payment_confirm', name: 'Payment Confirmation', content: 'Your payment has been processed successfully.' },
+          { id: 'schedule_reminder', name: 'Schedule Reminder', content: 'This is a reminder about your upcoming assignment.' }
+        ],
+        source: 'defaults'
+      });
+    }
+
+    const templates = db.prepare('SELECT * FROM message_templates ORDER BY name').all();
+    res.json({ success: true, data: templates });
+  } catch (error) {
+    logger.error('Error fetching templates', { error: error.message });
+    res.status(500).json({ success: false, error: 'Failed to retrieve templates' });
+  }
+});
+
+// Path-based message routes (frontend expects /chat/{candidateId}/messages)
+router.get('/:candidateId/messages', authenticateAny, (req, res, next) => {
+  req.query.candidateId = req.params.candidateId;
+  req.url = '/';
+  messagesRoutes(req, res, next);
+});
+
+// Admin message routes (frontend expects /chat/admin/{candidateId}/messages)
+router.get('/admin/:candidateId/messages', authenticateAdmin, (req, res, next) => {
+  req.query.candidateId = req.params.candidateId;
+  req.query.markAsRead = 'true';
+  req.url = '/';
+  messagesRoutes(req, res, next);
+});
+
+router.post('/admin/:candidateId/messages', authenticateAdmin, (req, res, next) => {
+  req.body.candidateId = req.params.candidateId;
+  req.url = '/';
+  messagesRoutes(req, res, next);
+});
 
 // Legacy admin routes (for backward compatibility)
 router.use('/admin/conversations', conversationsRoutes);  // Admin conversations endpoint
@@ -47,7 +105,7 @@ router.get('/health', (req, res) => {
  * GET /stats
  * Get chat system statistics
  */
-router.get('/stats', (req, res) => {
+router.get('/stats', async (req, res) => {
   try {
     const { db } = require('../../../../db');
     const { getOnlineCandidates } = require('./helpers/websocket-integration');
@@ -62,7 +120,7 @@ router.get('/stats', (req, res) => {
         COUNT(CASE WHEN created_at >= DATE('now', '-24 hours') THEN 1 END) as messages_24h,
         COUNT(CASE WHEN created_at >= DATE('now', '-7 days') THEN 1 END) as messages_7d
       FROM messages
-      WHERE deleted IS NULL OR deleted = 0
+      WHERE 1=1
     `).get();
 
     // Get conversation stats
@@ -72,7 +130,7 @@ router.get('/stats', (req, res) => {
         COUNT(DISTINCT CASE WHEN created_at >= DATE('now', '-24 hours') THEN candidate_id END) as active_24h,
         COUNT(DISTINCT CASE WHEN created_at >= DATE('now', '-7 days') THEN candidate_id END) as active_7d
       FROM messages
-      WHERE deleted IS NULL OR deleted = 0
+      WHERE 1=1
     `).get();
 
     // Get top conversation candidates
@@ -84,7 +142,6 @@ router.get('/stats', (req, res) => {
         MAX(m.created_at) as last_message_time
       FROM candidates c
       JOIN messages m ON c.id = m.candidate_id
-      WHERE m.deleted IS NULL OR m.deleted = 0
       GROUP BY c.id, c.name
       ORDER BY message_count DESC
       LIMIT 10
@@ -98,22 +155,18 @@ router.get('/stats', (req, res) => {
         COUNT(DISTINCT candidate_id) as unique_conversations
       FROM messages
       WHERE created_at >= DATE('now', '-7 days')
-        AND (deleted IS NULL OR deleted = 0)
       GROUP BY DATE(created_at)
       ORDER BY date DESC
     `).all();
 
-    // Get online status (async)
-    Promise.resolve().then(async () => {
-      try {
-        const onlineCandidates = await getOnlineCandidates();
-        return onlineCandidates.length;
-      } catch (error) {
-        return 0;
-      }
-    }).then(onlineCount => {
-      // This is for logging purposes; main response already sent
-    });
+    // Get online count properly
+    let onlineCount = 0;
+    try {
+      const onlineCandidates = await getOnlineCandidates();
+      onlineCount = onlineCandidates.length;
+    } catch (error) {
+      // Online count is non-critical, default to 0
+    }
 
     res.json({
       success: true,
@@ -122,18 +175,18 @@ router.get('/stats', (req, res) => {
         conversations: conversationStats,
         top_conversations: topConversations,
         trends: messageTrends,
-        online_candidates: 0 // Will be updated asynchronously
+        online_candidates: onlineCount
       },
       generated_at: new Date().toISOString(),
       module: 'chat'
     });
 
   } catch (error) {
-    console.error('Error fetching chat stats:', error);
+    logger.error('Error fetching chat stats', { error: error.message });
     res.status(500).json({
       success: false,
       error: 'Failed to retrieve chat statistics',
-      details: error.message
+      details: 'Internal server error'
     });
   }
 });

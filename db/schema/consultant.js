@@ -1,0 +1,192 @@
+/**
+ * Consultant Performance & Analytics Schema Tables
+ * @param {Database} db - SQLite database instance
+ */
+function createConsultantTables(db) {
+  db.exec(`
+    CREATE TABLE IF NOT EXISTS consultant_performance_daily (
+      id INTEGER PRIMARY KEY AUTOINCREMENT,
+      consultant_id TEXT NOT NULL,
+      date DATE NOT NULL,
+      candidates_scheduled INTEGER DEFAULT 0,
+      candidates_converted INTEGER DEFAULT 0,
+      interviews_conducted INTEGER DEFAULT 0,
+      no_show_rate REAL DEFAULT 0,
+      scheduling_speed_minutes REAL DEFAULT 0,
+      capacity_utilization_percent REAL DEFAULT 0,
+      candidate_satisfaction_score REAL DEFAULT 0,
+      interview_completion_rate REAL DEFAULT 0,
+      conversion_to_hire_rate REAL DEFAULT 0,
+      reliability_score REAL DEFAULT 0,
+      feedback_quality_score REAL DEFAULT 0,
+      pipeline_velocity REAL DEFAULT 0,
+      skill_development_score REAL DEFAULT 0,
+      coaching_implementation_score REAL DEFAULT 0,
+      process_improvement_suggestions INTEGER DEFAULT 0,
+      retention_contribution_score REAL DEFAULT 0,
+      total_interactions INTEGER DEFAULT 0,
+      total_hours_worked REAL DEFAULT 0,
+      productivity_score REAL DEFAULT 0,
+      efficiency_score REAL DEFAULT 0,
+      quality_score REAL DEFAULT 0,
+      growth_score REAL DEFAULT 0,
+      overall_performance_score REAL DEFAULT 0,
+      workload_factor REAL DEFAULT 1.0,
+      market_conditions_factor REAL DEFAULT 1.0,
+      created_at DATETIME DEFAULT CURRENT_TIMESTAMP,
+      UNIQUE(consultant_id, date)
+    );
+
+    CREATE TABLE IF NOT EXISTS consultant_kpi_scores (
+      id INTEGER PRIMARY KEY AUTOINCREMENT,
+      consultant_id TEXT NOT NULL,
+      calculation_period TEXT NOT NULL,
+      period_start DATE NOT NULL,
+      period_end DATE NOT NULL,
+      efficiency_kpis TEXT DEFAULT '{}',
+      quality_kpis TEXT DEFAULT '{}',
+      growth_kpis TEXT DEFAULT '{}',
+      scheduling_efficiency_score REAL DEFAULT 0,
+      conversion_rate_score REAL DEFAULT 0,
+      reliability_score REAL DEFAULT 0,
+      satisfaction_score REAL DEFAULT 0,
+      innovation_score REAL DEFAULT 0,
+      mentoring_score REAL DEFAULT 0,
+      weighted_efficiency_score REAL DEFAULT 0,
+      weighted_quality_score REAL DEFAULT 0,
+      weighted_growth_score REAL DEFAULT 0,
+      overall_kpi_score REAL DEFAULT 0,
+      efficiency_rank INTEGER,
+      quality_rank INTEGER,
+      growth_rank INTEGER,
+      overall_rank INTEGER,
+      percentile_rank REAL DEFAULT 0,
+      team_average_score REAL DEFAULT 0,
+      score_vs_team_average REAL DEFAULT 0,
+      improvement_from_last_period REAL DEFAULT 0,
+      calculated_at DATETIME DEFAULT CURRENT_TIMESTAMP,
+      UNIQUE(consultant_id, calculation_period, period_start)
+    );
+
+    CREATE TABLE IF NOT EXISTS consultant_alerts (
+      id INTEGER PRIMARY KEY AUTOINCREMENT,
+      consultant_id TEXT,
+      alert_type TEXT NOT NULL,
+      severity TEXT DEFAULT 'medium',
+      title TEXT NOT NULL,
+      description TEXT NOT NULL,
+      trigger_metric TEXT,
+      trigger_value REAL,
+      threshold_value REAL,
+      time_period TEXT,
+      comparison_baseline TEXT,
+      affected_kpis TEXT DEFAULT '[]',
+      status TEXT DEFAULT 'active',
+      priority_score INTEGER DEFAULT 0,
+      auto_generated INTEGER DEFAULT 1,
+      acknowledged_at DATETIME,
+      acknowledged_by TEXT,
+      resolved_at DATETIME,
+      resolution_notes TEXT,
+      created_at DATETIME DEFAULT CURRENT_TIMESTAMP
+    );
+
+    CREATE TABLE IF NOT EXISTS coaching_recommendations (
+      id INTEGER PRIMARY KEY AUTOINCREMENT,
+      consultant_id TEXT NOT NULL,
+      recommendation_type TEXT NOT NULL,
+      category TEXT NOT NULL,
+      title TEXT NOT NULL,
+      description TEXT NOT NULL,
+      detailed_guidance TEXT,
+      target_kpi TEXT,
+      current_performance REAL,
+      target_performance REAL,
+      estimated_impact_score REAL DEFAULT 0,
+      action_steps TEXT DEFAULT '[]',
+      resources_needed TEXT DEFAULT '[]',
+      estimated_time_to_implement_hours REAL DEFAULT 0,
+      difficulty_level TEXT DEFAULT 'medium',
+      status TEXT DEFAULT 'pending',
+      priority INTEGER DEFAULT 50,
+      implementation_deadline DATE,
+      baseline_measurement REAL,
+      progress_measurements TEXT DEFAULT '[]',
+      final_measurement REAL,
+      improvement_achieved REAL,
+      auto_generated INTEGER DEFAULT 1,
+      generated_by TEXT DEFAULT 'analytics_engine',
+      coach_assigned TEXT,
+      consultant_feedback TEXT,
+      coach_notes TEXT,
+      created_at DATETIME DEFAULT CURRENT_TIMESTAMP,
+      started_at DATETIME,
+      completed_at DATETIME
+    );
+
+    CREATE TABLE IF NOT EXISTS consultant_team_analytics (
+      id INTEGER PRIMARY KEY AUTOINCREMENT,
+      calculation_date DATE NOT NULL,
+      period_type TEXT NOT NULL,
+      period_start DATE NOT NULL,
+      period_end DATE NOT NULL,
+      total_consultants INTEGER DEFAULT 0,
+      active_consultants INTEGER DEFAULT 0,
+      performance_distribution TEXT DEFAULT '{}',
+      kpi_averages TEXT DEFAULT '{}',
+      kpi_ranges TEXT DEFAULT '{}',
+      top_efficiency_consultant_id TEXT,
+      top_quality_consultant_id TEXT,
+      top_growth_consultant_id TEXT,
+      top_overall_consultant_id TEXT,
+      team_efficiency_trend REAL DEFAULT 0,
+      team_quality_trend REAL DEFAULT 0,
+      team_growth_trend REAL DEFAULT 0,
+      overall_team_trend REAL DEFAULT 0,
+      improvement_opportunities TEXT DEFAULT '[]',
+      best_practices TEXT DEFAULT '[]',
+      risk_areas TEXT DEFAULT '[]',
+      calculated_at DATETIME DEFAULT CURRENT_TIMESTAMP,
+      UNIQUE(calculation_date, period_type)
+    );
+
+    CREATE TABLE IF NOT EXISTS consultant_achievements (
+      id INTEGER PRIMARY KEY AUTOINCREMENT,
+      consultant_id TEXT NOT NULL,
+      achievement_type TEXT NOT NULL,
+      achievement_name TEXT NOT NULL,
+      description TEXT,
+      criteria_met TEXT DEFAULT '{}',
+      performance_period TEXT,
+      badge_icon TEXT,
+      badge_color TEXT,
+      rarity TEXT DEFAULT 'common',
+      points_awarded INTEGER DEFAULT 0,
+      auto_awarded INTEGER DEFAULT 1,
+      publicly_visible INTEGER DEFAULT 1,
+      earned_at DATETIME DEFAULT CURRENT_TIMESTAMP
+    );
+
+    CREATE TABLE IF NOT EXISTS consultant_goals (
+      id INTEGER PRIMARY KEY AUTOINCREMENT,
+      consultant_id TEXT NOT NULL,
+      goal_type TEXT NOT NULL,
+      title TEXT NOT NULL,
+      description TEXT,
+      target_kpi TEXT,
+      current_value REAL,
+      target_value REAL,
+      target_date DATE,
+      status TEXT DEFAULT 'active',
+      progress_percentage REAL DEFAULT 0,
+      milestones TEXT DEFAULT '[]',
+      coaching_plan_id INTEGER,
+      support_provided TEXT DEFAULT '[]',
+      created_at DATETIME DEFAULT CURRENT_TIMESTAMP,
+      achieved_at DATETIME,
+      FOREIGN KEY (coaching_plan_id) REFERENCES coaching_recommendations(id)
+    );
+  `);
+}
+
+module.exports = { createConsultantTables };

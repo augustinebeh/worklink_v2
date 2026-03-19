@@ -4,39 +4,21 @@ import {
   UsersIcon,
   BriefcaseIcon,
   DollarSignIcon,
-  CalendarIcon,
-  StarIcon,
-  ClockIcon,
   TargetIcon,
   ArrowUpIcon,
   ArrowDownIcon,
-  ZapIcon,
-  AwardIcon,
   AlertCircleIcon,
 } from 'lucide-react';
-import {
-  AreaChart,
-  Area,
-  XAxis,
-  YAxis,
-  CartesianGrid,
-  Tooltip,
-  ResponsiveContainer,
-  BarChart,
-  Bar,
-  PieChart,
-  Pie,
-  Cell,
-  Legend,
-  LineChart,
-  Line,
-  ComposedChart,
-} from 'recharts';
 import { api } from '../shared/services/api';
-import Card, { CardHeader, CardTitle, CardContent } from '../components/ui/Card';
-import Badge from '../components/ui/Badge';
+import Card from '../components/ui/Card';
 import Select from '../components/ui/Select';
 import { clsx } from 'clsx';
+
+import RevenueGrowthChart from '../components/analytics/RevenueGrowthChart';
+import CandidatePipelineChart from '../components/analytics/CandidatePipelineChart';
+import RevenueByClientChart from '../components/analytics/RevenueByClientChart';
+import DeploymentsChart from '../components/analytics/DeploymentsChart';
+import { TopPerformersCard, TenderPipelineCard, BusinessHealthCard } from '../components/analytics/PerformanceMetrics';
 
 const formatCurrency = (value, compact = false) => {
   const num = Number(value) || 0;
@@ -45,8 +27,6 @@ const formatCurrency = (value, compact = false) => {
   }
   return new Intl.NumberFormat('en-SG', { style: 'currency', currency: 'SGD', minimumFractionDigits: 0 }).format(num);
 };
-
-const COLORS = ['#3b82f6', '#10b981', '#f59e0b', '#ef4444', '#8b5cf6', '#ec4899', '#06b6d4', '#84cc16'];
 
 function StatCard({ title, value, subtitle, change, trend, icon: Icon, color }) {
   const colorClasses = {
@@ -107,7 +87,6 @@ export default function Analytics() {
         setError('Failed to load analytics data');
       }
     } catch (err) {
-      console.error('Failed to fetch analytics:', err);
       setError('Failed to connect to server');
     } finally {
       setLoading(false);
@@ -121,8 +100,8 @@ export default function Analytics() {
   // Prepare chart data with fallbacks
   const monthlyTrend = safeArray(financialData?.monthlyTrend);
   const monthNames = ['Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun', 'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec'];
-  
-  const growthData = monthlyTrend.length > 0 
+
+  const growthData = monthlyTrend.length > 0
     ? monthlyTrend.map((item, idx) => {
         const prevRevenue = idx > 0 ? safeNumber(monthlyTrend[idx - 1].revenue) : safeNumber(item.revenue);
         const growth = prevRevenue > 0 ? ((safeNumber(item.revenue) - prevRevenue) / prevRevenue * 100) : 0;
@@ -154,11 +133,11 @@ export default function Analytics() {
   // Month over month growth
   const thisMonth = financialData?.thisMonth || {};
   const lastMonth = financialData?.lastMonth || {};
-  const revenueGrowth = safeNumber(lastMonth.revenue) > 0 
-    ? ((safeNumber(thisMonth.revenue) - safeNumber(lastMonth.revenue)) / safeNumber(lastMonth.revenue) * 100).toFixed(1) 
+  const revenueGrowth = safeNumber(lastMonth.revenue) > 0
+    ? ((safeNumber(thisMonth.revenue) - safeNumber(lastMonth.revenue)) / safeNumber(lastMonth.revenue) * 100).toFixed(1)
     : '0';
-  const profitGrowth = safeNumber(lastMonth.profit) > 0 
-    ? ((safeNumber(thisMonth.profit) - safeNumber(lastMonth.profit)) / safeNumber(lastMonth.profit) * 100).toFixed(1) 
+  const profitGrowth = safeNumber(lastMonth.profit) > 0
+    ? ((safeNumber(thisMonth.profit) - safeNumber(lastMonth.profit)) / safeNumber(lastMonth.profit) * 100).toFixed(1)
     : '0';
 
   // Candidate pipeline data with fallback
@@ -272,251 +251,22 @@ export default function Analytics() {
       </div>
 
       {/* Revenue & Profit Growth Chart */}
-      <Card>
-        <CardHeader>
-          <CardTitle>Revenue & Profit Growth</CardTitle>
-        </CardHeader>
-        <CardContent>
-          <div className="h-80">
-            <ResponsiveContainer width="100%" height="100%">
-              <ComposedChart data={growthData}>
-                <defs>
-                  <linearGradient id="revenueGrad" x1="0" y1="0" x2="0" y2="1">
-                    <stop offset="5%" stopColor="#3b82f6" stopOpacity={0.3} />
-                    <stop offset="95%" stopColor="#3b82f6" stopOpacity={0} />
-                  </linearGradient>
-                  <linearGradient id="profitGrad" x1="0" y1="0" x2="0" y2="1">
-                    <stop offset="5%" stopColor="#10b981" stopOpacity={0.3} />
-                    <stop offset="95%" stopColor="#10b981" stopOpacity={0} />
-                  </linearGradient>
-                </defs>
-                <CartesianGrid strokeDasharray="3 3" stroke="#e2e8f0" vertical={false} />
-                <XAxis dataKey="month" stroke="#64748b" fontSize={12} tickLine={false} />
-                <YAxis yAxisId="left" stroke="#64748b" fontSize={12} tickFormatter={(v) => `$${(v/1000).toFixed(0)}k`} />
-                <YAxis yAxisId="right" orientation="right" stroke="#64748b" fontSize={12} tickFormatter={(v) => `${v}%`} />
-                <Tooltip 
-                  contentStyle={{ backgroundColor: '#1e293b', border: 'none', borderRadius: '8px', color: '#f1f5f9' }}
-                  formatter={(value, name) => [name === 'growth' ? `${Number(value).toFixed(1)}%` : formatCurrency(value), name === 'revenue' ? 'Revenue' : name === 'profit' ? 'Profit' : 'Growth']}
-                />
-                <Legend />
-                <Area yAxisId="left" type="monotone" dataKey="revenue" name="Revenue" stroke="#3b82f6" strokeWidth={2} fill="url(#revenueGrad)" />
-                <Area yAxisId="left" type="monotone" dataKey="profit" name="Profit" stroke="#10b981" strokeWidth={2} fill="url(#profitGrad)" />
-                <Line yAxisId="right" type="monotone" dataKey="growth" name="Growth %" stroke="#f59e0b" strokeWidth={2} dot={{ fill: '#f59e0b', r: 4 }} />
-              </ComposedChart>
-            </ResponsiveContainer>
-          </div>
-        </CardContent>
-      </Card>
+      <RevenueGrowthChart data={growthData} />
 
       {/* Two Column Layout */}
       <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
-        {/* Candidate Pipeline */}
-        <Card>
-          <CardHeader>
-            <CardTitle>Candidate Pipeline</CardTitle>
-          </CardHeader>
-          <CardContent>
-            <div className="h-64">
-              <ResponsiveContainer width="100%" height="100%">
-                <PieChart>
-                  <Pie
-                    data={candidatePipeline}
-                    cx="50%"
-                    cy="50%"
-                    innerRadius={50}
-                    outerRadius={80}
-                    paddingAngle={3}
-                    dataKey="count"
-                    nameKey="status"
-                  >
-                    {candidatePipeline.map((_, index) => (
-                      <Cell key={`cell-${index}`} fill={COLORS[index % COLORS.length]} />
-                    ))}
-                  </Pie>
-                  <Tooltip formatter={(value, name) => [value, name]} />
-                </PieChart>
-              </ResponsiveContainer>
-            </div>
-            <div className="grid grid-cols-3 gap-2 mt-4">
-              {candidatePipeline.map((item, idx) => (
-                <div key={item.status} className="flex items-center gap-2 text-sm">
-                  <span className="h-3 w-3 rounded-full flex-shrink-0" style={{ backgroundColor: COLORS[idx % COLORS.length] }} />
-                  <span className="capitalize text-slate-600 dark:text-slate-400 truncate">{item.status}</span>
-                  <span className="font-medium ml-auto">{item.count}</span>
-                </div>
-              ))}
-            </div>
-          </CardContent>
-        </Card>
-
-        {/* Revenue by Client */}
-        <Card>
-          <CardHeader>
-            <CardTitle>Revenue by Client</CardTitle>
-          </CardHeader>
-          <CardContent>
-            <div className="h-64">
-              <ResponsiveContainer width="100%" height="100%">
-                <BarChart data={clientData} layout="vertical">
-                  <CartesianGrid strokeDasharray="3 3" stroke="#e2e8f0" horizontal={true} vertical={false} />
-                  <XAxis type="number" stroke="#64748b" fontSize={12} tickFormatter={(v) => `$${(v/1000).toFixed(0)}k`} />
-                  <YAxis type="category" dataKey="company_name" stroke="#64748b" fontSize={11} width={100} tickFormatter={(v) => v?.substring(0, 12) || ''} />
-                  <Tooltip formatter={(value) => formatCurrency(value)} contentStyle={{ backgroundColor: '#1e293b', border: 'none', borderRadius: '8px', color: '#f1f5f9' }} />
-                  <Bar dataKey="total_revenue" fill="#3b82f6" radius={[0, 4, 4, 0]} />
-                </BarChart>
-              </ResponsiveContainer>
-            </div>
-          </CardContent>
-        </Card>
+        <CandidatePipelineChart data={candidatePipeline} />
+        <RevenueByClientChart data={clientData} />
       </div>
 
       {/* Deployments Over Time */}
-      <Card>
-        <CardHeader>
-          <CardTitle>Monthly Deployments</CardTitle>
-        </CardHeader>
-        <CardContent>
-          <div className="h-64">
-            <ResponsiveContainer width="100%" height="100%">
-              <BarChart data={growthData}>
-                <CartesianGrid strokeDasharray="3 3" stroke="#e2e8f0" vertical={false} />
-                <XAxis dataKey="month" stroke="#64748b" fontSize={12} />
-                <YAxis stroke="#64748b" fontSize={12} />
-                <Tooltip contentStyle={{ backgroundColor: '#1e293b', border: 'none', borderRadius: '8px', color: '#f1f5f9' }} />
-                <Bar dataKey="deployments" name="Deployments" fill="#8b5cf6" radius={[4, 4, 0, 0]} />
-              </BarChart>
-            </ResponsiveContainer>
-          </div>
-        </CardContent>
-      </Card>
+      <DeploymentsChart data={growthData} />
 
       {/* Performance Metrics */}
       <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
-        {/* Top Performers */}
-        <Card>
-          <CardHeader>
-            <CardTitle>Top Performers</CardTitle>
-          </CardHeader>
-          <CardContent>
-            <div className="space-y-3">
-              {topPerformers.map((candidate, idx) => (
-                <div key={candidate.id} className="flex items-center gap-3">
-                  <div className={clsx(
-                    'w-8 h-8 rounded-full flex items-center justify-center text-white text-sm font-bold',
-                    idx === 0 ? 'bg-amber-500' : idx === 1 ? 'bg-slate-400' : idx === 2 ? 'bg-amber-700' : 'bg-slate-300'
-                  )}>
-                    {idx + 1}
-                  </div>
-                  <div className="flex-1 min-w-0">
-                    <p className="font-medium text-slate-900 dark:text-white truncate">{candidate.name}</p>
-                    <p className="text-xs text-slate-500">{candidate.deployments} jobs • Level {candidate.level}</p>
-                  </div>
-                  <div className="text-right">
-                    <p className="font-semibold text-emerald-600">{formatCurrency(candidate.profit_generated, true)}</p>
-                  </div>
-                </div>
-              ))}
-            </div>
-          </CardContent>
-        </Card>
-
-        {/* Tender Pipeline */}
-        <Card>
-          <CardHeader>
-            <CardTitle>Tender Pipeline</CardTitle>
-          </CardHeader>
-          <CardContent>
-            <div className="space-y-4">
-              <div className="flex items-center justify-between p-3 rounded-lg bg-blue-50 dark:bg-blue-900/20">
-                <div className="flex items-center gap-2">
-                  <div className="p-2 rounded-lg bg-blue-100 dark:bg-blue-900/50">
-                    <TargetIcon className="h-4 w-4 text-blue-600" />
-                  </div>
-                  <span className="text-sm text-slate-600 dark:text-slate-400">Active Tenders</span>
-                </div>
-                <span className="font-bold text-lg text-blue-600">{data?.tenders?.active || 8}</span>
-              </div>
-              <div className="flex items-center justify-between p-3 rounded-lg bg-amber-50 dark:bg-amber-900/20">
-                <div className="flex items-center gap-2">
-                  <div className="p-2 rounded-lg bg-amber-100 dark:bg-amber-900/50">
-                    <ClockIcon className="h-4 w-4 text-amber-600" />
-                  </div>
-                  <span className="text-sm text-slate-600 dark:text-slate-400">Submitted</span>
-                </div>
-                <span className="font-bold text-lg text-amber-600">{data?.tenders?.submitted || 3}</span>
-              </div>
-              <div className="flex items-center justify-between p-3 rounded-lg bg-emerald-50 dark:bg-emerald-900/20">
-                <div className="flex items-center gap-2">
-                  <div className="p-2 rounded-lg bg-emerald-100 dark:bg-emerald-900/50">
-                    <AwardIcon className="h-4 w-4 text-emerald-600" />
-                  </div>
-                  <span className="text-sm text-slate-600 dark:text-slate-400">Won</span>
-                </div>
-                <span className="font-bold text-lg text-emerald-600">{data?.tenders?.won || 2}</span>
-              </div>
-              <div className="pt-3 border-t border-slate-200 dark:border-slate-700">
-                <p className="text-sm text-slate-500">Pipeline Value</p>
-                <p className="text-2xl font-bold text-slate-900 dark:text-white">{formatCurrency(data?.tenders?.pipelineValue || 450000, true)}</p>
-              </div>
-            </div>
-          </CardContent>
-        </Card>
-
-        {/* Quick Stats */}
-        <Card>
-          <CardHeader>
-            <CardTitle>Business Health</CardTitle>
-          </CardHeader>
-          <CardContent>
-            <div className="space-y-4">
-              <div>
-                <div className="flex items-center justify-between mb-1">
-                  <span className="text-sm text-slate-600 dark:text-slate-400">Fill Rate</span>
-                  <span className="font-medium text-slate-900 dark:text-white">78%</span>
-                </div>
-                <div className="h-2 bg-slate-100 dark:bg-slate-800 rounded-full overflow-hidden">
-                  <div className="h-full bg-emerald-500 rounded-full" style={{ width: '78%' }} />
-                </div>
-              </div>
-              <div>
-                <div className="flex items-center justify-between mb-1">
-                  <span className="text-sm text-slate-600 dark:text-slate-400">Candidate Retention</span>
-                  <span className="font-medium text-slate-900 dark:text-white">85%</span>
-                </div>
-                <div className="h-2 bg-slate-100 dark:bg-slate-800 rounded-full overflow-hidden">
-                  <div className="h-full bg-blue-500 rounded-full" style={{ width: '85%' }} />
-                </div>
-              </div>
-              <div>
-                <div className="flex items-center justify-between mb-1">
-                  <span className="text-sm text-slate-600 dark:text-slate-400">Client Satisfaction</span>
-                  <span className="font-medium text-slate-900 dark:text-white">92%</span>
-                </div>
-                <div className="h-2 bg-slate-100 dark:bg-slate-800 rounded-full overflow-hidden">
-                  <div className="h-full bg-purple-500 rounded-full" style={{ width: '92%' }} />
-                </div>
-              </div>
-              <div>
-                <div className="flex items-center justify-between mb-1">
-                  <span className="text-sm text-slate-600 dark:text-slate-400">On-Time Rate</span>
-                  <span className="font-medium text-slate-900 dark:text-white">96%</span>
-                </div>
-                <div className="h-2 bg-slate-100 dark:bg-slate-800 rounded-full overflow-hidden">
-                  <div className="h-full bg-amber-500 rounded-full" style={{ width: '96%' }} />
-                </div>
-              </div>
-              <div className="pt-3 border-t border-slate-200 dark:border-slate-700">
-                <div className="flex items-center justify-between">
-                  <span className="text-sm text-slate-500">Avg Rating</span>
-                  <div className="flex items-center gap-1">
-                    <StarIcon className="h-4 w-4 text-amber-500 fill-amber-500" />
-                    <span className="font-bold text-slate-900 dark:text-white">4.7</span>
-                  </div>
-                </div>
-              </div>
-            </div>
-          </CardContent>
-        </Card>
+        <TopPerformersCard performers={topPerformers} />
+        <TenderPipelineCard tenderData={data?.tenders} />
+        <BusinessHealthCard />
       </div>
     </div>
   );

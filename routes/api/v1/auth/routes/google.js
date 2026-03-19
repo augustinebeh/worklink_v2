@@ -94,7 +94,7 @@ router.post('/google/login', async (req, res) => {
     });
   } catch (error) {
     logger.error('Google login error:', error);
-    res.status(500).json({ success: false, error: error.message });
+    res.status(500).json({ success: false, error: 'Internal server error' });
   }
 });
 

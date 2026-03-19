@@ -43,7 +43,7 @@ router.get('/', (req, res) => {
 
     res.status(500).json({
       success: false,
-      error: error.message
+      error: 'Internal server error'
     });
   }
 });
@@ -74,7 +74,7 @@ router.get('/:jobName', (req, res) => {
 
     res.status(500).json({
       success: false,
-      error: error.message
+      error: 'Internal server error'
     });
   }
 });
@@ -112,7 +112,7 @@ router.post('/:jobName/start', (req, res) => {
 
     res.status(500).json({
       success: false,
-      error: error.message
+      error: 'Internal server error'
     });
   }
 });
@@ -150,7 +150,7 @@ router.post('/:jobName/stop', (req, res) => {
 
     res.status(500).json({
       success: false,
-      error: error.message
+      error: 'Internal server error'
     });
   }
 });
@@ -190,7 +190,7 @@ router.post('/:jobName/trigger', async (req, res) => {
 
     res.status(500).json({
       success: false,
-      error: error.message
+      error: 'Internal server error'
     });
   }
 });
@@ -286,7 +286,7 @@ router.patch('/:jobName', (req, res) => {
 
     res.status(500).json({
       success: false,
-      error: error.message
+      error: 'Internal server error'
     });
   }
 });
@@ -336,7 +336,7 @@ router.get('/:jobName/history', (req, res) => {
 
     res.status(500).json({
       success: false,
-      error: error.message
+      error: 'Internal server error'
     });
   }
 });
@@ -404,7 +404,7 @@ router.get('/system/stats', (req, res) => {
 
     res.status(500).json({
       success: false,
-      error: error.message
+      error: 'Internal server error'
     });
   }
 });
@@ -442,7 +442,7 @@ router.post('/system/restart', (req, res) => {
 
     res.status(500).json({
       success: false,
-      error: error.message
+      error: 'Internal server error'
     });
   }
 });
@@ -478,7 +478,7 @@ router.get('/system/health', (req, res) => {
 
     res.status(500).json({
       success: false,
-      error: error.message
+      error: 'Internal server error'
     });
   }
 });

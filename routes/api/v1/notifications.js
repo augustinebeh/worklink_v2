@@ -5,8 +5,13 @@
 const express = require('express');
 const router = express.Router();
 const { db } = require('../../../db');
+const { safeJsonParse } = require('../../../db/utils/db-helpers');
 const { getSGDateString } = require('../../../shared/constants');
+const { authenticateAdmin, authenticateAny } = require('../../../middleware/auth');
+const { createLogger } = require('../../../utils/structured-logger');
 // const retentionService = require('../../../services/retention-notifications'); // Disabled to prevent hanging
+
+const logger = createLogger('api:notifications');
 
 // Initialize web-push if keys are available
 let webpush = null;
@@ -18,10 +23,10 @@ try {
       process.env.VAPID_PUBLIC_KEY,
       process.env.VAPID_PRIVATE_KEY
     );
-    console.log('✅ Web Push configured');
+    logger.info('Web Push configured');
   }
 } catch (e) {
-  console.log('⚠️ Web Push not configured');
+  logger.warn('Web Push not configured');
 }
 
 // Get VAPID public key for frontend subscription
@@ -36,12 +41,12 @@ router.get('/vapid-public-key', (req, res) => {
     }
     res.json({ success: true, publicKey });
   } catch (error) {
-    res.status(500).json({ success: false, error: error.message });
+    res.status(500).json({ success: false, error: 'Internal server error' });
   }
 });
 
 // Register push subscription
-router.post('/subscribe', (req, res) => {
+router.post('/subscribe', authenticateAny, (req, res) => {
   try {
     const { candidate_id, subscription } = req.body;
 
@@ -50,25 +55,35 @@ router.post('/subscribe', (req, res) => {
 
     res.json({ success: true, message: 'Push subscription registered' });
   } catch (error) {
-    res.status(500).json({ success: false, error: error.message });
+    res.status(500).json({ success: false, error: 'Internal server error' });
   }
 });
 
 // Unsubscribe from push
-router.post('/unsubscribe', (req, res) => {
+router.post('/unsubscribe', authenticateAny, (req, res) => {
   try {
     const { candidate_id } = req.body;
     db.prepare('UPDATE candidates SET push_token = NULL WHERE id = ?').run(candidate_id);
     res.json({ success: true });
   } catch (error) {
-    res.status(500).json({ success: false, error: error.message });
+    res.status(500).json({ success: false, error: 'Internal server error' });
   }
 });
 
 // Send push notification to specific candidate
-router.post('/send', async (req, res) => {
+router.post('/send', authenticateAdmin, async (req, res) => {
   try {
     const { candidate_id, title, body, data = {} } = req.body;
+
+    if (!candidate_id || typeof candidate_id !== 'string') {
+      return res.status(400).json({ success: false, error: 'candidate_id is required and must be a string' });
+    }
+    if (!title || typeof title !== 'string') {
+      return res.status(400).json({ success: false, error: 'title is required and must be a string' });
+    }
+    if (!body || typeof body !== 'string') {
+      return res.status(400).json({ success: false, error: 'body is required and must be a string' });
+    }
 
     const candidate = db.prepare('SELECT push_token, name FROM candidates WHERE id = ?').get(candidate_id);
     if (!candidate?.push_token) {
@@ -78,14 +93,24 @@ router.post('/send', async (req, res) => {
     const result = await sendPushNotification(candidate_id, candidate.push_token, title, body, data);
     res.json({ success: true, data: result });
   } catch (error) {
-    res.status(500).json({ success: false, error: error.message });
+    res.status(500).json({ success: false, error: 'Internal server error' });
   }
 });
 
 // Send push to multiple candidates
-router.post('/send-bulk', async (req, res) => {
+router.post('/send-bulk', authenticateAdmin, async (req, res) => {
   try {
     const { candidate_ids, title, body, data = {} } = req.body;
+
+    if (!Array.isArray(candidate_ids) || candidate_ids.length === 0) {
+      return res.status(400).json({ success: false, error: 'candidate_ids is required and must be a non-empty array' });
+    }
+    if (!title || typeof title !== 'string') {
+      return res.status(400).json({ success: false, error: 'title is required and must be a string' });
+    }
+    if (!body || typeof body !== 'string') {
+      return res.status(400).json({ success: false, error: 'body is required and must be a string' });
+    }
 
     const candidates = db.prepare(`
       SELECT id, push_token, name FROM candidates 
@@ -101,7 +126,7 @@ router.post('/send-bulk', async (req, res) => {
 
     res.json({ success: true, data: { sent, failed, total: candidates.length } });
   } catch (error) {
-    res.status(500).json({ success: false, error: error.message });
+    res.status(500).json({ success: false, error: 'Internal server error' });
   }
 });
 
@@ -129,18 +154,18 @@ router.get('/matches/:candidateId', (req, res) => {
     // Parse factors JSON
     const parsed = matches.map(m => ({
       ...m,
-      factors: JSON.parse(m.factors || '{}'),
+      factors: safeJsonParse(m.factors, {}),
       slotsRemaining: m.total_slots - m.filled_slots,
     }));
 
     res.json({ success: true, data: parsed });
   } catch (error) {
-    res.status(500).json({ success: false, error: error.message });
+    res.status(500).json({ success: false, error: 'Internal server error' });
   }
 });
 
 // Calculate and store job matches for all candidates (batch job)
-router.post('/calculate-matches', async (req, res) => {
+router.post('/calculate-matches', authenticateAdmin, async (req, res) => {
   try {
     const { job_id } = req.body;
 
@@ -189,12 +214,12 @@ router.post('/calculate-matches', async (req, res) => {
       },
     });
   } catch (error) {
-    res.status(500).json({ success: false, error: error.message });
+    res.status(500).json({ success: false, error: 'Internal server error' });
   }
 });
 
 // Send job match notifications (batch job)
-router.post('/notify-matches', async (req, res) => {
+router.post('/notify-matches', authenticateAdmin, async (req, res) => {
   try {
     const { job_id, min_score = 70 } = req.body;
 
@@ -248,12 +273,12 @@ router.post('/notify-matches', async (req, res) => {
       },
     });
   } catch (error) {
-    res.status(500).json({ success: false, error: error.message });
+    res.status(500).json({ success: false, error: 'Internal server error' });
   }
 });
 
 // Send streak reminder notifications
-router.post('/streak-reminders', async (req, res) => {
+router.post('/streak-reminders', authenticateAdmin, async (req, res) => {
   try {
     // Find candidates with active streaks who haven't logged in today (Singapore timezone)
     const today = getSGDateString();
@@ -280,12 +305,12 @@ router.post('/streak-reminders', async (req, res) => {
 
     res.json({ success: true, data: { remindersSent: sent } });
   } catch (error) {
-    res.status(500).json({ success: false, error: error.message });
+    res.status(500).json({ success: false, error: 'Internal server error' });
   }
 });
 
 // Send incentive progress notifications
-router.post('/incentive-progress', async (req, res) => {
+router.post('/incentive-progress', authenticateAdmin, async (req, res) => {
   try {
     // Find candidates close to consistency bonus (5 jobs/month) - Singapore timezone
     const thisMonth = getSGDateString().substring(0, 7);
@@ -318,7 +343,7 @@ router.post('/incentive-progress', async (req, res) => {
 
     res.json({ success: true, data: { notificationsSent: sent } });
   } catch (error) {
-    res.status(500).json({ success: false, error: error.message });
+    res.status(500).json({ success: false, error: 'Internal server error' });
   }
 });
 
@@ -360,7 +385,7 @@ async function sendPushNotification(candidateId, subscriptionStr, title, body, d
       db.prepare('UPDATE candidates SET push_token = NULL WHERE id = ?').run(candidateId);
     }
 
-    return { status: 'failed', error: error.message };
+    return { status: 'failed', error: 'Internal server error' };
   }
 }
 
@@ -439,7 +464,7 @@ router.post('/subscribe-enhanced', async (req, res) => {
     `;
     db.prepare(protectionQuery).run(candidateId);
 
-    console.log(`✅ Enhanced push subscription registered for candidate ${candidateId}`);
+    logger.info('Enhanced push subscription registered', { candidateId });
 
     res.json({
       success: true,
@@ -447,7 +472,7 @@ router.post('/subscribe-enhanced', async (req, res) => {
     });
 
   } catch (error) {
-    console.error('Error registering enhanced push subscription:', error);
+    logger.error('Error registering enhanced push subscription', { error: error.message });
     res.status(500).json({
       success: false,
       error: 'Failed to register enhanced push subscription'
@@ -494,12 +519,12 @@ router.post('/action', async (req, res) => {
       result = protectResult;
     }
 
-    console.log(`✅ Notification action: ${candidateId} responded to ${notificationType} with ${action}`);
+    logger.info('Notification action received', { candidateId, notificationType, action });
 
     res.json({ success: true, ...result });
 
   } catch (error) {
-    console.error('Error handling notification action:', error);
+    logger.error('Error handling notification action', { error: error.message });
     res.status(500).json({
       success: false,
       error: 'Failed to handle notification action'
@@ -552,7 +577,7 @@ router.get('/status/:candidateId', async (req, res) => {
     });
 
   } catch (error) {
-    console.error('Error getting notification status:', error);
+    logger.error('Error getting notification status', { error: error.message });
     res.status(500).json({
       success: false,
       error: 'Failed to get notification status'
@@ -576,10 +601,10 @@ router.post('/protect-streak', async (req, res) => {
     res.json(result);
 
   } catch (error) {
-    console.error('Error protecting streak:', error);
+    logger.error('Error protecting streak', { error: error.message });
     res.status(500).json({
       success: false,
-      error: error.message || 'Failed to protect streak'
+      error: 'Internal server error'
     });
   }
 });
@@ -600,10 +625,10 @@ router.post('/recover-streak', async (req, res) => {
     res.json(result);
 
   } catch (error) {
-    console.error('Error recovering streak:', error);
+    logger.error('Error recovering streak', { error: error.message });
     res.status(500).json({
       success: false,
-      error: error.message || 'Failed to recover streak'
+      error: 'Internal server error'
     });
   }
 });
@@ -628,10 +653,10 @@ router.post('/test-retention/:candidateId/:type', async (req, res) => {
     });
 
   } catch (error) {
-    console.error('Error sending test retention notification:', error);
+    logger.error('Error sending test retention notification', { error: error.message });
     res.status(500).json({
       success: false,
-      error: error.message
+      error: 'Internal server error'
     });
   }
 });
@@ -754,7 +779,7 @@ router.get('/', (req, res) => {
 
     res.json({ success: true, data: notifications });
   } catch (error) {
-    res.status(500).json({ success: false, error: error.message });
+    res.status(500).json({ success: false, error: 'Internal server error' });
   }
 });
 
@@ -768,7 +793,7 @@ router.post('/:id/read', (req, res) => {
 
     res.json({ success: true });
   } catch (error) {
-    res.status(500).json({ success: false, error: error.message });
+    res.status(500).json({ success: false, error: 'Internal server error' });
   }
 });
 
@@ -791,7 +816,7 @@ router.post('/read-all', (req, res) => {
 
     res.json({ success: true });
   } catch (error) {
-    res.status(500).json({ success: false, error: error.message });
+    res.status(500).json({ success: false, error: 'Internal server error' });
   }
 });
 

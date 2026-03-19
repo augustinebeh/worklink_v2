@@ -12,6 +12,10 @@
  * - Real-time dashboard data
  */
 
+
+const { createLogger } = require('./structured-logger');
+const logger = createLogger('acquisition-analytics');
+
 const { db } = require('../db');
 
 /**
@@ -95,7 +99,7 @@ function generateCampaignAnalytics(campaignId, options = {}) {
       generatedAt: new Date().toISOString(),
     };
   } catch (error) {
-    console.error('Error generating campaign analytics:', error);
+    logger.error('Error generating campaign analytics:', { error: error });
     throw error;
   }
 }
@@ -162,7 +166,7 @@ function calculateCoreMetrics(campaignId) {
       },
     };
   } catch (error) {
-    console.error('Error calculating core metrics:', error);
+    logger.error('Error calculating core metrics:', { error: error });
     return null;
   }
 }
@@ -261,7 +265,7 @@ function calculateConversionFunnel(campaignId) {
         Math.round((funnelSteps[funnelSteps.length - 1].count / funnelSteps[0].count) * 10000) / 100 : 0,
     };
   } catch (error) {
-    console.error('Error calculating conversion funnel:', error);
+    logger.error('Error calculating conversion funnel:', { error: error });
     return null;
   }
 }
@@ -325,7 +329,7 @@ function analyzeChannelPerformance(campaignId) {
         ).channel : null,
     };
   } catch (error) {
-    console.error('Error analyzing channel performance:', error);
+    logger.error('Error analyzing channel performance:', { error: error });
     return null;
   }
 }
@@ -398,7 +402,7 @@ function analyzeTimePatterns(campaignId) {
       },
     };
   } catch (error) {
-    console.error('Error analyzing time patterns:', error);
+    logger.error('Error analyzing time patterns:', { error: error });
     return null;
   }
 }
@@ -449,7 +453,7 @@ function calculateQualityMetrics(campaignId) {
       totalAcquired: qualityData.total_acquired || 0,
     };
   } catch (error) {
-    console.error('Error calculating quality metrics:', error);
+    logger.error('Error calculating quality metrics:', { error: error });
     return null;
   }
 }
@@ -526,7 +530,7 @@ function calculateCostAnalysis(campaignId) {
       costPerAcquisition: Math.round(costPerAcquisition * 100) / 100,
     };
   } catch (error) {
-    console.error('Error calculating cost analysis:', error);
+    logger.error('Error calculating cost analysis:', { error: error });
     return null;
   }
 }
@@ -584,7 +588,7 @@ function getBenchmarkComparisons(campaignType, currentMetrics) {
       },
     };
   } catch (error) {
-    console.error('Error getting benchmark comparisons:', error);
+    logger.error('Error getting benchmark comparisons:', { error: error });
     return null;
   }
 }
@@ -632,7 +636,7 @@ function generatePerformancePredictions(campaignId, currentMetrics) {
 
     return predictions;
   } catch (error) {
-    console.error('Error generating predictions:', error);
+    logger.error('Error generating predictions:', { error: error });
     return null;
   }
 }
@@ -644,7 +648,7 @@ function getCampaignDetails(campaignId) {
   try {
     return db.prepare('SELECT * FROM outreach_campaigns WHERE id = ?').get(campaignId);
   } catch (error) {
-    console.error('Error getting campaign details:', error);
+    logger.error('Error getting campaign details:', { error: error });
     return null;
   }
 }
@@ -760,7 +764,7 @@ function generateAcquisitionDashboard(options = {}) {
       generatedAt: new Date().toISOString(),
     };
   } catch (error) {
-    console.error('Error generating acquisition dashboard:', error);
+    logger.error('Error generating acquisition dashboard:', { error: error });
     throw error;
   }
 }

@@ -9,6 +9,9 @@ const express = require('express');
 const router = express.Router();
 const { db } = require('../../../../../db');
 const { generateMockTenders } = require('../utils/scraping-helpers');
+const { createLogger } = require('../../../../../utils/structured-logger');
+const { authenticateAdmin } = require('../../../../../middleware/auth');
+const logger = createLogger('ai-automation:gebiz');
 
 // Production web scraping imports (lazy-loaded)
 let GeBIZScraper = null;
@@ -22,12 +25,12 @@ let dataValidator = null;
  */
 function ensureScrapingDependencies() {
   if (!GeBIZScraper) {
-    console.log('🔄 Loading scraping dependencies...');
+    logger.info('Loading scraping dependencies');
     GeBIZScraper = require('../../../../../utils/scraping/gebiz-scraper');
     scrapingMonitor = require('../../../../../utils/scraping/scraping-monitor');
     DataValidator = require('../../../../../utils/scraping/data-validator');
     dataValidator = new DataValidator();
-    console.log('✅ Scraping dependencies loaded successfully');
+    logger.info('Scraping dependencies loaded successfully');
   }
 }
 
@@ -35,7 +38,7 @@ function ensureScrapingDependencies() {
  * POST /scrape
  * Scrape GeBIZ for new tenders using production web scraping
  */
-router.post('/scrape', async (req, res) => {
+router.post('/scrape', authenticateAdmin, async (req, res) => {
   const sessionId = `SCR${Date.now()}`;
 
   try {
@@ -158,7 +161,7 @@ router.post('/scrape', async (req, res) => {
         );
         inserted.push(tender);
       } catch (e) {
-        console.log('Failed to insert tender:', e.message);
+        logger.warn('Failed to insert tender', { error: e.message });
       }
     });
 
@@ -203,16 +206,16 @@ router.post('/scrape', async (req, res) => {
     scrapingMonitor.reportError(sessionId, error, { categories: req.body.categories });
     scrapingMonitor.endSession(sessionId, false);
 
-    console.error('Production scraping failed:', error);
+    logger.error('Production scraping failed', { error: error.message });
 
     // Fallback to mock data if scraping fails completely
-    console.log('Falling back to mock data generation...');
+    logger.info('Falling back to mock data generation');
     const fallbackTenders = generateMockTenders(
       req.body.categories || ['manpower', 'hr services', 'event support'], 2);
 
     res.status(500).json({
       success: false,
-      error: error.message,
+      error: 'Internal server error',
       fallback: true,
       message: 'Scraping failed, generated fallback data',
       data: {
@@ -228,7 +231,7 @@ router.post('/scrape', async (req, res) => {
  * GET /status
  * Get scraper status and history
  */
-router.get('/status', (req, res) => {
+router.get('/status', authenticateAdmin, (req, res) => {
   try {
     ensureScrapingDependencies();
 
@@ -297,7 +300,7 @@ router.get('/status', (req, res) => {
       }
     });
   } catch (error) {
-    res.status(500).json({ success: false, error: error.message });
+    res.status(500).json({ success: false, error: 'Internal server error' });
   }
 });
 
@@ -305,7 +308,7 @@ router.get('/status', (req, res) => {
  * GET /session/:sessionId
  * Get detailed scraping session information
  */
-router.get('/session/:sessionId', (req, res) => {
+router.get('/session/:sessionId', authenticateAdmin, (req, res) => {
   try {
     ensureScrapingDependencies();
 
@@ -323,7 +326,7 @@ router.get('/session/:sessionId', (req, res) => {
       data: sessionStatus
     });
   } catch (error) {
-    res.status(500).json({ success: false, error: error.message });
+    res.status(500).json({ success: false, error: 'Internal server error' });
   }
 });
 
@@ -331,7 +334,7 @@ router.get('/session/:sessionId', (req, res) => {
  * POST /configure
  * Configure scraper settings
  */
-router.post('/configure', async (req, res) => {
+router.post('/configure', authenticateAdmin, async (req, res) => {
   try {
     ensureScrapingDependencies();
 
@@ -370,7 +373,7 @@ router.post('/configure', async (req, res) => {
       }
     });
   } catch (error) {
-    res.status(500).json({ success: false, error: error.message });
+    res.status(500).json({ success: false, error: 'Internal server error' });
   }
 });
 
@@ -378,7 +381,7 @@ router.post('/configure', async (req, res) => {
  * POST /test
  * Test scraper connectivity and configuration
  */
-router.post('/test', async (req, res) => {
+router.post('/test', authenticateAdmin, async (req, res) => {
   const testSessionId = `TEST${Date.now()}`;
 
   try {
@@ -420,7 +423,7 @@ router.post('/test', async (req, res) => {
     res.status(500).json({
       success: false,
       message: 'Scraper test failed',
-      error: error.message,
+      error: 'Internal server error',
       data: {
         testSessionId,
         status: 'failed'
@@ -433,7 +436,7 @@ router.post('/test', async (req, res) => {
  * POST /cleanup
  * Cleanup scraper resources
  */
-router.post('/cleanup', async (req, res) => {
+router.post('/cleanup', authenticateAdmin, async (req, res) => {
   try {
     ensureScrapingDependencies();
 
@@ -447,7 +450,7 @@ router.post('/cleanup', async (req, res) => {
       message: 'Scraper resources cleaned up successfully'
     });
   } catch (error) {
-    res.status(500).json({ success: false, error: error.message });
+    res.status(500).json({ success: false, error: 'Internal server error' });
   }
 });
 

@@ -5,6 +5,8 @@
 
 const { db } = require('../../db');
 const crypto = require('crypto');
+const { createLogger } = require('../../utils/structured-logger');
+const logger = createLogger('email-delivery-tracker');
 
 class EmailDeliveryTracker {
   constructor() {
@@ -94,9 +96,9 @@ class EmailDeliveryTracker {
         CREATE INDEX IF NOT EXISTS idx_email_preferences_email ON email_preferences (email);
       `);
 
-      console.log('Email delivery tracking tables initialized');
+      logger.info('Email delivery tracking tables initialized');
     } catch (error) {
-      console.error('Error creating email tracking tables:', error);
+      logger.error('Error creating email tracking tables', { error: error.message });
     }
   }
 
@@ -122,10 +124,10 @@ class EmailDeliveryTracker {
         JSON.stringify(emailData.metadata || {})
       );
 
-      console.log(`Created delivery record with tracking ID: ${trackingId}`);
+      logger.info(`Created delivery record with tracking ID: ${trackingId}`);
       return trackingId;
     } catch (error) {
-      console.error('Error creating delivery record:', error);
+      logger.error('Error creating delivery record', { error: error.message });
       throw error;
     }
   }
@@ -149,7 +151,7 @@ class EmailDeliveryTracker {
       `).run(attemptNumber, errorMessage, trackingId);
 
     } catch (error) {
-      console.error('Error logging delivery attempt:', error);
+      logger.error('Error logging delivery attempt', { error: error.message });
     }
   }
 
@@ -178,9 +180,9 @@ class EmailDeliveryTracker {
 
       this.logDeliveryAttempt(trackingId, deliveryData.attempt, 'delivered', null, deliveryData);
 
-      console.log(`Marked email as delivered: ${trackingId}`);
+      logger.info(`Marked email as delivered: ${trackingId}`);
     } catch (error) {
-      console.error('Error marking as delivered:', error);
+      logger.error('Error marking as delivered', { error: error.message });
     }
   }
 
@@ -198,9 +200,9 @@ class EmailDeliveryTracker {
 
       this.logDeliveryAttempt(trackingId, failureData.attempt, 'failed', failureData.error);
 
-      console.log(`Marked email as failed (attempt ${failureData.attempt}): ${trackingId}`);
+      logger.info(`Marked email as failed (attempt ${failureData.attempt}): ${trackingId}`);
     } catch (error) {
-      console.error('Error marking as failed:', error);
+      logger.error('Error marking as failed', { error: error.message });
     }
   }
 
@@ -221,9 +223,9 @@ class EmailDeliveryTracker {
 
       this.logDeliveryAttempt(trackingId, failureData.totalAttempts, 'failed_permanent', failureData.error);
 
-      console.log(`Marked email as permanently failed: ${trackingId}`);
+      logger.info(`Marked email as permanently failed: ${trackingId}`);
     } catch (error) {
-      console.error('Error marking as permanently failed:', error);
+      logger.error('Error marking as permanently failed', { error: error.message });
     }
   }
 
@@ -252,7 +254,7 @@ class EmailDeliveryTracker {
         metadata: JSON.parse(record.metadata || '{}')
       };
     } catch (error) {
-      console.error('Error getting delivery status:', error);
+      logger.error('Error getting delivery status', { error: error.message });
       return null;
     }
   }
@@ -343,7 +345,7 @@ class EmailDeliveryTracker {
         recentFailures
       };
     } catch (error) {
-      console.error('Error getting delivery analytics:', error);
+      logger.error('Error getting delivery analytics', { error: error.message });
       return null;
     }
   }
@@ -367,7 +369,7 @@ class EmailDeliveryTracker {
         metadata: JSON.parse(email.metadata || '{}')
       }));
     } catch (error) {
-      console.error('Error getting emails for retry:', error);
+      logger.error('Error getting emails for retry', { error: error.message });
       return [];
     }
   }
@@ -394,14 +396,14 @@ class EmailDeliveryTracker {
         WHERE created_at < ?
       `).run(cutoffISO);
 
-      console.log(`Cleaned ${deletedLogs.changes} old delivery records and ${deletedAttempts.changes} attempt records`);
+      logger.info(`Cleaned ${deletedLogs.changes} old delivery records and ${deletedAttempts.changes} attempt records`);
 
       return {
         deletedLogs: deletedLogs.changes,
         deletedAttempts: deletedAttempts.changes
       };
     } catch (error) {
-      console.error('Error cleaning old records:', error);
+      logger.error('Error cleaning old records', { error: error.message });
       return { deletedLogs: 0, deletedAttempts: 0 };
     }
   }
@@ -444,7 +446,7 @@ class EmailDeliveryTracker {
 
       return preferences;
     } catch (error) {
-      console.error('Error getting email preferences:', error);
+      logger.error('Error getting email preferences', { error: error.message });
       return this.getDefaultPreferences(email, userType);
     }
   }
@@ -465,7 +467,7 @@ class EmailDeliveryTracker {
 
       return this.getEmailPreferences(email, userType);
     } catch (error) {
-      console.error('Error creating default preferences:', error);
+      logger.error('Error creating default preferences', { error: error.message });
       return this.getDefaultPreferences(email, userType);
     }
   }
@@ -518,7 +520,7 @@ class EmailDeliveryTracker {
 
       return this.getEmailPreferences(email);
     } catch (error) {
-      console.error('Error updating email preferences:', error);
+      logger.error('Error updating email preferences', { error: error.message });
       throw error;
     }
   }
@@ -568,7 +570,7 @@ class EmailDeliveryTracker {
 
       return true;
     } catch (error) {
-      console.error('Error checking email preferences:', error);
+      logger.error('Error checking email preferences', { error: error.message });
       return true; // Default to sending if error
     }
   }

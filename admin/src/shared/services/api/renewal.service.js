@@ -191,7 +191,7 @@ const renewalService = {
       return response;
     } catch (error) {
       // Return mock data for development/testing
-      console.log('Using mock renewal data for development');
+      // Using mock renewal data for development
       return {
         success: true,
         data: {
@@ -242,7 +242,7 @@ const renewalService = {
       return response;
     } catch (error) {
       // Mock response for development
-      console.log('Using mock activity creation for development');
+      // Using mock activity creation for development
       const newActivity = {
         ...activity,
         id: Date.now()
@@ -264,7 +264,7 @@ const renewalService = {
       return response;
     } catch (error) {
       // Return mock data for development
-      console.log('Using mock timeline data for development');
+      // Using mock timeline data for development
       return {
         success: true,
         data: MOCK_TIMELINE

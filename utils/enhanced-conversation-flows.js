@@ -3,6 +3,10 @@
  * Integrates with existing SLM scheduling bridge to boost conversion rates
  */
 
+
+const { createLogger } = require('./structured-logger');
+const logger = createLogger('enhanced-conversation-flows');
+
 class EnhancedConversationFlows {
   constructor(slmBridge = null) {
     this.slmBridge = slmBridge;
@@ -110,7 +114,7 @@ class EnhancedConversationFlows {
       return response;
 
     } catch (error) {
-      console.error('Enhanced conversation flow error:', error);
+      logger.error('Enhanced conversation flow error:', { error: error });
       return this.generateFallbackResponse();
     }
   }
@@ -503,8 +507,7 @@ Time remaining: ${finalCountdown} ⏳`,
 
   async getCandidateProfile(candidateId) {
     // Integration with existing database
-    const Database = require('better-sqlite3');
-    const db = new Database(require('path').resolve(__dirname, '../db/database.db'));
+    const { db } = require('../db');
     return db.prepare('SELECT * FROM candidates WHERE id = ?').get(candidateId);
   }
 
@@ -519,7 +522,7 @@ Time remaining: ${finalCountdown} ⏳`,
     };
 
     // Store in analytics table (to be created)
-    console.log('Tracking conversion metrics:', metrics);
+    logger.info('Tracking conversion metrics:', { data: metrics });
   }
 
   generateFallbackResponse() {

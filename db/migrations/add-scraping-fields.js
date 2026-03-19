@@ -5,12 +5,14 @@
 
 const Database = require('better-sqlite3');
 const path = require('path');
+const { createLogger } = require('../../utils/structured-logger');
+const logger = createLogger('migration-scraping-fields');
 
 const DATA_DIR = process.env.RAILWAY_VOLUME_MOUNT_PATH || path.join(__dirname, '..', '..', 'data');
 const DB_PATH = path.join(DATA_DIR, 'worklink.db');
 
 function runMigration() {
-  console.log('🔄 Running production scraping fields migration...');
+  logger.info('Running production scraping fields migration...');
 
   const db = new Database(DB_PATH);
   db.pragma('foreign_keys = OFF');
@@ -35,10 +37,10 @@ function runMigration() {
     for (const column of newColumns) {
       if (!existingColumns.includes(column.name)) {
         const alterSQL = `ALTER TABLE tenders ADD COLUMN ${column.name} ${column.type} DEFAULT ${column.default}`;
-        console.log(`Adding column: ${column.name}`);
+        logger.info(`Adding column: ${column.name}`);
         db.exec(alterSQL);
       } else {
-        console.log(`Column ${column.name} already exists, skipping`);
+        logger.info(`Column ${column.name} already exists, skipping`);
       }
     }
 
@@ -52,9 +54,9 @@ function runMigration() {
     for (const indexSQL of indexes) {
       try {
         db.exec(indexSQL);
-        console.log('Created index:', indexSQL.match(/idx_\w+/)[0]);
+        logger.info('Created index', { index: indexSQL.match(/idx_\w+/)[0] });
       } catch (e) {
-        console.log('Index already exists or failed:', e.message);
+        logger.warn('Index already exists or failed', { error: e.message });
       }
     }
 
@@ -67,20 +69,20 @@ function runMigration() {
     `;
 
     const updateResult = db.prepare(updateExistingSQL).run();
-    console.log(`Updated ${updateResult.changes} existing records with default data quality scores`);
+    logger.info(`Updated ${updateResult.changes} existing records with default data quality scores`);
 
     // Commit transaction
     db.exec('COMMIT');
-    console.log('✅ Migration completed successfully');
+    logger.info('Migration completed successfully');
 
     // Verify the migration
     const finalTableInfo = db.prepare("PRAGMA table_info(tenders)").all();
     const finalColumns = finalTableInfo.map(col => col.name);
 
-    console.log('📊 Current tenders table columns:', finalColumns.join(', '));
+    logger.info('Current tenders table columns', { columns: finalColumns.join(', ') });
 
     const tenderCount = db.prepare('SELECT COUNT(*) as count FROM tenders').get();
-    console.log(`📋 Total tenders in database: ${tenderCount.count}`);
+    logger.info(`Total tenders in database: ${tenderCount.count}`);
 
     const qualityStats = db.prepare(`
       SELECT
@@ -92,10 +94,10 @@ function runMigration() {
       WHERE data_quality_score IS NOT NULL
     `).get();
 
-    console.log('📈 Data quality stats:', qualityStats);
+    logger.info('Data quality stats', qualityStats);
 
   } catch (error) {
-    console.error('❌ Migration failed:', error);
+    logger.error('Migration failed', { error: error.message });
     db.exec('ROLLBACK');
     throw error;
   } finally {

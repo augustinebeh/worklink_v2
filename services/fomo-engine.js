@@ -5,6 +5,7 @@
 
 const { db } = require('../db');
 const { createLogger } = require('../utils/structured-logger');
+const intervalRegistry = require('../utils/interval-registry');
 
 // Import sub-modules
 const { calculateUrgencyScores, createUrgencyEvent } = require('./fomo/urgency-calculator');
@@ -15,6 +16,8 @@ const { generateFOMOMessage, getFOMOAction, processImmediateFOMO, isHighImpactAc
 
 const logger = createLogger('fomo-engine');
 
+const MAX_CACHE_SIZE = 1000;
+
 class FOMAEngine {
   constructor() {
     this.activityBuffer = new Map();
@@ -24,6 +27,13 @@ class FOMAEngine {
 
     this.initializeEngine();
     this.setupPeriodicTasks();
+  }
+
+  /** Evict oldest entries from a Map when it exceeds maxSize */
+  _evictOldest(map, maxSize = MAX_CACHE_SIZE) {
+    if (map.size <= maxSize) return;
+    const keysToDelete = [...map.keys()].slice(0, map.size - maxSize);
+    for (const key of keysToDelete) map.delete(key);
   }
 
   initializeEngine() {
@@ -123,8 +133,12 @@ class FOMAEngine {
   }
 
   startActivityMonitoring() {
-    setInterval(() => { this.processActivityBuffer(); }, 30000);
-    setInterval(() => { this.cleanupExpiredEvents(); }, 300000);
+    const activityTimer = setInterval(() => { this.processActivityBuffer(); }, 30000);
+    intervalRegistry.register('fomo-activity-buffer', activityTimer, 'FOMO activity buffer processing (30s)');
+
+    const cleanupTimer = setInterval(() => { this.cleanupExpiredEvents(); }, 300000);
+    intervalRegistry.register('fomo-expired-cleanup', cleanupTimer, 'FOMO expired events cleanup (5m)');
+
     logger.info('FOMO activity monitoring started');
   }
 
@@ -133,10 +147,27 @@ class FOMAEngine {
       createSocialProofEvent(proofType, data, calculateSocialProofFactor);
     const boundCreateFOMOEvent = this.createFOMOEvent.bind(this);
 
-    setInterval(() => { calculateUrgencyScores(createUrgencyEvent); }, 120000);
-    setInterval(() => { updateSocialProofData(boundCreateSocialProofEvent); }, 60000);
-    setInterval(() => { checkStreakProtectionOpportunities(boundCreateFOMOEvent, boundCreateSocialProofEvent); }, 600000);
-    setInterval(() => { processScarcityTriggers(); }, 300000);
+    const urgencyTimer = setInterval(() => { calculateUrgencyScores(createUrgencyEvent); }, 120000);
+    intervalRegistry.register('fomo-urgency', urgencyTimer, 'FOMO urgency score calculation (2m)');
+
+    const socialProofTimer = setInterval(() => { updateSocialProofData(boundCreateSocialProofEvent); }, 60000);
+    intervalRegistry.register('fomo-social-proof', socialProofTimer, 'FOMO social proof data update (1m)');
+
+    const streakProtectionTimer = setInterval(() => { checkStreakProtectionOpportunities(boundCreateFOMOEvent, boundCreateSocialProofEvent); }, 600000);
+    intervalRegistry.register('fomo-streak-protection', streakProtectionTimer, 'FOMO streak protection check (10m)');
+
+    const scarcityTimer = setInterval(() => { processScarcityTriggers(); }, 300000);
+    intervalRegistry.register('fomo-scarcity', scarcityTimer, 'FOMO scarcity trigger processing (5m)');
+
+    // Evict stale cache entries every 5 minutes
+    const cacheEvictionTimer = setInterval(() => {
+      this._evictOldest(this.urgencyCache);
+      this._evictOldest(this.socialProofCache);
+      this._evictOldest(this.activityBuffer, 500);
+      if (this.scarcityTriggers.size > MAX_CACHE_SIZE) this.scarcityTriggers.clear();
+    }, 300000);
+    intervalRegistry.register('fomo-cache-eviction', cacheEvictionTimer, 'FOMO cache eviction (5m)');
+
     logger.info('FOMO periodic tasks scheduled');
   }
 

@@ -9,12 +9,13 @@ const express = require('express');
 const router = express.Router();
 const { db } = require('../../../../../db');
 const { askClaude } = require('../../../../../utils/claude');
+const { authenticateAdmin } = require('../../../../../middleware/auth');
 
 /**
  * POST /
  * Ask Claude AI a question with business context
  */
-router.post('/', async (req, res) => {
+router.post('/', authenticateAdmin, async (req, res) => {
   try {
     const { question, context = 'general' } = req.body;
 
@@ -81,7 +82,7 @@ Be concise, practical, and use Singapore business context. Focus on actionable a
   } catch (error) {
     res.status(500).json({
       success: false,
-      error: error.message
+      error: 'Internal server error'
     });
   }
 });
@@ -90,7 +91,7 @@ Be concise, practical, and use Singapore business context. Focus on actionable a
  * POST /analyze-text
  * Analyze arbitrary text with AI
  */
-router.post('/analyze-text', async (req, res) => {
+router.post('/analyze-text', authenticateAdmin, async (req, res) => {
   try {
     const { text, analysisType = 'general' } = req.body;
 
@@ -121,7 +122,7 @@ router.post('/analyze-text', async (req, res) => {
   } catch (error) {
     res.status(500).json({
       success: false,
-      error: error.message
+      error: 'Internal server error'
     });
   }
 });

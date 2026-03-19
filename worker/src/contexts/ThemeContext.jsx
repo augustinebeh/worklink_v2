@@ -1,5 +1,6 @@
 import { createContext, useContext, useState, useEffect } from 'react';
 import { useAuth } from './AuthContext';
+import logger from '../utils/logger';
 
 const ThemeContext = createContext();
 
@@ -130,7 +131,7 @@ export function ThemeProvider({ children }) {
         setColorTheme(data.data.theme);
       }
     } catch (error) {
-      console.error('Failed to sync theme:', error);
+      logger.error('Failed to sync theme:', error);
     }
   };
 

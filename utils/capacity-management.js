@@ -6,6 +6,10 @@
  * while scaling to 100x performance safely.
  */
 
+
+const { createLogger } = require('./structured-logger');
+const logger = createLogger('capacity-management');
+
 const { db } = require('../db');
 
 class CapacityManagementSystem {
@@ -187,7 +191,7 @@ class CapacityManagementSystem {
    * Emergency brake - stop all automated sourcing
    */
   async emergencyBrake() {
-    console.log('🚨 EMERGENCY BRAKE ACTIVATED - Stopping all sourcing automation');
+    logger.info('EMERGENCY BRAKE ACTIVATED - Stopping all sourcing automation');
 
     // Update job scheduler to pause sourcing jobs
     db.prepare(`

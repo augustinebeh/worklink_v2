@@ -20,7 +20,9 @@ const router = express.Router();
  */
 router.get('/', authenticateAny, (req, res) => {
   try {
-    const { candidateId, limit = 50, offset = 0, since } = req.query;
+    const { candidateId, since } = req.query;
+    const limit = Math.min(Math.max(1, parseInt(req.query.limit) || 50), 500);
+    const offset = Math.max(0, parseInt(req.query.offset) || 0);
 
     if (!candidateId) {
       return res.status(400).json({
@@ -44,7 +46,7 @@ router.get('/', authenticateAny, (req, res) => {
     }
 
     query += ' ORDER BY m.created_at ASC LIMIT ? OFFSET ?';
-    params.push(parseInt(limit), parseInt(offset));
+    params.push(limit, offset);
 
     const messages = db.prepare(query).all(...params);
 
@@ -53,9 +55,9 @@ router.get('/', authenticateAny, (req, res) => {
       try {
         db.prepare(`
           UPDATE messages
-          SET read = 1, read_at = ?
+          SET read = 1
           WHERE candidate_id = ? AND sender = 'candidate' AND read = 0
-        `).run(new Date().toISOString(), candidateId);
+        `).run(candidateId);
 
         // Broadcast read receipt
         if (messages.length > 0) {
@@ -74,9 +76,9 @@ router.get('/', authenticateAny, (req, res) => {
       data: messages,
       candidateId,
       pagination: {
-        limit: parseInt(limit),
-        offset: parseInt(offset),
-        hasMore: messages.length === parseInt(limit)
+        limit,
+        offset,
+        hasMore: messages.length === limit
       },
       message: `Retrieved ${messages.length} messages`
     });
@@ -86,7 +88,7 @@ router.get('/', authenticateAny, (req, res) => {
     res.status(500).json({
       success: false,
       error: 'Failed to retrieve messages',
-      details: error.message
+      details: 'Internal server error'
     });
   }
 });
@@ -114,6 +116,13 @@ router.post('/', authenticateAny, async (req, res) => {
       });
     }
 
+    if (content.length > 10000) {
+      return res.status(400).json({
+        success: false,
+        error: 'Message content too long (max 10000 characters)'
+      });
+    }
+
     // Validate candidateId exists
     const candidate = db.prepare('SELECT id, name FROM candidates WHERE id = ?').get(candidateId);
     if (!candidate) {
@@ -130,13 +139,12 @@ router.post('/', authenticateAny, async (req, res) => {
       sender,
       channel,
       created_at: new Date().toISOString(),
-      read: sender === 'admin' ? 1 : 0, // Admin messages are auto-marked as read
-      sender_id: req.user?.id || null
+      read: sender === 'admin' ? 1 : 0 // Admin messages are auto-marked as read
     };
 
     const insertStmt = db.prepare(`
-      INSERT INTO messages (candidate_id, content, sender, channel, created_at, read, sender_id)
-      VALUES (?, ?, ?, ?, ?, ?, ?)
+      INSERT INTO messages (candidate_id, content, sender, channel, created_at, read)
+      VALUES (?, ?, ?, ?, ?, ?)
     `);
 
     const result = insertStmt.run(
@@ -145,8 +153,7 @@ router.post('/', authenticateAny, async (req, res) => {
       messageData.sender,
       messageData.channel,
       messageData.created_at,
-      messageData.read,
-      messageData.sender_id
+      messageData.read
     );
 
     if (!result.lastInsertRowid) {
@@ -196,7 +203,7 @@ router.post('/', authenticateAny, async (req, res) => {
     res.status(500).json({
       success: false,
       error: 'Failed to send message',
-      details: error.message
+      details: 'Internal server error'
     });
   }
 });
@@ -255,7 +262,7 @@ router.post('/quick-replies', authenticateAny, async (req, res) => {
     res.status(500).json({
       success: false,
       error: 'Failed to generate quick replies',
-      details: error.message
+      details: 'Internal server error'
     });
   }
 });
@@ -292,7 +299,7 @@ router.post('/typing', authenticateAny, (req, res) => {
     res.status(500).json({
       success: false,
       error: 'Failed to send typing indicator',
-      details: error.message
+      details: 'Internal server error'
     });
   }
 });
@@ -318,9 +325,9 @@ router.put('/:id/read', authenticateAny, (req, res) => {
     // Update read status
     const result = db.prepare(`
       UPDATE messages
-      SET read = 1, read_at = ?
+      SET read = 1
       WHERE id = ?
-    `).run(new Date().toISOString(), id);
+    `).run(id);
 
     if (result.changes === 0) {
       return res.status(400).json({
@@ -344,8 +351,66 @@ router.put('/:id/read', authenticateAny, (req, res) => {
     res.status(500).json({
       success: false,
       error: 'Failed to mark message as read',
-      details: error.message
+      details: 'Internal server error'
     });
+  }
+});
+
+/**
+ * POST /:id/read
+ * Mark message as read (POST compatibility for worker portal)
+ */
+router.post('/:id/read', authenticateAny, (req, res) => {
+  try {
+    const { id } = req.params;
+    const reader = req.user?.role === 'admin' ? 'admin' : 'candidate';
+
+    const message = db.prepare('SELECT * FROM messages WHERE id = ?').get(id);
+    if (!message) {
+      return res.status(404).json({ success: false, error: 'Message not found' });
+    }
+
+    db.prepare(`
+      UPDATE messages SET read = 1 WHERE id = ?
+    `).run(id);
+
+    broadcastReadReceipt(message.candidate_id, id, reader);
+
+    res.json({ success: true, message: 'Message marked as read', messageId: id, reader });
+  } catch (error) {
+    logger.error('Error marking message as read (POST)', { error: error.message });
+    res.status(500).json({ success: false, error: 'Failed to mark message as read', details: 'Internal server error' });
+  }
+});
+
+/**
+ * GET /templates
+ * Get message templates for quick replies
+ */
+router.get('/templates', authenticateAny, (req, res) => {
+  try {
+    // Check if templates table exists
+    const tableExists = db.prepare("SELECT name FROM sqlite_master WHERE type='table' AND name='message_templates'").get();
+
+    if (!tableExists) {
+      // Return default templates if table doesn't exist
+      return res.json({
+        success: true,
+        data: [
+          { id: 'welcome', name: 'Welcome', content: 'Welcome to WorkLink! How can we help you today?' },
+          { id: 'job_update', name: 'Job Update', content: 'We have new job opportunities that match your profile.' },
+          { id: 'payment_confirm', name: 'Payment Confirmation', content: 'Your payment has been processed successfully.' },
+          { id: 'schedule_reminder', name: 'Schedule Reminder', content: 'This is a reminder about your upcoming assignment.' }
+        ],
+        source: 'defaults'
+      });
+    }
+
+    const templates = db.prepare('SELECT * FROM message_templates ORDER BY name').all();
+    res.json({ success: true, data: templates });
+  } catch (error) {
+    logger.error('Error fetching templates', { error: error.message });
+    res.status(500).json({ success: false, error: 'Failed to retrieve templates', details: 'Internal server error' });
   }
 });
 
@@ -366,12 +431,8 @@ router.delete('/:id', authenticateAdmin, (req, res) => {
       });
     }
 
-    // Soft delete - mark as deleted instead of removing
-    const result = db.prepare(`
-      UPDATE messages
-      SET deleted = 1, deleted_at = ?, deleted_by = ?
-      WHERE id = ?
-    `).run(new Date().toISOString(), req.user?.id || 'admin', id);
+    // Hard delete (messages table has no soft-delete columns)
+    const result = db.prepare('DELETE FROM messages WHERE id = ?').run(id);
 
     if (result.changes === 0) {
       return res.status(400).json({
@@ -391,7 +452,7 @@ router.delete('/:id', authenticateAdmin, (req, res) => {
     res.status(500).json({
       success: false,
       error: 'Failed to delete message',
-      details: error.message
+      details: 'Internal server error'
     });
   }
 });

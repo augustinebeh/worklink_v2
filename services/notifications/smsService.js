@@ -5,6 +5,8 @@
  */
 
 const twilio = require('twilio');
+const { createLogger } = require('../../utils/structured-logger');
+const logger = createLogger('sms-service');
 
 class SmsService {
   constructor() {
@@ -21,13 +23,13 @@ class SmsService {
     const authToken = process.env.TWILIO_AUTH_TOKEN;
     
     if (!accountSid || !authToken || !this.fromNumber) {
-      console.warn('⚠️  Twilio credentials not found. SMS notifications disabled.');
+      logger.warn('Twilio credentials not found, SMS notifications disabled');
       return false;
     }
     
     this.client = twilio(accountSid, authToken);
     this.initialized = true;
-    console.log('✅ SMS service initialized (Twilio)');
+    logger.info('SMS service initialized (Twilio)');
     return true;
   }
 
@@ -141,7 +143,7 @@ class SmsService {
         results
       };
     } catch (error) {
-      console.error('SMS send error:', error);
+      logger.error('SMS send error', { error: error.message });
       return {
         success: false,
         error: error.message

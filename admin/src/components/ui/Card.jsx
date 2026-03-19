@@ -1,6 +1,6 @@
 import { clsx } from 'clsx';
 
-export default function Card({ 
+export function Card({ 
   children, 
   className, 
   hover = false,
@@ -69,3 +69,5 @@ export function CardFooter({ children, className }) {
     </div>
   );
 }
+
+export default Card;

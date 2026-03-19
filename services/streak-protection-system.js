@@ -10,11 +10,27 @@
  * - Peer milestone competitive notifications
  * - Streak recovery incentives
  * - Social proof of streak achievements
+ *
+ * Risk analysis logic: ./streak-protection/risk-analyzer.js
+ * Milestone processing: ./streak-protection/milestone-processor.js
  */
 
 const { db } = require('../db');
 const { createLogger } = require('../utils/structured-logger');
 const { formatXP, calculateLevel, getLevelTier } = require('../shared/utils/gamification');
+const intervalRegistry = require('../utils/interval-registry');
+
+const {
+  calculateRiskFactors,
+  calculateOverallRiskScore,
+  predictStreakBreakTime,
+  calculateStreakValue
+} = require('./streak-protection/risk-analyzer');
+
+const {
+  processMilestoneAchievements,
+  sendCompetitiveMilestoneAlerts
+} = require('./streak-protection/milestone-processor');
 
 const logger = createLogger('streak-protection');
 
@@ -23,6 +39,14 @@ class StreakProtectionSystem {
     this.riskProfiles = new Map();
     this.protectionTokens = new Map();
     this.milestoneTrackers = new Map();
+
+    // Evict in-memory caches to prevent unbounded growth
+    const cacheEvictionTimer = setInterval(() => {
+      if (this.riskProfiles.size > 1000) this.riskProfiles.clear();
+      if (this.protectionTokens.size > 1000) this.protectionTokens.clear();
+      if (this.milestoneTrackers.size > 1000) this.milestoneTrackers.clear();
+    }, 600000); // Every 10 minutes
+    intervalRegistry.register('streak-cache-eviction', cacheEvictionTimer, 'Streak protection cache eviction (10m)');
 
     this.initializeSystem();
     this.setupPeriodicChecks();
@@ -148,24 +172,28 @@ class StreakProtectionSystem {
 
   setupPeriodicChecks() {
     // Check for streak risks every 15 minutes
-    setInterval(() => {
+    const riskAnalysisTimer = setInterval(() => {
       this.analyzeStreakRisks();
     }, 15 * 60 * 1000);
+    intervalRegistry.register('streak-risk-analysis', riskAnalysisTimer, 'Streak risk analysis (15m)');
 
     // Process milestone achievements every hour
-    setInterval(() => {
-      this.processMilestoneAchievements();
+    const milestoneTimer = setInterval(() => {
+      processMilestoneAchievements(this.milestoneThresholds);
     }, 60 * 60 * 1000);
+    intervalRegistry.register('streak-milestone-processing', milestoneTimer, 'Streak milestone processing (1h)');
 
     // Clean up expired protections every 6 hours
-    setInterval(() => {
+    const cleanupTimer = setInterval(() => {
       this.cleanupExpiredProtections();
     }, 6 * 60 * 60 * 1000);
+    intervalRegistry.register('streak-protection-cleanup', cleanupTimer, 'Streak expired protection cleanup (6h)');
 
     // Send competitive milestone alerts every 30 minutes
-    setInterval(() => {
-      this.sendCompetitiveMilestoneAlerts();
+    const competitiveTimer = setInterval(() => {
+      sendCompetitiveMilestoneAlerts();
     }, 30 * 60 * 1000);
+    intervalRegistry.register('streak-competitive-alerts', competitiveTimer, 'Streak competitive milestone alerts (30m)');
 
     logger.info('Streak protection periodic checks scheduled');
   }
@@ -205,9 +233,9 @@ class StreakProtectionSystem {
 
   async analyzeIndividualRisk(candidate) {
     try {
-      const riskFactors = await this.calculateRiskFactors(candidate);
-      const riskScore = this.calculateOverallRiskScore(riskFactors);
-      const predictedBreakHours = this.predictStreakBreakTime(candidate, riskFactors);
+      const riskFactors = await calculateRiskFactors(candidate);
+      const riskScore = calculateOverallRiskScore(riskFactors);
+      const predictedBreakHours = predictStreakBreakTime(candidate, riskFactors);
 
       // Store risk analysis
       const analysisId = `risk_${Date.now()}_${Math.random().toString(36).substr(2, 9)}`;
@@ -243,192 +271,6 @@ class StreakProtectionSystem {
     } catch (error) {
       logger.error('Failed to analyze individual risk:', error);
     }
-  }
-
-  async calculateRiskFactors(candidate) {
-    const factors = {
-      timeRisk: 0,          // How close to breaking
-      patternRisk: 0,       // Historical pattern risk
-      engagementRisk: 0,    // Recent engagement decline
-      socialRisk: 0,        // Peer pressure/comparison
-      valueRisk: 0          // Potential loss value
-    };
-
-    // Time risk (0-1): How close to the 24-hour deadline
-    factors.timeRisk = Math.min(candidate.hours_since_checkin / 24, 1.0);
-
-    // Pattern risk: Analyze historical check-in patterns
-    const checkInPattern = await this.analyzeCheckInPattern(candidate.id);
-    factors.patternRisk = checkInPattern.riskScore;
-
-    // Engagement risk: Recent job applications, messages, etc.
-    const engagementData = await this.analyzeRecentEngagement(candidate.id);
-    factors.engagementRisk = engagementData.riskScore;
-
-    // Social risk: How peers are performing
-    const socialData = await this.analyzeSocialPressure(candidate);
-    factors.socialRisk = socialData.riskScore;
-
-    // Value risk: What they stand to lose
-    factors.valueRisk = this.calculateStreakValue(candidate.streak_days) / 100;
-
-    return factors;
-  }
-
-  async analyzeCheckInPattern(candidateId) {
-    try {
-      // Analyze last 14 days of check-in times
-      const checkIns = db.prepare(`
-        SELECT
-          date(streak_last_date) as check_date,
-          time(streak_last_date) as check_time,
-          julianday('now') - julianday(streak_last_date) as days_ago
-        FROM candidates
-        WHERE id = ?
-        ORDER BY streak_last_date DESC
-        LIMIT 14
-      `).all(candidateId);
-
-      if (checkIns.length < 3) {
-        return { riskScore: 0.3, pattern: 'insufficient_data' };
-      }
-
-      // Analyze check-in time variance
-      const checkTimes = checkIns.map(ci => {
-        const [hours, minutes] = ci.check_time.split(':').map(Number);
-        return hours + minutes / 60;
-      });
-
-      const avgCheckTime = checkTimes.reduce((a, b) => a + b, 0) / checkTimes.length;
-      const variance = checkTimes.reduce((acc, time) => acc + Math.pow(time - avgCheckTime, 2), 0) / checkTimes.length;
-
-      // Higher variance = higher risk
-      const patternRisk = Math.min(Math.sqrt(variance) / 6, 1.0); // Normalize by 6 hours
-
-      return {
-        riskScore: patternRisk,
-        pattern: variance > 4 ? 'inconsistent' : 'consistent',
-        avgCheckTime: avgCheckTime.toFixed(1),
-        variance: variance.toFixed(2)
-      };
-    } catch (error) {
-      logger.error('Failed to analyze check-in pattern:', error);
-      return { riskScore: 0.3, pattern: 'error' };
-    }
-  }
-
-  async analyzeRecentEngagement(candidateId) {
-    try {
-      const recentActivity = db.prepare(`
-        SELECT
-          COUNT(CASE WHEN d.created_at > datetime('now', '-7 days') THEN 1 END) as recent_applications,
-          COUNT(CASE WHEN m.created_at > datetime('now', '-7 days') THEN 1 END) as recent_messages,
-          AVG(CASE WHEN j.completed_at > datetime('now', '-14 days') THEN j.rating END) as recent_rating
-        FROM candidates c
-        LEFT JOIN deployments d ON c.id = d.candidate_id
-        LEFT JOIN messages m ON c.id = m.candidate_id AND m.sender = 'candidate'
-        LEFT JOIN (
-          SELECT candidate_id, completed_at, rating FROM deployments WHERE status = 'completed'
-        ) j ON c.id = j.candidate_id
-        WHERE c.id = ?
-      `).get(candidateId);
-
-      // Calculate engagement decline risk
-      let riskScore = 0;
-
-      if (recentActivity.recent_applications === 0) riskScore += 0.3;
-      if (recentActivity.recent_messages === 0) riskScore += 0.2;
-      if (recentActivity.recent_rating && recentActivity.recent_rating < 4) riskScore += 0.2;
-
-      return {
-        riskScore: Math.min(riskScore, 1.0),
-        recentApplications: recentActivity.recent_applications || 0,
-        recentMessages: recentActivity.recent_messages || 0,
-        recentRating: recentActivity.recent_rating || 'N/A'
-      };
-    } catch (error) {
-      logger.error('Failed to analyze recent engagement:', error);
-      return { riskScore: 0.2 };
-    }
-  }
-
-  async analyzeSocialPressure(candidate) {
-    try {
-      // Find peers who are outperforming
-      const peerComparison = db.prepare(`
-        SELECT
-          COUNT(*) as total_peers,
-          COUNT(CASE WHEN streak_days > ? THEN 1 END) as outperforming_peers,
-          AVG(streak_days) as avg_peer_streak,
-          MAX(streak_days) as best_peer_streak
-        FROM candidates
-        WHERE status = 'active'
-          AND location_area = ?
-          AND level BETWEEN ? AND ?
-          AND id != ?
-      `).get(
-        candidate.streak_days,
-        candidate.location_area,
-        candidate.level - 5,
-        candidate.level + 5,
-        candidate.id
-      );
-
-      let socialRisk = 0;
-      if (peerComparison.outperforming_peers > 0) {
-        socialRisk = Math.min(peerComparison.outperforming_peers / peerComparison.total_peers, 0.8);
-      }
-
-      return {
-        riskScore: socialRisk,
-        peerData: peerComparison
-      };
-    } catch (error) {
-      logger.error('Failed to analyze social pressure:', error);
-      return { riskScore: 0 };
-    }
-  }
-
-  calculateOverallRiskScore(factors) {
-    // Weighted combination of risk factors
-    const weights = {
-      timeRisk: 0.4,        // Most important: time urgency
-      patternRisk: 0.2,     // Historical behavior
-      engagementRisk: 0.2,  // Recent activity
-      socialRisk: 0.1,      // Peer pressure
-      valueRisk: 0.1        // Loss aversion
-    };
-
-    let totalScore = 0;
-    Object.keys(weights).forEach(factor => {
-      totalScore += (factors[factor] || 0) * weights[factor];
-    });
-
-    return Math.min(totalScore, 1.0);
-  }
-
-  predictStreakBreakTime(candidate, riskFactors) {
-    // Predict when streak will break based on risk factors
-    const baseTimeRemaining = 24 - candidate.hours_since_checkin;
-
-    // Adjust based on risk factors
-    const adjustmentFactor = 1 - (riskFactors.patternRisk * 0.5 + riskFactors.engagementRisk * 0.3);
-
-    return Math.max(baseTimeRemaining * adjustmentFactor, 0);
-  }
-
-  calculateStreakValue(streakDays) {
-    // Calculate the "value" of a streak (for loss aversion psychology)
-    let value = streakDays * 10; // Base value
-
-    // Bonus for milestone streaks
-    if (streakDays >= 100) value += 500;
-    else if (streakDays >= 50) value += 200;
-    else if (streakDays >= 30) value += 100;
-    else if (streakDays >= 14) value += 50;
-    else if (streakDays >= 7) value += 20;
-
-    return value;
   }
 
   // ==================== PROTECTION OFFERS ====================
@@ -520,7 +362,6 @@ class StreakProtectionSystem {
   }
 
   generateSocialProof(candidate) {
-    // Generate social proof messaging
     return [
       `${Math.floor(Math.random() * 8) + 3} workers used streak protection this week`,
       `Don't be the only one to lose their streak today`,
@@ -529,13 +370,11 @@ class StreakProtectionSystem {
   }
 
   calculateScarcityFactor(candidate) {
-    // Calculate scarcity messaging
     const dailyProtections = Math.floor(Math.random() * 5) + 1;
     return `Only ${dailyProtections} protection offers available today`;
   }
 
   async sendProtectionOffer(candidate, protectionType, tokenId, riskScore) {
-    // This would integrate with the WebSocket system to send real-time offers
     try {
       const { notifyStreakRisk } = require('../websocket');
 
@@ -561,346 +400,6 @@ class StreakProtectionSystem {
     }
   }
 
-  // ==================== MILESTONE PROCESSING ====================
-
-  async processMilestoneAchievements() {
-    try {
-      const recentAchievers = db.prepare(`
-        SELECT
-          c.id, c.name, c.streak_days, c.level, c.location_area,
-          CASE
-            WHEN c.level >= 100 THEN 'mythic'
-            WHEN c.level >= 75 THEN 'diamond'
-            WHEN c.level >= 50 THEN 'platinum'
-            WHEN c.level >= 25 THEN 'gold'
-            WHEN c.level >= 10 THEN 'silver'
-            ELSE 'bronze'
-          END as tier
-        FROM candidates c
-        WHERE c.status = 'active'
-          AND c.streak_days > 0
-          AND datetime(c.updated_at) > datetime('now', '-2 hours')
-      `).all();
-
-      for (const candidate of recentAchievers) {
-        await this.checkMilestoneAchievements(candidate);
-      }
-
-      logger.info(`Processed milestones for ${recentAchievers.length} candidates`);
-    } catch (error) {
-      logger.error('Failed to process milestone achievements:', error);
-    }
-  }
-
-  async checkMilestoneAchievements(candidate) {
-    try {
-      // Check for milestone achievements
-      const achievedMilestones = [];
-
-      this.milestoneThresholds.forEach(category => {
-        category.values.forEach(value => {
-          if (this.isNewMilestone(candidate, category.type, value)) {
-            achievedMilestones.push({
-              type: category.type,
-              value: value,
-              candidate: candidate
-            });
-          }
-        });
-      });
-
-      // Process each new milestone
-      for (const milestone of achievedMilestones) {
-        await this.processMilestone(milestone);
-      }
-    } catch (error) {
-      logger.error('Failed to check milestone achievements:', error);
-    }
-  }
-
-  isNewMilestone(candidate, type, value) {
-    // Check if this is a new milestone achievement
-    if (type === 'daily' && candidate.streak_days === value) return true;
-    if (type === 'weekly' && candidate.streak_days === value * 7) return true;
-    if (type === 'monthly' && candidate.streak_days === value * 30) return true;
-
-    return false;
-  }
-
-  async processMilestone(milestone) {
-    try {
-      const milestoneId = `mile_${Date.now()}_${Math.random().toString(36).substr(2, 9)}`;
-
-      // Record milestone achievement
-      db.prepare(`
-        INSERT INTO streak_milestones
-        (id, candidate_id, milestone_type, milestone_value, achieved_at)
-        VALUES (?, ?, ?, ?, datetime('now'))
-      `).run(
-        milestoneId,
-        milestone.candidate.id,
-        milestone.type,
-        milestone.value,
-        new Date().toISOString()
-      );
-
-      // Send celebration notification
-      await this.sendMilestoneCelebration(milestone);
-
-      // Create competitive alerts for peers
-      await this.createCompetitiveMilestoneAlerts(milestone);
-
-      logger.debug('Processed milestone', {
-        candidateId: milestone.candidate.id,
-        type: milestone.type,
-        value: milestone.value
-      });
-    } catch (error) {
-      logger.error('Failed to process milestone:', error);
-    }
-  }
-
-  async sendMilestoneCelebration(milestone) {
-    try {
-      const { notifyAchievementUnlocked } = require('../websocket');
-
-      const celebrationMessage = this.generateCelebrationMessage(milestone);
-
-      notifyAchievementUnlocked(milestone.candidate.id, {
-        id: `streak_milestone_${milestone.type}_${milestone.value}`,
-        name: `${milestone.value}-${milestone.type} Streak Warrior`,
-        description: celebrationMessage,
-        type: 'streak_milestone',
-        rarity: this.calculateMilestoneRarity(milestone),
-        xp_reward: this.calculateMilestoneXP(milestone)
-      });
-
-      logger.debug('Sent milestone celebration', {
-        candidateId: milestone.candidate.id,
-        milestone: milestone
-      });
-    } catch (error) {
-      logger.error('Failed to send milestone celebration:', error);
-    }
-  }
-
-  generateCelebrationMessage(milestone) {
-    const messages = {
-      daily: [
-        `🔥 Incredible! ${milestone.value} days of consistency!`,
-        `🎉 ${milestone.value}-day streak achieved! You're unstoppable!`,
-        `💪 ${milestone.value} days straight! Your dedication is inspiring!`
-      ],
-      weekly: [
-        `🌟 ${milestone.value} weeks of perfect streaks! Amazing!`,
-        `🚀 ${milestone.value} consecutive weeks! You're a legend!`,
-        `👑 ${milestone.value} weeks of excellence! Keep dominating!`
-      ],
-      monthly: [
-        `🏆 ${milestone.value} months of streaks! Absolutely legendary!`,
-        `💎 ${milestone.value} months of consistency! Hall of fame material!`,
-        `🦾 ${milestone.value} months strong! You're redefining dedication!`
-      ]
-    };
-
-    const categoryMessages = messages[milestone.type] || [`Achievement: ${milestone.value} ${milestone.type}!`];
-    return categoryMessages[Math.floor(Math.random() * categoryMessages.length)];
-  }
-
-  calculateMilestoneRarity(milestone) {
-    if (milestone.type === 'monthly' && milestone.value >= 12) return 'legendary';
-    if (milestone.type === 'daily' && milestone.value >= 365) return 'legendary';
-    if (milestone.type === 'weekly' && milestone.value >= 52) return 'legendary';
-
-    if (milestone.type === 'daily' && milestone.value >= 100) return 'epic';
-    if (milestone.type === 'weekly' && milestone.value >= 12) return 'epic';
-    if (milestone.type === 'monthly' && milestone.value >= 6) return 'epic';
-
-    if (milestone.type === 'daily' && milestone.value >= 30) return 'rare';
-    if (milestone.type === 'weekly' && milestone.value >= 4) return 'rare';
-    if (milestone.type === 'monthly' && milestone.value >= 3) return 'rare';
-
-    return 'common';
-  }
-
-  calculateMilestoneXP(milestone) {
-    const baseXP = {
-      daily: milestone.value * 50,
-      weekly: milestone.value * 300,
-      monthly: milestone.value * 1200
-    };
-
-    const rarityMultiplier = {
-      common: 1,
-      rare: 1.5,
-      epic: 2.0,
-      legendary: 3.0
-    };
-
-    const rarity = this.calculateMilestoneRarity(milestone);
-    return Math.floor(baseXP[milestone.type] * rarityMultiplier[rarity]);
-  }
-
-  async createCompetitiveMilestoneAlerts(milestone) {
-    try {
-      // Find peers to notify about this achievement
-      const peers = db.prepare(`
-        SELECT id, name, streak_days, level
-        FROM candidates
-        WHERE status = 'active'
-          AND location_area = ?
-          AND level BETWEEN ? AND ?
-          AND id != ?
-          AND streak_days < ?
-        LIMIT 10
-      `).all(
-        milestone.candidate.location_area,
-        milestone.candidate.level - 10,
-        milestone.candidate.level + 10,
-        milestone.candidate.id,
-        milestone.candidate.streak_days
-      );
-
-      // Send competitive alerts to peers
-      const { notifyCompetitivePressure } = require('../websocket');
-
-      peers.forEach(peer => {
-        notifyCompetitivePressure(peer.id, {
-          type: 'peer_milestone',
-          achieverTier: milestone.candidate.tier,
-          milestoneType: milestone.type,
-          milestoneValue: milestone.value,
-          streakGap: milestone.candidate.streak_days - peer.streak_days,
-          motivationalMessage: this.generateCompetitiveMessage(milestone, peer)
-        });
-      });
-
-      logger.debug('Created competitive milestone alerts', {
-        achieverId: milestone.candidate.id,
-        peerCount: peers.length,
-        milestone: milestone
-      });
-    } catch (error) {
-      logger.error('Failed to create competitive milestone alerts:', error);
-    }
-  }
-
-  generateCompetitiveMessage(milestone, peer) {
-    const gap = milestone.candidate.streak_days - peer.streak_days;
-
-    if (gap > 50) {
-      return `A peer just hit a ${milestone.value}-${milestone.type} milestone! They're ${gap} days ahead - time to catch up! 🏃‍♂️`;
-    } else if (gap > 10) {
-      return `Someone in your area achieved ${milestone.value} ${milestone.type}s! Close the ${gap}-day gap! 🎯`;
-    } else {
-      return `A nearby worker just hit ${milestone.value} ${milestone.type}s! You're only ${gap} days behind! 🔥`;
-    }
-  }
-
-  // ==================== COMPETITIVE ALERTS ====================
-
-  async sendCompetitiveMilestoneAlerts() {
-    try {
-      // Find recent milestone achievements that haven't triggered competitive alerts
-      const recentMilestones = db.prepare(`
-        SELECT sm.*, c.name, c.location_area, c.level, c.streak_days,
-               CASE
-                 WHEN c.level >= 100 THEN 'mythic'
-                 WHEN c.level >= 75 THEN 'diamond'
-                 WHEN c.level >= 50 THEN 'platinum'
-                 WHEN c.level >= 25 THEN 'gold'
-                 WHEN c.level >= 10 THEN 'silver'
-                 ELSE 'bronze'
-               END as tier
-        FROM streak_milestones sm
-        JOIN candidates c ON sm.candidate_id = c.id
-        WHERE sm.achieved_at > datetime('now', '-2 hours')
-          AND sm.competitive_alert_sent = FALSE
-          AND c.status = 'active'
-      `).all();
-
-      for (const milestone of recentMilestones) {
-        await this.sendDelayedCompetitiveAlert(milestone);
-
-        // Mark as sent
-        db.prepare(`
-          UPDATE streak_milestones
-          SET competitive_alert_sent = TRUE
-          WHERE id = ?
-        `).run(milestone.id);
-      }
-
-      logger.debug(`Sent competitive alerts for ${recentMilestones.length} milestones`);
-    } catch (error) {
-      logger.error('Failed to send competitive milestone alerts:', error);
-    }
-  }
-
-  async sendDelayedCompetitiveAlert(milestone) {
-    try {
-      // Find candidates who might be motivated by this achievement
-      const motivationTargets = db.prepare(`
-        SELECT id, name, streak_days, level
-        FROM candidates
-        WHERE status = 'active'
-          AND location_area = ?
-          AND id != ?
-          AND (
-            streak_days BETWEEN ? AND ? OR
-            level BETWEEN ? AND ?
-          )
-        LIMIT 15
-      `).all(
-        milestone.location_area,
-        milestone.candidate_id,
-        Math.max(0, milestone.streak_days - 20),
-        milestone.streak_days + 10,
-        milestone.level - 15,
-        milestone.level + 15
-      );
-
-      const { broadcastToCandidate, EventTypes } = require('../websocket');
-
-      motivationTargets.forEach(target => {
-        const motivationMessage = this.generateDelayedMotivationMessage(milestone, target);
-
-        broadcastToCandidate(target.id, {
-          type: EventTypes.FOMO_PEER_ACTIVITY,
-          subtype: 'milestone_motivation',
-          message: motivationMessage,
-          achieverTier: milestone.tier,
-          milestoneData: {
-            type: milestone.milestone_type,
-            value: milestone.milestone_value,
-            daysAhead: milestone.streak_days - target.streak_days
-          },
-          motivational: true,
-          urgency: 'medium'
-        });
-      });
-
-      logger.debug('Sent delayed competitive alert', {
-        milestoneId: milestone.id,
-        targetCount: motivationTargets.length
-      });
-    } catch (error) {
-      logger.error('Failed to send delayed competitive alert:', error);
-    }
-  }
-
-  generateDelayedMotivationMessage(milestone, target) {
-    const gap = milestone.streak_days - target.streak_days;
-
-    const messages = [
-      `🏆 A ${milestone.tier} worker in your area just achieved their ${milestone.milestone_value}-${milestone.milestone_type} milestone!`,
-      `💪 Someone nearby is dominating with ${milestone.streak_days} consecutive days!`,
-      `🌟 Peer alert: Another worker just hit ${milestone.milestone_value} ${milestone.milestone_type}s of consistency!`,
-      `🎯 Motivation boost: A colleague just reached ${milestone.streak_days} days straight!`
-    ];
-
-    return messages[Math.floor(Math.random() * messages.length)];
-  }
-
   // ==================== FOMO INTERVENTIONS ====================
 
   generateFOMOInterventions(candidate, riskFactors) {
@@ -910,7 +409,7 @@ class StreakProtectionSystem {
     if (riskFactors.timeRisk > 0.7) {
       interventions.push({
         type: 'urgency_alert',
-        message: `⏰ Only ${Math.max(0, 24 - candidate.hours_since_checkin).toFixed(1)} hours left!`,
+        message: `\u23F0 Only ${Math.max(0, 24 - candidate.hours_since_checkin).toFixed(1)} hours left!`,
         priority: 'high'
       });
     }
@@ -926,7 +425,7 @@ class StreakProtectionSystem {
 
     // Loss aversion interventions
     if (candidate.streak_days >= 7) {
-      const streakValue = this.calculateStreakValue(candidate.streak_days);
+      const streakValue = calculateStreakValue(candidate.streak_days);
       interventions.push({
         type: 'loss_aversion',
         message: `You've invested ${candidate.streak_days} days building this streak. Don't lose it now!`,
@@ -1008,8 +507,8 @@ class StreakProtectionSystem {
 
       if (!candidate) return null;
 
-      const riskFactors = await this.calculateRiskFactors(candidate);
-      const riskScore = this.calculateOverallRiskScore(riskFactors);
+      const riskFactors = await calculateRiskFactors(candidate);
+      const riskScore = calculateOverallRiskScore(riskFactors);
 
       const activeProtection = db.prepare(`
         SELECT * FROM streak_protection_tokens
@@ -1024,7 +523,7 @@ class StreakProtectionSystem {
         riskLevel: riskScore > 0.8 ? 'critical' : riskScore > 0.6 ? 'high' : riskScore > 0.4 ? 'medium' : 'low',
         riskFactors: riskFactors,
         activeProtection: activeProtection,
-        streakValue: this.calculateStreakValue(candidate.streak_days)
+        streakValue: calculateStreakValue(candidate.streak_days)
       };
     } catch (error) {
       logger.error('Failed to get streak protection data:', error);

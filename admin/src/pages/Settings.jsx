@@ -32,7 +32,7 @@ export default function Settings() {
         setStats(data.data);
       }
     } catch (error) {
-      console.error('Failed to fetch stats:', error);
+      // Failed to fetch stats:
     } finally {
       setLoading(false);
     }
@@ -54,7 +54,7 @@ export default function Settings() {
         }, 2000);
       }
     } catch (error) {
-      console.error('Failed to reset database:', error);
+      // Failed to reset database:
     } finally {
       setResetting(false);
     }

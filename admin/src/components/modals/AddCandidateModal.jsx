@@ -142,7 +142,7 @@ export default function AddCandidateModal({ isOpen, onClose, onSuccess }) {
       onClose();
     } catch (error) {
       // Error is handled by the hook
-      console.error('Failed to create candidate:', error);
+      // Failed to create candidate
     }
   };
 

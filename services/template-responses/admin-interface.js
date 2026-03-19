@@ -6,6 +6,8 @@
  */
 
 const { db } = require('../../db');
+const { createLogger } = require('../../utils/structured-logger');
+const logger = createLogger('template-admin-interface');
 
 class TemplateAdminInterface {
   constructor() {
@@ -13,7 +15,7 @@ class TemplateAdminInterface {
   }
 
   initializeInterface() {
-    console.log('🎛️ [Admin Interface] Template management interface initialized');
+    logger.info('Template management interface initialized');
   }
 
   /**
@@ -83,7 +85,7 @@ class TemplateAdminInterface {
       };
 
     } catch (error) {
-      console.error('❌ [Admin Interface] Dashboard error:', error);
+      logger.error('Dashboard error', { error: error.message });
       return null;
     }
   }
@@ -148,7 +150,7 @@ class TemplateAdminInterface {
       return templateDetails;
 
     } catch (error) {
-      console.error('❌ [Admin Interface] Template performance error:', error);
+      logger.error('Template performance error', { error: error.message });
       return [];
     }
   }
@@ -221,7 +223,7 @@ class TemplateAdminInterface {
       return enrichedEscalations;
 
     } catch (error) {
-      console.error('❌ [Admin Interface] Escalation management error:', error);
+      logger.error('Escalation management error', { error: error.message });
       return [];
     }
   }
@@ -311,7 +313,7 @@ class TemplateAdminInterface {
       };
 
     } catch (error) {
-      console.error('❌ [Admin Interface] Analytics report error:', error);
+      logger.error('Analytics report error', { error: error.message });
       return null;
     }
   }
@@ -337,7 +339,7 @@ class TemplateAdminInterface {
       }
 
     } catch (error) {
-      console.error('❌ [Admin Interface] Export error:', error);
+      logger.error('Export error', { error: error.message });
       return null;
     }
   }
@@ -396,7 +398,7 @@ class TemplateAdminInterface {
       };
 
     } catch (error) {
-      console.error('❌ [Admin Interface] Real-time metrics error:', error);
+      logger.error('Real-time metrics error', { error: error.message });
       return {
         activeEscalations: 0,
         highPriorityEscalations: 0,
@@ -476,7 +478,7 @@ class TemplateAdminInterface {
       return recommendations;
 
     } catch (error) {
-      console.error('❌ [Admin Interface] Recommendations error:', error);
+      logger.error('Recommendations error', { error: error.message });
       return [];
     }
   }

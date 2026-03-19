@@ -91,14 +91,8 @@ export const useCalendarData = ({ startDate, endDate, timezone = 'Asia/Singapore
       setAvailability(mockAvailability);
       setInterviews(mockInterviews);
 
-      console.log('Frontend-only calendar data loaded:', {
-        availability: mockAvailability.length,
-        interviews: mockInterviews.length,
-        dateRange: `${format(startDate, 'yyyy-MM-dd')} to ${format(endDate, 'yyyy-MM-dd')}`
-      });
-
     } catch (err) {
-      console.error('Calendar data fetch error:', err);
+      // Calendar data fetch error
       setError({
         message: err.message,
         canRetry: retryCount < 3,
@@ -131,10 +125,9 @@ export const useCalendarData = ({ startDate, endDate, timezone = 'Asia/Singapore
           : slot
       ));
 
-      console.log('Availability updated (frontend-only):', slotData);
       return slotData;
     } catch (err) {
-      console.error('Update availability error:', err);
+      // Update availability error
       throw err;
     } finally {
       setLoading(false);
@@ -164,10 +157,9 @@ export const useCalendarData = ({ startDate, endDate, timezone = 'Asia/Singapore
       // Add to local state
       setInterviews(prev => [...prev, newInterview]);
 
-      console.log('Interview scheduled (frontend-only):', newInterview);
       return newInterview;
     } catch (err) {
-      console.error('Schedule interview error:', err);
+      // Schedule interview error
       throw err;
     } finally {
       setLoading(false);
@@ -188,10 +180,9 @@ export const useCalendarData = ({ startDate, endDate, timezone = 'Asia/Singapore
           : interview
       ));
 
-      console.log('Interview rescheduled (frontend-only):', { interviewId, newDatetime });
       return { id: interviewId, scheduled_datetime: newDatetime };
     } catch (err) {
-      console.error('Reschedule interview error:', err);
+      // Reschedule interview error
       throw err;
     } finally {
       setLoading(false);
@@ -208,10 +199,9 @@ export const useCalendarData = ({ startDate, endDate, timezone = 'Asia/Singapore
       // Remove from local state
       setInterviews(prev => prev.filter(interview => interview.id !== interviewId));
 
-      console.log('Interview cancelled (frontend-only):', { interviewId, reason });
       return { id: interviewId, status: 'cancelled', reason };
     } catch (err) {
-      console.error('Cancel interview error:', err);
+      // Cancel interview error
       throw err;
     } finally {
       setLoading(false);
@@ -226,14 +216,11 @@ export const useCalendarData = ({ startDate, endDate, timezone = 'Asia/Singapore
     if (startDate && endDate) {
       fetchCalendarData();
 
-      // Note: WebSocket connections disabled for frontend-only development
-      console.log('Calendar data hook initialized (frontend-only mode)');
     }
 
     // Cleanup function (no WebSocket to clean up in frontend-only mode)
-    return () => {
-      console.log('Calendar data hook cleanup');
-    };
+    return () => {};
+
   }, [startDate, endDate, timezone]);
 
   return {

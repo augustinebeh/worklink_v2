@@ -10,6 +10,8 @@ const telegram = require('../messaging/telegram');
 const adML = require('../ad-ml');
 const abTesting = require('../ad-ml/ab-testing');
 const timing = require('../ad-ml/timing');
+const { createLogger } = require('../../utils/structured-logger');
+const logger = createLogger('telegram-posting');
 
 /**
  * Get posting settings
@@ -228,13 +230,13 @@ function scheduleTestEvaluation(jobId, hours) {
   setTimeout(async () => {
     try {
       const result = await adML.evaluateTest(jobId);
-      console.log(`A/B test evaluation for job ${jobId}:`, result);
+      logger.info('A/B test evaluation complete', { job_id: jobId, result });
     } catch (error) {
-      console.error(`Failed to evaluate A/B test for job ${jobId}:`, error);
+      logger.error('Failed to evaluate A/B test', { job_id: jobId, error: error.message });
     }
   }, ms);
 
-  console.log(`Scheduled A/B test evaluation for job ${jobId} in ${hours} hours`);
+  logger.info('Scheduled A/B test evaluation', { job_id: jobId, hours });
 }
 
 /**

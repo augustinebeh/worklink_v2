@@ -38,6 +38,22 @@ import RenewalPipeline from './pages/RenewalPipeline';
 import RenewalDetail from './pages/RenewalDetail';
 import TenderScanner from './pages/TenderScanner';
 
+// Import refactored pages
+import Analytics from './pages/Analytics';
+import RetentionAnalytics from './pages/RetentionAnalytics';
+import Gamification from './pages/Gamification';
+import Training from './pages/Training';
+import AISourcing from './pages/AISourcing';
+import AIAutomation from './pages/AIAutomation';
+import ConsultantPerformance from './pages/ConsultantPerformance';
+import InterviewScheduling from './pages/InterviewScheduling';
+import MLDashboard from './pages/MLDashboard';
+import TelegramGroups from './pages/TelegramGroups';
+import AdOptimization from './pages/AdOptimization';
+import TenderMonitor from './pages/TenderMonitor';
+import EPUIntelligence from './pages/EPUIntelligence';
+import GeBizRSSMonitor from './pages/GeBizRSSMonitor';
+
 function AppRoutes() {
   return (
     <Routes>
@@ -123,15 +139,15 @@ function AppRoutes() {
         />
 
         {/* Client Management */}
-        <Route path="clients" element={<Clients />} />
-        <Route path="clients/:id" element={<ClientDetail />} />
+        <Route path="clients" element={<ErrorBoundary level="page"><Clients /></ErrorBoundary>} />
+        <Route path="clients/:id" element={<ErrorBoundary level="page"><ClientDetail /></ErrorBoundary>} />
 
         {/* Financial */}
-        <Route path="financials" element={<FinancialDashboard />} />
+        <Route path="financials" element={<ErrorBoundary level="page"><FinancialDashboard /></ErrorBoundary>} />
 
         {/* Communication */}
-        <Route path="chat" element={<Chat />} />
-        <Route path="escalation-queue" element={<EscalationQueue />} />
+        <Route path="chat" element={<ErrorBoundary level="page"><Chat /></ErrorBoundary>} />
+        <Route path="escalation-queue" element={<ErrorBoundary level="page"><EscalationQueue /></ErrorBoundary>} />
 
         {/* Alerts System */}
         <Route
@@ -156,7 +172,9 @@ function AppRoutes() {
           path="settings"
           element={
             <ProtectedRoute requireRole="admin">
-              <Settings />
+              <ErrorBoundary level="page">
+                <Settings />
+              </ErrorBoundary>
             </ProtectedRoute>
           }
         />
@@ -207,21 +225,32 @@ function AppRoutes() {
           }
         />
 
-        {/* Redirects for removed/problematic pages */}
-        <Route path="analytics" element={<Navigate to="financials" replace />} />
-        <Route path="tender-monitor" element={<Navigate to="tender-scanner" replace />} />
+        {/* Analytics & Intelligence */}
+        <Route path="analytics" element={<ErrorBoundary level="page"><Analytics /></ErrorBoundary>} />
+        <Route path="retention-analytics" element={<ErrorBoundary level="page"><RetentionAnalytics /></ErrorBoundary>} />
+        <Route path="ad-optimization" element={<ErrorBoundary level="page"><AdOptimization /></ErrorBoundary>} />
+        <Route path="ml-dashboard" element={<ErrorBoundary level="page"><MLDashboard /></ErrorBoundary>} />
+        <Route path="epu-intelligence" element={<ErrorBoundary level="page"><EPUIntelligence /></ErrorBoundary>} />
+        <Route path="ai-automation" element={<ErrorBoundary level="page"><AIAutomation /></ErrorBoundary>} />
+
+        {/* Workforce Management */}
+        <Route path="gamification" element={<ErrorBoundary level="page"><Gamification /></ErrorBoundary>} />
+        <Route path="training" element={<ErrorBoundary level="page"><Training /></ErrorBoundary>} />
+        <Route path="ai-sourcing" element={<ErrorBoundary level="page"><AISourcing /></ErrorBoundary>} />
+        <Route path="consultant-performance" element={<ErrorBoundary level="page"><ConsultantPerformance /></ErrorBoundary>} />
+        <Route path="interview-scheduling" element={<ErrorBoundary level="page"><InterviewScheduling /></ErrorBoundary>} />
+
+        {/* Communication */}
+        <Route path="telegram-groups" element={<ErrorBoundary level="page"><TelegramGroups /></ErrorBoundary>} />
+
+        {/* BPO & Tenders (additional) */}
+        <Route path="bpo" element={<ErrorBoundary level="page"><BPODashboard /></ErrorBoundary>} />
+        <Route path="renewal-pipeline" element={<ErrorBoundary level="page"><RenewalPipeline /></ErrorBoundary>} />
+        <Route path="tender-monitor" element={<ErrorBoundary level="page"><TenderMonitor /></ErrorBoundary>} />
+        <Route path="gebiz-rss" element={<ErrorBoundary level="page"><GeBizRSSMonitor /></ErrorBoundary>} />
+
+        {/* Legacy redirects */}
         <Route path="tender-lifecycle" element={<Navigate to="tender-pipeline" replace />} />
-        <Route path="bpo" element={<Navigate to="tender-pipeline" replace />} />
-        <Route path="renewal-pipeline" element={<Navigate to="gebiz-intelligence" replace />} />
-        <Route path="retention-analytics" element={<Navigate to="financials" replace />} />
-        <Route path="gamification" element={<Navigate to="deployments" replace />} />
-        <Route path="training" element={<Navigate to="deployments" replace />} />
-        <Route path="ai-sourcing" element={<Navigate to="candidates" replace />} />
-        <Route path="consultant-performance" element={<Navigate to="deployments" replace />} />
-        <Route path="interview-scheduling" element={<Navigate to="candidates" replace />} />
-        <Route path="ml-dashboard" element={<Navigate to="financials" replace />} />
-        <Route path="telegram-groups" element={<Navigate to="chat" replace />} />
-        <Route path="ad-optimization" element={<Navigate to="financials" replace />} />
       </Route>
 
       {/* Catch all */}
@@ -231,9 +260,10 @@ function AppRoutes() {
 }
 
 export default function App() {
-  // Setup global error handling
+  // Setup global error handling with cleanup
   React.useEffect(() => {
-    setupGlobalErrorHandling();
+    const cleanup = setupGlobalErrorHandling();
+    return cleanup;
   }, []);
 
   return (

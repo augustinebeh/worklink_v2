@@ -5,6 +5,8 @@
  */
 
 const { generateAvatar } = require('../connection');
+const { createLogger } = require('../../utils/structured-logger');
+const logger = createLogger('seeder-essential');
 
 /**
  * Seed essential data that should exist in both development and production
@@ -108,7 +110,7 @@ function seedEssentialData(db) {
     rewards.forEach(r => {
       db.prepare('INSERT OR IGNORE INTO rewards (id, name, description, icon, category, points_cost, tier_required, stock, active) VALUES (?,?,?,?,?,?,?,?,?)').run(...r);
     });
-    console.log('  ✅ Seeded rewards shop (Career Ladder Strategy)');
+    logger.info('Seeded rewards shop (Career Ladder Strategy)');
   }
 
   // Incentive schemes
@@ -231,11 +233,11 @@ function seedAIMLData(db) {
 function ensureDemoAccount(db) {
   const demoExists = db.prepare('SELECT COUNT(*) as c FROM candidates WHERE email = ?').get('sarah.tan@email.com').c;
   if (demoExists > 0) {
-    console.log('✅ Demo account exists: sarah.tan@email.com');
+    logger.info('Demo account exists: sarah.tan@email.com');
     return;
   }
 
-  console.log('🎭 Creating demo account: Sarah Tan');
+  logger.info('Creating demo account: Sarah Tan');
 
   // Create Sarah Tan demo candidate
   // Career Ladder System: XP 16000 = Level 10 (Silver Member)
@@ -302,7 +304,7 @@ function ensureDemoAccount(db) {
   db.prepare(`INSERT INTO xp_transactions (candidate_id, action_type, amount, reason, created_at) VALUES ('CND_DEMO_001', 'quest_claim', 10, 'Daily Check-in quest', datetime('now', '-1 days'))`).run();
   db.prepare(`INSERT INTO xp_transactions (candidate_id, action_type, amount, reason, created_at) VALUES ('CND_DEMO_001', 'referral', 1000, 'Referral bonus: friend completed first job', datetime('now', '-10 days'))`).run();
 
-  console.log('✅ Demo account created: sarah.tan@email.com');
+  logger.info('Demo account created: sarah.tan@email.com');
 }
 
 // FAQ and training data functions (truncated for brevity - these would contain the full data arrays)

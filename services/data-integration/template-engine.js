@@ -5,6 +5,9 @@
  * with conditional logic and dynamic content generation.
  */
 
+const { createLogger } = require('../../utils/structured-logger');
+const logger = createLogger('template-engine');
+
 class TemplateEngine {
   constructor() {
     this.templates = new Map();
@@ -60,7 +63,7 @@ class TemplateEngine {
 
       return template(data, options);
     } catch (error) {
-      console.error(`Template rendering error for '${templateName}':`, error);
+      logger.error('Template rendering error', { template: templateName, error: error.message });
       return this.renderErrorTemplate(templateName, error, data);
     }
   }
@@ -210,7 +213,7 @@ class TemplateEngine {
         const parsedArgs = this.parseHelperArgs(args, data);
         return helper(...parsedArgs);
       } catch (error) {
-        console.error(`Helper '${helperName}' error:`, error);
+        logger.error('Helper error', { helper: helperName, error: error.message });
         return match;
       }
     });
@@ -244,7 +247,7 @@ class TemplateEngine {
             const parsedArgs = filterArgs.map(arg => this.parseValue(arg, data));
             value = filter(value, ...parsedArgs);
           } catch (error) {
-            console.error(`Filter '${filterName}' error:`, error);
+            logger.error('Filter error', { filter: filterName, error: error.message });
           }
         }
       });
@@ -318,7 +321,7 @@ class TemplateEngine {
       const value = this.getNestedValue(data, cleanCondition);
       return this.isTruthy(value);
     } catch (error) {
-      console.error('Condition evaluation error:', error);
+      logger.error('Condition evaluation error', { error: error.message });
       return false;
     }
   }

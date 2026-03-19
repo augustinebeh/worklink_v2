@@ -1,4 +1,6 @@
 /**
+const { createLogger } = require('../../utils/structured-logger');
+const logger = createLogger('cache-manager');
  * Cache Manager
  *
  * Handles caching of frequently accessed data with Redis/memory fallback
@@ -34,7 +36,7 @@ class CacheManager {
           retry_strategy: (options) => {
             if (options.error && options.error.code === 'ECONNREFUSED') {
               // Fallback to memory cache if Redis is not available
-              console.log('Redis connection refused, using memory cache');
+              logger.info('Redis connection refused, using memory cache');
               return undefined;
             }
             if (options.total_retry_time > 1000 * 10) {
@@ -45,15 +47,15 @@ class CacheManager {
         });
 
         await this.redisClient.connect();
-        console.log('✅ Redis cache manager connected');
+        logger.info('Redis cache manager connected');
 
         // Test Redis connection
         await this.redisClient.ping();
       } else {
-        console.log('🔄 Using memory cache (Redis not configured)');
+        logger.info('Using memory cache (Redis not configured)');
       }
     } catch (error) {
-      console.log('⚠️ Redis unavailable, using memory cache:', error.message);
+      logger.warn('Redis unavailable, using memory cache', { error: error.message });
       this.redisClient = null;
     }
   }
@@ -87,7 +89,7 @@ class CacheManager {
 
       return null;
     } catch (error) {
-      console.error('Cache get error:', error);
+      logger.error('Cache get error', { error: error.message });
       return null;
     }
   }
@@ -113,7 +115,7 @@ class CacheManager {
 
       return true;
     } catch (error) {
-      console.error('Cache set error:', error);
+      logger.error('Cache set error', { error: error.message });
 
       // Ensure memory cache is set even if Redis fails
       this.setMemoryCache(key, data, ttl);
@@ -138,7 +140,7 @@ class CacheManager {
 
       return true;
     } catch (error) {
-      console.error('Cache delete error:', error);
+      logger.error('Cache delete error', { error: error.message });
 
       // Ensure memory cache is cleared even if Redis fails
       this.memoryCache.delete(key);
@@ -182,7 +184,7 @@ class CacheManager {
 
       return true;
     } catch (error) {
-      console.error('Cache clear error:', error);
+      logger.error('Cache clear error', { error: error.message });
 
       // Ensure memory cache is cleared even if Redis fails
       this.memoryCache.clear();
@@ -250,7 +252,7 @@ class CacheManager {
 
       return false;
     } catch (error) {
-      console.error('Cache exists error:', error);
+      logger.error('Cache exists error', { error: error.message });
       return false;
     }
   }
@@ -272,7 +274,7 @@ class CacheManager {
             try {
               results[key] = JSON.parse(redisResults[index]);
             } catch (parseError) {
-              console.error(`Parse error for key ${key}:`, parseError);
+              logger.error(`Parse error for key ${key}`, { error: parseError.message });
             }
           }
         });
@@ -290,7 +292,7 @@ class CacheManager {
 
       return results;
     } catch (error) {
-      console.error('Cache mget error:', error);
+      logger.error('Cache mget error', { error: error.message });
       return {};
     }
   }
@@ -407,7 +409,7 @@ class CacheManager {
         await this.redisClient.quit();
       }
     } catch (error) {
-      console.error('Error closing cache manager:', error);
+      logger.error('Error closing cache manager', { error: error.message });
     }
   }
 }

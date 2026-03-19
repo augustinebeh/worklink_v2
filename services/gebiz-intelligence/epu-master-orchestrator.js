@@ -17,6 +17,8 @@ const EPUAlertSystem = require('./epu-alert-system');
 const EPULifecycleTracker = require('./epu-lifecycle-tracker');
 const EPUCompetitorAnalyzer = require('./epu-competitor-analyzer');
 const cron = require('node-cron');
+const { createLogger } = require('../../utils/structured-logger');
+const logger = createLogger('epu-master-orchestrator');
 
 class EPUMasterOrchestrator {
   constructor(options = {}) {
@@ -56,7 +58,7 @@ class EPUMasterOrchestrator {
       lastError: null
     };
 
-    console.log('🎯 EPU/SER/19 Master Orchestrator initialized');
+    logger.info('EPU/SER/19 Master Orchestrator initialized');
   }
 
   /**
@@ -64,24 +66,24 @@ class EPUMasterOrchestrator {
    */
   async start() {
     if (this.isRunning) {
-      console.log('⚠️  EPU Master Orchestrator is already running');
+      logger.warn('EPU Master Orchestrator is already running');
       return;
     }
 
     try {
-      console.log('🚀 Starting EPU/SER/19 Master Intelligence System...');
+      logger.info('Starting EPU/SER/19 Master Intelligence System...');
       this.stats.systemStartTime = new Date();
       this.isRunning = true;
 
       // Initialize all databases
-      console.log('📊 Initializing databases...');
+      logger.info('Initializing databases...');
       this.monitor.initDB();
       this.lifecycleTracker.initDB();
       this.competitorAnalyzer.initDB();
 
       // Start real-time monitoring if enabled
       if (this.config.realTimeMonitoring && this.config.alertSystem) {
-        console.log('🔍 Starting real-time monitoring...');
+        logger.info('Starting real-time monitoring...');
         this.alertSystem.start();
       }
 
@@ -109,10 +111,10 @@ class EPUMasterOrchestrator {
       this.startHealthMonitoring();
 
       // Perform initial comprehensive scan
-      console.log('🔄 Performing initial comprehensive scan...');
+      logger.info('Performing initial comprehensive scan...');
       await this.performComprehensiveScan();
 
-      console.log('✅ EPU/SER/19 Master Intelligence System started successfully');
+      logger.info('EPU/SER/19 Master Intelligence System started successfully');
 
       // Emit startup notification
       this.emitSystemEvent('system_started', {
@@ -122,7 +124,7 @@ class EPUMasterOrchestrator {
       });
 
     } catch (error) {
-      console.error('❌ Failed to start EPU Master Orchestrator:', error.message);
+      logger.error('Failed to start EPU Master Orchestrator', { error: error.message });
       this.stats.errorCount++;
       this.stats.lastError = error.message;
       throw error;
@@ -137,7 +139,7 @@ class EPUMasterOrchestrator {
       return;
     }
 
-    console.log('🛑 Stopping EPU/SER/19 Master Intelligence System...');
+    logger.info('Stopping EPU/SER/19 Master Intelligence System...');
 
     try {
       // Stop alert system
@@ -164,7 +166,7 @@ class EPUMasterOrchestrator {
       }
 
       this.isRunning = false;
-      console.log('✅ EPU Master Orchestrator stopped successfully');
+      logger.info('EPU Master Orchestrator stopped successfully');
 
       // Emit shutdown notification
       this.emitSystemEvent('system_stopped', {
@@ -174,7 +176,7 @@ class EPUMasterOrchestrator {
       });
 
     } catch (error) {
-      console.error('Error stopping EPU Master Orchestrator:', error.message);
+      logger.error('Error stopping EPU Master Orchestrator', { error: error.message });
     }
   }
 
@@ -185,14 +187,14 @@ class EPUMasterOrchestrator {
     const scanStartTime = Date.now();
 
     try {
-      console.log('🔍 Starting comprehensive EPU/SER/19 scan...');
+      logger.info('Starting comprehensive EPU/SER/19 scan...');
 
       // Step 1: Scrape latest EPU/SER/19 tenders
-      console.log('📡 Scraping EPU/SER/19 tenders...');
+      logger.info('Scraping EPU/SER/19 tenders...');
       const scrapedTenders = await this.scraper.scrapeEPUTenders();
 
       this.stats.tendersProcessed += scrapedTenders.length;
-      console.log(`✅ Processed ${scrapedTenders.length} EPU tenders`);
+      logger.info(`Processed ${scrapedTenders.length} EPU tenders`);
 
       // Step 2: Analyze each tender for lifecycle and competitive intelligence
       for (const tender of scrapedTenders) {
@@ -200,11 +202,11 @@ class EPUMasterOrchestrator {
       }
 
       // Step 3: Update market intelligence
-      console.log('📈 Updating market intelligence...');
+      logger.info('Updating market intelligence...');
       await this.updateMarketIntelligence();
 
       // Step 4: Generate insights and recommendations
-      console.log('💡 Generating strategic insights...');
+      logger.info('Generating strategic insights...');
       const insights = await this.generateStrategicInsights();
 
       // Step 5: Update system statistics
@@ -212,7 +214,7 @@ class EPUMasterOrchestrator {
       this.stats.lastFullScanTime = new Date().toISOString();
 
       const scanDuration = Date.now() - scanStartTime;
-      console.log(`✅ Comprehensive scan completed in ${scanDuration}ms`);
+      logger.info(`Comprehensive scan completed in ${scanDuration}ms`);
 
       // Emit scan completion event
       this.emitSystemEvent('comprehensive_scan_completed', {
@@ -230,7 +232,7 @@ class EPUMasterOrchestrator {
       };
 
     } catch (error) {
-      console.error('❌ Comprehensive scan failed:', error.message);
+      logger.error('Comprehensive scan failed', { error: error.message });
       this.stats.errorCount++;
       this.stats.lastError = error.message;
 
@@ -269,7 +271,7 @@ class EPUMasterOrchestrator {
       }
 
     } catch (error) {
-      console.error(`Error processing tender ${tender.tender_no}:`, error.message);
+      logger.error(`Error processing tender ${tender.tender_no}`, { error: error.message });
     }
   }
 
@@ -294,7 +296,7 @@ class EPUMasterOrchestrator {
       };
 
     } catch (error) {
-      console.error('Failed to update market intelligence:', error.message);
+      logger.error('Failed to update market intelligence', { error: error.message });
       return null;
     }
   }
@@ -367,7 +369,7 @@ class EPUMasterOrchestrator {
       return trends;
 
     } catch (error) {
-      console.error('Failed to analyze market trends:', error.message);
+      logger.error('Failed to analyze market trends', { error: error.message });
       return {};
     }
   }
@@ -412,7 +414,7 @@ class EPUMasterOrchestrator {
       return insights;
 
     } catch (error) {
-      console.error('Failed to generate strategic insights:', error.message);
+      logger.error('Failed to generate strategic insights', { error: error.message });
       return [];
     }
   }
@@ -498,7 +500,7 @@ class EPUMasterOrchestrator {
       };
 
     } catch (error) {
-      console.error('Failed to assess competitive position:', error.message);
+      logger.error('Failed to assess competitive position', { error: error.message });
       return {};
     }
   }
@@ -572,11 +574,11 @@ class EPUMasterOrchestrator {
   scheduleComprehensiveScans() {
     // Daily comprehensive scan at 6 AM
     const dailyScanJob = cron.schedule('0 6 * * *', async () => {
-      console.log('🕕 Running scheduled daily EPU/SER/19 scan...');
+      logger.info('Running scheduled daily EPU/SER/19 scan...');
       try {
         await this.performComprehensiveScan();
       } catch (error) {
-        console.error('Scheduled scan failed:', error.message);
+        logger.error('Scheduled scan failed', { error: error.message });
       }
     }, {
       scheduled: true,
@@ -587,11 +589,11 @@ class EPUMasterOrchestrator {
 
     // Additional scans during business hours (every 2 hours from 9 AM to 5 PM)
     const businessHoursScanJob = cron.schedule('0 9-17/2 * * 1-5', async () => {
-      console.log('🕘 Running business hours EPU scan...');
+      logger.info('Running business hours EPU scan...');
       try {
         await this.performComprehensiveScan();
       } catch (error) {
-        console.error('Business hours scan failed:', error.message);
+        logger.error('Business hours scan failed', { error: error.message });
       }
     }, {
       scheduled: true,
@@ -600,7 +602,7 @@ class EPUMasterOrchestrator {
 
     this.scheduledJobs.push(businessHoursScanJob);
 
-    console.log('📅 Comprehensive scan schedule configured');
+    logger.info('Comprehensive scan schedule configured');
   }
 
   /**
@@ -609,12 +611,12 @@ class EPUMasterOrchestrator {
   scheduleCompetitorAnalysis() {
     // Weekly competitor analysis on Monday at 7 AM
     const weeklyCompetitorJob = cron.schedule('0 7 * * 1', async () => {
-      console.log('📊 Running weekly competitor analysis...');
+      logger.info('Running weekly competitor analysis...');
       try {
         const report = this.competitorAnalyzer.getCompetitiveIntelligenceReport();
-        console.log(`Competitor analysis complete: ${report.top_competitors.length} competitors analyzed`);
+        logger.info(`Competitor analysis complete: ${report.top_competitors.length} competitors analyzed`);
       } catch (error) {
-        console.error('Competitor analysis failed:', error.message);
+        logger.error('Competitor analysis failed', { error: error.message });
       }
     }, {
       scheduled: true,
@@ -622,7 +624,7 @@ class EPUMasterOrchestrator {
     });
 
     this.scheduledJobs.push(weeklyCompetitorJob);
-    console.log('📅 Competitor analysis schedule configured');
+    logger.info('Competitor analysis schedule configured');
   }
 
   /**
@@ -631,13 +633,13 @@ class EPUMasterOrchestrator {
   scheduleLifecycleUpdates() {
     // Daily lifecycle updates at 8 AM
     const lifecycleJob = cron.schedule('0 8 * * *', async () => {
-      console.log('📋 Running lifecycle tracking updates...');
+      logger.info('Running lifecycle tracking updates...');
       try {
         const upcomingDates = this.lifecycleTracker.getUpcomingCriticalDates(30);
         const renewals = this.lifecycleTracker.getRenewalOpportunities(12);
-        console.log(`Lifecycle update: ${upcomingDates.length} upcoming dates, ${renewals.length} renewal opportunities`);
+        logger.info(`Lifecycle update: ${upcomingDates.length} upcoming dates, ${renewals.length} renewal opportunities`);
       } catch (error) {
-        console.error('Lifecycle update failed:', error.message);
+        logger.error('Lifecycle update failed', { error: error.message });
       }
     }, {
       scheduled: true,
@@ -645,7 +647,7 @@ class EPUMasterOrchestrator {
     });
 
     this.scheduledJobs.push(lifecycleJob);
-    console.log('📅 Lifecycle tracking schedule configured');
+    logger.info('Lifecycle tracking schedule configured');
   }
 
   /**
@@ -654,12 +656,12 @@ class EPUMasterOrchestrator {
   scheduleMarketReports() {
     // Weekly market report on Friday at 5 PM
     const weeklyReportJob = cron.schedule('0 17 * * 5', async () => {
-      console.log('📈 Generating weekly EPU/SER/19 market report...');
+      logger.info('Generating weekly EPU/SER/19 market report...');
       try {
         const report = this.monitor.generateMarketReport();
-        console.log(`Weekly report: ${report.active_opportunities} active opportunities, $${report.total_estimated_value.toLocaleString()} total value`);
+        logger.info(`Weekly report: ${report.active_opportunities} active opportunities, $${report.total_estimated_value.toLocaleString()} total value`);
       } catch (error) {
-        console.error('Market report generation failed:', error.message);
+        logger.error('Market report generation failed', { error: error.message });
       }
     }, {
       scheduled: true,
@@ -667,7 +669,7 @@ class EPUMasterOrchestrator {
     });
 
     this.scheduledJobs.push(weeklyReportJob);
-    console.log('📅 Market report schedule configured');
+    logger.info('Market report schedule configured');
   }
 
   /**
@@ -710,7 +712,7 @@ class EPUMasterOrchestrator {
       });
 
     } catch (error) {
-      console.error('Failed to generate opportunity alert:', error.message);
+      logger.error('Failed to generate opportunity alert', { error: error.message });
     }
   }
 
@@ -735,7 +737,7 @@ class EPUMasterOrchestrator {
       });
 
     } catch (error) {
-      console.error('Failed to emit system event:', error.message);
+      logger.error('Failed to emit system event', { error: error.message });
     }
   }
 
@@ -804,7 +806,7 @@ class EPUMasterOrchestrator {
       }
 
     } catch (error) {
-      console.error('Failed to generate market opportunity insights:', error.message);
+      logger.error('Failed to generate market opportunity insights', { error: error.message });
     }
 
     return insights;
@@ -852,7 +854,7 @@ class EPUMasterOrchestrator {
       }
 
     } catch (error) {
-      console.error('Failed to generate competitive threat insights:', error.message);
+      logger.error('Failed to generate competitive threat insights', { error: error.message });
     }
 
     return insights;

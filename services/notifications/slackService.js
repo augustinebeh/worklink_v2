@@ -5,6 +5,8 @@
  */
 
 const https = require('https');
+const { createLogger } = require('../../utils/structured-logger');
+const logger = createLogger('notification-slack');
 
 class SlackService {
   constructor() {
@@ -18,12 +20,12 @@ class SlackService {
    */
   initialize() {
     if (!this.webhookUrl) {
-      console.warn('⚠️  Slack webhook URL not found. Slack notifications disabled.');
+      logger.warn('Slack webhook URL not found, Slack notifications disabled');
       return false;
     }
     
     this.initialized = true;
-    console.log('✅ Slack service initialized (Webhooks)');
+    logger.info('Slack service initialized (Webhooks)');
     return true;
   }
 
@@ -413,7 +415,7 @@ class SlackService {
         results
       };
     } catch (error) {
-      console.error('Slack send error:', error);
+      logger.error('Slack send error', { error: error.message });
       return {
         success: false,
         error: error.message

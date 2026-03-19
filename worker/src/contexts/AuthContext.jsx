@@ -1,4 +1,5 @@
 import { createContext, useContext, useState, useEffect } from 'react';
+import logger from '../utils/logger';
 
 const AuthContext = createContext(null);
 
@@ -62,7 +63,7 @@ export function AuthProvider({ children }) {
         localStorage.setItem('worker_user', JSON.stringify(updatedUser));
       }
     } catch (error) {
-      console.error('Failed to refresh user:', error);
+      logger.error('Failed to refresh user:', error);
     }
   };
 

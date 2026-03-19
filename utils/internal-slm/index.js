@@ -4,6 +4,10 @@
  * Fallback: Groq for complex cases that need LLM processing
  */
 
+
+const { createLogger } = require('../structured-logger');
+const logger = createLogger('internal-slm');
+
 const { analyzeIntent } = require('./intent-analyzer');
 const { generateResponse } = require('./response-generator');
 const { ManageConversationFlow } = require('./conversation-flow-manager');
@@ -82,7 +86,7 @@ class InternalSLM {
       return { ...fallbackResponse, source: 'fallback' };
 
     } catch (error) {
-      console.error('Internal SLM Error:', error);
+      logger.error('Internal SLM Error:', { error: error });
       return this.generateErrorResponse(candidateData);
     }
   }
@@ -278,7 +282,7 @@ class InternalSLM {
         };
       }
     } catch (error) {
-      console.error('Booking error:', error);
+      logger.error('Booking error:', { error: error });
       return {
         content: `I encountered an issue while booking your interview. Let me connect you with our admin team to complete the scheduling manually.\n\nDon't worry - we'll get this sorted out quickly! 😊`,
         intent: 'escalate',

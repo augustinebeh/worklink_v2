@@ -10,6 +10,7 @@ const router = express.Router();
 const { db } = require('../../../../../db');
 const { ConsultantAnalyticsEngine } = require('../../../../../utils/consultant-analytics-engine');
 const { calculateTrendAnalysis } = require('../utils/helpers');
+const { authenticateAdmin } = require('../../../../../middleware/auth');
 
 const analyticsEngine = new ConsultantAnalyticsEngine();
 
@@ -17,7 +18,7 @@ const analyticsEngine = new ConsultantAnalyticsEngine();
  * POST /analytics/calculate-daily
  * Calculate daily performance analytics for consultants
  */
-router.post('/calculate-daily', async (req, res) => {
+router.post('/calculate-daily', authenticateAdmin, async (req, res) => {
   try {
     const { consultantIds, date } = req.body;
     const result = await analyticsEngine.runDailyAnalytics(consultantIds, date);
@@ -27,7 +28,7 @@ router.post('/calculate-daily', async (req, res) => {
       data: result
     });
   } catch (error) {
-    res.status(500).json({ success: false, error: error.message });
+    res.status(500).json({ success: false, error: 'Internal server error' });
   }
 });
 
@@ -35,7 +36,7 @@ router.post('/calculate-daily', async (req, res) => {
  * POST /analytics/calculate-kpis
  * Calculate KPI scores and rankings for team
  */
-router.post('/calculate-kpis', async (req, res) => {
+router.post('/calculate-kpis', authenticateAdmin, async (req, res) => {
   try {
     const { period = 'weekly', startDate } = req.body;
     const result = await analyticsEngine.runWeeklyKPICalculation();
@@ -45,7 +46,7 @@ router.post('/calculate-kpis', async (req, res) => {
       data: result
     });
   } catch (error) {
-    res.status(500).json({ success: false, error: error.message });
+    res.status(500).json({ success: false, error: 'Internal server error' });
   }
 });
 
@@ -53,7 +54,7 @@ router.post('/calculate-kpis', async (req, res) => {
  * GET /analytics/dashboard/:consultantId
  * Get individual consultant dashboard with comprehensive analytics
  */
-router.get('/dashboard/:consultantId', async (req, res) => {
+router.get('/dashboard/:consultantId', authenticateAdmin, async (req, res) => {
   try {
     const { consultantId } = req.params;
     const { period = 'weekly' } = req.query;
@@ -65,7 +66,7 @@ router.get('/dashboard/:consultantId', async (req, res) => {
       data: dashboard
     });
   } catch (error) {
-    res.status(500).json({ success: false, error: error.message });
+    res.status(500).json({ success: false, error: 'Internal server error' });
   }
 });
 
@@ -73,7 +74,7 @@ router.get('/dashboard/:consultantId', async (req, res) => {
  * GET /analytics/performance-trends
  * Get performance trends over time
  */
-router.get('/performance-trends', async (req, res) => {
+router.get('/performance-trends', authenticateAdmin, async (req, res) => {
   try {
     const { days = 30, consultantId } = req.query;
     const since = new Date(Date.now() - days * 24 * 60 * 60 * 1000).toISOString().split('T')[0];
@@ -107,7 +108,7 @@ router.get('/performance-trends', async (req, res) => {
       }
     });
   } catch (error) {
-    res.status(500).json({ success: false, error: error.message });
+    res.status(500).json({ success: false, error: 'Internal server error' });
   }
 });
 
@@ -115,7 +116,7 @@ router.get('/performance-trends', async (req, res) => {
  * GET /analytics/real-time-metrics
  * Get real-time performance metrics for dashboard widgets
  */
-router.get('/real-time-metrics', async (req, res) => {
+router.get('/real-time-metrics', authenticateAdmin, async (req, res) => {
   try {
     const today = new Date().toISOString().split('T')[0];
 
@@ -190,7 +191,7 @@ router.get('/real-time-metrics', async (req, res) => {
       }
     });
   } catch (error) {
-    res.status(500).json({ success: false, error: error.message });
+    res.status(500).json({ success: false, error: 'Internal server error' });
   }
 });
 

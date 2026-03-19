@@ -4,9 +4,9 @@
  */
 
 const dataGovClient = require('./datagovsg-client');
-const Database = require('better-sqlite3');
-const path = require('path');
-const fs = require('fs');
+const { db } = require('../../db');
+const { createLogger } = require('../../utils/structured-logger');
+const logger = createLogger('historical-sync');
 
 // Import WebSocket broadcasting for real-time progress updates
 let broadcastToAdmins;
@@ -34,28 +34,11 @@ class HistoricalTenderSync {
   }
 
   /**
-   * Initialize database connection with Railway compatibility
+   * Initialize database connection
    */
   initDB() {
     if (!this.db) {
-      // Railway-compatible database path detection
-      const IS_RAILWAY = !!process.env.RAILWAY_ENVIRONMENT; // Only true on actual Railway
-      const DB_DIR = IS_RAILWAY
-        ? (process.env.RAILWAY_VOLUME_MOUNT_PATH || '/app/data')
-        : path.join(__dirname, '../../database');
-
-      // Ensure database directory exists
-      if (!fs.existsSync(DB_DIR)) {
-        fs.mkdirSync(DB_DIR, { recursive: true });
-        console.log(`📁 Created database directory: ${DB_DIR}`);
-      }
-
-      const dbPath = path.join(DB_DIR, 'gebiz_intelligence.db');
-      console.log(`🔌 Historical sync connecting to: ${dbPath}`);
-
-      this.db = new Database(dbPath);
-      this.db.pragma('journal_mode = WAL');
-      this.db.pragma('foreign_keys = ON');
+      this.db = db;
 
       // Ensure required tables exist
       this.ensureTables();
@@ -74,7 +57,7 @@ class HistoricalTenderSync {
       `).get();
 
       if (!tableExists) {
-        console.log('📋 Creating gebiz_historical_tenders table...');
+        logger.info('Creating gebiz_historical_tenders table...');
 
         // Create the table with full schema
         const createTableSQL = `
@@ -103,22 +86,19 @@ class HistoricalTenderSync {
         `;
 
         this.db.exec(createTableSQL);
-        console.log('✅ gebiz_historical_tenders table created successfully');
+        logger.info('gebiz_historical_tenders table created successfully');
       }
     } catch (error) {
-      console.error('❌ Failed to ensure tables exist:', error.message);
+      logger.error('Failed to ensure tables exist', { error: error.message });
       throw error;
     }
   }
 
   /**
-   * Close database connection
+   * Close database connection (no-op: using singleton)
    */
   closeDB() {
-    if (this.db) {
-      this.db.close();
-      this.db = null;
-    }
+    // No-op: singleton db connection is managed by db/index.js
   }
 
   /**
@@ -167,9 +147,9 @@ class HistoricalTenderSync {
         }
       });
 
-      console.log(`📡 [WebSocket] Progress update: ${stage} - ${message} (${this.stats.progress_percentage}%)`);
+      logger.info(`Progress update: ${stage} - ${message} (${this.stats.progress_percentage}%)`);
     } catch (error) {
-      console.warn('Failed to emit progress update:', error.message);
+      logger.warn('Failed to emit progress update', { error: error.message });
     }
   }
 
@@ -221,9 +201,7 @@ class HistoricalTenderSync {
     this.initDB();
     this.resetStats();
 
-    console.log('====================================');
-    console.log('🔄 STARTING DAILY INCREMENTAL SYNC');
-    console.log('====================================\n');
+    logger.info('==== STARTING DAILY INCREMENTAL SYNC ====');
 
     // Emit start notification
     this.emitProgress('starting', 'Initializing GeBIZ data sync...', 0);
@@ -239,13 +217,13 @@ class HistoricalTenderSync {
       `).get();
 
       const lastSyncDate = latest?.latest_date || '2020-01-01';
-      console.log(`📅 Last sync date: ${lastSyncDate}\n`);
+      logger.info(`Last sync date: ${lastSyncDate}`);
 
       // Emit fetching progress
       this.emitProgress('fetching', 'Fetching tender data from Data.gov.sg...', 10);
 
       // Fetch records from last 90 days
-      console.log('📡 Fetching recent awards from Data.gov.sg...');
+      logger.info('Fetching recent awards from Data.gov.sg...');
       // Try broader search terms for better results
       const records = await dataGovClient.searchByKeywords(
         ['service', 'maintenance', 'supply', 'consultancy', 'cleaning', 'security'],
@@ -253,20 +231,20 @@ class HistoricalTenderSync {
       );
 
       this.stats.total_fetched = records.length;
-      console.log(`✅ Fetched ${records.length} records\n`);
+      logger.info(`Fetched ${records.length} records`);
 
       // Emit records fetched progress
       this.emitProgress('processing', `Processing ${records.length} tender records...`, 25);
 
       if (records.length === 0) {
-        console.log('ℹ️  No new records to import');
+        logger.info('No new records to import');
         this.emitProgress('complete', 'No new records found. Sync completed.', 100);
         this.stats.is_running = false;
         return this.stats;
       }
 
       // Import records in batches
-      console.log('💾 Importing records into database...');
+      logger.info('Importing records into database...');
       this.emitProgress('importing', 'Importing records into database...', 30);
 
       const batchSize = 100;
@@ -278,7 +256,7 @@ class HistoricalTenderSync {
 
         processed += batch.length;
         const percentage = ((processed / records.length) * 100).toFixed(1);
-        console.log(`  Progress: ${processed}/${records.length} (${percentage}%)`);
+        logger.info(`Progress: ${processed}/${records.length} (${percentage}%)`);
 
         // Emit progress updates during processing (30% to 90%)
         const importProgress = 30 + (processed / records.length) * 60; // 30% to 90%
@@ -292,9 +270,7 @@ class HistoricalTenderSync {
         await new Promise(resolve => setTimeout(resolve, 50));
       }
 
-      console.log('\n====================================');
-      console.log('✅ SYNC COMPLETE');
-      console.log('====================================');
+      logger.info('==== SYNC COMPLETE ====');
       this.printStats();
 
       // Emit completion
@@ -304,7 +280,7 @@ class HistoricalTenderSync {
       return this.stats;
 
     } catch (error) {
-      console.error('\n❌ Sync failed:', error.message);
+      logger.error('Sync failed', { error: error.message });
       this.stats.errors.push(error.message);
       this.stats.is_running = false;
 
@@ -350,18 +326,17 @@ class HistoricalTenderSync {
       ? ((new Date() - this.stats.start_time) / 1000).toFixed(1)
       : 0;
 
-    console.log('\n📊 Statistics:');
-    console.log(`  - Fetched: ${this.stats.total_fetched}`);
-    console.log(`  - Inserted: ${this.stats.total_inserted}`);
-    console.log(`  - Updated: ${this.stats.total_updated}`);
-    console.log(`  - Skipped: ${this.stats.total_skipped}`);
-    console.log(`  - Errors: ${this.stats.errors.length}`);
-    console.log(`  - Duration: ${duration}s\n`);
+    logger.info('Sync statistics', {
+      fetched: this.stats.total_fetched,
+      inserted: this.stats.total_inserted,
+      updated: this.stats.total_updated,
+      skipped: this.stats.total_skipped,
+      errors: this.stats.errors.length,
+      duration: `${duration}s`
+    });
 
     if (this.stats.errors.length > 0 && this.stats.errors.length <= 10) {
-      console.log('⚠️  Errors:');
-      this.stats.errors.forEach(err => console.log(`  - ${err}`));
-      console.log('');
+      this.stats.errors.forEach(err => logger.warn(`Sync error: ${err}`));
     }
   }
 }

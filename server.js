@@ -174,11 +174,17 @@ app.use((req, res, next) => {
     res.header('Strict-Transport-Security', 'max-age=31536000; includeSubDomains');
   }
 
+  // Referrer policy - don't leak URLs to third parties
+  res.header('Referrer-Policy', 'strict-origin-when-cross-origin');
+
+  // Permissions policy - restrict browser features
+  res.header('Permissions-Policy', 'camera=(), microphone=(), geolocation=()');
+
   // Content Security Policy (updated for external resources + OAuth providers)
   res.header(
     'Content-Security-Policy',
     "default-src 'self'; " +
-    "script-src 'self' 'unsafe-inline' 'unsafe-eval' https://telegram.org https://accounts.google.com https://www.gstatic.com; " +
+    "script-src 'self' 'unsafe-inline' https://telegram.org https://accounts.google.com https://www.gstatic.com; " +
     "style-src 'self' 'unsafe-inline' https://fonts.googleapis.com https://accounts.google.com; " +
     "style-src-elem 'self' 'unsafe-inline' https://fonts.googleapis.com https://accounts.google.com; " +
     "img-src 'self' data: https:; " +
@@ -196,32 +202,29 @@ app.use('/api/v1', require('./routes/api/v1'));
 // Health check endpoint for Railway
 app.get('/health', (req, res) => {
   try {
-    // Test database connection
     db.prepare('SELECT 1').get();
-    res.json({ 
-      status: 'ok', 
-      timestamp: new Date().toISOString(),
-      environment: process.env.NODE_ENV || 'development',
-      uptime: process.uptime()
+    res.json({
+      status: 'ok',
+      timestamp: new Date().toISOString()
     });
   } catch (error) {
-    res.status(500).json({ 
-      status: 'error', 
-      message: error.message,
+    res.status(500).json({
+      status: 'error',
       timestamp: new Date().toISOString()
     });
   }
 });
 
-// Favicon and logo
+// Favicon and logo - serve from admin/dist where they actually live
+const faviconDir = path.join(__dirname, 'admin', 'dist');
 app.get('/favicon.ico', (req, res) => {
-  res.sendFile(path.join(__dirname, 'favicon.png'));
+  res.sendFile(path.join(faviconDir, 'favicon.png'), { maxAge: '1d' });
 });
 app.get('/favicon.png', (req, res) => {
-  res.sendFile(path.join(__dirname, 'favicon.png'));
+  res.sendFile(path.join(faviconDir, 'favicon.png'), { maxAge: '1d' });
 });
 app.get('/favicon-32x32.png', (req, res) => {
-  res.sendFile(path.join(__dirname, 'favicon-32x32.png'));
+  res.sendFile(path.join(faviconDir, 'favicon-32x32.png'), { maxAge: '1d' });
 });
 
 // Serve static files for admin portal
@@ -302,32 +305,6 @@ app.use((err, req, res, next) => {
   });
 });
 
-// Initialize retention notification service (temporarily disabled for debugging)
-try {
-  logger.info('Retention notification service skipped for development', { module: 'services' });
-  // require('./services/retention-notifications');
-  // logger.info('Retention notification service initialized', { module: 'services' });
-} catch (error) {
-  logger.error('Failed to initialize retention notification service', {
-    error: error.message,
-    stack: error.stack,
-    module: 'services'
-  });
-}
-
-// Initialize job scheduler (temporarily disabled for debugging)
-try {
-  logger.info('Background job scheduler skipped for development', { module: 'services' });
-  // const jobScheduler = require('./services/job-scheduler');
-  // jobScheduler.initialize();
-  // logger.info('Background job scheduler initialized', { module: 'services' });
-} catch (error) {
-  logger.error('Failed to initialize background job scheduler', {
-    error: error.message,
-    stack: error.stack,
-    module: 'services'
-  });
-}
 
 // Start server
 const PORT = process.env.PORT || 8080;
@@ -375,26 +352,6 @@ server.listen(PORT, HOST, async () => {
     });
   }
 
-  // Initialize email service and scheduler (temporarily disabled for debugging)
-  try {
-    logger.info('Email service initialization skipped for development', { module: 'email' });
-    // const emailService = require('./services/email');
-    // const emailScheduler = require('./services/email/scheduler');
-
-    // // Initialize email service
-    // await emailService.initialize();
-    // logger.info('Email service initialized successfully', { module: 'email' });
-
-    // // Start email scheduler
-    // emailScheduler.start();
-    // logger.info('Email scheduler started successfully', { module: 'email' });
-  } catch (error) {
-    logger.warn('Email service initialization failed - continuing without email features', {
-      module: 'email',
-      error: error.message
-    });
-  }
-
   // Initialize GeBIZ RSS Scraping Service
   try {
     const { initialize: initializeScrapingService } = require('./services/scraping');
@@ -414,19 +371,11 @@ server.listen(PORT, HOST, async () => {
     });
   }
 
-  // Enhanced console output for all environments
-  const adminBuilt = fs.existsSync(path.join(__dirname, 'admin', 'dist'));
-  const workerBuilt = fs.existsSync(path.join(__dirname, 'worker', 'dist'));
-  const dbStatus = (() => {
-    try {
-      db.prepare('SELECT 1').get();
-      return '✅ Connected';
-    } catch (error) {
-      return '❌ Error';
-    }
-  })();
-
-  console.log(`🚀 WorkLink v2 ready on http://${HOST}:${PORT} | Admin: /admin`);
+  logger.info('WorkLink v2 ready', {
+    module: 'server',
+    url: `http://${HOST}:${PORT}`,
+    admin_url: `http://${HOST}:${PORT}/admin`
+  });
 });
 
 // Graceful shutdown handling with timeout
@@ -438,6 +387,15 @@ function gracefulShutdown(signal) {
     logger.warn('Forcing shutdown after timeout', { module: 'server' });
     process.exit(1);
   }, 5000); // 5 second timeout
+
+  // Clear all registered intervals first
+  try {
+    const intervalRegistry = require('./utils/interval-registry');
+    const cleared = intervalRegistry.clearAll();
+    logger.info(`Cleared ${cleared} registered intervals`, { module: 'server' });
+  } catch (error) {
+    logger.warn('Error clearing interval registry', { module: 'server', error: error.message });
+  }
 
   // Close WebSocket server first
   if (wss) {

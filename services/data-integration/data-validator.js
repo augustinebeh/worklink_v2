@@ -6,6 +6,8 @@
  */
 
 const { db } = require('../../db');
+const { createLogger } = require('../../utils/structured-logger');
+const logger = createLogger('data-validator');
 
 class DataValidator {
   constructor() {
@@ -53,7 +55,7 @@ class DataValidator {
       return !!exists;
 
     } catch (error) {
-      console.error('Candidate ID validation error:', error);
+      logger.error('Candidate ID validation error', { error: error.message });
       return false;
     }
   }
@@ -172,7 +174,7 @@ class DataValidator {
       return result;
 
     } catch (error) {
-      console.error('Data access validation error:', error);
+      logger.error('Data access validation error', { error: error.message });
       return {
         allowed: false,
         reason: 'Validation error',
@@ -229,7 +231,7 @@ class DataValidator {
       }
 
     } catch (error) {
-      console.error('Input validation error:', error);
+      logger.error('Input validation error', { error: error.message });
       result.isValid = false;
       result.errors.push('Validation process failed');
     }
@@ -294,7 +296,7 @@ class DataValidator {
       return compliance;
 
     } catch (error) {
-      console.error('GDPR compliance check error:', error);
+      logger.error('GDPR compliance check error', { error: error.message });
       return {
         compliant: false,
         issues: ['Compliance check failed'],

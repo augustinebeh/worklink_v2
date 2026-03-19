@@ -9,6 +9,8 @@ const { db } = require('../../../../../db');
 const { authenticateAdmin } = require('../../../../../middleware/auth');
 const { createValidationMiddleware } = require('../../../../../middleware/database-validation');
 const { parseJSONFields, prepareCandidateForDB } = require('../helpers/avatar-utils');
+const { createLogger } = require('../../../../../utils/structured-logger');
+const logger = createLogger('api:candidates:create');
 
 const router = express.Router();
 
@@ -71,11 +73,11 @@ router.post('/', authenticateAdmin, validateCandidate, (req, res) => {
     });
 
   } catch (error) {
-    console.error('Error creating candidate:', error);
+    logger.error('Error creating candidate', { error: error.message });
     res.status(500).json({
       success: false,
       error: 'Failed to create candidate',
-      details: error.message
+      details: 'Internal server error'
     });
   }
 });
@@ -151,7 +153,7 @@ router.post('/bulk', authenticateAdmin, (req, res) => {
           errors.push({
             index: i,
             email: candidateData.email || 'unknown',
-            error: error.message
+            error: 'Internal server error'
           });
         }
       }
@@ -164,7 +166,7 @@ router.post('/bulk', authenticateAdmin, (req, res) => {
       return res.status(500).json({
         success: false,
         error: 'Transaction failed',
-        details: error.message
+        details: 'Internal server error'
       });
     }
 
@@ -183,11 +185,11 @@ router.post('/bulk', authenticateAdmin, (req, res) => {
     });
 
   } catch (error) {
-    console.error('Error in bulk candidate creation:', error);
+    logger.error('Error in bulk candidate creation', { error: error.message });
     res.status(500).json({
       success: false,
       error: 'Failed to process bulk candidate creation',
-      details: error.message
+      details: 'Internal server error'
     });
   }
 });
@@ -231,7 +233,7 @@ router.post('/:id/notes', authenticateAdmin, (req, res) => {
         )
       `);
     } catch (tableError) {
-      console.warn('Notes table may already exist:', tableError);
+      logger.warn('Notes table may already exist', { error: tableError.message });
     }
 
     // Add note
@@ -248,11 +250,11 @@ router.post('/:id/notes', authenticateAdmin, (req, res) => {
     });
 
   } catch (error) {
-    console.error('Error adding candidate note:', error);
+    logger.error('Error adding candidate note', { error: error.message });
     res.status(500).json({
       success: false,
       error: 'Failed to add note',
-      details: error.message
+      details: 'Internal server error'
     });
   }
 });

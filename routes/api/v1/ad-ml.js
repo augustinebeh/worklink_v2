@@ -24,7 +24,7 @@ router.get('/settings', (req, res) => {
     const settings = adML.getSettings();
     res.json({ success: true, data: settings });
   } catch (error) {
-    res.status(500).json({ success: false, error: error.message });
+    res.status(500).json({ success: false, error: 'Internal server error' });
   }
 });
 
@@ -43,7 +43,7 @@ router.put('/settings', (req, res) => {
     adML.updateSetting(key, value);
     res.json({ success: true, message: 'Setting updated' });
   } catch (error) {
-    res.status(500).json({ success: false, error: error.message });
+    res.status(500).json({ success: false, error: 'Internal server error' });
   }
 });
 
@@ -68,7 +68,7 @@ router.get('/stats', (req, res) => {
       },
     });
   } catch (error) {
-    res.status(500).json({ success: false, error: error.message });
+    res.status(500).json({ success: false, error: 'Internal server error' });
   }
 });
 
@@ -93,7 +93,7 @@ router.get('/variables', (req, res) => {
       },
     });
   } catch (error) {
-    res.status(500).json({ success: false, error: error.message });
+    res.status(500).json({ success: false, error: 'Internal server error' });
   }
 });
 
@@ -118,7 +118,7 @@ router.get('/timing', (req, res) => {
       },
     });
   } catch (error) {
-    res.status(500).json({ success: false, error: error.message });
+    res.status(500).json({ success: false, error: 'Internal server error' });
   }
 });
 
@@ -131,7 +131,7 @@ router.post('/timing/analyze', (req, res) => {
     const result = timing.analyzeTimingPatterns();
     res.json({ success: true, data: result });
   } catch (error) {
-    res.status(500).json({ success: false, error: error.message });
+    res.status(500).json({ success: false, error: 'Internal server error' });
   }
 });
 
@@ -148,7 +148,7 @@ router.get('/tests', (req, res) => {
     const tests = adML.getActiveTests();
     res.json({ success: true, data: tests });
   } catch (error) {
-    res.status(500).json({ success: false, error: error.message });
+    res.status(500).json({ success: false, error: 'Internal server error' });
   }
 });
 
@@ -161,7 +161,7 @@ router.get('/tests/:jobId', (req, res) => {
     const progress = abTesting.getTestProgress(req.params.jobId);
     res.json({ success: true, data: progress });
   } catch (error) {
-    res.status(500).json({ success: false, error: error.message });
+    res.status(500).json({ success: false, error: 'Internal server error' });
   }
 });
 
@@ -174,7 +174,7 @@ router.post('/tests/:jobId/evaluate', async (req, res) => {
     const result = await adML.evaluateTest(req.params.jobId);
     res.json({ success: true, data: result });
   } catch (error) {
-    res.status(500).json({ success: false, error: error.message });
+    res.status(500).json({ success: false, error: 'Internal server error' });
   }
 });
 
@@ -201,7 +201,7 @@ router.post('/generate', async (req, res) => {
       data: variants,
     });
   } catch (error) {
-    res.status(500).json({ success: false, error: error.message });
+    res.status(500).json({ success: false, error: 'Internal server error' });
   }
 });
 
@@ -224,7 +224,7 @@ router.post('/generate-optimized', async (req, res) => {
       data: { content },
     });
   } catch (error) {
-    res.status(500).json({ success: false, error: error.message });
+    res.status(500).json({ success: false, error: 'Internal server error' });
   }
 });
 
@@ -247,7 +247,7 @@ router.post('/response', (req, res) => {
     adML.recordResponse(variantId);
     res.json({ success: true, message: 'Response recorded' });
   } catch (error) {
-    res.status(500).json({ success: false, error: error.message });
+    res.status(500).json({ success: false, error: 'Internal server error' });
   }
 });
 
@@ -272,7 +272,7 @@ router.get('/training-data', (req, res) => {
 
     res.json({ success: true, data });
   } catch (error) {
-    res.status(500).json({ success: false, error: error.message });
+    res.status(500).json({ success: false, error: 'Internal server error' });
   }
 });
 
@@ -285,7 +285,7 @@ router.get('/training-data/stats', (req, res) => {
     const stats = trainer.getTrainingStats();
     res.json({ success: true, data: stats });
   } catch (error) {
-    res.status(500).json({ success: false, error: error.message });
+    res.status(500).json({ success: false, error: 'Internal server error' });
   }
 });
 
@@ -311,7 +311,7 @@ router.post('/training-data', (req, res) => {
 
     res.json({ success: true, data: { id }, message: 'Training example added' });
   } catch (error) {
-    res.status(500).json({ success: false, error: error.message });
+    res.status(500).json({ success: false, error: 'Internal server error' });
   }
 });
 
@@ -324,7 +324,7 @@ router.delete('/training-data/:id', (req, res) => {
     trainer.deleteTrainingExample(req.params.id);
     res.json({ success: true, message: 'Training example deleted' });
   } catch (error) {
-    res.status(500).json({ success: false, error: error.message });
+    res.status(500).json({ success: false, error: 'Internal server error' });
   }
 });
 
@@ -365,7 +365,7 @@ router.post('/training-data/export', (req, res) => {
 
     res.send(result.content);
   } catch (error) {
-    res.status(500).json({ success: false, error: error.message });
+    res.status(500).json({ success: false, error: 'Internal server error' });
   }
 });
 
@@ -389,7 +389,7 @@ router.post('/training-data/import', (req, res) => {
       message: `Imported ${result.imported} examples (${result.errors} errors)`,
     });
   } catch (error) {
-    res.status(500).json({ success: false, error: error.message });
+    res.status(500).json({ success: false, error: 'Internal server error' });
   }
 });
 
@@ -402,7 +402,7 @@ router.post('/training-data/update-quality', (req, res) => {
     const result = trainer.updateQualityScores();
     res.json({ success: true, data: result });
   } catch (error) {
-    res.status(500).json({ success: false, error: error.message });
+    res.status(500).json({ success: false, error: 'Internal server error' });
   }
 });
 

@@ -49,7 +49,7 @@ router.get('/', authenticateAdmin, (req, res) => {
     const payments = db.prepare(sql).all(...params);
     res.json({ success: true, data: payments });
   } catch (error) {
-    res.status(500).json({ success: false, error: error.message });
+    res.status(500).json({ success: false, error: 'Internal server error' });
   }
 });
 
@@ -67,7 +67,7 @@ router.get('/stats', authenticateAdmin, (req, res) => {
 
     res.json({ success: true, data: stats });
   } catch (error) {
-    res.status(500).json({ success: false, error: error.message });
+    res.status(500).json({ success: false, error: 'Internal server error' });
   }
 });
 
@@ -81,42 +81,47 @@ router.patch('/:id', authenticateAdmin, createValidationMiddleware('payment'), (
       return res.status(404).json({ success: false, error: 'Payment not found' });
     }
 
-    const updates = [];
-    const params = [];
+    // Wrap in transaction so payment status + candidate earnings are atomic
+    const updatePayment = db.transaction(() => {
+      const updates = [];
+      const params = [];
 
-    if (status) {
-      updates.push('status = ?');
-      params.push(status);
-      
-      if (status === 'paid') {
-        updates.push('paid_at = CURRENT_TIMESTAMP');
-        
-        // Update candidate earnings (round to 2 decimal places)
-        db.prepare(`
-          UPDATE candidates
-          SET total_earnings = ROUND(total_earnings + ?, 2)
-          WHERE id = ?
-        `).run(payment.total_amount, payment.candidate_id);
+      if (status) {
+        updates.push('status = ?');
+        params.push(status);
+
+        if (status === 'paid') {
+          updates.push('paid_at = CURRENT_TIMESTAMP');
+
+          // Update candidate earnings (round to 2 decimal places)
+          db.prepare(`
+            UPDATE candidates
+            SET total_earnings = ROUND(total_earnings + ?, 2)
+            WHERE id = ?
+          `).run(payment.total_amount, payment.candidate_id);
+        }
       }
-    }
-    if (transaction_id) { updates.push('transaction_id = ?'); params.push(transaction_id); }
-    if (payment_proof) { updates.push('payment_proof = ?'); params.push(payment_proof); }
-    if (notes) { updates.push('notes = ?'); params.push(notes); }
+      if (transaction_id) { updates.push('transaction_id = ?'); params.push(transaction_id); }
+      if (payment_proof) { updates.push('payment_proof = ?'); params.push(payment_proof); }
+      if (notes) { updates.push('notes = ?'); params.push(notes); }
 
-    if (updates.length > 0) {
-      params.push(req.params.id);
-      db.prepare(`UPDATE payments SET ${updates.join(', ')} WHERE id = ?`).run(...params);
-    }
+      if (updates.length > 0) {
+        params.push(req.params.id);
+        db.prepare(`UPDATE payments SET ${updates.join(', ')} WHERE id = ?`).run(...params);
+      }
+    });
+
+    updatePayment();
 
     const updated = db.prepare('SELECT * FROM payments WHERE id = ?').get(req.params.id);
     res.json({ success: true, data: updated });
   } catch (error) {
-    res.status(500).json({ success: false, error: error.message });
+    res.status(500).json({ success: false, error: 'Internal server error' });
   }
 });
 
-// Batch approve payments
-router.post('/batch-approve', (req, res) => {
+// Batch approve payments - Admin only
+router.post('/batch-approve', authenticateAdmin, (req, res) => {
   try {
     const { payment_ids } = req.body;
     
@@ -130,12 +135,12 @@ router.post('/batch-approve', (req, res) => {
     const updated = db.prepare(`SELECT * FROM payments WHERE id IN (${placeholders})`).all(...payment_ids);
     res.json({ success: true, data: updated, message: `${updated.length} payments approved` });
   } catch (error) {
-    res.status(500).json({ success: false, error: error.message });
+    res.status(500).json({ success: false, error: 'Internal server error' });
   }
 });
 
-// Batch mark as paid
-router.post('/batch-paid', (req, res) => {
+// Batch mark as paid - Admin only
+router.post('/batch-paid', authenticateAdmin, (req, res) => {
   try {
     const { payment_ids, transaction_id } = req.body;
     
@@ -175,7 +180,79 @@ router.post('/batch-paid', (req, res) => {
 
     res.json({ success: true, message: `${payments.length} payments marked as paid` });
   } catch (error) {
-    res.status(500).json({ success: false, error: error.message });
+    res.status(500).json({ success: false, error: 'Internal server error' });
+  }
+});
+
+// Approve a single payment
+router.post('/:id/approve', authenticateAdmin, (req, res) => {
+  try {
+    const payment = db.prepare('SELECT * FROM payments WHERE id = ?').get(req.params.id);
+    if (!payment) {
+      return res.status(404).json({ success: false, error: 'Payment not found' });
+    }
+    if (payment.status !== 'pending') {
+      return res.status(400).json({ success: false, error: `Cannot approve payment with status '${payment.status}'` });
+    }
+
+    db.prepare("UPDATE payments SET status = 'approved' WHERE id = ?").run(req.params.id);
+    const updated = db.prepare('SELECT * FROM payments WHERE id = ?').get(req.params.id);
+    res.json({ success: true, data: updated, message: 'Payment approved' });
+  } catch (error) {
+    res.status(500).json({ success: false, error: 'Internal server error' });
+  }
+});
+
+// Reject a single payment
+router.post('/:id/reject', authenticateAdmin, (req, res) => {
+  try {
+    const { reason } = req.body;
+    const payment = db.prepare('SELECT * FROM payments WHERE id = ?').get(req.params.id);
+    if (!payment) {
+      return res.status(404).json({ success: false, error: 'Payment not found' });
+    }
+    if (payment.status !== 'pending') {
+      return res.status(400).json({ success: false, error: `Cannot reject payment with status '${payment.status}'` });
+    }
+
+    db.prepare("UPDATE payments SET status = 'rejected', notes = COALESCE(?, notes) WHERE id = ?").run(reason || null, req.params.id);
+    const updated = db.prepare('SELECT * FROM payments WHERE id = ?').get(req.params.id);
+    res.json({ success: true, data: updated, message: 'Payment rejected' });
+  } catch (error) {
+    res.status(500).json({ success: false, error: 'Internal server error' });
+  }
+});
+
+// Mark a single payment as paid
+router.post('/:id/paid', authenticateAdmin, (req, res) => {
+  try {
+    const { transaction_id } = req.body;
+    const payment = db.prepare('SELECT * FROM payments WHERE id = ?').get(req.params.id);
+    if (!payment) {
+      return res.status(404).json({ success: false, error: 'Payment not found' });
+    }
+    if (payment.status !== 'approved') {
+      return res.status(400).json({ success: false, error: `Cannot mark as paid: payment status is '${payment.status}', must be 'approved'` });
+    }
+
+    const transaction = db.transaction(() => {
+      db.prepare(`
+        UPDATE payments SET status = 'paid', paid_at = CURRENT_TIMESTAMP, transaction_id = ?
+        WHERE id = ?
+      `).run(transaction_id || null, req.params.id);
+
+      // Update candidate earnings
+      db.prepare(`
+        UPDATE candidates SET total_earnings = ROUND(total_earnings + ?, 2) WHERE id = ?
+      `).run(payment.total_amount, payment.candidate_id);
+    });
+
+    transaction();
+
+    const updated = db.prepare('SELECT * FROM payments WHERE id = ?').get(req.params.id);
+    res.json({ success: true, data: updated, message: 'Payment marked as paid' });
+  } catch (error) {
+    res.status(500).json({ success: false, error: 'Internal server error' });
   }
 });
 
@@ -201,7 +278,7 @@ router.post('/:id/request-withdrawal', (req, res) => {
     const updated = db.prepare('SELECT * FROM payments WHERE id = ?').get(req.params.id);
     res.json({ success: true, data: updated });
   } catch (error) {
-    res.status(500).json({ success: false, error: error.message });
+    res.status(500).json({ success: false, error: 'Internal server error' });
   }
 });
 

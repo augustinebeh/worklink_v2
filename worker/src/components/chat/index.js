@@ -3,4 +3,6 @@ export { default as MessageAttachment } from './MessageAttachment';
 export { default as DateDivider } from './DateDivider';
 export { default as TypingIndicator } from './TypingIndicator';
 export { default as QuickReplyChip } from './QuickReplyChip';
+export { default as WorkerMessageList } from './WorkerMessageList';
+export { default as WorkerChatInput } from './WorkerChatInput';
 export { parseUTCTimestamp } from './utils';

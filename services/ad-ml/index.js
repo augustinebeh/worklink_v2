@@ -9,6 +9,8 @@ const { db } = require('../../db');
 const { askClaude } = require('../../utils/claude');
 const abTesting = require('./ab-testing');
 const timing = require('./timing');
+const { createLogger } = require('../../utils/structured-logger');
+const logger = createLogger('ad-ml');
 
 /**
  * Get Ad ML settings
@@ -113,7 +115,7 @@ Description: ${job.description || ''}`;
     const response = await askClaude(prompt, systemPrompt, { maxTokens: 500 });
     return response.trim();
   } catch (error) {
-    console.error('Ad generation failed:', error.message);
+    logger.error('Ad generation failed', { error: error.message });
     // Fallback to template-based ad
     return generateTemplateAd(job, variables);
   }

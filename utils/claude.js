@@ -13,6 +13,10 @@
  * - Response caching for common queries
  */
 
+
+const { createLogger } = require('./structured-logger');
+const logger = createLogger('claude-llm');
+
 const { db } = require('../db');
 
 // API Configuration
@@ -55,6 +59,7 @@ const PROVIDERS = {
 // Simple in-memory cache for common responses
 const responseCache = new Map();
 const CACHE_TTL = 5 * 60 * 1000; // 5 minutes
+const MAX_CACHE_ENTRIES = 200;
 
 /**
  * Main LLM function with intelligent provider selection
@@ -68,7 +73,7 @@ async function askClaude(prompt, systemPrompt = '', options = {}) {
     const cacheKey = generateCacheKey(prompt, systemPrompt, options);
     const cached = responseCache.get(cacheKey);
     if (cached && Date.now() - cached.timestamp < CACHE_TTL) {
-      console.log(`🧠 [LLM] Cache hit for query`);
+      logger.info('[LLM] Cache hit for query');
       recordUsage('cache', 0, 0, 0, Date.now() - startTime);
       return cached.response;
     }
@@ -90,12 +95,12 @@ async function askClaude(prompt, systemPrompt = '', options = {}) {
     const apiKey = provider.apiKey();
 
     if (!apiKey) {
-      console.log(`🧠 [LLM] ${provider.name}: No API key configured, skipping`);
+      logger.info('[LLM] ${provider.name}: No API key configured, skipping');
       continue;
     }
 
     try {
-      console.log(`🧠 [LLM] Trying ${provider.name}...`);
+      logger.info('[LLM] Trying ${provider.name}...');
 
       let response, inputTokens, outputTokens;
 
@@ -130,12 +135,12 @@ async function askClaude(prompt, systemPrompt = '', options = {}) {
       // Record usage
       recordUsage(providerName, inputTokens, outputTokens, calculateCost(providerName, inputTokens, outputTokens), responseTime);
 
-      console.log(`🧠 [LLM] ${provider.name} succeeded (${responseTime}ms, $${calculateCost(providerName, inputTokens, outputTokens).toFixed(4)})`);
+      logger.info('[LLM] ${provider.name} succeeded (${responseTime}ms, $${calculateCost(providerName, inputTokens, outputTokens).toFixed(4)})');
       return response;
 
     } catch (error) {
       lastError = error;
-      console.error(`🧠 [LLM] ${provider.name} failed:`, error.message);
+      logger.error('[LLM] ${provider.name} failed:', { error: error.message });
 
       // Record failed attempt
       recordUsage(providerName, 0, 0, 0, Date.now() - startTime, error.message);
@@ -193,7 +198,7 @@ async function askClaudeAPI(prompt, systemPrompt = '', options = {}) {
   if (!response.ok) {
     const errorData = await response.json().catch(() => ({}));
     const errorMessage = errorData.error?.message || errorData.error?.type || `Claude API error: ${response.status}`;
-    console.error('Claude API error:', errorMessage);
+    logger.error('Claude API error:', { error: errorMessage });
     throw new Error(errorMessage);
   }
 
@@ -251,7 +256,7 @@ async function askGroq(prompt, systemPrompt = '', options = {}) {
   if (!response.ok) {
     const errorData = await response.json().catch(() => ({}));
     const errorMessage = errorData.error?.message || `Groq API error: ${response.status}`;
-    console.error('Groq API error:', errorMessage);
+    logger.error('Groq API error:', { error: errorMessage });
     throw new Error(errorMessage);
   }
 
@@ -357,13 +362,14 @@ function calculateCost(provider, inputTokens, outputTokens) {
  * Generate cache key for response caching
  */
 function generateCacheKey(prompt, systemPrompt, options) {
+  const crypto = require('crypto');
   const key = JSON.stringify({
-    prompt: prompt.substring(0, 200), // Limit key length
-    system: systemPrompt.substring(0, 100),
+    prompt: prompt.substring(0, 500),
+    system: systemPrompt.substring(0, 200),
     maxTokens: options.maxTokens || 1024,
     temperature: options.temperature || 0.7,
   });
-  return Buffer.from(key).toString('base64').substring(0, 50);
+  return crypto.createHash('sha256').update(key).digest('hex').substring(0, 32);
 }
 
 /**
@@ -374,6 +380,13 @@ function cleanCache() {
   for (const [key, value] of responseCache.entries()) {
     if (now - value.timestamp > CACHE_TTL) {
       responseCache.delete(key);
+    }
+  }
+  // Hard cap to prevent unbounded growth
+  if (responseCache.size > MAX_CACHE_ENTRIES) {
+    const keys = [...responseCache.keys()];
+    for (let i = 0; i < keys.length - MAX_CACHE_ENTRIES; i++) {
+      responseCache.delete(keys[i]);
     }
   }
 }
@@ -451,10 +464,17 @@ function recordUsage(provider, inputTokens, outputTokens, cost, responseTime, er
         );
       `);
 
-      // Retry the insert
-      recordUsage(provider, inputTokens, outputTokens, cost, responseTime, error);
+      // Retry once after table creation (no further recursion)
+      try {
+        db.prepare(`
+          INSERT INTO llm_usage_logs (provider, input_tokens, output_tokens, cost_usd, response_time_ms, error_message)
+          VALUES (?, ?, ?, ?, ?, ?)
+        `).run(provider, inputTokens, outputTokens, cost, responseTime, error);
+      } catch (retryErr) {
+        // Give up silently - usage logging is non-critical
+      }
     } else {
-      console.warn('Failed to record LLM usage:', e.message);
+      // Non-table error - ignore, usage logging is non-critical
     }
   }
 }
@@ -530,7 +550,7 @@ function getLLMStats(days = 30) {
       })),
     };
   } catch (e) {
-    console.warn('Failed to get LLM stats:', e.message);
+    logger.warn('Failed to get LLM stats:', { data: e.message });
     return {
       period: `${days} days`,
       totals: { calls: 0, inputTokens: 0, outputTokens: 0, cost: 0, errors: 0, successRate: '0%', avgCostPerCall: 0 },
@@ -617,7 +637,7 @@ function cleanupUsageLogs(daysToKeep = 90) {
 
     return deleted.changes;
   } catch (e) {
-    console.warn('Failed to cleanup usage logs:', e.message);
+    logger.warn('Failed to cleanup usage logs:', { data: e.message });
     return 0;
   }
 }
@@ -686,7 +706,7 @@ Return ONLY valid JSON in this exact format:
     }
     throw new Error('Failed to parse AI response');
   } catch (error) {
-    console.error('Job posting generation failed:', error.message);
+    logger.error('Job posting generation failed:', { error: error.message });
     throw error;
   }
 }
@@ -725,7 +745,7 @@ Return ONLY the message text, no explanations.`;
     const response = await askClaude(prompt, systemPrompt, { maxTokens: 400 });
     return typeof response === 'string' ? response : response.response;
   } catch (error) {
-    console.error('Outreach message generation failed:', error.message);
+    logger.error('Outreach message generation failed:', { error: error.message });
     throw error;
   }
 }
@@ -777,7 +797,7 @@ Return ONLY valid JSON.`;
     }
     throw new Error('Failed to parse AI analysis');
   } catch (error) {
-    console.error('Tender analysis failed:', error.message);
+    logger.error('Tender analysis failed:', { error: error.message });
     throw error;
   }
 }
@@ -830,7 +850,7 @@ Return ONLY valid JSON array.`;
     }
     throw new Error('Failed to parse AI recommendations');
   } catch (error) {
-    console.error('Candidate matching failed:', error.message);
+    logger.error('Candidate matching failed:', { error: error.message });
     throw error;
   }
 }

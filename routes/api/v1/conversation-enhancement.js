@@ -5,14 +5,14 @@
 
 const express = require('express');
 const router = express.Router();
-const Database = require('better-sqlite3');
-const path = require('path');
 
 // Import the enhancement engines
 const ConversationABTesting = require('../../../utils/conversation-ab-testing');
 const SLMConversionAnalytics = require('../../../utils/slm-conversion-analytics');
 const EnhancedConversationFlows = require('../../../utils/enhanced-conversation-flows');
 const MultilingualConversationEngine = require('../../../utils/multilingual-conversation-engine');
+const { createLogger } = require('../../../utils/structured-logger');
+const logger = createLogger('conversation-enhancement');
 
 // Initialize enhancement systems
 const abTesting = new ConversationABTesting();
@@ -21,7 +21,8 @@ const enhancedFlows = new EnhancedConversationFlows();
 const multilingualEngine = new MultilingualConversationEngine();
 
 // Database connection
-const db = new Database(path.resolve(__dirname, '../../../db/database.db'));
+const { db } = require('../../../db');
+const { authenticateAdmin } = require('../../../middleware/auth');
 
 /**
  * ========================================
@@ -30,7 +31,7 @@ const db = new Database(path.resolve(__dirname, '../../../db/database.db'));
  */
 
 // Start new A/B test
-router.post('/ab-testing/start', async (req, res) => {
+router.post('/ab-testing/start', authenticateAdmin, async (req, res) => {
   try {
     const { testType, duration, candidateSegment } = req.body;
 
@@ -67,13 +68,13 @@ router.post('/ab-testing/start', async (req, res) => {
     });
 
   } catch (error) {
-    console.error('A/B test start error:', error);
+    logger.error('A/B test start error', { error: error.message });
     res.status(500).json({ error: 'Failed to start A/B test' });
   }
 });
 
 // Get active A/B tests
-router.get('/ab-testing/active', async (req, res) => {
+router.get('/ab-testing/active', authenticateAdmin, async (req, res) => {
   try {
     const activeTests = await abTesting.getActiveTests();
     res.json({
@@ -81,13 +82,13 @@ router.get('/ab-testing/active', async (req, res) => {
       tests: activeTests
     });
   } catch (error) {
-    console.error('Active tests error:', error);
+    logger.error('Active tests error', { error: error.message });
     res.status(500).json({ error: 'Failed to retrieve active tests' });
   }
 });
 
 // Get A/B test results
-router.get('/ab-testing/:testId/results', async (req, res) => {
+router.get('/ab-testing/:testId/results', authenticateAdmin, async (req, res) => {
   try {
     const { testId } = req.params;
     const results = await abTesting.getTestResults(testId);
@@ -98,13 +99,13 @@ router.get('/ab-testing/:testId/results', async (req, res) => {
     });
 
   } catch (error) {
-    console.error('Test results error:', error);
+    logger.error('Test results error', { error: error.message });
     res.status(500).json({ error: 'Failed to retrieve test results' });
   }
 });
 
 // Track conversion event
-router.post('/ab-testing/track', async (req, res) => {
+router.post('/ab-testing/track', authenticateAdmin, async (req, res) => {
   try {
     const { candidateId, eventType, eventData } = req.body;
 
@@ -116,7 +117,7 @@ router.post('/ab-testing/track', async (req, res) => {
     });
 
   } catch (error) {
-    console.error('Event tracking error:', error);
+    logger.error('Event tracking error', { error: error.message });
     res.status(500).json({ error: 'Failed to track event' });
   }
 });
@@ -128,7 +129,7 @@ router.post('/ab-testing/track', async (req, res) => {
  */
 
 // Get real-time metrics dashboard
-router.get('/analytics/real-time', async (req, res) => {
+router.get('/analytics/real-time', authenticateAdmin, async (req, res) => {
   try {
     const metrics = await analytics.getRealTimeMetrics();
     res.json({
@@ -136,13 +137,13 @@ router.get('/analytics/real-time', async (req, res) => {
       metrics
     });
   } catch (error) {
-    console.error('Real-time metrics error:', error);
+    logger.error('Real-time metrics error', { error: error.message });
     res.status(500).json({ error: 'Failed to retrieve real-time metrics' });
   }
 });
 
 // Get funnel performance analysis
-router.get('/analytics/funnel', async (req, res) => {
+router.get('/analytics/funnel', authenticateAdmin, async (req, res) => {
   try {
     const { timeframe = '7d', segment } = req.query;
     const segmentation = segment ? JSON.parse(segment) : {};
@@ -155,13 +156,13 @@ router.get('/analytics/funnel', async (req, res) => {
     });
 
   } catch (error) {
-    console.error('Funnel analysis error:', error);
+    logger.error('Funnel analysis error', { error: error.message });
     res.status(500).json({ error: 'Failed to analyze funnel performance' });
   }
 });
 
 // Get performance dashboard
-router.get('/analytics/dashboard', async (req, res) => {
+router.get('/analytics/dashboard', authenticateAdmin, async (req, res) => {
   try {
     const dashboard = await analytics.getPerformanceDashboard();
     res.json({
@@ -169,13 +170,13 @@ router.get('/analytics/dashboard', async (req, res) => {
       dashboard
     });
   } catch (error) {
-    console.error('Dashboard error:', error);
+    logger.error('Dashboard error', { error: error.message });
     res.status(500).json({ error: 'Failed to retrieve dashboard data' });
   }
 });
 
 // Track funnel progression
-router.post('/analytics/track-progression', async (req, res) => {
+router.post('/analytics/track-progression', authenticateAdmin, async (req, res) => {
   try {
     const { candidateId, fromStage, toStage, metadata } = req.body;
 
@@ -192,13 +193,13 @@ router.post('/analytics/track-progression', async (req, res) => {
     });
 
   } catch (error) {
-    console.error('Progression tracking error:', error);
+    logger.error('Progression tracking error', { error: error.message });
     res.status(500).json({ error: 'Failed to track progression' });
   }
 });
 
 // Get conversion predictions
-router.get('/analytics/predict/:candidateId', async (req, res) => {
+router.get('/analytics/predict/:candidateId', authenticateAdmin, async (req, res) => {
   try {
     const { candidateId } = req.params;
     const conversationContext = req.query.context ? JSON.parse(req.query.context) : {};
@@ -211,13 +212,13 @@ router.get('/analytics/predict/:candidateId', async (req, res) => {
     });
 
   } catch (error) {
-    console.error('Prediction error:', error);
+    logger.error('Prediction error', { error: error.message });
     res.status(500).json({ error: 'Failed to generate prediction' });
   }
 });
 
 // Get hot leads
-router.get('/analytics/hot-leads', async (req, res) => {
+router.get('/analytics/hot-leads', authenticateAdmin, async (req, res) => {
   try {
     const hotLeads = await analytics.identifyHotLeads();
     res.json({
@@ -225,13 +226,13 @@ router.get('/analytics/hot-leads', async (req, res) => {
       hotLeads
     });
   } catch (error) {
-    console.error('Hot leads error:', error);
+    logger.error('Hot leads error', { error: error.message });
     res.status(500).json({ error: 'Failed to identify hot leads' });
   }
 });
 
 // Export analytics data
-router.get('/analytics/export', async (req, res) => {
+router.get('/analytics/export', authenticateAdmin, async (req, res) => {
   try {
     const { format = 'json', timeframe = '30d' } = req.query;
     const exportData = await analytics.exportAnalytics(format, timeframe);
@@ -250,7 +251,7 @@ router.get('/analytics/export', async (req, res) => {
     res.send(exportData);
 
   } catch (error) {
-    console.error('Export error:', error);
+    logger.error('Export error', { error: error.message });
     res.status(500).json({ error: 'Failed to export analytics data' });
   }
 });
@@ -262,7 +263,7 @@ router.get('/analytics/export', async (req, res) => {
  */
 
 // Generate enhanced conversation
-router.post('/fomo/generate-conversation', async (req, res) => {
+router.post('/fomo/generate-conversation', authenticateAdmin, async (req, res) => {
   try {
     const { candidateId, message, context } = req.body;
 
@@ -274,13 +275,13 @@ router.post('/fomo/generate-conversation', async (req, res) => {
     });
 
   } catch (error) {
-    console.error('Enhanced conversation error:', error);
+    logger.error('Enhanced conversation error', { error: error.message });
     res.status(500).json({ error: 'Failed to generate enhanced conversation' });
   }
 });
 
 // Start FOMO campaign
-router.post('/fomo/campaign/start', async (req, res) => {
+router.post('/fomo/campaign/start', authenticateAdmin, async (req, res) => {
   try {
     const { campaignType, targetSegment, intensity, duration } = req.body;
 
@@ -304,7 +305,7 @@ router.post('/fomo/campaign/start', async (req, res) => {
     };
 
     // Store campaign (in production, save to database)
-    console.log('Starting FOMO campaign:', campaign);
+    logger.info('Starting FOMO campaign', { campaignId: campaign.id, type: campaign.type });
 
     res.json({
       success: true,
@@ -313,13 +314,13 @@ router.post('/fomo/campaign/start', async (req, res) => {
     });
 
   } catch (error) {
-    console.error('FOMO campaign error:', error);
+    logger.error('FOMO campaign error', { error: error.message });
     res.status(500).json({ error: 'Failed to start FOMO campaign' });
   }
 });
 
 // Get FOMO campaign performance
-router.get('/fomo/campaign/:campaignId/performance', async (req, res) => {
+router.get('/fomo/campaign/:campaignId/performance', authenticateAdmin, async (req, res) => {
   try {
     const { campaignId } = req.params;
 
@@ -348,7 +349,7 @@ router.get('/fomo/campaign/:campaignId/performance', async (req, res) => {
     });
 
   } catch (error) {
-    console.error('Campaign performance error:', error);
+    logger.error('Campaign performance error', { error: error.message });
     res.status(500).json({ error: 'Failed to retrieve campaign performance' });
   }
 });
@@ -360,7 +361,7 @@ router.get('/fomo/campaign/:campaignId/performance', async (req, res) => {
  */
 
 // Detect candidate language
-router.get('/multilingual/detect/:candidateId', async (req, res) => {
+router.get('/multilingual/detect/:candidateId', authenticateAdmin, async (req, res) => {
   try {
     const { candidateId } = req.params;
     const conversationContext = req.query.context ? JSON.parse(req.query.context) : {};
@@ -373,13 +374,13 @@ router.get('/multilingual/detect/:candidateId', async (req, res) => {
     });
 
   } catch (error) {
-    console.error('Language detection error:', error);
+    logger.error('Language detection error', { error: error.message });
     res.status(500).json({ error: 'Failed to detect language' });
   }
 });
 
 // Generate multilingual response
-router.post('/multilingual/generate-response', async (req, res) => {
+router.post('/multilingual/generate-response', authenticateAdmin, async (req, res) => {
   try {
     const { candidateId, baseTemplate, conversationContext } = req.body;
 
@@ -395,13 +396,13 @@ router.post('/multilingual/generate-response', async (req, res) => {
     });
 
   } catch (error) {
-    console.error('Multilingual response error:', error);
+    logger.error('Multilingual response error', { error: error.message });
     res.status(500).json({ error: 'Failed to generate multilingual response' });
   }
 });
 
 // Update candidate language preferences
-router.put('/multilingual/preferences/:candidateId', async (req, res) => {
+router.put('/multilingual/preferences/:candidateId', authenticateAdmin, async (req, res) => {
   try {
     const { candidateId } = req.params;
     const { primaryLanguage, region, manualOverride } = req.body;
@@ -421,17 +422,25 @@ router.put('/multilingual/preferences/:candidateId', async (req, res) => {
     });
 
   } catch (error) {
-    console.error('Language preferences error:', error);
+    logger.error('Language preferences error', { error: error.message });
     res.status(500).json({ error: 'Failed to update language preferences' });
   }
 });
 
 // Get language performance statistics
-router.get('/multilingual/performance', async (req, res) => {
+router.get('/multilingual/performance', authenticateAdmin, async (req, res) => {
   try {
     const { timeframe = '7d' } = req.query;
 
-    // Get language performance statistics
+    // Parse timeframe safely - extract numeric days only to prevent SQL injection
+    const daysMatch = timeframe.match(/^(\d+)d$/);
+    const days = daysMatch ? parseInt(daysMatch[1], 10) : 7;
+    if (days < 1 || days > 365) {
+      return res.status(400).json({ error: 'Timeframe must be between 1d and 365d' });
+    }
+    const intervalParam = `-${days} days`;
+
+    // Get language performance statistics (parameterized query)
     const languageStats = db.prepare(`
       SELECT
         primary_language,
@@ -442,10 +451,10 @@ router.get('/multilingual/performance', async (req, res) => {
         END) as conversion_rate
       FROM candidate_language_preferences clp
       LEFT JOIN slm_conversation_analytics sca ON clp.candidate_id = sca.candidate_id
-      WHERE datetime(sca.created_at) >= datetime('now', '-${timeframe.replace('d', ' days')}')
+      WHERE datetime(sca.created_at) >= datetime('now', ?)
       GROUP BY primary_language
       ORDER BY candidate_count DESC
-    `).all();
+    `).all(intervalParam);
 
     res.json({
       success: true,
@@ -454,7 +463,7 @@ router.get('/multilingual/performance', async (req, res) => {
     });
 
   } catch (error) {
-    console.error('Language performance error:', error);
+    logger.error('Language performance error', { error: error.message });
     res.status(500).json({ error: 'Failed to retrieve language performance' });
   }
 });
@@ -466,7 +475,7 @@ router.get('/multilingual/performance', async (req, res) => {
  */
 
 // Get conversation monitoring dashboard
-router.get('/monitoring/dashboard', async (req, res) => {
+router.get('/monitoring/dashboard', authenticateAdmin, async (req, res) => {
   try {
     const monitoring = db.prepare(`
       SELECT
@@ -501,13 +510,13 @@ router.get('/monitoring/dashboard', async (req, res) => {
     });
 
   } catch (error) {
-    console.error('Monitoring dashboard error:', error);
+    logger.error('Monitoring dashboard error', { error: error.message });
     res.status(500).json({ error: 'Failed to retrieve monitoring dashboard' });
   }
 });
 
 // Update conversation monitoring status
-router.put('/monitoring/:candidateId', async (req, res) => {
+router.put('/monitoring/:candidateId', authenticateAdmin, async (req, res) => {
   try {
     const { candidateId } = req.params;
     const updates = req.body;
@@ -543,7 +552,7 @@ router.put('/monitoring/:candidateId', async (req, res) => {
     });
 
   } catch (error) {
-    console.error('Monitoring update error:', error);
+    logger.error('Monitoring update error', { error: error.message });
     res.status(500).json({ error: 'Failed to update monitoring status' });
   }
 });
@@ -555,7 +564,7 @@ router.put('/monitoring/:candidateId', async (req, res) => {
  */
 
 // Enhanced conversation endpoint for SLM integration
-router.post('/enhanced-conversation', async (req, res) => {
+router.post('/enhanced-conversation', authenticateAdmin, async (req, res) => {
   try {
     const { candidateId, message, context, useMultilingual, useABTesting } = req.body;
 
@@ -619,7 +628,7 @@ router.post('/enhanced-conversation', async (req, res) => {
     });
 
   } catch (error) {
-    console.error('Enhanced conversation integration error:', error);
+    logger.error('Enhanced conversation integration error', { error: error.message });
     res.status(500).json({ error: 'Failed to generate enhanced conversation' });
   }
 });
@@ -650,10 +659,10 @@ router.get('/health', async (req, res) => {
     res.json(health);
 
   } catch (error) {
-    console.error('Health check error:', error);
+    logger.error('Health check error', { error: error.message });
     res.status(500).json({
       status: 'unhealthy',
-      error: error.message
+      error: 'Internal server error'
     });
   }
 });

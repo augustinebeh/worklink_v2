@@ -69,15 +69,33 @@ function setupWebSocket(server) {
  * @param {http.IncomingMessage} req - HTTP request
  */
 function handleConnection(ws, req) {
+  // Origin validation
+  const origin = req.headers.origin;
+  if (origin) {
+    const allowedOrigins = [
+      'http://localhost:5173',   // Admin dev
+      'http://localhost:5174',   // Worker dev
+      'http://localhost:8080',   // Production local
+      process.env.RAILWAY_PUBLIC_DOMAIN ? `https://${process.env.RAILWAY_PUBLIC_DOMAIN}` : null,
+      process.env.CORS_ORIGIN || null
+    ].filter(Boolean);
+
+    if (allowedOrigins.length > 0 && !allowedOrigins.includes(origin)) {
+      logger.security('websocket_origin_rejected', { origin, allowed: allowedOrigins });
+      ws.close(4003, 'Origin not allowed');
+      return;
+    }
+  }
+
   const clientIp = req.headers['x-forwarded-for']?.split(',')[0] || req.socket.remoteAddress;
   const url = new URL(req.url, `http://${req.headers.host}`);
   const candidateId = url.searchParams.get('candidateId');
-  const isAdmin = url.searchParams.get('admin') === 'true';
+  const isAdminParam = url.searchParams.get('admin') === 'true';
   const token = url.searchParams.get('token');
 
   logger.info('WebSocket connection attempt', {
     ip: clientIp,
-    isAdmin,
+    isAdmin: isAdminParam,
     candidateId,
     hasToken: !!token
   });
@@ -93,17 +111,20 @@ function handleConnection(ws, req) {
   tracker.trackConnection(clientIp);
 
   // Validate authentication
-  const authResult = validator.validateConnection(token, candidateId, isAdmin);
+  const authResult = validator.validateConnection(token, candidateId, isAdminParam);
   if (!authResult.valid) {
     logger.security('websocket_auth_failed', {
       ip: clientIp,
       candidateId,
-      isAdmin,
+      isAdmin: isAdminParam,
       error: authResult.error
     });
     ws.close(4001, authResult.error || 'Authentication failed');
     return;
   }
+
+  // Determine admin status from token validation result, not URL parameter
+  const isAdmin = authResult.role === 'admin';
 
   logger.auth('websocket_auth_success', authResult.candidateId || 'admin', {
     role: authResult.role,
@@ -113,7 +134,7 @@ function handleConnection(ws, req) {
   // Generate unique connection ID
   const connectionId = tracker.generateConnectionId(clientIp, authResult.role, authResult.candidateId);
 
-  // Set up connection based on role
+  // Set up connection based on verified role
   if (isAdmin) {
     setupAdminConnection(ws, clientIp, connectionId);
   } else if (candidateId) {
@@ -302,17 +323,45 @@ function setupPeriodicCleanup(wss) {
 }
 
 // Export main function and utilities
+// Flatten broadcast and eventNotifier functions so consumers can destructure directly
 module.exports = {
   setupWebSocket,
-  
-  // Export for testing and external use
+
+  // Event types
   EventTypes,
+
+  // Full modules (for consumers that use `broadcast.xyz`)
   broadcast,
   eventNotifiers,
   clientStore,
-  
-  // Helper functions
+
+  // Broadcast functions (flattened for direct destructuring)
+  broadcastToAdmins: broadcast.broadcastToAdmins,
+  broadcastToCandidate: broadcast.broadcastToCandidate,
+  broadcastToCandidates: broadcast.broadcastToCandidates,
+  broadcastToAll: broadcast.broadcastToAll,
   isCandidateOnline: broadcast.isCandidateOnline,
   getOnlineCandidates: broadcast.getOnlineCandidates,
-  getConnectionStats: broadcast.getConnectionStats
+  getConnectionStats: broadcast.getConnectionStats,
+
+  // Event notifier functions (flattened for direct destructuring)
+  createNotification: eventNotifiers.createNotification,
+  notifyJobCreated: eventNotifiers.notifyJobCreated,
+  notifyJobUpdated: eventNotifiers.notifyJobUpdated,
+  notifyDeploymentUpdated: eventNotifiers.notifyDeploymentUpdated,
+  notifyPaymentCreated: eventNotifiers.notifyPaymentCreated,
+  notifyPaymentStatusChanged: eventNotifiers.notifyPaymentStatusChanged,
+  notifyXPEarned: eventNotifiers.notifyXPEarned,
+  notifyLevelUp: eventNotifiers.notifyLevelUp,
+  notifyAchievementUnlocked: eventNotifiers.notifyAchievementUnlocked,
+  notifyQuestCompleted: eventNotifiers.notifyQuestCompleted,
+  notifyCandidateUpdated: eventNotifiers.notifyCandidateUpdated,
+  notifyStatusChange: eventNotifiers.notifyStatusChange,
+
+  // FOMO event notifiers (flattened)
+  notifyFOMOEvent: eventNotifiers.notifyFOMOEvent,
+  notifyUrgencyAlert: eventNotifiers.notifyUrgencyAlert,
+  notifyScarcityAlert: eventNotifiers.notifyScarcityAlert,
+  notifyStreakRisk: eventNotifiers.notifyStreakRisk,
+  notifyCompetitivePressure: eventNotifiers.notifyCompetitivePressure,
 };

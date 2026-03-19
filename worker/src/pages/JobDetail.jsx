@@ -15,6 +15,7 @@ import {
 } from 'lucide-react';
 import { useAuth } from '../contexts/AuthContext';
 import { useToast } from '../components/ui/Toast';
+import logger from '../utils/logger';
 import { clsx } from 'clsx';
 import {
   formatMoney,
@@ -57,7 +58,7 @@ export default function JobDetail() {
         }
       }
     } catch (error) {
-      console.error('Failed to fetch job:', error);
+      logger.error('Failed to fetch job:', error);
     } finally {
       setLoading(false);
     }
@@ -112,7 +113,7 @@ export default function JobDetail() {
         }
       }
     } catch (error) {
-      console.error('Apply error:', error);
+      logger.error('Apply error:', error);
       toast.error('Network Error', 'Please check your connection and try again');
     } finally {
       setApplying(false);

@@ -8,6 +8,7 @@
 const { createLogger } = require('../../utils/structured-logger');
 const clientStore = require('../utils/client-store');
 const { EventTypes } = require('../config/event-types');
+const { cleanupInterviewConversation } = require('../handlers/interview-handler');
 
 const logger = createLogger('websocket:candidate-handler');
 
@@ -37,6 +38,10 @@ function handleCandidateConnection(ws, candidateId, options = {}) {
 
   // Close existing connection for same candidate (single session per candidate)
   closeExistingConnection(candidateId);
+
+  // Mark connection as alive for ping/pong heartbeat
+  ws.isAlive = true;
+  ws.on('pong', () => { ws.isAlive = true; });
 
   // Add candidate client to store
   clientStore.addCandidateClient(candidateId, ws);
@@ -166,6 +171,9 @@ function handleClose(ws, candidateId, code, reason, options = {}) {
 
   // Remove candidate from store
   clientStore.removeCandidateClient(candidateId);
+
+  // Clean up interview conversation to prevent memory leak
+  cleanupInterviewConversation(candidateId);
 
   // Update status to offline
   if (updateStatus) {

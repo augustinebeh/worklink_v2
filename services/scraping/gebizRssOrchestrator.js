@@ -6,8 +6,10 @@
 
 const GeBIZRSSParser = require('./gebizRssParser');
 const DataLifecycleManager = require('./dataLifecycleManager');
-const { db } = require('../../db/database');
+const { db } = require('../../db');
 const nodemailer = require('nodemailer');
+const { createLogger } = require('../../utils/structured-logger');
+const logger = createLogger('gebiz-orchestrator');
 
 class GeBIZRSSOrchestrator {
   constructor() {
@@ -39,7 +41,7 @@ class GeBIZRSSOrchestrator {
    */
   async initializeEmailTransporter() {
     if (!this.emailConfig.enabled || !this.emailConfig.auth.user) {
-      console.log('📧 Email notifications disabled (missing configuration)');
+      logger.info('Email notifications disabled (missing configuration)');
       return;
     }
 
@@ -53,9 +55,9 @@ class GeBIZRSSOrchestrator {
 
       // Verify connection
       await this.transporter.verify();
-      console.log('📧 Email transporter initialized successfully');
+      logger.info('Email transporter initialized successfully');
     } catch (error) {
-      console.error('📧 Failed to initialize email transporter:', error.message);
+      logger.error('Failed to initialize email transporter', { error: error.message });
       this.transporter = null;
     }
   }
@@ -73,7 +75,7 @@ class GeBIZRSSOrchestrator {
     const runId = `RUN-${Date.now()}`;
     const startTime = Date.now();
 
-    console.log(`🚀 Starting RSS scraping pipeline (${runId})`);
+    logger.info('Starting RSS scraping pipeline', { runId });
 
     this.isRunning = true;
 
@@ -85,7 +87,7 @@ class GeBIZRSSOrchestrator {
         ).get('gebiz');
 
         if (portal && !portal.enabled) {
-          console.log('⏸️  GeBIZ portal is disabled by admin, skipping scrape');
+          logger.info('GeBIZ portal is disabled by admin, skipping scrape');
           this.isRunning = false;
           return {
             runId,
@@ -96,7 +98,7 @@ class GeBIZRSSOrchestrator {
         }
       } catch (portalError) {
         // Table may not exist yet on older databases — continue anyway
-        console.warn('Portal check skipped:', portalError.message);
+        logger.warn('Portal check skipped', { error: portalError.message });
       }
 
       // Log the start of the run
@@ -124,7 +126,7 @@ class GeBIZRSSOrchestrator {
       };
 
       // Stage 1: Parse RSS Feed
-      console.log('📡 Stage 1: Parsing RSS Feed...');
+      logger.info('Stage 1: Parsing RSS Feed');
       try {
         const parsingResult = await this.parser.parseRSSFeed();
         pipelineResult.stages.parsing = parsingResult;
@@ -134,7 +136,7 @@ class GeBIZRSSOrchestrator {
         pipelineResult.summary.duplicates = parsingResult.duplicates;
         pipelineResult.summary.errors += parsingResult.errors;
 
-        console.log(`✅ Parsing complete: ${parsingResult.newTenders} new tenders found`);
+        logger.info('Parsing complete', { newTenders: parsingResult.newTenders });
 
       } catch (error) {
         pipelineResult.errors.push(`Parsing stage failed: ${error.message}`);
@@ -144,7 +146,7 @@ class GeBIZRSSOrchestrator {
 
       // Stage 2: Insert into Staging Table (gebiz_active_tenders)
       if (pipelineResult.stages.parsing.validatedTenders?.length > 0) {
-        console.log('📝 Stage 2: Inserting into staging table...');
+        logger.info('Stage 2: Inserting into staging table');
         try {
           const lifecycleResult = await this.lifecycleManager.insertToStagingTable(
             pipelineResult.stages.parsing.validatedTenders
@@ -153,7 +155,7 @@ class GeBIZRSSOrchestrator {
           pipelineResult.summary.stagingRecordsCreated = lifecycleResult.created;
           pipelineResult.summary.errors += lifecycleResult.errors;
 
-          console.log(`✅ Staging complete: ${lifecycleResult.created} tenders added to feed`);
+          logger.info('Staging complete', { created: lifecycleResult.created });
 
         } catch (error) {
           pipelineResult.errors.push(`Lifecycle stage failed: ${error.message}`);
@@ -161,7 +163,7 @@ class GeBIZRSSOrchestrator {
           throw error;
         }
       } else {
-        console.log('⏭️  No new tenders to add to staging');
+        logger.info('No new tenders to add to staging');
         pipelineResult.stages.lifecycle = {
           success: true,
           message: 'No new tenders to process',
@@ -172,7 +174,7 @@ class GeBIZRSSOrchestrator {
       }
 
       // Stage 3: Send Notifications
-      console.log('📧 Stage 3: Sending Notifications...');
+      logger.info('Stage 3: Sending Notifications');
       try {
         const notificationResult = await this.sendNotifications(pipelineResult);
         pipelineResult.stages.notifications = notificationResult;
@@ -210,12 +212,12 @@ class GeBIZRSSOrchestrator {
 
       this.lastRun = pipelineResult;
 
-      console.log(`🏁 Pipeline complete (${pipelineResult.duration}ms): ${pipelineResult.summary.stagingRecordsCreated} tenders added to feed`);
+      logger.info('Pipeline complete', { durationMs: pipelineResult.duration, stagingRecordsCreated: pipelineResult.summary.stagingRecordsCreated });
 
       return pipelineResult;
 
     } catch (error) {
-      console.error('❌ Pipeline failed:', error.message);
+      logger.error('Pipeline failed', { error: error.message });
 
       // Send failure notification
       if (this.transporter) {
@@ -267,7 +269,7 @@ class GeBIZRSSOrchestrator {
     } catch (error) {
       notificationResult.errors.push(error.message);
       notificationResult.success = false;
-      console.error('Notification error:', error.message);
+      logger.error('Notification error', { error: error.message });
     }
 
     return notificationResult;
@@ -291,7 +293,7 @@ class GeBIZRSSOrchestrator {
     };
 
     await this.transporter.sendMail(mailOptions);
-    console.log('📧 Summary email sent to administrators');
+    logger.info('Summary email sent to administrators');
   }
 
   /**
@@ -429,7 +431,7 @@ class GeBIZRSSOrchestrator {
         );
 
       } catch (error) {
-        console.error(`Failed to create alert for tender ${tender.tender_no}:`, error.message);
+        logger.error('Failed to create alert for tender', { tenderNo: tender.tender_no, error: error.message });
       }
     }
   }
@@ -476,10 +478,10 @@ class GeBIZRSSOrchestrator {
       };
 
       await this.transporter.sendMail(mailOptions);
-      console.log('📧 Failure notification sent');
+      logger.info('Failure notification sent');
 
     } catch (emailError) {
-      console.error('Failed to send failure notification:', emailError.message);
+      logger.error('Failed to send failure notification', { error: emailError.message });
     }
   }
 
@@ -505,7 +507,7 @@ class GeBIZRSSOrchestrator {
 
       return result.lastInsertRowid;
     } catch (error) {
-      console.error('Failed to log job start:', error.message);
+      logger.error('Failed to log job start', { error: error.message });
       return null;
     }
   }
@@ -543,7 +545,7 @@ class GeBIZRSSOrchestrator {
       );
 
     } catch (error) {
-      console.error('Failed to log job completion:', error.message);
+      logger.error('Failed to log job completion', { error: error.message });
     }
   }
 
@@ -591,7 +593,7 @@ class GeBIZRSSOrchestrator {
    * @returns {Object} Results
    */
   async manualTrigger(options = {}) {
-    console.log('🔧 Manual scraping trigger activated');
+    logger.info('Manual scraping trigger activated');
     return this.runCompleteScrapingPipeline({ ...options, manual: true });
   }
 }

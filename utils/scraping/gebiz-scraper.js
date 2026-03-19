@@ -3,6 +3,10 @@
  * Replaces mock data with actual web scraping using Puppeteer
  */
 
+
+const { createLogger } = require('../structured-logger');
+const logger = createLogger('gebiz-scraper');
+
 const puppeteer = require('puppeteer-extra');
 const StealthPlugin = require('puppeteer-extra-plugin-stealth');
 const RecaptchaPlugin = require('puppeteer-extra-plugin-recaptcha');
@@ -104,14 +108,14 @@ class GeBIZScraper {
 
       // Handle dialogs/alerts
       this.page.on('dialog', async dialog => {
-        console.log(`Dialog appeared: ${dialog.message()}`);
+        logger.info('Dialog appeared: ${dialog.message()}');
         await dialog.accept();
       });
 
       this.isInitialized = true;
-      console.log('GeBIZ scraper initialized successfully');
+      logger.info('GeBIZ scraper initialized successfully');
     } catch (error) {
-      console.error('Failed to initialize GeBIZ scraper:', error);
+      logger.error('Failed to initialize GeBIZ scraper:', { error: error });
       await this.cleanup();
       throw error;
     }
@@ -129,7 +133,7 @@ class GeBIZScraper {
 
         await this.initialize();
 
-        console.log(`Scraping GeBIZ tenders (attempt ${attempts}/${maxAttempts})...`);
+        logger.info('Scraping GeBIZ tenders (attempt ${attempts}/${maxAttempts})...');
 
         // Navigate to GeBIZ opportunities page
         await this.page.goto(this.searchUrl, {
@@ -154,11 +158,11 @@ class GeBIZScraper {
         this.scrapingStats.successfulScrapes++;
         this.scrapingStats.lastScrapeTime = new Date().toISOString();
 
-        console.log(`Successfully scraped ${tenders.length} tenders in ${Date.now() - startTime}ms`);
+        logger.info('Successfully scraped ${tenders.length} tenders in ${Date.now() - startTime}ms');
         return tenders;
 
       } catch (error) {
-        console.error(`Scraping attempt ${attempts} failed:`, error.message);
+        logger.error('Scraping attempt ${attempts} failed:', { error: error.message });
         this.scrapingStats.failedScrapes++;
         this.scrapingStats.errors.push({
           timestamp: new Date().toISOString(),
@@ -172,7 +176,7 @@ class GeBIZScraper {
 
         // Exponential backoff
         const backoffDelay = Math.min(30000, 1000 * Math.pow(2, attempts));
-        console.log(`Waiting ${backoffDelay}ms before retry...`);
+        logger.info('Waiting ${backoffDelay}ms before retry...');
         await this.delay(backoffDelay);
 
         // Restart browser on persistent failures
@@ -257,7 +261,7 @@ class GeBIZScraper {
               scrapedAt: new Date().toISOString()
             });
           } catch (e) {
-            console.log('Error processing tender element:', e.message);
+            logger.info('Error processing tender element:', { data: e.message });
           }
         });
 
@@ -276,13 +280,13 @@ class GeBIZScraper {
 
       // If no specific results found, scrape recent tenders from RSS as fallback
       if (tenders.length === 0) {
-        console.log('No specific search results, falling back to RSS scraping...');
+        logger.info('No specific search results, falling back to RSS scraping...');
         const rssTenders = await this.scrapeRSSFeed();
         tenders.push(...rssTenders);
       }
 
     } catch (error) {
-      console.error('Error in searchTenders:', error);
+      logger.error('Error in searchTenders:', { error: error });
       // Fallback to RSS on search failure
       const rssTenders = await this.scrapeRSSFeed();
       tenders.push(...rssTenders);
@@ -330,7 +334,7 @@ class GeBIZScraper {
         scraped_at: rawTender.scrapedAt
       };
     } catch (error) {
-      console.error('Error processing tender data:', error);
+      logger.error('Error processing tender data:', { error: error });
       return null;
     }
   }
@@ -362,13 +366,13 @@ class GeBIZScraper {
             tenders.push(tender);
           }
         } catch (e) {
-          console.log('Error processing RSS item:', e.message);
+          logger.info('Error processing RSS item:', { data: e.message });
         }
       }
 
       return tenders;
     } catch (error) {
-      console.error('RSS scraping failed:', error);
+      logger.error('RSS scraping failed:', { error: error });
       return [];
     }
   }
@@ -386,7 +390,7 @@ class GeBIZScraper {
 
       for (const selector of captchaSelectors) {
         if (await this.page.$(selector)) {
-          console.log('CAPTCHA detected, attempting to solve...');
+          logger.info('CAPTCHA detected, attempting to solve...');
 
           // Wait a bit for CAPTCHA to fully load
           await this.delay(3000);
@@ -403,7 +407,7 @@ class GeBIZScraper {
 
       return false;
     } catch (error) {
-      console.log('CAPTCHA handling error:', error.message);
+      logger.info('CAPTCHA handling error:', { data: error.message });
       return false;
     }
   }
@@ -462,7 +466,7 @@ class GeBIZScraper {
         }
       }
     } catch (e) {
-      console.log('Date parsing error:', e.message);
+      logger.info('Date parsing error:', { data: e.message });
     }
 
     return null;
@@ -566,9 +570,9 @@ class GeBIZScraper {
         this.browser = null;
       }
       this.isInitialized = false;
-      console.log('GeBIZ scraper cleaned up');
+      logger.info('GeBIZ scraper cleaned up');
     } catch (error) {
-      console.error('Error during cleanup:', error);
+      logger.error('Error during cleanup:', { error: error });
     }
   }
 }

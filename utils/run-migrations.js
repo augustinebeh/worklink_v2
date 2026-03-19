@@ -3,6 +3,10 @@
  * Applies worker status classification schema changes
  */
 
+
+const { createLogger } = require('./structured-logger');
+const logger = createLogger('run-migrations');
+
 const fs = require('fs');
 const path = require('path');
 const { db } = require('../db');
@@ -12,7 +16,7 @@ const MIGRATIONS_DIR = path.join(__dirname, '..', 'db', 'migrations');
 async function runMigration(migrationFile) {
   const migrationPath = path.join(MIGRATIONS_DIR, migrationFile);
 
-  console.log(`\n🔄 Running migration: ${migrationFile}`);
+  logger.info('\n Running migration: ${migrationFile}');
 
   try {
     const sql = fs.readFileSync(migrationPath, 'utf8');
@@ -23,34 +27,34 @@ async function runMigration(migrationFile) {
       .map(stmt => stmt.trim())
       .filter(stmt => stmt.length > 0);
 
-    console.log(`   Found ${statements.length} SQL statements to execute`);
+    logger.info('Found ${statements.length} SQL statements to execute');
 
     for (const [index, statement] of statements.entries()) {
       try {
-        console.log(`   Executing statement ${index + 1}/${statements.length}...`);
+        logger.info('Executing statement ${index + 1}/${statements.length}...');
         db.prepare(statement).run();
       } catch (error) {
-        console.warn(`   Warning: Statement ${index + 1} failed (may be expected):`, error.message);
+        logger.warn('Warning: Statement ${index + 1} failed (may be expected):', { data: error.message });
         // Continue with other statements - some might fail if already applied
       }
     }
 
-    console.log(`✅ Migration completed: ${migrationFile}`);
+    logger.info('Migration completed: ${migrationFile}');
     return true;
 
   } catch (error) {
-    console.error(`❌ Migration failed: ${migrationFile}`, error.message);
+    logger.error('Migration failed: ${migrationFile}', { error: error.message });
     return false;
   }
 }
 
 async function runAllMigrations() {
-  console.log('🚀 Starting database migrations for Worker Status Classification...\n');
+  logger.info('Starting database migrations for Worker Status Classification...\n');
 
   try {
     // Ensure migrations directory exists
     if (!fs.existsSync(MIGRATIONS_DIR)) {
-      console.error(`❌ Migrations directory not found: ${MIGRATIONS_DIR}`);
+      logger.error('Migrations directory not found: ${MIGRATIONS_DIR}');
       return false;
     }
 
@@ -60,12 +64,12 @@ async function runAllMigrations() {
       .sort(); // Apply in alphabetical order
 
     if (migrationFiles.length === 0) {
-      console.log('ℹ️  No migration files found');
+      logger.info('ℹ️  No migration files found');
       return true;
     }
 
-    console.log(`📋 Found ${migrationFiles.length} migration file(s):`);
-    migrationFiles.forEach(file => console.log(`   - ${file}`));
+    logger.info('Found ${migrationFiles.length} migration file(s):');
+    migrationFiles.forEach(file => logger.info('- ${file}'));
 
     // Run each migration
     let successCount = 0;
@@ -76,30 +80,30 @@ async function runAllMigrations() {
       }
     }
 
-    console.log(`\n📊 Migration Summary:`);
-    console.log(`   ✅ Successful: ${successCount}/${migrationFiles.length}`);
-    console.log(`   ❌ Failed: ${migrationFiles.length - successCount}/${migrationFiles.length}`);
+    logger.info('\n Migration Summary:');
+    logger.info('Successful: ${successCount}/${migrationFiles.length}');
+    logger.info('Failed: ${migrationFiles.length - successCount}/${migrationFiles.length}');
 
     if (successCount === migrationFiles.length) {
-      console.log('\n🎉 All migrations completed successfully!');
+      logger.info('\n All migrations completed successfully!');
 
       // Verify the changes
       await verifyMigrations();
 
       return true;
     } else {
-      console.log('\n⚠️  Some migrations failed. Please check the logs.');
+      logger.info('\n️  Some migrations failed. Please check the logs.');
       return false;
     }
 
   } catch (error) {
-    console.error('❌ Migration runner failed:', error.message);
+    logger.error('Migration runner failed:', { error: error.message });
     return false;
   }
 }
 
 async function verifyMigrations() {
-  console.log('\n🔍 Verifying migration results...');
+  logger.info('\n Verifying migration results...');
 
   try {
     // Check if new columns exist
@@ -113,7 +117,7 @@ async function verifyMigrations() {
     `);
 
     const testResult = testQuery.get();
-    console.log('   ✅ New candidate columns are accessible');
+    logger.info('New candidate columns are accessible');
 
     // Check worker_status distribution
     const statusStats = db.prepare(`
@@ -124,9 +128,9 @@ async function verifyMigrations() {
       GROUP BY worker_status
     `).all();
 
-    console.log('   📊 Worker status distribution:');
+    logger.info('Worker status distribution:');
     statusStats.forEach(stat => {
-      console.log(`      ${stat.worker_status}: ${stat.count} candidates`);
+      logger.info('${stat.worker_status}: ${stat.count} candidates');
     });
 
     // Check if new tables exist
@@ -134,9 +138,9 @@ async function verifyMigrations() {
     for (const table of tables) {
       try {
         const count = db.prepare(`SELECT COUNT(*) as count FROM ${table}`).get().count;
-        console.log(`   ✅ Table '${table}' exists with ${count} rows`);
+        logger.info('Table \'${table}\' exists with ${count} rows');
       } catch (e) {
-        console.log(`   ❌ Table '${table}' not accessible: ${e.message}`);
+        logger.info('Table \'${table}\' not accessible: ${e.message}');
       }
     }
 
@@ -148,13 +152,13 @@ async function verifyMigrations() {
         AND name LIKE 'idx_candidates_worker%'
     `).all();
 
-    console.log(`   ✅ Created ${indexes.length} worker status indexes`);
+    logger.info('Created ${indexes.length} worker status indexes');
     indexes.forEach(idx => {
-      console.log(`      ${idx.name} on ${idx.tbl_name}`);
+      logger.info('${idx.name} on ${idx.tbl_name}');
     });
 
   } catch (error) {
-    console.error('   ❌ Verification failed:', error.message);
+    logger.error('Verification failed:', { error: error.message });
   }
 }
 
@@ -163,15 +167,15 @@ if (require.main === module) {
   runAllMigrations()
     .then(success => {
       if (success) {
-        console.log('\n✨ Database is ready for Worker Status Classification!');
+        logger.info('\n Database is ready for Worker Status Classification!');
         process.exit(0);
       } else {
-        console.log('\n💥 Migration process completed with errors.');
+        logger.info('\n Migration process completed with errors.');
         process.exit(1);
       }
     })
     .catch(error => {
-      console.error('\n💥 Migration runner crashed:', error);
+      logger.error('\n Migration runner crashed:', { error: error });
       process.exit(1);
     });
 }

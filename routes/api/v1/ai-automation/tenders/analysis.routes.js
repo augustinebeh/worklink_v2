@@ -8,6 +8,9 @@
 const express = require('express');
 const router = express.Router();
 const { db } = require('../../../../../db');
+const { createLogger } = require('../../../../../utils/structured-logger');
+const { authenticateAdmin } = require('../../../../../middleware/auth');
+const logger = createLogger('ai-automation:tenders:analysis');
 const { analyzeTender: analyzeWithClaude } = require('../../../../../utils/claude');
 const { analyzeTender } = require('../utils/scraping-helpers');
 
@@ -15,7 +18,7 @@ const { analyzeTender } = require('../utils/scraping-helpers');
  * POST /:id/analyze
  * Analyze a single tender using Claude AI
  */
-router.post('/:id/analyze', async (req, res) => {
+router.post('/:id/analyze', authenticateAdmin, async (req, res) => {
   try {
     const tender = db.prepare('SELECT * FROM tenders WHERE id = ?').get(req.params.id);
     
@@ -44,7 +47,7 @@ router.post('/:id/analyze', async (req, res) => {
       analysis = await analyzeWithClaude(tender, companyContext);
       aiPowered = true;
     } catch (aiError) {
-      console.warn('Claude AI unavailable, using fallback analysis:', aiError.message);
+      logger.warn('Claude AI unavailable, using fallback analysis', { error: aiError.message });
       // Fallback to rule-based analysis
       analysis = analyzeTender(tender);
     }
@@ -69,7 +72,7 @@ router.post('/:id/analyze', async (req, res) => {
   } catch (error) {
     res.status(500).json({
       success: false,
-      error: error.message
+      error: 'Internal server error'
     });
   }
 });
@@ -78,7 +81,7 @@ router.post('/:id/analyze', async (req, res) => {
  * POST /analyze-all
  * Batch analyze all new tenders using Claude AI
  */
-router.post('/analyze-all', async (req, res) => {
+router.post('/analyze-all', authenticateAdmin, async (req, res) => {
   try {
     const newTenders = db.prepare(`
       SELECT * FROM tenders WHERE status = 'new' AND win_probability IS NULL
@@ -149,7 +152,7 @@ router.post('/analyze-all', async (req, res) => {
   } catch (error) {
     res.status(500).json({
       success: false,
-      error: error.message
+      error: 'Internal server error'
     });
   }
 });
@@ -158,7 +161,7 @@ router.post('/analyze-all', async (req, res) => {
  * GET /:id/analysis
  * Get existing analysis for a tender
  */
-router.get('/:id/analysis', (req, res) => {
+router.get('/:id/analysis', authenticateAdmin, (req, res) => {
   try {
     const tender = db.prepare(`
       SELECT id, title, agency, estimated_value, manpower_required,
@@ -200,7 +203,7 @@ router.get('/:id/analysis', (req, res) => {
   } catch (error) {
     res.status(500).json({
       success: false,
-      error: error.message
+      error: 'Internal server error'
     });
   }
 });

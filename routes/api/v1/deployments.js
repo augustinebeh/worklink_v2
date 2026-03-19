@@ -1,9 +1,10 @@
 const express = require('express');
 const router = express.Router();
 const { db } = require('../../../db');
+const { authenticateAdmin, authenticateToken } = require('../../../middleware/auth');
 
 // Get all deployments with filters
-router.get('/', (req, res) => {
+router.get('/', authenticateAdmin, (req, res) => {
   try {
     const { status, job_id, candidate_id, from_date, to_date } = req.query;
     
@@ -54,67 +55,81 @@ router.get('/', (req, res) => {
     const deployments = db.prepare(sql).all(...params);
     res.json({ success: true, data: deployments });
   } catch (error) {
-    res.status(500).json({ success: false, error: error.message });
+    res.status(500).json({ success: false, error: 'Internal server error' });
   }
 });
 
 // Create new deployment (assign worker to job)
-router.post('/', (req, res) => {
+router.post('/', authenticateToken, (req, res) => {
   try {
     const { job_id, candidate_id, status = 'assigned' } = req.body;
 
-    if (!job_id || !candidate_id) {
-      return res.status(400).json({ success: false, error: 'job_id and candidate_id are required' });
+    if (!job_id || typeof job_id !== 'string') {
+      return res.status(400).json({ success: false, error: 'job_id is required and must be a string' });
+    }
+    if (!candidate_id || typeof candidate_id !== 'string') {
+      return res.status(400).json({ success: false, error: 'candidate_id is required and must be a string' });
     }
 
-    // Check if job exists
-    const job = db.prepare('SELECT * FROM jobs WHERE id = ?').get(job_id);
-    if (!job) {
-      return res.status(404).json({ success: false, error: 'Job not found' });
-    }
-
-    // Check if candidate exists
-    const candidate = db.prepare('SELECT * FROM candidates WHERE id = ?').get(candidate_id);
-    if (!candidate) {
-      return res.status(404).json({ success: false, error: 'Candidate not found' });
-    }
-
-    // Check if job has available slots
-    if (job.filled_slots >= job.total_slots) {
-      return res.status(400).json({ success: false, error: 'Job is fully booked' });
-    }
-
-    // Check if already deployed
-    const existing = db.prepare('SELECT * FROM deployments WHERE job_id = ? AND candidate_id = ?').get(job_id, candidate_id);
-    if (existing) {
-      return res.status(400).json({ success: false, error: 'Candidate already assigned to this job' });
-    }
-
-    // Create deployment
+    // Wrap in transaction to prevent TOCTOU race between slot check and insert
     const deployment_id = 'DEP' + Date.now().toString(36).toUpperCase();
-    db.prepare(`
-      INSERT INTO deployments (id, job_id, candidate_id, status)
-      VALUES (?, ?, ?, ?)
-    `).run(deployment_id, job_id, candidate_id, status);
+    const createDeployment = db.transaction(() => {
+      // Check if job exists
+      const job = db.prepare('SELECT * FROM jobs WHERE id = ?').get(job_id);
+      if (!job) {
+        return { error: 'Job not found', status: 404 };
+      }
 
-    // Update job filled slots
-    db.prepare('UPDATE jobs SET filled_slots = filled_slots + 1 WHERE id = ?').run(job_id);
+      // Check if candidate exists
+      const candidate = db.prepare('SELECT * FROM candidates WHERE id = ?').get(candidate_id);
+      if (!candidate) {
+        return { error: 'Candidate not found', status: 404 };
+      }
 
-    // Check if job is now fully booked and update status
-    const updatedJob = db.prepare('SELECT filled_slots, total_slots FROM jobs WHERE id = ?').get(job_id);
-    if (updatedJob.filled_slots >= updatedJob.total_slots) {
-      db.prepare('UPDATE jobs SET status = ? WHERE id = ?').run('filled', job_id);
+      // Check if job has available slots (inside transaction to prevent race)
+      if (job.filled_slots >= job.total_slots) {
+        return { error: 'Job is fully booked', status: 400 };
+      }
+
+      // Check if already deployed
+      const existing = db.prepare('SELECT * FROM deployments WHERE job_id = ? AND candidate_id = ?').get(job_id, candidate_id);
+      if (existing) {
+        return { error: 'Candidate already assigned to this job', status: 400 };
+      }
+
+      // Create deployment
+      db.prepare(`
+        INSERT INTO deployments (id, job_id, candidate_id, status)
+        VALUES (?, ?, ?, ?)
+      `).run(deployment_id, job_id, candidate_id, status);
+
+      // Update job filled slots
+      db.prepare('UPDATE jobs SET filled_slots = filled_slots + 1 WHERE id = ?').run(job_id);
+
+      // Check if job is now fully booked and update status
+      const updatedJob = db.prepare('SELECT filled_slots, total_slots FROM jobs WHERE id = ?').get(job_id);
+      if (updatedJob.filled_slots >= updatedJob.total_slots) {
+        db.prepare('UPDATE jobs SET status = ? WHERE id = ?').run('filled', job_id);
+      }
+
+      return { success: true };
+    });
+
+    const result = createDeployment();
+
+    if (result.error) {
+      return res.status(result.status).json({ success: false, error: result.error });
     }
 
     const deployment = db.prepare('SELECT * FROM deployments WHERE id = ?').get(deployment_id);
     res.json({ success: true, data: deployment });
   } catch (error) {
-    res.status(500).json({ success: false, error: error.message });
+    res.status(500).json({ success: false, error: 'Internal server error' });
   }
 });
 
 // Get single deployment
-router.get('/:id', (req, res) => {
+router.get('/:id', authenticateToken, (req, res) => {
   try {
     const deployment = db.prepare(`
       SELECT 
@@ -143,14 +158,20 @@ router.get('/:id', (req, res) => {
 
     res.json({ success: true, data: deployment });
   } catch (error) {
-    res.status(500).json({ success: false, error: error.message });
+    res.status(500).json({ success: false, error: 'Internal server error' });
   }
 });
 
 // Update deployment status
-router.patch('/:id', (req, res) => {
+router.patch('/:id', authenticateAdmin, (req, res) => {
   try {
     const { status, check_in_time, check_out_time, hours_worked, rating, feedback } = req.body;
+
+    const allowedStatuses = ['assigned', 'confirmed', 'checked_in', 'completed', 'cancelled', 'no_show'];
+    if (status && !allowedStatuses.includes(status)) {
+      return res.status(400).json({ success: false, error: `status must be one of: ${allowedStatuses.join(', ')}` });
+    }
+
     const deployment = db.prepare('SELECT * FROM deployments WHERE id = ?').get(req.params.id);
 
     if (!deployment) {
@@ -200,12 +221,12 @@ router.patch('/:id', (req, res) => {
     const updated = db.prepare('SELECT * FROM deployments WHERE id = ?').get(req.params.id);
     res.json({ success: true, data: updated });
   } catch (error) {
-    res.status(500).json({ success: false, error: error.message });
+    res.status(500).json({ success: false, error: 'Internal server error' });
   }
 });
 
 // Get deployment stats
-router.get('/stats/overview', (req, res) => {
+router.get('/stats/overview', authenticateAdmin, (req, res) => {
   try {
     const stats = {
       total: db.prepare('SELECT COUNT(*) as count FROM deployments').get().count,
@@ -224,7 +245,7 @@ router.get('/stats/overview', (req, res) => {
 
     res.json({ success: true, data: stats });
   } catch (error) {
-    res.status(500).json({ success: false, error: error.message });
+    res.status(500).json({ success: false, error: 'Internal server error' });
   }
 });
 

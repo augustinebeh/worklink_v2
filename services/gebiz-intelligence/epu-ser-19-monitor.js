@@ -6,11 +6,11 @@
  * of government procurement - EPU/SER/19 (Service - Manpower Supply)
  */
 
-const Database = require('better-sqlite3');
-const path = require('path');
-const fs = require('fs');
 const axios = require('axios');
 const cheerio = require('cheerio');
+const { db } = require('../../db');
+const { createLogger } = require('../../utils/structured-logger');
+const logger = createLogger('epu-ser-19-monitor');
 
 class EPUSer19Monitor {
   constructor() {
@@ -78,20 +78,7 @@ class EPUSer19Monitor {
    */
   initDB() {
     if (!this.db) {
-      const IS_RAILWAY = !!process.env.RAILWAY_ENVIRONMENT;
-      const DB_DIR = IS_RAILWAY
-        ? (process.env.RAILWAY_VOLUME_MOUNT_PATH || '/app/data')
-        : path.join(__dirname, '../../database');
-
-      if (!fs.existsSync(DB_DIR)) {
-        fs.mkdirSync(DB_DIR, { recursive: true });
-      }
-
-      const dbPath = path.join(DB_DIR, 'gebiz_intelligence.db');
-      this.db = new Database(dbPath);
-      this.db.pragma('journal_mode = WAL');
-      this.db.pragma('foreign_keys = ON');
-
+      this.db = db;
       this.ensureEPUTables();
     }
   }
@@ -229,9 +216,9 @@ class EPUSer19Monitor {
       this.db.exec(createCompetitorTableSQL);
       this.db.exec(createPricingTableSQL);
 
-      console.log('✅ EPU/SER/19 specialized tables created');
+      logger.info('EPU/SER/19 specialized tables created');
     } catch (error) {
-      console.error('❌ Failed to create EPU/SER/19 tables:', error.message);
+      logger.error('Failed to create EPU/SER/19 tables', { error: error.message });
       throw error;
     }
   }
@@ -478,10 +465,10 @@ class EPUSer19Monitor {
         }
       }
 
-      console.log(`✅ Stored EPU/SER/19 tender: ${tender.title} (Score: ${analysis.intelligence_score})`);
+      logger.info('Stored EPU/SER/19 tender', { title: tender.title, intelligence_score: analysis.intelligence_score });
       return result.lastInsertRowid;
     } catch (error) {
-      console.error('❌ Failed to store EPU tender:', error.message);
+      logger.error('Failed to store EPU tender', { error: error.message });
       throw error;
     }
   }
@@ -634,13 +621,10 @@ class EPUSer19Monitor {
   }
 
   /**
-   * Close database connection
+   * Close database connection (no-op: using singleton)
    */
   closeDB() {
-    if (this.db) {
-      this.db.close();
-      this.db = null;
-    }
+    // No-op: singleton db connection is managed by db/index.js
   }
 }
 

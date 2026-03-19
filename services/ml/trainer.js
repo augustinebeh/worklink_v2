@@ -8,6 +8,8 @@
 const { db } = require('../../db');
 const fs = require('fs');
 const path = require('path');
+const { createLogger } = require('../../utils/structured-logger');
+const logger = createLogger('ml-trainer');
 
 /**
  * Get training data with filters
@@ -301,7 +303,7 @@ Guidelines:
 
     return { generated: pairs.length, pairs };
   } catch (error) {
-    console.error('Failed to generate synthetic data:', error);
+    logger.error('Failed to generate synthetic data', { error: error.message });
     throw error;
   }
 }
@@ -390,7 +392,7 @@ function importFromJSONL(content, options = {}) {
       }
     } catch (e) {
       errors++;
-      console.warn(`Failed to parse line ${index + 1}:`, e.message);
+      logger.warn('Failed to parse training data line', { line: index + 1, error: e.message });
     }
   });
 

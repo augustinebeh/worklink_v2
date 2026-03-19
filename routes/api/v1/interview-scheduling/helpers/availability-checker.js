@@ -5,6 +5,8 @@
 
 const { db } = require('../../../../db');
 const { generateTimeSlots, getTimePeriod, getDateRange } = require('./time-utils');
+const { createLogger } = require('../../../../../utils/structured-logger');
+const logger = createLogger('interview-scheduling:availability-checker');
 
 /**
  * Check if a specific time slot is available for booking
@@ -31,7 +33,7 @@ function isSlotAvailable(date, time, excludeInterviewId = null) {
     const result = db.prepare(query).get(...params);
     return result.count === 0;
   } catch (error) {
-    console.error('Error checking slot availability:', error);
+    logger.error('Error checking slot availability', { error: error.message });
     return false;
   }
 }
@@ -111,7 +113,7 @@ function getAvailableSlots(options = {}) {
 
     return slots.slice(0, limit);
   } catch (error) {
-    console.error('Error fetching available slots:', error);
+    logger.error('Error fetching available slots', { error: error.message });
     return [];
   }
 }
@@ -180,11 +182,11 @@ function checkConflicts(date, time, duration = 30) {
 
     return conflicts;
   } catch (error) {
-    console.error('Error checking conflicts:', error);
+    logger.error('Error checking conflicts', { error: error.message });
     return {
       hasConflict: true,
       conflictType: 'error',
-      error: error.message
+      error: 'Internal server error'
     };
   }
 }
@@ -229,7 +231,7 @@ function generateConflictSuggestions(originalDate, originalTime, duration) {
 
     return suggestions;
   } catch (error) {
-    console.error('Error generating conflict suggestions:', error);
+    logger.error('Error generating conflict suggestions', { error: error.message });
     return [];
   }
 }
@@ -265,11 +267,11 @@ function checkCandidateAvailability(candidateId) {
       canSchedule: !existingInterview // Can't schedule if already has active interview
     };
   } catch (error) {
-    console.error('Error checking candidate availability:', error);
+    logger.error('Error checking candidate availability', { error: error.message });
     return {
       hasExistingInterview: false,
       canSchedule: true,
-      error: error.message
+      error: 'Internal server error'
     };
   }
 }
@@ -299,10 +301,10 @@ function checkConsultantAvailability(consultantId, date, time) {
       reason: availability ? 'Available' : 'No availability window found'
     };
   } catch (error) {
-    console.error('Error checking consultant availability:', error);
+    logger.error('Error checking consultant availability', { error: error.message });
     return {
       isAvailable: false,
-      error: error.message
+      error: 'Internal server error'
     };
   }
 }
@@ -341,7 +343,7 @@ function getBookingStatistics(options = {}) {
       period: { startDate, endDate }
     };
   } catch (error) {
-    console.error('Error getting booking statistics:', error);
+    logger.error('Error getting booking statistics', { error: error.message });
     return null;
   }
 }

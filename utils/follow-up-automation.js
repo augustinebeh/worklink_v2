@@ -11,6 +11,10 @@
  * - Engagement-based optimization
  */
 
+
+const { createLogger } = require('./structured-logger');
+const logger = createLogger('follow-up-automation');
+
 const { db } = require('../db');
 const { generateOutreachMessage } = require('./claude');
 const { createOutreachCampaign, CHANNELS } = require('./candidate-outreach');
@@ -276,11 +280,11 @@ function createFollowUpSequence(sequenceData) {
       active ? 1 : 0
     );
 
-    console.log(`🔄 [Follow-up] Created sequence: ${name} (${id})`);
+    logger.info('[Follow-up] Created sequence: ${name} (${id})');
 
     return { sequenceId: id, success: true };
   } catch (error) {
-    console.error('Error creating follow-up sequence:', error);
+    logger.error('Error creating follow-up sequence:', { error: error });
     throw error;
   }
 }
@@ -302,7 +306,7 @@ function triggerFollowUpSequence(candidateId, sequenceId, triggerEvent, triggerD
     `).get(candidateId, sequenceId);
 
     if (existingInstance) {
-      console.log(`🔄 [Follow-up] Candidate ${candidateId} already has active instance of sequence ${sequenceId}`);
+      logger.info('[Follow-up] Candidate ${candidateId} already has active instance of sequence ${sequenceId}');
       return { instanceId: existingInstance.id, status: 'already_active' };
     }
 
@@ -331,11 +335,11 @@ function triggerFollowUpSequence(candidateId, sequenceId, triggerEvent, triggerD
       nextActionAt
     );
 
-    console.log(`🔄 [Follow-up] Triggered sequence "${sequence.name}" for candidate ${candidateId} (${instanceId})`);
+    logger.info('[Follow-up] Triggered sequence "${sequence.name}" for candidate ${candidateId} (${instanceId})');
 
     return { instanceId, success: true, nextActionAt };
   } catch (error) {
-    console.error('Error triggering follow-up sequence:', error);
+    logger.error('Error triggering follow-up sequence:', { error: error });
     throw error;
   }
 }
@@ -356,7 +360,7 @@ async function processFollowUpActions() {
       ORDER BY fi.next_action_at ASC
     `).all();
 
-    console.log(`🔄 [Follow-up] Processing ${pendingInstances.length} pending actions`);
+    logger.info('[Follow-up] Processing ${pendingInstances.length} pending actions');
 
     let processed = 0;
     let errors = 0;
@@ -366,7 +370,7 @@ async function processFollowUpActions() {
         await processFollowUpInstance(instance);
         processed++;
       } catch (error) {
-        console.error(`Failed to process instance ${instance.id}:`, error);
+        logger.error('Failed to process instance ${instance.id}:', { error: error });
         errors++;
 
         // Mark instance as failed if too many errors
@@ -382,11 +386,11 @@ async function processFollowUpActions() {
       await new Promise(resolve => setTimeout(resolve, 100));
     }
 
-    console.log(`🔄 [Follow-up] Processed ${processed} instances, ${errors} errors`);
+    logger.info('[Follow-up] Processed ${processed} instances, ${errors} errors');
 
     return { processed, errors };
   } catch (error) {
-    console.error('Error processing follow-up actions:', error);
+    logger.error('Error processing follow-up actions:', { error: error });
     throw error;
   }
 }
@@ -408,7 +412,7 @@ async function processFollowUpInstance(instance) {
     return;
   }
 
-  console.log(`🔄 [Follow-up] Processing step ${currentStepIndex + 1} for instance ${instance.id}: ${currentStep.type}`);
+  logger.info('[Follow-up] Processing step ${currentStepIndex + 1} for instance ${instance.id}: ${currentStep.type}');
 
   let nextStepIndex = currentStepIndex + 1;
   let nextActionAt = null;
@@ -453,7 +457,7 @@ async function processFollowUpInstance(instance) {
       break;
 
     default:
-      console.warn(`Unknown action type: ${currentStep.type}`);
+      logger.warn('Unknown action type: ${currentStep.type}');
   }
 
   // Update instance
@@ -513,7 +517,7 @@ async function executeSendMessage(instance, step) {
     }
 
     // Log the message (would integrate with actual messaging service)
-    console.log(`💬 [Follow-up] Sending ${step.channel} message to ${candidate.name}: ${message.substring(0, 100)}...`);
+    logger.info('[Follow-up] Sending ${step.channel} message to ${candidate.name}: ${message.substring(0, 100)}...');
 
     // Track engagement
     trackEngagement(candidate.id, 'MESSAGE_SENT', {
@@ -526,7 +530,7 @@ async function executeSendMessage(instance, step) {
     // TODO: Integrate with actual messaging service
     return { success: true, messageId: `msg_${Date.now()}` };
   } catch (error) {
-    console.error('Error executing send message:', error);
+    logger.error('Error executing send message:', { error: error });
     throw error;
   }
 }
@@ -539,19 +543,19 @@ async function executeSendEmail(instance, step) {
     const candidate = db.prepare('SELECT * FROM candidates WHERE id = ?').get(instance.candidate_id);
 
     if (!candidate.email) {
-      console.warn(`No email address for candidate ${candidate.id}`);
+      logger.warn('No email address for candidate ${candidate.id}');
       return { success: false, reason: 'no_email' };
     }
 
     const message = generateTemplateMessage(step.template, candidate, instance);
 
-    console.log(`📧 [Follow-up] Sending email to ${candidate.name} (${candidate.email})`);
+    logger.info('[Follow-up] Sending email to ${candidate.name} (${candidate.email})');
 
     // TODO: Integrate with email service
 
     return { success: true, messageId: `email_${Date.now()}` };
   } catch (error) {
-    console.error('Error executing send email:', error);
+    logger.error('Error executing send email:', { error: error });
     throw error;
   }
 }
@@ -574,11 +578,11 @@ async function executeTriggerCampaign(instance, step) {
       autoStart: true,
     });
 
-    console.log(`🚀 [Follow-up] Triggered campaign for candidate ${candidate.id}: ${campaignResult.campaignId}`);
+    logger.info('[Follow-up] Triggered campaign for candidate ${candidate.id}: ${campaignResult.campaignId}');
 
     return campaignResult;
   } catch (error) {
-    console.error('Error triggering campaign:', error);
+    logger.error('Error triggering campaign:', { error: error });
     throw error;
   }
 }
@@ -610,11 +614,11 @@ async function executeUpdateCandidate(instance, step) {
       );
     }
 
-    console.log(`📝 [Follow-up] Updated candidate ${instance.candidate_id}`);
+    logger.info('[Follow-up] Updated candidate ${instance.candidate_id}');
 
     return { success: true };
   } catch (error) {
-    console.error('Error updating candidate:', error);
+    logger.error('Error updating candidate:', { error: error });
     throw error;
   }
 }
@@ -623,7 +627,7 @@ async function executeUpdateCandidate(instance, step) {
  * Execute end sequence action
  */
 async function executeEndSequence(instance, step) {
-  console.log(`🏁 [Follow-up] Ending sequence for instance ${instance.id}: ${step.reason || 'sequence_complete'}`);
+  logger.info('[Follow-up] Ending sequence for instance ${instance.id}: ${step.reason || \'sequence_complete\'}');
 
   if (step.updateCandidate) {
     await executeUpdateCandidate(instance, step);
@@ -667,7 +671,7 @@ async function evaluateCondition(instance, condition) {
       return (candidate.engagement_score || 0) >= 70;
 
     default:
-      console.warn(`Unknown condition: ${condition}`);
+      logger.warn('Unknown condition: ${condition}');
       return false;
   }
 }
@@ -733,7 +737,7 @@ function updateFollowUpInstance(instanceId, updateData) {
  * Initialize default follow-up sequences
  */
 function initializeDefaultSequences() {
-  console.log('🔄 [Follow-up] Initializing default sequences...');
+  logger.info('[Follow-up] Initializing default sequences...');
 
   for (const [key, sequence] of Object.entries(DEFAULT_SEQUENCES)) {
     try {
@@ -742,7 +746,7 @@ function initializeDefaultSequences() {
         createFollowUpSequence(sequence);
       }
     } catch (error) {
-      console.warn(`Failed to create default sequence ${key}:`, error.message);
+      logger.warn('Failed to create default sequence ${key}:', { data: error.message });
     }
   }
 }
@@ -780,7 +784,7 @@ function getFollowUpStats(days = 30) {
       period: `${days} days`,
     };
   } catch (error) {
-    console.error('Error getting follow-up stats:', error);
+    logger.error('Error getting follow-up stats:', { error: error });
     return { sequences: [], period: `${days} days` };
   }
 }

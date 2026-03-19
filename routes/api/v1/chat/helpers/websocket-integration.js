@@ -39,7 +39,7 @@ async function broadcastToCandidate(candidateId, messageData) {
 
     await websocket.broadcastToCandidate(candidateId, {
       type: 'chat_message',
-      data: messageData,
+      message: messageData,
       timestamp: new Date().toISOString()
     });
 
@@ -67,8 +67,8 @@ async function broadcastToAdmins(messageData) {
     }
 
     await websocket.broadcastToAdmins({
-      type: 'chat_message',
-      data: messageData,
+      type: 'new_message',
+      message: messageData,
       timestamp: new Date().toISOString()
     });
 
@@ -99,7 +99,7 @@ async function broadcastTypingIndicator(candidateId, sender, isTyping) {
       type: 'typing',
       candidateId,
       sender,
-      isTyping,
+      typing: isTyping,
       timestamp: new Date().toISOString()
     };
 
@@ -135,7 +135,7 @@ async function broadcastReadReceipt(candidateId, messageId, reader) {
     }
 
     const readData = {
-      type: 'message_read',
+      type: 'messages_read',
       candidateId,
       messageId,
       reader,

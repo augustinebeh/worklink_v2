@@ -1,17 +1,13 @@
 import { useState, useEffect } from 'react';
 import {
   Brain,
-  Database,
-  Zap,
   TrendingUp,
-  DollarSign,
+  Database,
   MessageSquare,
   BookOpen,
-  Download,
-  RefreshCw,
   Settings,
+  RefreshCw,
   ChevronRight,
-  Search,
   Edit3,
   Trash2,
   Plus,
@@ -21,31 +17,9 @@ import {
 import Card from '../components/ui/Card';
 import Badge from '../components/ui/Badge';
 import { clsx } from 'clsx';
-
-// Stat card component
-function StatCard({ icon: Icon, label, value, subValue, color = 'primary' }) {
-  const colorClasses = {
-    primary: 'bg-primary-500/10 text-primary-600 dark:text-primary-400',
-    emerald: 'bg-emerald-500/10 text-emerald-600 dark:text-emerald-400',
-    violet: 'bg-violet-500/10 text-violet-600 dark:text-violet-400',
-    amber: 'bg-amber-500/10 text-amber-600 dark:text-amber-400',
-  };
-
-  return (
-    <Card className="flex items-center gap-4">
-      <div className={clsx('p-3 rounded-xl', colorClasses[color])}>
-        <Icon className="h-6 w-6" />
-      </div>
-      <div>
-        <p className="text-sm text-slate-500 dark:text-slate-400">{label}</p>
-        <p className="text-2xl font-bold text-slate-900 dark:text-white">{value}</p>
-        {subValue && (
-          <p className="text-xs text-slate-400">{subValue}</p>
-        )}
-      </div>
-    </Card>
-  );
-}
+import MLStatsCards from '../components/ml/MLStatsCards';
+import MLModelPanel from '../components/ml/MLModelPanel';
+import MLPredictionsPanel from '../components/ml/MLPredictionsPanel';
 
 // FAQ item component
 function FAQItem({ faq, onEdit, onDelete }) {
@@ -148,7 +122,7 @@ export default function MLDashboard() {
       const data = await res.json();
       if (data.success) setStats(data.data);
     } catch (error) {
-      console.error('Failed to fetch ML stats:', error);
+      // Failed to fetch ML stats
     }
   };
 
@@ -158,7 +132,7 @@ export default function MLDashboard() {
       const data = await res.json();
       if (data.success) setSettings(data.data);
     } catch (error) {
-      console.error('Failed to fetch ML settings:', error);
+      // Failed to fetch ML settings
     }
   };
 
@@ -168,7 +142,7 @@ export default function MLDashboard() {
       const data = await res.json();
       if (data.success) setFaqs(data.data);
     } catch (error) {
-      console.error('Failed to fetch FAQs:', error);
+      // Failed to fetch FAQs
     }
   };
 
@@ -178,7 +152,7 @@ export default function MLDashboard() {
       const data = await res.json();
       if (data.success) setKnowledgeBase(data.data);
     } catch (error) {
-      console.error('Failed to fetch knowledge base:', error);
+      // Failed to fetch knowledge base
     }
   };
 
@@ -188,7 +162,7 @@ export default function MLDashboard() {
       const data = await res.json();
       if (data.success) setResponseLogs(data.data);
     } catch (error) {
-      console.error('Failed to fetch response logs:', error);
+      // Failed to fetch response logs
     }
   };
 
@@ -201,7 +175,7 @@ export default function MLDashboard() {
       });
       setSettings(prev => ({ ...prev, [key]: value }));
     } catch (error) {
-      console.error('Failed to update setting:', error);
+      // Failed to update setting
     }
   };
 
@@ -228,7 +202,7 @@ export default function MLDashboard() {
       setFaqForm({ category: '', question: '', answer: '', keywords: '', priority: 0 });
       fetchFAQs();
     } catch (error) {
-      console.error('Failed to save FAQ:', error);
+      // Failed to save FAQ
     }
   };
 
@@ -250,7 +224,7 @@ export default function MLDashboard() {
       await fetch(`/api/v1/ml/faq/${id}`, { method: 'DELETE' });
       fetchFAQs();
     } catch (error) {
-      console.error('Failed to delete FAQ:', error);
+      // Failed to delete FAQ
     }
   };
 
@@ -270,7 +244,7 @@ export default function MLDashboard() {
       a.click();
       URL.revokeObjectURL(url);
     } catch (error) {
-      console.error('Failed to export training data:', error);
+      // Failed to export training data
     }
   };
 
@@ -334,81 +308,8 @@ export default function MLDashboard() {
       {/* Overview Tab */}
       {activeTab === 'overview' && stats && (
         <div className="space-y-6">
-          {/* Stats Grid */}
-          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
-            <StatCard
-              icon={Database}
-              label="Knowledge Base Size"
-              value={stats.kbSize || 0}
-              subValue="Learned Q&A pairs"
-              color="primary"
-            />
-            <StatCard
-              icon={Zap}
-              label="KB Hit Rate"
-              value={`${((stats.kbHitRate || 0) * 100).toFixed(1)}%`}
-              subValue="Answered without LLM"
-              color="emerald"
-            />
-            <StatCard
-              icon={MessageSquare}
-              label="Total Responses"
-              value={stats.totalResponses || 0}
-              subValue={`${stats.llmCalls || 0} LLM calls`}
-              color="violet"
-            />
-            <StatCard
-              icon={DollarSign}
-              label="Estimated Savings"
-              value={`$${(stats.costSaved || 0).toFixed(2)}`}
-              subValue="From KB hits"
-              color="amber"
-            />
-          </div>
-
-          {/* Training Stats */}
-          {stats.training && (
-            <Card>
-              <h3 className="text-lg font-semibold text-slate-900 dark:text-white mb-4">
-                Training Data
-              </h3>
-              <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
-                <div>
-                  <p className="text-sm text-slate-500 dark:text-slate-400">Total Examples</p>
-                  <p className="text-xl font-bold text-slate-900 dark:text-white">{stats.training.totalExamples}</p>
-                </div>
-                <div>
-                  <p className="text-sm text-slate-500 dark:text-slate-400">Approved</p>
-                  <p className="text-xl font-bold text-emerald-600">{stats.training.approvedExamples}</p>
-                </div>
-                <div>
-                  <p className="text-sm text-slate-500 dark:text-slate-400">High Quality</p>
-                  <p className="text-xl font-bold text-violet-600">{stats.training.highQualityExamples}</p>
-                </div>
-                <div>
-                  <p className="text-sm text-slate-500 dark:text-slate-400">Avg Quality</p>
-                  <p className="text-xl font-bold text-slate-900 dark:text-white">{stats.training.averageQuality}</p>
-                </div>
-              </div>
-
-              <div className="mt-4 flex items-center gap-2">
-                <button
-                  onClick={() => exportTrainingData('jsonl')}
-                  className="flex items-center gap-2 px-4 py-2 rounded-lg bg-primary-500 text-white text-sm hover:bg-primary-600 transition-colors"
-                >
-                  <Download className="h-4 w-4" />
-                  Export JSONL
-                </button>
-                <button
-                  onClick={() => exportTrainingData('csv')}
-                  className="flex items-center gap-2 px-4 py-2 rounded-lg bg-slate-200 dark:bg-slate-700 text-slate-700 dark:text-slate-300 text-sm hover:bg-slate-300 dark:hover:bg-slate-600 transition-colors"
-                >
-                  <Download className="h-4 w-4" />
-                  Export CSV
-                </button>
-              </div>
-            </Card>
-          )}
+          <MLStatsCards stats={stats} />
+          <MLModelPanel training={stats.training} onExport={exportTrainingData} />
         </div>
       )}
 
@@ -452,92 +353,12 @@ export default function MLDashboard() {
         </div>
       )}
 
-      {/* Knowledge Base Tab */}
-      {activeTab === 'knowledge' && (
-        <Card>
-          <div className="flex items-center justify-between mb-4">
-            <h3 className="text-lg font-semibold text-slate-900 dark:text-white">
-              Learned Knowledge Base
-            </h3>
-          </div>
-
-          {knowledgeBase.length === 0 ? (
-            <div className="p-8 text-center text-slate-400">
-              <Database className="h-8 w-8 mx-auto mb-2 opacity-50" />
-              <p>Knowledge base is empty</p>
-              <p className="text-sm mt-1">It will grow as the AI learns from conversations</p>
-            </div>
-          ) : (
-            <div className="space-y-3">
-              {knowledgeBase.map(entry => (
-                <div key={entry.id} className="p-4 rounded-lg bg-slate-50 dark:bg-slate-800/50">
-                  <div className="flex items-start justify-between mb-2">
-                    <p className="font-medium text-slate-900 dark:text-white">
-                      {entry.question}
-                    </p>
-                    <Badge
-                      variant={entry.confidence >= 0.8 ? 'success' : entry.confidence >= 0.5 ? 'warning' : 'default'}
-                      size="xs"
-                    >
-                      {Math.round(entry.confidence * 100)}%
-                    </Badge>
-                  </div>
-                  <p className="text-sm text-slate-600 dark:text-slate-400">
-                    {entry.answer}
-                  </p>
-                  <div className="flex items-center gap-4 mt-2 text-xs text-slate-400">
-                    <span>Used {entry.use_count || 0}x</span>
-                    <span>Source: {entry.source}</span>
-                    {entry.intent && <span>Intent: {entry.intent}</span>}
-                  </div>
-                </div>
-              ))}
-            </div>
-          )}
-        </Card>
-      )}
-
-      {/* Response Logs Tab */}
-      {activeTab === 'logs' && (
-        <Card>
-          <h3 className="text-lg font-semibold text-slate-900 dark:text-white mb-4">
-            Recent AI Responses
-          </h3>
-
-          {responseLogs.length === 0 ? (
-            <div className="p-8 text-center text-slate-400">
-              <MessageSquare className="h-8 w-8 mx-auto mb-2 opacity-50" />
-              <p>No response logs yet</p>
-            </div>
-          ) : (
-            <div className="space-y-3">
-              {responseLogs.map(log => (
-                <div key={log.id} className="p-4 rounded-lg bg-slate-50 dark:bg-slate-800/50 border-l-4 border-l-primary-500">
-                  <div className="flex items-center justify-between mb-2">
-                    <span className="text-xs text-slate-400">
-                      {new Date(log.created_at).toLocaleString('en-SG', { timeZone: 'Asia/Singapore' })}
-                    </span>
-                    <div className="flex items-center gap-2">
-                      <Badge variant={log.source === 'knowledge_base' ? 'success' : 'primary'} size="xs">
-                        {log.source === 'knowledge_base' ? 'KB' : 'LLM'}
-                      </Badge>
-                      <Badge variant={log.status === 'sent' ? 'success' : 'warning'} size="xs">
-                        {log.status}
-                      </Badge>
-                    </div>
-                  </div>
-                  <p className="text-sm text-slate-500 dark:text-slate-400 mb-1">
-                    <strong>Q:</strong> {log.incoming_message}
-                  </p>
-                  <p className="text-sm text-slate-900 dark:text-white">
-                    <strong>A:</strong> {log.ai_response}
-                  </p>
-                </div>
-              ))}
-            </div>
-          )}
-        </Card>
-      )}
+      {/* Knowledge Base & Response Logs Tabs */}
+      <MLPredictionsPanel
+        activeTab={activeTab}
+        knowledgeBase={knowledgeBase}
+        responseLogs={responseLogs}
+      />
 
       {/* Settings Tab */}
       {activeTab === 'settings' && (

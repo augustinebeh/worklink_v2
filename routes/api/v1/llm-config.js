@@ -40,7 +40,7 @@ router.get('/status', async (req, res) => {
   } catch (error) {
     res.status(500).json({
       success: false,
-      error: error.message,
+      error: 'Internal server error',
     });
   }
 });
@@ -59,7 +59,7 @@ router.post('/test', async (req, res) => {
   } catch (error) {
     res.status(500).json({
       success: false,
-      error: error.message,
+      error: 'Internal server error',
     });
   }
 });
@@ -98,7 +98,7 @@ router.post('/test/:provider', async (req, res) => {
   } catch (error) {
     res.status(500).json({
       success: false,
-      error: error.message,
+      error: 'Internal server error',
     });
   }
 });
@@ -122,7 +122,7 @@ router.get('/stats', (req, res) => {
   } catch (error) {
     res.status(500).json({
       success: false,
-      error: error.message,
+      error: 'Internal server error',
     });
   }
 });
@@ -153,7 +153,7 @@ router.get('/cost-breakdown', (req, res) => {
   } catch (error) {
     res.status(500).json({
       success: false,
-      error: error.message,
+      error: 'Internal server error',
     });
   }
 });
@@ -180,7 +180,7 @@ router.post('/cleanup', (req, res) => {
   } catch (error) {
     res.status(500).json({
       success: false,
-      error: error.message,
+      error: 'Internal server error',
     });
   }
 });
@@ -215,7 +215,7 @@ router.get('/env-check', (req, res) => {
   } catch (error) {
     res.status(500).json({
       success: false,
-      error: error.message,
+      error: 'Internal server error',
     });
   }
 });
@@ -249,7 +249,7 @@ router.post('/test-features', async (req, res) => {
       });
       results.jobPostings = { status: 'success', data: jobPostings };
     } catch (error) {
-      results.jobPostings = { status: 'error', error: error.message };
+      results.jobPostings = { status: 'error', error: 'Internal server error' };
     }
 
     // Test outreach message generation
@@ -272,7 +272,7 @@ router.post('/test-features', async (req, res) => {
       );
       results.outreachMessage = { status: 'success', data: outreach };
     } catch (error) {
-      results.outreachMessage = { status: 'error', error: error.message };
+      results.outreachMessage = { status: 'error', error: 'Internal server error' };
     }
 
     // Test tender analysis
@@ -295,7 +295,7 @@ router.post('/test-features', async (req, res) => {
       );
       results.tenderAnalysis = { status: 'success', data: analysis };
     } catch (error) {
-      results.tenderAnalysis = { status: 'error', error: error.message };
+      results.tenderAnalysis = { status: 'error', error: 'Internal server error' };
     }
 
     // Test candidate matching
@@ -328,7 +328,7 @@ router.post('/test-features', async (req, res) => {
       );
       results.candidateMatching = { status: 'success', data: matches };
     } catch (error) {
-      results.candidateMatching = { status: 'error', error: error.message };
+      results.candidateMatching = { status: 'error', error: 'Internal server error' };
     }
 
     res.json({
@@ -338,7 +338,7 @@ router.post('/test-features', async (req, res) => {
   } catch (error) {
     res.status(500).json({
       success: false,
-      error: error.message,
+      error: 'Internal server error',
     });
   }
 });
@@ -374,7 +374,7 @@ router.post('/chat', async (req, res) => {
   } catch (error) {
     res.status(500).json({
       success: false,
-      error: error.message,
+      error: 'Internal server error',
     });
   }
 });

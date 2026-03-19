@@ -19,8 +19,8 @@ import { clsx } from 'clsx';
 import { DEFAULT_LOCALE, TIMEZONE, getSGDateString, formatMoney } from '../utils/constants';
 import { EmptyState } from '../components/common';
 import { useMyDeployments, useAvailability, useAvailabilityMode, useSaveAvailability } from '../hooks/useQueries';
+import CalendarGrid from '../components/calendar/CalendarGrid';
 
-const DAYS = ['Sun', 'Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat'];
 const MONTHS = ['January', 'February', 'March', 'April', 'May', 'June', 'July', 'August', 'September', 'October', 'November', 'December'];
 
 function getDaysInMonth(year, month) {
@@ -31,13 +31,11 @@ function getFirstDayOfMonth(year, month) {
   return new Date(year, month, 1).getDay();
 }
 
-// Check if a day is a weekday (Mon-Fri)
 function isWeekday(year, month, day) {
   const d = new Date(year, month, day).getDay();
   return d >= 1 && d <= 5;
 }
 
-// Check if a day is a weekend (Sat-Sun)
 function isWeekend(year, month, day) {
   const d = new Date(year, month, day).getDay();
   return d === 0 || d === 6;
@@ -47,7 +45,6 @@ function isWeekend(year, month, day) {
 function PendingAccountOverlay() {
   const { logout } = useAuth();
 
-  // Lock body scroll when overlay is shown
   useEffect(() => {
     document.body.style.overflow = 'hidden';
     return () => {
@@ -64,7 +61,6 @@ function PendingAccountOverlay() {
       className="fixed inset-0 z-[100] bg-theme-primary/80 backdrop-blur-md"
       style={{ position: 'fixed', height: '100dvh', width: '100vw' }}
     >
-      {/* Centered Frame - does not scroll */}
       <div className="absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 w-[calc(100%-2rem)] max-w-sm p-5 sm:p-6 rounded-3xl bg-[#0a1628] border border-amber-500/30 shadow-2xl">
         <div className="flex items-start gap-3 sm:gap-4">
           <div className="w-12 h-12 sm:w-14 sm:h-14 rounded-2xl bg-amber-500/20 flex items-center justify-center flex-shrink-0">
@@ -95,8 +91,6 @@ function PendingAccountOverlay() {
           <p className="text-[10px] sm:text-xs text-white/40 mb-3 sm:mb-4">
             This usually takes 1-2 business days. You'll receive a notification when your account is approved.
           </p>
-
-          {/* Navigation Options */}
           <div className="flex gap-2">
             <Link
               to="/profile"
@@ -125,7 +119,6 @@ export default function Calendar() {
   const [mode, setMode] = useState('view');
   const [pendingChanges, setPendingChanges] = useState({});
 
-  // Check if user is pending
   const isPending = user?.status === 'pending' || user?.status === 'lead';
 
   const year = currentDate.getFullYear();
@@ -133,7 +126,6 @@ export default function Calendar() {
   const daysInMonth = getDaysInMonth(year, month);
   const firstDay = getFirstDayOfMonth(year, month);
 
-  // React Query — cached, deduped, auto-refetching
   const { data: deployments = [], isLoading: deploymentsLoading } = useMyDeployments(user?.id);
   const { data: availability = [], isLoading: availabilityLoading } = useAvailability(user?.id);
   const { data: modeData, isLoading: modeLoading } = useAvailabilityMode(user?.id);
@@ -154,8 +146,7 @@ export default function Calendar() {
   };
 
   const getDateString = (day) => `${year}-${String(month + 1).padStart(2, '0')}-${String(day).padStart(2, '0')}`;
-  
-  // Get deployments for a specific date
+
   const getDeploymentsForDate = (dateStr) => {
     return deployments.filter(d => {
       const jobDate = d.job_date?.split('T')[0];
@@ -163,22 +154,15 @@ export default function Calendar() {
     });
   };
 
-  // Determine if a date is available based on mode
   const isDateAvailable = (day) => {
     const dateStr = getDateString(day);
-    
-    // Check custom overrides first
     const customOverride = availability.find(a => a.date === dateStr);
     if (customOverride) {
       return customOverride.status === 'available';
     }
-    
-    // Check pending changes
     if (pendingChanges[dateStr] !== undefined) {
       return pendingChanges[dateStr] === 'available';
     }
-    
-    // Check based on mode
     switch (availabilityMode) {
       case 'weekdays':
         return isWeekday(year, month, day);
@@ -192,13 +176,6 @@ export default function Calendar() {
       default:
         return false;
     }
-  };
-
-  const getAvailabilityForDate = (dateStr) => {
-    if (pendingChanges[dateStr] !== undefined) return pendingChanges[dateStr];
-    const custom = availability.find(a => a.date === dateStr);
-    if (custom) return custom.status;
-    return null; // No custom override, use mode-based
   };
 
   const selectedDateStr = getSGDateString(selectedDate);
@@ -252,7 +229,6 @@ export default function Calendar() {
     return 'unavailable';
   };
 
-  // Calculate monthly stats
   const monthlyDeployments = deployments.filter(d => {
     const jobDate = new Date(d.job_date);
     return jobDate.getMonth() === month && jobDate.getFullYear() === year;
@@ -261,7 +237,6 @@ export default function Calendar() {
 
   return (
     <div className="min-h-screen bg-theme-primary pb-24">
-      {/* Pending Account Overlay */}
       {isPending && <PendingAccountOverlay />}
 
       {/* Header */}
@@ -340,77 +315,21 @@ export default function Calendar() {
       </div>
 
       <div className="px-4 py-4">
-        {/* Day Headers */}
-        <div className="grid grid-cols-7 gap-1 mb-2">
-          {DAYS.map(day => (
-            <div key={day} className="text-center text-xs font-medium py-2 text-white/40">{day}</div>
-          ))}
-        </div>
-
-        {/* Calendar Grid */}
-        <div className="grid grid-cols-7 gap-1">
-          {Array.from({ length: firstDay }).map((_, i) => <div key={`empty-${i}`} className="aspect-square" />)}
-          
-          {Array.from({ length: daysInMonth }).map((_, i) => {
-            const day = i + 1;
-            const status = getDayStatus(day);
-            const hasPending = pendingChanges[getDateString(day)] !== undefined;
-            const jobCount = getJobCount(day);
-            
-            const statusStyles = {
-              available: 'bg-emerald-500/10 border-emerald-500/30',
-              unavailable: 'bg-white/[0.02] border-white/[0.03]',
-              booked: 'bg-violet-500/20 border-violet-500/40',
-            };
-            
-            const dotColors = {
-              available: 'bg-emerald-400',
-              unavailable: 'bg-white/20',
-              booked: 'bg-violet-400',
-            };
-
-            return (
-              <button
-                key={day}
-                onClick={() => handleDayClick(day)}
-                disabled={isPast(day) && mode === 'edit'}
-                className={clsx(
-                  'aspect-square rounded-xl flex flex-col items-center justify-center relative transition-all border',
-                  isSelected(day) && mode !== 'edit' ? 'bg-emerald-500 text-white border-emerald-400 shadow-lg shadow-emerald-500/30' :
-                  isToday(day) ? 'bg-emerald-500/20 text-emerald-400 border-emerald-500/40' :
-                  isPast(day) ? 'text-white/20 border-transparent' :
-                  statusStyles[status],
-                  hasPending && 'ring-2 ring-amber-400',
-                  !isPast(day) && !isSelected(day) && status === 'available' && 'hover:border-emerald-500/50'
-                )}
-              >
-                <span className={clsx('text-sm font-medium', isPast(day) && 'text-white/20')}>{day}</span>
-                
-                {/* Job count badge */}
-                {jobCount > 0 && (
-                  <span className="absolute top-0.5 right-0.5 min-w-[16px] h-4 px-1 rounded-full bg-violet-500 text-[10px] font-bold text-white flex items-center justify-center">
-                    {jobCount}
-                  </span>
-                )}
-                
-                {/* Status dot */}
-                {!isSelected(day) && !isPast(day) && status !== 'booked' && (
-                  <span className={clsx('absolute bottom-1 w-1.5 h-1.5 rounded-full', dotColors[status])} />
-                )}
-              </button>
-            );
-          })}
-        </div>
-
-        {/* Legend */}
-        <div className="flex items-center justify-center gap-6 mt-4 text-xs text-white/40">
-          <span className="flex items-center gap-1"><span className="w-2 h-2 rounded-full bg-emerald-400" /> Available</span>
-          <span className="flex items-center gap-1">
-            <span className="w-4 h-4 rounded bg-violet-500 text-[8px] font-bold text-white flex items-center justify-center">1</span>
-            Scheduled Jobs
-          </span>
-          <span className="flex items-center gap-1"><span className="w-2 h-2 rounded-full bg-white/20" /> Unavailable</span>
-        </div>
+        <CalendarGrid
+          year={year}
+          month={month}
+          daysInMonth={daysInMonth}
+          firstDay={firstDay}
+          mode={mode}
+          pendingChanges={pendingChanges}
+          getDateString={getDateString}
+          getDayStatus={getDayStatus}
+          getJobCount={getJobCount}
+          isToday={isToday}
+          isSelected={isSelected}
+          isPast={isPast}
+          onDayClick={handleDayClick}
+        />
 
         {/* Selected Date Details */}
         {mode !== 'edit' && (
@@ -490,11 +409,11 @@ export default function Calendar() {
                     </div>
                     <div className="flex items-center gap-4 text-sm text-white/50">
                       <span className="flex items-center gap-1">
-                        <ClockIcon className="h-4 w-4" /> 
+                        <ClockIcon className="h-4 w-4" />
                         {deployment.start_time || '09:00'} - {deployment.end_time || '17:00'}
                       </span>
                       <span className="flex items-center gap-1">
-                        <MapPinIcon className="h-4 w-4" /> 
+                        <MapPinIcon className="h-4 w-4" />
                         {deployment.location}
                       </span>
                     </div>

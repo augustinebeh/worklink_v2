@@ -8,6 +8,9 @@
 const express = require('express');
 const router = express.Router();
 const { db } = require('../../../../../db');
+const { createLogger } = require('../../../../../utils/structured-logger');
+const { authenticateAdmin } = require('../../../../../middleware/auth');
+const logger = createLogger('outreach');
 
 // Import outreach system utilities
 const {
@@ -23,7 +26,7 @@ const {
  * POST /campaigns
  * Create a new outreach campaign
  */
-router.post('/campaigns', async (req, res) => {
+router.post('/campaigns', authenticateAdmin, async (req, res) => {
   try {
     const {
       name,
@@ -62,8 +65,8 @@ router.post('/campaigns', async (req, res) => {
       data: result
     });
   } catch (error) {
-    console.error('Error creating outreach campaign:', error);
-    res.status(500).json({ success: false, error: error.message });
+    logger.error('Error creating outreach campaign', { error: error.message });
+    res.status(500).json({ success: false, error: 'Internal server error' });
   }
 });
 
@@ -71,7 +74,7 @@ router.post('/campaigns', async (req, res) => {
  * POST /campaigns/:campaignId/execute
  * Execute a campaign
  */
-router.post('/campaigns/:campaignId/execute', async (req, res) => {
+router.post('/campaigns/:campaignId/execute', authenticateAdmin, async (req, res) => {
   try {
     const result = await executeCampaign(req.params.campaignId);
     res.json({
@@ -80,8 +83,8 @@ router.post('/campaigns/:campaignId/execute', async (req, res) => {
       data: result
     });
   } catch (error) {
-    console.error('Error executing campaign:', error);
-    res.status(500).json({ success: false, error: error.message });
+    logger.error('Error executing campaign', { error: error.message });
+    res.status(500).json({ success: false, error: 'Internal server error' });
   }
 });
 
@@ -89,7 +92,7 @@ router.post('/campaigns/:campaignId/execute', async (req, res) => {
  * GET /campaigns/:campaignId/stats
  * Get campaign statistics
  */
-router.get('/campaigns/:campaignId/stats', (req, res) => {
+router.get('/campaigns/:campaignId/stats', authenticateAdmin, (req, res) => {
   try {
     const stats = getCampaignStats(req.params.campaignId);
 
@@ -105,8 +108,8 @@ router.get('/campaigns/:campaignId/stats', (req, res) => {
       data: stats
     });
   } catch (error) {
-    console.error('Error getting campaign stats:', error);
-    res.status(500).json({ success: false, error: error.message });
+    logger.error('Error getting campaign stats', { error: error.message });
+    res.status(500).json({ success: false, error: 'Internal server error' });
   }
 });
 
@@ -114,7 +117,7 @@ router.get('/campaigns/:campaignId/stats', (req, res) => {
  * GET /campaigns
  * List all campaigns
  */
-router.get('/campaigns', (req, res) => {
+router.get('/campaigns', authenticateAdmin, (req, res) => {
   try {
     const { status, type, limit = '20' } = req.query;
 
@@ -158,8 +161,8 @@ router.get('/campaigns', (req, res) => {
       }
     });
   } catch (error) {
-    console.error('Error listing campaigns:', error);
-    res.status(500).json({ success: false, error: error.message });
+    logger.error('Error listing campaigns', { error: error.message });
+    res.status(500).json({ success: false, error: 'Internal server error' });
   }
 });
 
@@ -167,7 +170,7 @@ router.get('/campaigns', (req, res) => {
  * POST /quick-job-invite/:jobId
  * Quick job-based outreach (simplified endpoint)
  */
-router.post('/quick-job-invite/:jobId', async (req, res) => {
+router.post('/quick-job-invite/:jobId', authenticateAdmin, async (req, res) => {
   try {
     const { jobId } = req.params;
     const { maxCandidates = 20, minScore = 50, channels = ['whatsapp'] } = req.body;
@@ -202,8 +205,8 @@ router.post('/quick-job-invite/:jobId', async (req, res) => {
       data: result
     });
   } catch (error) {
-    console.error('Error creating quick job invite:', error);
-    res.status(500).json({ success: false, error: error.message });
+    logger.error('Error creating quick job invite', { error: error.message });
+    res.status(500).json({ success: false, error: 'Internal server error' });
   }
 });
 
@@ -211,7 +214,7 @@ router.post('/quick-job-invite/:jobId', async (req, res) => {
  * POST /engagement
  * Track candidate engagement
  */
-router.post('/engagement', (req, res) => {
+router.post('/engagement', authenticateAdmin, (req, res) => {
   try {
     const {
       candidateId,
@@ -252,8 +255,8 @@ router.post('/engagement', (req, res) => {
       data: { engagementId: result.lastInsertRowid }
     });
   } catch (error) {
-    console.error('Error tracking engagement:', error);
-    res.status(500).json({ success: false, error: error.message });
+    logger.error('Error tracking engagement', { error: error.message });
+    res.status(500).json({ success: false, error: 'Internal server error' });
   }
 });
 
@@ -261,7 +264,7 @@ router.post('/engagement', (req, res) => {
  * GET /engagement/:candidateId
  * Get candidate engagement history
  */
-router.get('/engagement/:candidateId', (req, res) => {
+router.get('/engagement/:candidateId', authenticateAdmin, (req, res) => {
   try {
     const { candidateId } = req.params;
     const { limit = '50', days = '30' } = req.query;
@@ -294,8 +297,8 @@ router.get('/engagement/:candidateId', (req, res) => {
       }
     });
   } catch (error) {
-    console.error('Error getting engagement history:', error);
-    res.status(500).json({ success: false, error: error.message });
+    logger.error('Error getting engagement history', { error: error.message });
+    res.status(500).json({ success: false, error: 'Internal server error' });
   }
 });
 
@@ -303,7 +306,7 @@ router.get('/engagement/:candidateId', (req, res) => {
  * GET /stats
  * Get outreach system statistics
  */
-router.get('/stats', (req, res) => {
+router.get('/stats', authenticateAdmin, (req, res) => {
   try {
     const { days = '30' } = req.query;
 
@@ -369,8 +372,8 @@ router.get('/stats', (req, res) => {
       }
     });
   } catch (error) {
-    console.error('Error getting outreach stats:', error);
-    res.status(500).json({ success: false, error: error.message });
+    logger.error('Error getting outreach stats', { error: error.message });
+    res.status(500).json({ success: false, error: 'Internal server error' });
   }
 });
 

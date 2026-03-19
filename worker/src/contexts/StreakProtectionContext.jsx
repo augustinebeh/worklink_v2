@@ -31,10 +31,10 @@ export function StreakProtectionProvider({ children }) {
       if (data.success) {
         setStreakStatus(data.data);
       } else {
-        console.error('Failed to fetch streak status:', data.error);
+        logger.error('Failed to fetch streak status:', data.error);
       }
     } catch (error) {
-      console.error('Error fetching streak status:', error);
+      logger.error('Error fetching streak status:', error);
     }
   }, [user?.id]);
 
@@ -82,7 +82,7 @@ export function StreakProtectionProvider({ children }) {
         throw new Error(data.error || 'Failed to protect streak');
       }
     } catch (error) {
-      console.error('Error protecting streak:', error);
+      logger.error('Error protecting streak:', error);
       toast.error('Protection Failed', error.message);
       throw error;
     } finally {
@@ -123,7 +123,7 @@ export function StreakProtectionProvider({ children }) {
         throw new Error(data.error || 'Failed to recover streak');
       }
     } catch (error) {
-      console.error('Error recovering streak:', error);
+      logger.error('Error recovering streak:', error);
       toast.error('Recovery Failed', error.message);
       throw error;
     } finally {
@@ -166,7 +166,7 @@ export function StreakProtectionProvider({ children }) {
         throw new Error(data.error || 'Failed to check in');
       }
     } catch (error) {
-      console.error('Error checking in:', error);
+      logger.error('Error checking in:', error);
       toast.error('Check-in Failed', error.message);
       throw error;
     } finally {
@@ -192,7 +192,7 @@ export function StreakProtectionProvider({ children }) {
         const vapidData = await vapidResponse.json();
 
         if (!vapidData.success) {
-          console.error('VAPID key not available');
+          logger.error('VAPID key not available');
           return false;
         }
 
@@ -221,11 +221,11 @@ export function StreakProtectionProvider({ children }) {
         logger.log('✅ Enhanced push notifications registered');
         return true;
       } else {
-        console.error('Failed to register enhanced push notifications:', data.error);
+        logger.error('Failed to register enhanced push notifications:', data.error);
         return false;
       }
     } catch (error) {
-      console.error('Error registering enhanced push notifications:', error);
+      logger.error('Error registering enhanced push notifications:', error);
       return false;
     }
   }, [user?.id]);

@@ -7,6 +7,7 @@ const express = require('express');
 const router = express.Router();
 const { db } = require('../../../db');
 const messaging = require('../../../services/messaging');
+const { authenticateAdmin, authenticateAny, authenticateToken } = require('../../../middleware/auth');
 
 /**
  * Get messaging configuration status
@@ -23,7 +24,7 @@ router.get('/status', (req, res) => {
       },
     });
   } catch (error) {
-    res.status(500).json({ success: false, error: error.message });
+    res.status(500).json({ success: false, error: 'Internal server error' });
   }
 });
 
@@ -31,7 +32,7 @@ router.get('/status', (req, res) => {
  * Send message to candidate via specific channel
  * POST /api/v1/messaging/send
  */
-router.post('/send', async (req, res) => {
+router.post('/send', authenticateAdmin, async (req, res) => {
   try {
     const { candidateId, content, channel, templateId } = req.body;
 
@@ -62,7 +63,7 @@ router.post('/send', async (req, res) => {
       });
     }
   } catch (error) {
-    res.status(500).json({ success: false, error: error.message });
+    res.status(500).json({ success: false, error: 'Internal server error' });
   }
 });
 
@@ -70,7 +71,7 @@ router.post('/send', async (req, res) => {
  * Get candidate's available channels
  * GET /api/v1/messaging/channels/:candidateId
  */
-router.get('/channels/:candidateId', (req, res) => {
+router.get('/channels/:candidateId', authenticateToken, (req, res) => {
   try {
     const { candidateId } = req.params;
     const channels = messaging.getCandidateChannels(candidateId);
@@ -84,7 +85,7 @@ router.get('/channels/:candidateId', (req, res) => {
 
     res.json({ success: true, data: channels });
   } catch (error) {
-    res.status(500).json({ success: false, error: error.message });
+    res.status(500).json({ success: false, error: 'Internal server error' });
   }
 });
 
@@ -92,7 +93,7 @@ router.get('/channels/:candidateId', (req, res) => {
  * Generate Telegram verification code for candidate
  * POST /api/v1/messaging/telegram/verify
  */
-router.post('/telegram/verify', (req, res) => {
+router.post('/telegram/verify', authenticateAny, (req, res) => {
   try {
     const { candidateId } = req.body;
 
@@ -138,7 +139,7 @@ router.post('/telegram/verify', (req, res) => {
       },
     });
   } catch (error) {
-    res.status(500).json({ success: false, error: error.message });
+    res.status(500).json({ success: false, error: 'Internal server error' });
   }
 });
 
@@ -146,7 +147,7 @@ router.post('/telegram/verify', (req, res) => {
  * Unlink Telegram from candidate
  * DELETE /api/v1/messaging/telegram/:candidateId
  */
-router.delete('/telegram/:candidateId', (req, res) => {
+router.delete('/telegram/:candidateId', authenticateAdmin, (req, res) => {
   try {
     const { candidateId } = req.params;
 
@@ -156,7 +157,7 @@ router.delete('/telegram/:candidateId', (req, res) => {
 
     res.json({ success: true, message: 'Telegram unlinked' });
   } catch (error) {
-    res.status(500).json({ success: false, error: error.message });
+    res.status(500).json({ success: false, error: 'Internal server error' });
   }
 });
 
@@ -164,7 +165,7 @@ router.delete('/telegram/:candidateId', (req, res) => {
  * Get Telegram groups for job posting
  * GET /api/v1/messaging/telegram/groups
  */
-router.get('/telegram/groups', (req, res) => {
+router.get('/telegram/groups', authenticateAdmin, (req, res) => {
   try {
     // Ensure table exists
     db.exec(`
@@ -186,7 +187,7 @@ router.get('/telegram/groups', (req, res) => {
 
     res.json({ success: true, data: groups });
   } catch (error) {
-    res.status(500).json({ success: false, error: error.message });
+    res.status(500).json({ success: false, error: 'Internal server error' });
   }
 });
 
@@ -194,7 +195,7 @@ router.get('/telegram/groups', (req, res) => {
  * Add Telegram group for job posting
  * POST /api/v1/messaging/telegram/groups
  */
-router.post('/telegram/groups', (req, res) => {
+router.post('/telegram/groups', authenticateAdmin, (req, res) => {
   try {
     const { chatId, name, description, autoPostJobs } = req.body;
 
@@ -234,7 +235,7 @@ router.post('/telegram/groups', (req, res) => {
         error: 'Group already exists',
       });
     }
-    res.status(500).json({ success: false, error: error.message });
+    res.status(500).json({ success: false, error: 'Internal server error' });
   }
 });
 
@@ -242,7 +243,7 @@ router.post('/telegram/groups', (req, res) => {
  * Update Telegram group
  * PATCH /api/v1/messaging/telegram/groups/:id
  */
-router.patch('/telegram/groups/:id', (req, res) => {
+router.patch('/telegram/groups/:id', authenticateAdmin, (req, res) => {
   try {
     const { id } = req.params;
     const { name, description, isActive, autoPostJobs } = req.body;
@@ -284,7 +285,7 @@ router.patch('/telegram/groups/:id', (req, res) => {
 
     res.json({ success: true, data: group });
   } catch (error) {
-    res.status(500).json({ success: false, error: error.message });
+    res.status(500).json({ success: false, error: 'Internal server error' });
   }
 });
 
@@ -292,7 +293,7 @@ router.patch('/telegram/groups/:id', (req, res) => {
  * Delete Telegram group
  * DELETE /api/v1/messaging/telegram/groups/:id
  */
-router.delete('/telegram/groups/:id', (req, res) => {
+router.delete('/telegram/groups/:id', authenticateAdmin, (req, res) => {
   try {
     const { id } = req.params;
 
@@ -300,7 +301,7 @@ router.delete('/telegram/groups/:id', (req, res) => {
 
     res.json({ success: true });
   } catch (error) {
-    res.status(500).json({ success: false, error: error.message });
+    res.status(500).json({ success: false, error: 'Internal server error' });
   }
 });
 
@@ -308,7 +309,7 @@ router.delete('/telegram/groups/:id', (req, res) => {
  * Post job to Telegram groups
  * POST /api/v1/messaging/telegram/post-job
  */
-router.post('/telegram/post-job', async (req, res) => {
+router.post('/telegram/post-job', authenticateAdmin, async (req, res) => {
   try {
     const { jobId, groupIds } = req.body;
 
@@ -363,7 +364,7 @@ router.post('/telegram/post-job', async (req, res) => {
       },
     });
   } catch (error) {
-    res.status(500).json({ success: false, error: error.message });
+    res.status(500).json({ success: false, error: 'Internal server error' });
   }
 });
 
@@ -371,7 +372,7 @@ router.post('/telegram/post-job', async (req, res) => {
  * Broadcast message to multiple candidates
  * POST /api/v1/messaging/broadcast
  */
-router.post('/broadcast', async (req, res) => {
+router.post('/broadcast', authenticateAdmin, async (req, res) => {
   try {
     const { candidateIds, content, channel, templateId } = req.body;
 
@@ -415,7 +416,7 @@ router.post('/broadcast', async (req, res) => {
       },
     });
   } catch (error) {
-    res.status(500).json({ success: false, error: error.message });
+    res.status(500).json({ success: false, error: 'Internal server error' });
   }
 });
 
@@ -423,7 +424,7 @@ router.post('/broadcast', async (req, res) => {
  * Update candidate's preferred contact method
  * PATCH /api/v1/messaging/preference/:candidateId
  */
-router.patch('/preference/:candidateId', (req, res) => {
+router.patch('/preference/:candidateId', authenticateToken, (req, res) => {
   try {
     const { candidateId } = req.params;
     const { preferredContact } = req.body;
@@ -441,7 +442,7 @@ router.patch('/preference/:candidateId', (req, res) => {
 
     res.json({ success: true });
   } catch (error) {
-    res.status(500).json({ success: false, error: error.message });
+    res.status(500).json({ success: false, error: 'Internal server error' });
   }
 });
 

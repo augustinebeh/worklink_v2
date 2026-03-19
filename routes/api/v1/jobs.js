@@ -1,8 +1,12 @@
 const express = require('express');
 const router = express.Router();
 const { db } = require('../../../db');
+const { safeJsonParse } = require('../../../db/utils/db-helpers');
 const { createValidationMiddleware } = require('../../../middleware/database-validation');
 const { createInputValidationMiddleware } = require('../../../middleware/input-validation');
+const { createLogger } = require('../../../utils/structured-logger');
+
+const logger = createLogger('api:jobs');
 
 // Lazy-load telegram posting to avoid circular dependencies
 let telegramPostingService = null;
@@ -11,7 +15,7 @@ function getTelegramPosting() {
     try {
       telegramPostingService = require('../../../services/telegram-posting');
     } catch (error) {
-      console.error('Failed to load telegram-posting service:', error.message);
+      logger.warn('Failed to load telegram-posting service', { error: error.message });
     }
   }
   return telegramPostingService;
@@ -42,17 +46,19 @@ function autoCompleteExpiredJobs() {
     `).run(currentDate, currentDate, currentTime);
 
     if (result.changes > 0) {
-      console.log(`✅ Auto-completed ${result.changes} expired job(s)`);
+      logger.info('Auto-completed expired jobs', { count: result.changes });
     }
   } catch (error) {
-    console.error('Error auto-completing expired jobs:', error);
+    logger.error('Error auto-completing expired jobs', { error: error.message });
     // Don't throw - this is a background operation
   }
 }
 
 
+const { authenticateAdmin } = require('../../../middleware/auth');
+
 // Get job statistics
-router.get('/stats', (req, res) => {
+router.get('/stats', authenticateAdmin, (req, res) => {
   try {
     // Get status counts for frontend pipeline cards
     const statusStats = db.prepare(`
@@ -97,11 +103,11 @@ router.get('/stats', (req, res) => {
     });
 
   } catch (error) {
-    console.error('Error fetching job stats:', error);
+    logger.error('Error fetching job stats', { error: error.message });
     res.status(500).json({
       success: false,
       error: 'Failed to retrieve job statistics',
-      details: error.message
+      details: 'Internal server error'
     });
   }
 });
@@ -145,7 +151,7 @@ router.get('/', (req, res) => {
 
     const parsed = jobs.map(j => ({
       ...j,
-      required_certifications: JSON.parse(j.required_certifications || '[]'),
+      required_certifications: safeJsonParse(j.required_certifications, []),
     }));
 
     res.json({
@@ -159,7 +165,7 @@ router.get('/', (req, res) => {
       },
     });
   } catch (error) {
-    res.status(500).json({ success: false, error: error.message });
+    res.status(500).json({ success: false, error: 'Internal server error' });
   }
 });
 
@@ -177,11 +183,11 @@ router.get('/:id', (req, res) => {
       return res.status(404).json({ success: false, error: 'Job not found' });
     }
 
-    job.required_certifications = JSON.parse(job.required_certifications || '[]');
+    job.required_certifications = safeJsonParse(job.required_certifications, []);
 
     res.json({ success: true, data: job });
   } catch (error) {
-    res.status(500).json({ success: false, error: error.message });
+    res.status(500).json({ success: false, error: 'Internal server error' });
   }
 });
 
@@ -199,7 +205,7 @@ router.get('/:id/deployments', (req, res) => {
 
     res.json({ success: true, data: deployments });
   } catch (error) {
-    res.status(500).json({ success: false, error: error.message });
+    res.status(500).json({ success: false, error: 'Internal server error' });
   }
 });
 
@@ -244,7 +250,7 @@ router.post('/',
         }
       }
     } catch (error) {
-      console.error('Auto-post to Telegram failed:', error.message);
+      logger.warn('Auto-post to Telegram failed', { error: error.message });
       // Don't fail job creation if telegram posting fails
     }
 
@@ -254,18 +260,13 @@ router.post('/',
       telegramPost: telegramResult,
     });
   } catch (error) {
-    res.status(500).json({ success: false, error: error.message });
+    res.status(500).json({ success: false, error: 'Internal server error' });
   }
 });
 
 // Update job
 router.put('/:id', (req, res) => {
   try {
-    console.log('🔧 PUT /jobs/:id - Request received:', { 
-      id: req.params.id, 
-      body: req.body 
-    });
-
     const allowedFields = [
       'title', 'description', 'job_date', 'start_time', 'end_time',
       'location', 'pay_rate', 'charge_rate', 'total_slots', 'required_certifications',
@@ -288,20 +289,47 @@ router.put('/:id', (req, res) => {
     updates.push('updated_at = CURRENT_TIMESTAMP');
     values.push(req.params.id);
 
-    console.log('🔧 SQL Update:', { 
-      sql: `UPDATE jobs SET ${updates.join(', ')} WHERE id = ?`,
-      values: values
-    });
-
     db.prepare(`UPDATE jobs SET ${updates.join(', ')} WHERE id = ?`).run(...values);
-    
+
     const job = db.prepare('SELECT * FROM jobs WHERE id = ?').get(req.params.id);
-    console.log('✅ Job updated successfully:', job);
-    
+
     res.json({ success: true, data: job });
   } catch (error) {
-    console.error('❌ Error updating job:', error);
-    res.status(500).json({ success: false, error: error.message });
+    logger.error('Error updating job', { id: req.params.id, error: error.message });
+    res.status(500).json({ success: false, error: 'Internal server error' });
+  }
+});
+
+// Check job applications for a candidate
+router.get('/:id/applications', (req, res) => {
+  try {
+    const job_id = req.params.id;
+    const { candidate_id } = req.query;
+
+    let query = `
+      SELECT d.*, c.name as candidate_name, c.email as candidate_email
+      FROM deployments d
+      JOIN candidates c ON d.candidate_id = c.id
+      WHERE d.job_id = ?
+    `;
+    const params = [job_id];
+
+    if (candidate_id) {
+      query += ' AND d.candidate_id = ?';
+      params.push(candidate_id);
+    }
+
+    query += ' ORDER BY d.created_at DESC';
+
+    const applications = db.prepare(query).all(...params);
+
+    res.json({
+      success: true,
+      data: applications,
+      applied: candidate_id ? applications.length > 0 : undefined
+    });
+  } catch (error) {
+    res.status(500).json({ success: false, error: 'Internal server error' });
   }
 });
 
@@ -358,7 +386,7 @@ router.post('/:id/accept', (req, res) => {
 
     res.json({ success: true, data: { deployment_id } });
   } catch (error) {
-    res.status(500).json({ success: false, error: error.message });
+    res.status(500).json({ success: false, error: 'Internal server error' });
   }
 });
 
@@ -387,7 +415,7 @@ router.patch('/:id/status', (req, res) => {
     const updatedJob = db.prepare('SELECT * FROM jobs WHERE id = ?').get(job_id);
     res.json({ success: true, data: updatedJob });
   } catch (error) {
-    res.status(500).json({ success: false, error: error.message });
+    res.status(500).json({ success: false, error: 'Internal server error' });
   }
 });
 

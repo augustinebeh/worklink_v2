@@ -58,7 +58,7 @@ export default function GeBizSyncProgress({ isVisible, onClose }) {
     const websocket = new WebSocket(wsUrl);
 
     websocket.onopen = () => {
-      console.log('📡 WebSocket connected for GeBIZ sync progress');
+      // WebSocket connected for GeBIZ sync progress
     };
 
     websocket.onmessage = (event) => {
@@ -82,16 +82,16 @@ export default function GeBizSyncProgress({ isVisible, onClose }) {
           }
         }
       } catch (error) {
-        console.error('Error parsing WebSocket message:', error);
+        // Error parsing WebSocket message
       }
     };
 
     websocket.onclose = () => {
-      console.log('📡 WebSocket disconnected');
+      // WebSocket disconnected
     };
 
     websocket.onerror = (error) => {
-      console.error('📡 WebSocket error:', error);
+      // WebSocket error
     };
 
     setWs(websocket);

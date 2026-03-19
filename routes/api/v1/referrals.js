@@ -6,6 +6,7 @@ const express = require('express');
 const router = express.Router();
 const { db } = require('../../../db');
 const { validate, schemas } = require('../../../middleware/validation');
+const { authenticateAdmin } = require('../../../middleware/auth');
 
 // Random default avatar generator
 function generateRandomAvatar(name) {
@@ -33,7 +34,7 @@ router.get('/settings', (req, res) => {
       },
     });
   } catch (error) {
-    res.status(500).json({ success: false, error: error.message });
+    res.status(500).json({ success: false, error: 'Internal server error' });
   }
 });
 
@@ -95,7 +96,7 @@ router.get('/dashboard/:candidateId', (req, res) => {
       },
     });
   } catch (error) {
-    res.status(500).json({ success: false, error: error.message });
+    res.status(500).json({ success: false, error: 'Internal server error' });
   }
 });
 
@@ -148,30 +149,32 @@ router.post('/register', validate(schemas.referralRegistration), (req, res) => {
     const newReferralCode = name.split(' ')[0].toUpperCase().slice(0, 4) + 
       Math.random().toString(36).substring(2, 6).toUpperCase();
 
-    // Create candidate with random avatar
-    db.prepare(`
-      INSERT INTO candidates (id, name, email, phone, status, source, referral_code, referred_by, profile_photo)
-      VALUES (?, ?, ?, ?, 'onboarding', 'referral', ?, ?, ?)
-    `).run(id, name, email, phone, newReferralCode, referrer.id, generateRandomAvatar(name));
-
-    // Create referral record
-    const refId = 'REF' + Date.now().toString(36).toUpperCase();
+    // Create candidate, referral record, and notification atomically
     const tier1Bonus = db.prepare('SELECT bonus_amount FROM referral_tiers WHERE tier_level = 1').get();
-    
-    db.prepare(`
-      INSERT INTO referrals (id, referrer_id, referred_id, status, tier, bonus_amount)
-      VALUES (?, ?, ?, 'registered', 1, ?)
-    `).run(refId, referrer.id, id, tier1Bonus?.bonus_amount || 25);
+    const refId = 'REF' + Date.now().toString(36).toUpperCase();
 
-    // Notify referrer
-    db.prepare(`
-      INSERT INTO notifications (candidate_id, type, title, message, data)
-      VALUES (?, 'referral', 'New Referral! 🎉', ?, ?)
-    `).run(
-      referrer.id,
-      `${name} just signed up using your code! You'll earn $${tier1Bonus?.bonus_amount || 25} when they complete their first job.`,
-      JSON.stringify({ referred_id: id, referred_name: name })
-    );
+    const registerReferral = db.transaction(() => {
+      db.prepare(`
+        INSERT INTO candidates (id, name, email, phone, status, source, referral_code, referred_by, profile_photo)
+        VALUES (?, ?, ?, ?, 'onboarding', 'referral', ?, ?, ?)
+      `).run(id, name, email, phone, newReferralCode, referrer.id, generateRandomAvatar(name));
+
+      db.prepare(`
+        INSERT INTO referrals (id, referrer_id, referred_id, status, tier, bonus_amount)
+        VALUES (?, ?, ?, 'registered', 1, ?)
+      `).run(refId, referrer.id, id, tier1Bonus?.bonus_amount || 25);
+
+      db.prepare(`
+        INSERT INTO notifications (candidate_id, type, title, message, data)
+        VALUES (?, 'referral', 'New Referral! 🎉', ?, ?)
+      `).run(
+        referrer.id,
+        `${name} just signed up using your code! You'll earn $${tier1Bonus?.bonus_amount || 25} when they complete their first job.`,
+        JSON.stringify({ referred_id: id, referred_name: name })
+      );
+    });
+
+    registerReferral();
 
     res.status(201).json({
       success: true,
@@ -183,12 +186,12 @@ router.post('/register', validate(schemas.referralRegistration), (req, res) => {
       },
     });
   } catch (error) {
-    res.status(500).json({ success: false, error: error.message });
+    res.status(500).json({ success: false, error: 'Internal server error' });
   }
 });
 
 // Process referral bonus (called when referred candidate completes a job)
-router.post('/process-bonus', (req, res) => {
+router.post('/process-bonus', authenticateAdmin, (req, res) => {
   try {
     const { candidate_id, job_id } = req.body;
 
@@ -228,30 +231,34 @@ router.post('/process-bonus', (req, res) => {
     }
 
     if (bonusToAward > 0) {
-      // Update referral
-      db.prepare(`
-        UPDATE referrals SET tier = ?, total_bonus_paid = total_bonus_paid + ? WHERE id = ?
-      `).run(newTier, bonusToAward, referral.id);
+      const awardBonus = db.transaction(() => {
+        // Update referral
+        db.prepare(`
+          UPDATE referrals SET tier = ?, total_bonus_paid = total_bonus_paid + ? WHERE id = ?
+        `).run(newTier, bonusToAward, referral.id);
 
-      // Update referrer's earnings
-      db.prepare(`
-        UPDATE candidates SET 
-          total_referral_earnings = total_referral_earnings + ?,
-          total_incentives_earned = total_incentives_earned + ?,
-          referral_tier = MAX(referral_tier, ?)
-        WHERE id = ?
-      `).run(bonusToAward, bonusToAward, newTier, referral.referrer_id);
+        // Update referrer's earnings
+        db.prepare(`
+          UPDATE candidates SET
+            total_referral_earnings = total_referral_earnings + ?,
+            total_incentives_earned = total_incentives_earned + ?,
+            referral_tier = MAX(referral_tier, ?)
+          WHERE id = ?
+        `).run(bonusToAward, bonusToAward, newTier, referral.referrer_id);
 
-      // Notify referrer
-      const tierInfo = tiers.find(t => t.tier_level === newTier);
-      db.prepare(`
-        INSERT INTO notifications (candidate_id, type, title, message, data)
-        VALUES (?, 'referral_bonus', 'Referral Bonus! 💰', ?, ?)
-      `).run(
-        referral.referrer_id,
-        `You earned $${bonusToAward}! ${tierInfo?.description || ''}`,
-        JSON.stringify({ bonus: bonusToAward, tier: newTier })
-      );
+        // Notify referrer
+        const tierInfo = tiers.find(t => t.tier_level === newTier);
+        db.prepare(`
+          INSERT INTO notifications (candidate_id, type, title, message, data)
+          VALUES (?, 'referral_bonus', 'Referral Bonus! 💰', ?, ?)
+        `).run(
+          referral.referrer_id,
+          `You earned $${bonusToAward}! ${tierInfo?.description || ''}`,
+          JSON.stringify({ bonus: bonusToAward, tier: newTier })
+        );
+      });
+
+      awardBonus();
     }
 
     res.json({
@@ -263,7 +270,7 @@ router.post('/process-bonus', (req, res) => {
       },
     });
   } catch (error) {
-    res.status(500).json({ success: false, error: error.message });
+    res.status(500).json({ success: false, error: 'Internal server error' });
   }
 });
 
@@ -286,7 +293,7 @@ router.get('/leaderboard', (req, res) => {
 
     res.json({ success: true, data: leaderboard });
   } catch (error) {
-    res.status(500).json({ success: false, error: error.message });
+    res.status(500).json({ success: false, error: 'Internal server error' });
   }
 });
 
@@ -313,7 +320,7 @@ router.get('/validate/:code', (req, res) => {
       },
     });
   } catch (error) {
-    res.status(500).json({ success: false, error: error.message });
+    res.status(500).json({ success: false, error: 'Internal server error' });
   }
 });
 

@@ -17,8 +17,7 @@ if (!fs.existsSync(DATA_DIR)) {
   fs.mkdirSync(DATA_DIR, { recursive: true });
 }
 
-console.log(`🔌 Database path: ${DB_PATH}`);
-console.log(`🌍 Environment: ${IS_PRODUCTION ? 'PRODUCTION' : 'DEVELOPMENT'}`);
+// Connection info is logged by server.js at startup
 
 /**
  * Initialize and configure SQLite database connection
@@ -28,8 +27,12 @@ function createConnection() {
   const db = new Database(DB_PATH);
 
   // Configure SQLite for optimal performance
-  db.pragma('journal_mode = WAL'); // Write-Ahead Logging for better concurrency
-  db.pragma('foreign_keys = ON');  // Enable foreign key constraints
+  db.pragma('journal_mode = WAL');
+  db.pragma('foreign_keys = ON');
+  db.pragma('busy_timeout = 5000');
+  db.pragma('synchronous = NORMAL');
+  db.pragma('cache_size = -64000');
+  db.pragma('temp_store = MEMORY');
 
   return db;
 }

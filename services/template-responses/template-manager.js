@@ -6,6 +6,8 @@
  */
 
 const { db } = require('../../db');
+const { createLogger } = require('../../utils/structured-logger');
+const logger = createLogger('template-manager');
 
 class TemplateManager {
   constructor() {
@@ -32,7 +34,7 @@ class TemplateManager {
         ('escalation_responses', 'Escalation and admin handoff responses', 5)
       `);
     } catch (error) {
-      console.warn('Warning: Could not insert default categories:', error.message);
+      logger.warn('Could not insert default categories', { error: error.message });
     }
   }
 
@@ -177,7 +179,7 @@ class TemplateManager {
       `).get(templateData.category);
 
       if (!category) {
-        console.error(`❌ [Template] Category not found: ${templateData.category}`);
+        logger.error('Category not found', { category: templateData.category });
         return null;
       }
 
@@ -187,7 +189,7 @@ class TemplateManager {
       `).get(templateData.name);
 
       if (existing) {
-        console.log(`⚠️ [Template] Template already exists: ${templateData.name}`);
+        logger.debug('Template already exists', { name: templateData.name });
         return existing.id;
       }
 
@@ -225,11 +227,11 @@ class TemplateManager {
         });
       }
 
-      console.log(`✅ [Template] Created template: ${templateData.name}`);
+      logger.info('Template created', { name: templateData.name });
       return templateId;
 
     } catch (error) {
-      console.error(`❌ [Template] Error creating template ${templateData.name}:`, error);
+      logger.error('Error creating template', { name: templateData.name, error: error.message });
       return null;
     }
   }
@@ -270,7 +272,7 @@ class TemplateManager {
 
       return null;
     } catch (error) {
-      console.error('❌ [Template] Error finding template:', error);
+      logger.error('Error finding template', { error: error.message });
       return null;
     }
   }
@@ -303,7 +305,7 @@ class TemplateManager {
 
       return score;
     } catch (error) {
-      console.error('❌ [Template] Error calculating score:', error);
+      logger.error('Error calculating template score', { error: error.message });
       return 0;
     }
   }
@@ -350,7 +352,7 @@ class TemplateManager {
       };
 
     } catch (error) {
-      console.error('❌ [Template] Error generating response:', error);
+      logger.error('Error generating response', { error: error.message });
       return {
         content: "I'll have the admin team assist with your specific question and provide accurate information.",
         metadata: { error: error.message }
@@ -383,7 +385,7 @@ class TemplateManager {
           return variable.fallback_value || '';
       }
     } catch (error) {
-      console.error(`❌ [Template] Error extracting variable ${variable.variable_name}:`, error);
+      logger.error('Error extracting variable', { variable: variable.variable_name, error: error.message });
       return variable.fallback_value || '';
     }
   }
@@ -476,7 +478,7 @@ class TemplateManager {
         WHERE id = ?
       `).run(templateId, templateId);
     } catch (error) {
-      console.error('❌ [Template] Error updating metrics:', error);
+      logger.error('Error updating template metrics', { error: error.message });
     }
   }
 

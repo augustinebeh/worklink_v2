@@ -49,7 +49,7 @@ router.get('/',
         health.errors.push({
           service: 'database',
           error: 'Connection test failed',
-          details: error.message
+          details: 'Internal server error'
         });
       }
 
@@ -69,7 +69,7 @@ router.get('/',
         health.errors.push({
           service: 'cache',
           error: 'Cache test failed',
-          details: error.message
+          details: 'Internal server error'
         });
       }
 
@@ -85,7 +85,7 @@ router.get('/',
         health.errors.push({
           service: 'integration',
           error: 'Integration layer test failed',
-          details: error.message
+          details: 'Internal server error'
         });
       }
 
@@ -100,7 +100,7 @@ router.get('/',
         health.errors.push({
           service: 'validation',
           error: 'Validation engine test failed',
-          details: error.message
+          details: 'Internal server error'
         });
       }
 
@@ -118,7 +118,7 @@ router.get('/',
           status: 'unhealthy',
           timestamp: new Date().toISOString(),
           error: 'Health check failed',
-          details: error.message
+          details: 'Internal server error'
         }
       });
     }
@@ -191,7 +191,7 @@ router.get('/detailed',
           status: 'unhealthy',
           timestamp: new Date().toISOString(),
           error: 'Detailed health check failed',
-          details: error.message
+          details: 'Internal server error'
         }
       });
     }
@@ -247,7 +247,7 @@ router.get('/readiness',
     } catch (error) {
       res.status(503).json({
         ready: false,
-        error: error.message,
+        error: 'Internal server error',
         timestamp: new Date().toISOString()
       });
     }
@@ -304,7 +304,7 @@ router.get('/metrics',
     } catch (error) {
       res.status(500).json({
         error: 'Failed to generate metrics',
-        details: error.message
+        details: 'Internal server error'
       });
     }
   }

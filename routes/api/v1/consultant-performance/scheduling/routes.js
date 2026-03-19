@@ -21,7 +21,7 @@ router.post('/run-engine', async (req, res) => {
     const result = await schedulingEngine.runSchedulingEngine();
     res.json({ success: true, data: result });
   } catch (error) {
-    res.status(500).json({ success: false, error: error.message });
+    res.status(500).json({ success: false, error: 'Internal server error' });
   }
 });
 
@@ -34,7 +34,7 @@ router.get('/status', async (req, res) => {
     const status = await schedulingEngine.getCurrentSchedulingStatus();
     res.json({ success: true, data: status });
   } catch (error) {
-    res.status(500).json({ success: false, error: error.message });
+    res.status(500).json({ success: false, error: 'Internal server error' });
   }
 });
 
@@ -48,7 +48,7 @@ router.get('/analytics', async (req, res) => {
     const analytics = await schedulingEngine.getSchedulingAnalytics(parseInt(days));
     res.json({ success: true, data: analytics });
   } catch (error) {
-    res.status(500).json({ success: false, error: error.message });
+    res.status(500).json({ success: false, error: 'Internal server error' });
   }
 });
 
@@ -96,7 +96,7 @@ router.get('/calendar', async (req, res) => {
       }
     });
   } catch (error) {
-    res.status(500).json({ success: false, error: error.message });
+    res.status(500).json({ success: false, error: 'Internal server error' });
   }
 });
 
@@ -141,7 +141,7 @@ router.get('/queue', async (req, res) => {
       }
     });
   } catch (error) {
-    res.status(500).json({ success: false, error: error.message });
+    res.status(500).json({ success: false, error: 'Internal server error' });
   }
 });
 
@@ -170,7 +170,7 @@ router.post('/add-to-queue', async (req, res) => {
       }
     });
   } catch (error) {
-    res.status(500).json({ success: false, error: error.message });
+    res.status(500).json({ success: false, error: 'Internal server error' });
   }
 });
 
@@ -183,7 +183,7 @@ router.post('/emergency-stop', async (req, res) => {
     const result = await schedulingEngine.emergencyStopScheduling();
     res.json({ success: true, data: result });
   } catch (error) {
-    res.status(500).json({ success: false, error: error.message });
+    res.status(500).json({ success: false, error: 'Internal server error' });
   }
 });
 
@@ -196,7 +196,7 @@ router.post('/resume', async (req, res) => {
     const result = await schedulingEngine.resumeScheduling();
     res.json({ success: true, data: result });
   } catch (error) {
-    res.status(500).json({ success: false, error: error.message });
+    res.status(500).json({ success: false, error: 'Internal server error' });
   }
 });
 
@@ -226,7 +226,7 @@ router.put('/availability', async (req, res) => {
       }
     });
   } catch (error) {
-    res.status(500).json({ success: false, error: error.message });
+    res.status(500).json({ success: false, error: 'Internal server error' });
   }
 });
 

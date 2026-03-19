@@ -51,22 +51,18 @@ function broadcastToAdmins(data) {
  * Broadcast message to a specific candidate
  */
 function broadcastToCandidate(candidateId, data) {
-  console.log(`📤 Broadcasting to candidate ${candidateId}:`, data.type);
-  console.log(`   📋 Data:`, JSON.stringify(data).substring(0, 200));
-  console.log(`   🗺️  All connected candidates:`, Array.from(candidateClients.keys()));
+  logger.debug('Broadcasting to candidate', { candidateId, eventType: data.type });
 
   const clientWs = candidateClients.get(candidateId);
   if (clientWs?.readyState === WebSocket.OPEN) {
-    console.log(`   ✅ Candidate ${candidateId} is connected (readyState=${clientWs.readyState}), sending...`);
     try {
       clientWs.send(JSON.stringify(data));
-      console.log(`   ✅ Message sent successfully to ${candidateId}`);
+      logger.debug('Message sent to candidate', { candidateId });
     } catch (err) {
-      console.error(`   ❌ Failed to send to ${candidateId}:`, err.message);
+      logger.error('Failed to send to candidate', { candidateId, error: err.message });
     }
   } else {
-    console.log(`   ❌ Candidate ${candidateId} not connected or socket not open`);
-    console.log(`   🔍 clientWs exists:`, !!clientWs, ', readyState:', clientWs?.readyState);
+    logger.debug('Candidate not connected', { candidateId, wsExists: !!clientWs, readyState: clientWs?.readyState });
   }
 }
 

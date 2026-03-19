@@ -58,7 +58,7 @@ router.get('/report', (req, res) => {
 
   } catch (error) {
     logger.error('Failed to generate analytics report', { error: error.message });
-    res.status(500).json({ success: false, error: error.message });
+    res.status(500).json({ success: false, error: 'Internal server error' });
   }
 });
 
@@ -94,7 +94,7 @@ router.get('/leaderboard', (req, res) => {
 
   } catch (error) {
     logger.error('Failed to generate leaderboard', { error: error.message });
-    res.status(500).json({ success: false, error: error.message });
+    res.status(500).json({ success: false, error: 'Internal server error' });
   }
 });
 
@@ -110,7 +110,7 @@ router.get('/insights', (req, res) => {
 
   } catch (error) {
     logger.error('Failed to get real-time insights', { error: error.message });
-    res.status(500).json({ success: false, error: error.message });
+    res.status(500).json({ success: false, error: 'Internal server error' });
   }
 });
 
@@ -186,7 +186,7 @@ router.get('/dashboard', (req, res) => {
 
   } catch (error) {
     logger.error('Failed to get dashboard data', { error: error.message });
-    res.status(500).json({ success: false, error: error.message });
+    res.status(500).json({ success: false, error: 'Internal server error' });
   }
 });
 
@@ -235,7 +235,7 @@ router.get('/admin/:adminId', (req, res) => {
       admin_id: req.params.adminId,
       error: error.message
     });
-    res.status(500).json({ success: false, error: error.message });
+    res.status(500).json({ success: false, error: 'Internal server error' });
   }
 });
 
@@ -254,7 +254,7 @@ router.post('/update-metrics', (req, res) => {
 
   } catch (error) {
     logger.error('Failed to update daily metrics', { error: error.message });
-    res.status(500).json({ success: false, error: error.message });
+    res.status(500).json({ success: false, error: 'Internal server error' });
   }
 });
 
@@ -312,7 +312,7 @@ router.get('/export', (req, res) => {
 
   } catch (error) {
     logger.error('Failed to export analytics data', { error: error.message });
-    res.status(500).json({ success: false, error: error.message });
+    res.status(500).json({ success: false, error: 'Internal server error' });
   }
 });
 

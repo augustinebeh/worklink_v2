@@ -1,289 +1,16 @@
 import { useState, useEffect } from 'react';
 import {
   GiftIcon,
-  ZapIcon,
-  LockIcon,
-  CheckCircleIcon,
-  SparklesIcon,
-  PaletteIcon,
-  ShieldIcon,
-  RefreshCwIcon,
-  HardHatIcon,
-  ShirtIcon,
-  AwardIcon,
   CoinsIcon,
-  PackageIcon,
-  XIcon,
 } from 'lucide-react';
 import { useAuth } from '../contexts/AuthContext';
 import { useTheme, COLOR_THEMES } from '../contexts/ThemeContext';
 import { useToast } from '../components/ui/Toast';
 import { clsx } from 'clsx';
-import { FilterTabs, EmptyState, LoadingSkeleton, SectionHeader } from '../components/common';
-
-// Map icon strings to components
-const ICON_MAP = {
-  palette: PaletteIcon,
-  sparkles: SparklesIcon,
-  'refresh-cw': RefreshCwIcon,
-  zap: ZapIcon,
-  shield: ShieldIcon,
-  'hard-hat': HardHatIcon,
-  shirt: ShirtIcon,
-  award: AwardIcon,
-  gift: GiftIcon,
-};
-
-const categoryInfo = {
-  feature: { icon: SparklesIcon, label: 'Feature Unlock', color: 'violet' },
-  operational: { icon: ZapIcon, label: 'Perk', color: 'cyan' },
-  physical: { icon: PackageIcon, label: 'Physical Item', color: 'amber' },
-};
-
-const tierColors = {
-  bronze: { text: 'text-amber-600', bg: 'bg-amber-500/20', border: 'border-amber-500/30' },
-  silver: { text: 'text-slate-300', bg: 'bg-slate-400/20', border: 'border-slate-400/30' },
-  gold: { text: 'text-yellow-400', bg: 'bg-yellow-500/20', border: 'border-yellow-500/30' },
-  platinum: { text: 'text-cyan-300', bg: 'bg-cyan-500/20', border: 'border-cyan-500/30' },
-  diamond: { text: 'text-violet-300', bg: 'bg-violet-500/20', border: 'border-violet-500/30' },
-  mythic: { text: 'text-rose-300', bg: 'bg-rose-500/20', border: 'border-rose-500/30' },
-};
-
-const colorClasses = {
-  amber: { bg: 'bg-amber-500/20', border: 'border-amber-500/30', text: 'text-amber-400', glow: 'shadow-amber-500/20' },
-  violet: { bg: 'bg-violet-500/20', border: 'border-violet-500/30', text: 'text-violet-400', glow: 'shadow-violet-500/20' },
-  cyan: { bg: 'bg-cyan-500/20', border: 'border-cyan-500/30', text: 'text-cyan-400', glow: 'shadow-cyan-500/20' },
-  emerald: { bg: 'bg-emerald-500/20', border: 'border-emerald-500/30', text: 'text-emerald-400', glow: 'shadow-emerald-500/20' },
-};
-
-// Available flair emojis
-const FLAIR_OPTIONS = [
-  null, // No flair
-  '🔥', '⭐', '💎', '🏆', '👑', '🚀', '💪', '🎯',
-  '⚡', '🌟', '✨', '💫', '🎖️', '🥇', '🏅', '💯',
-  '🦁', '🐯', '🦅', '🐺', '🦊', '🐲', '🦋', '🌈',
-];
-
-// Flair Picker Modal
-function FlairPickerModal({ isOpen, onClose, currentFlair, onSelect }) {
-  if (!isOpen) return null;
-
-  return (
-    <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/70 backdrop-blur-sm">
-      <div className="w-full max-w-sm rounded-2xl border border-white/10 p-6" style={{ backgroundColor: 'var(--bg-card)' }}>
-        <div className="flex items-center justify-between mb-4">
-          <h3 className="text-lg font-bold text-white">Choose Your Flair</h3>
-          <button onClick={onClose} className="p-2 rounded-xl hover:bg-white/5">
-            <XIcon className="h-5 w-5 text-white/50" />
-          </button>
-        </div>
-        <p className="text-sm text-white/50 mb-4">Select an emoji to display next to your name</p>
-        <div className="grid grid-cols-6 gap-2">
-          {FLAIR_OPTIONS.map((flair, idx) => (
-            <button
-              key={idx}
-              onClick={() => onSelect(flair)}
-              className={clsx(
-                'w-12 h-12 rounded-xl flex items-center justify-center text-2xl transition-all',
-                currentFlair === flair
-                  ? 'bg-violet-500/30 border-2 border-violet-500'
-                  : 'bg-white/5 border border-white/10 hover:bg-white/10'
-              )}
-            >
-              {flair || <span className="text-sm text-white/30">None</span>}
-            </button>
-          ))}
-        </div>
-      </div>
-    </div>
-  );
-}
-
-// Theme Picker Modal
-function ThemePickerModal({ isOpen, onClose, currentTheme, onSelect }) {
-  if (!isOpen) return null;
-
-  return (
-    <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/70 backdrop-blur-sm">
-      <div className="w-full max-w-sm rounded-2xl border border-white/10 p-6" style={{ backgroundColor: 'var(--bg-card)' }}>
-        <div className="flex items-center justify-between mb-4">
-          <h3 className="text-lg font-bold text-white">Choose Theme</h3>
-          <button onClick={onClose} className="p-2 rounded-xl hover:bg-white/5">
-            <XIcon className="h-5 w-5 text-white/50" />
-          </button>
-        </div>
-        <p className="text-sm text-white/50 mb-4">Select a color theme for your app</p>
-        <div className="space-y-2">
-          {Object.entries(COLOR_THEMES).map(([key, theme]) => (
-            <button
-              key={key}
-              onClick={() => onSelect(key)}
-              className={clsx(
-                'w-full p-3 rounded-xl flex items-center gap-3 transition-all',
-                currentTheme === key
-                  ? 'bg-violet-500/20 border-2 border-violet-500'
-                  : 'bg-white/5 border border-white/10 hover:bg-white/10'
-              )}
-            >
-              <div
-                className={clsx('w-10 h-10 rounded-lg bg-gradient-to-br', theme.preview)}
-                style={{ backgroundColor: theme.bg }}
-              >
-                <div
-                  className="w-full h-full rounded-lg"
-                  style={{ background: `linear-gradient(135deg, ${theme.primary}40, ${theme.accent}40)` }}
-                />
-              </div>
-              <div className="text-left">
-                <p className="font-medium text-white">{theme.name}</p>
-                <p className="text-xs text-white/50">{theme.description}</p>
-              </div>
-              {currentTheme === key && (
-                <CheckCircleIcon className="h-5 w-5 text-violet-400 ml-auto" />
-              )}
-            </button>
-          ))}
-        </div>
-      </div>
-    </div>
-  );
-}
-
-function RewardCard({ reward, userTier, userPoints, onPurchase, purchasing, onCustomize }) {
-  const category = categoryInfo[reward.category] || categoryInfo.feature;
-  const IconComponent = ICON_MAP[reward.icon] || category.icon;
-  const colors = colorClasses[category.color];
-  const tierColor = tierColors[reward.tier_required] || tierColors.bronze;
-
-  const canPurchase = reward.canPurchase;
-  const isLocked = !reward.meetsRequirement;
-  const isOwned = reward.purchaseCount > 0;
-  const cantAfford = !reward.canAfford && reward.meetsRequirement;
-
-  // Check if this reward has customization options
-  const hasCustomization = isOwned && (reward.id === 'RWD_PROFILE_FLAIR' || reward.id === 'RWD_DARK_MODE');
-
-  // Default background for non-special state cards
-  const cardStyle = (!isOwned && !isLocked && !canPurchase) ? { backgroundColor: 'var(--bg-card)' } : {};
-
-  return (
-    <div
-      className={clsx(
-        'relative p-4 rounded-2xl border transition-all',
-        isOwned
-          ? 'bg-emerald-500/10 border-emerald-500/30'
-          : isLocked
-            ? 'bg-white/[0.02] border-white/[0.03] opacity-60'
-            : canPurchase
-              ? `bg-gradient-to-br from-emerald-500/10 to-cyan-500/10 border-emerald-500/40 shadow-lg ${colors.glow}`
-              : `${colors.border}`
-      )}
-      style={cardStyle}
-    >
-      {/* Owned indicator */}
-      {isOwned && (
-        <div className="absolute -top-1 -right-1 w-6 h-6 rounded-full bg-emerald-500 flex items-center justify-center">
-          <CheckCircleIcon className="h-4 w-4 text-white" />
-        </div>
-      )}
-
-      <div className="flex items-start gap-4">
-        {/* Icon */}
-        <div className={clsx(
-          'w-14 h-14 rounded-2xl flex items-center justify-center flex-shrink-0 transition-all',
-          isOwned
-            ? 'bg-emerald-500/30 border border-emerald-500/40'
-            : isLocked
-              ? 'bg-white/5'
-              : canPurchase
-                ? 'bg-gradient-to-br from-emerald-500/30 to-cyan-500/30 border border-emerald-500/40'
-                : colors.bg
-        )}>
-          {isLocked ? (
-            <LockIcon className="h-6 w-6 text-white/20" />
-          ) : (
-            <IconComponent className={clsx('h-7 w-7', isOwned ? 'text-emerald-400' : canPurchase ? 'text-emerald-400' : colors.text)} />
-          )}
-        </div>
-
-        {/* Content */}
-        <div className="flex-1 min-w-0">
-          <div className="flex items-center gap-2 mb-1">
-            <h3 className={clsx('font-semibold', isLocked ? 'text-white/40' : 'text-white')}>
-              {reward.name}
-            </h3>
-            {isOwned && <span className="text-xs text-emerald-400">Owned</span>}
-          </div>
-          <p className={clsx('text-sm', isLocked ? 'text-white/30' : 'text-white/50')}>
-            {reward.description}
-          </p>
-
-          {/* Tags row */}
-          <div className="mt-2 flex items-center gap-2 flex-wrap">
-            <span className={clsx(
-              'text-xs px-2 py-0.5 rounded-full',
-              isLocked ? 'bg-white/5 text-white/30' : `${colors.bg} ${colors.text}`
-            )}>
-              {category.label}
-            </span>
-            <span className={clsx(
-              'text-xs px-2 py-0.5 rounded-full capitalize',
-              tierColor.bg, tierColor.text
-            )}>
-              {reward.tier_required}+
-            </span>
-            {reward.stock !== null && (
-              <span className={clsx(
-                'text-xs px-2 py-0.5 rounded-full',
-                reward.stock > 0 ? 'bg-white/5 text-white/50' : 'bg-red-500/20 text-red-400'
-              )}>
-                {reward.stock > 0 ? `${reward.stock} left` : 'Out of stock'}
-              </span>
-            )}
-          </div>
-        </div>
-
-        {/* Price & Action */}
-        <div className="flex flex-col items-end gap-2">
-          <div className={clsx(
-            'flex items-center gap-1 px-2 py-1 rounded-lg',
-            cantAfford ? 'bg-red-500/20' : 'bg-emerald-500/20'
-          )}>
-            <CoinsIcon className={clsx('h-3.5 w-3.5', cantAfford ? 'text-red-400' : 'text-emerald-400')} />
-            <span className={clsx('text-sm font-bold', cantAfford ? 'text-red-400' : 'text-emerald-400')}>
-              {reward.points_cost}
-            </span>
-          </div>
-
-          {!isOwned && canPurchase && (
-            <button
-              onClick={() => onPurchase(reward)}
-              disabled={purchasing}
-              className="px-4 py-2 rounded-xl bg-gradient-to-r from-emerald-500 to-cyan-500 text-white text-sm font-semibold shadow-lg shadow-emerald-500/25 disabled:opacity-50 active:scale-95 transition-transform"
-            >
-              {purchasing ? '...' : 'Redeem'}
-            </button>
-          )}
-
-          {hasCustomization && (
-            <button
-              onClick={() => onCustomize(reward.id)}
-              className="px-4 py-2 rounded-xl bg-violet-500/20 border border-violet-500/30 text-violet-400 text-sm font-semibold hover:bg-violet-500/30 active:scale-95 transition-all"
-            >
-              Customize
-            </button>
-          )}
-
-          {isLocked && (
-            <span className="text-xs text-white/30">
-              Reach {reward.tier_required}
-            </span>
-          )}
-        </div>
-      </div>
-    </div>
-  );
-}
+import { FilterTabs, SectionHeader } from '../components/common';
+import { tierColors } from '../components/rewards/reward-constants';
+import RewardGrid from '../components/rewards/RewardGrid';
+import { FlairPickerModal, ThemePickerModal } from '../components/rewards/RewardFilters';
 
 // Stat pod component
 function StatPod({ label, value, icon: Icon, color = 'white' }) {
@@ -550,34 +277,20 @@ export default function Rewards() {
       {/* Rewards List */}
       <div className="px-4 mt-6">
         <SectionHeader title="All Rewards" icon={GiftIcon} iconColor="text-emerald-400" />
-
         <FilterTabs tabs={tabs} activeFilter={filter} onFilterChange={setFilter} />
       </div>
 
       <div className="px-4 py-4">
-        {loading ? (
-          <LoadingSkeleton count={4} height="h-28" />
-        ) : sortedRewards.length === 0 ? (
-          <EmptyState
-            icon={GiftIcon}
-            title={filter === 'available' ? 'No rewards available' : filter === 'owned' ? 'No rewards owned yet' : 'No rewards found'}
-            description={filter === 'available' ? 'Earn more points or level up to unlock rewards' : 'Purchase rewards to see them here'}
-          />
-        ) : (
-          <div className="space-y-3">
-            {sortedRewards.map(reward => (
-              <RewardCard
-                key={reward.id}
-                reward={reward}
-                userTier={userTier}
-                userPoints={userPoints}
-                onPurchase={handlePurchase}
-                purchasing={purchasing === reward.id}
-                onCustomize={handleCustomize}
-              />
-            ))}
-          </div>
-        )}
+        <RewardGrid
+          rewards={sortedRewards}
+          loading={loading}
+          filter={filter}
+          userTier={userTier}
+          userPoints={userPoints}
+          onPurchase={handlePurchase}
+          purchasing={purchasing}
+          onCustomize={handleCustomize}
+        />
       </div>
 
       {/* Modals */}

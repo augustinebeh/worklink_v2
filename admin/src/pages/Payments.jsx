@@ -70,7 +70,7 @@ export default function Payments() {
       });
       if (data.success) setPayments(data.data);
     } catch (error) {
-      console.error('Failed to fetch payments:', error);
+      // Failed to fetch payments:
     } finally {
       setLoading(false);
     }
@@ -113,7 +113,7 @@ export default function Payments() {
         fetchPayments();
       }
     } catch (error) {
-      console.error('Failed to approve payments:', error);
+      // Failed to approve payments:
     }
   };
 

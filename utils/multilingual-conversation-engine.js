@@ -3,6 +3,10 @@
  * Handles automatic language detection and culturally adapted FOMO strategies
  */
 
+
+const { createLogger } = require('./structured-logger');
+const logger = createLogger('multilingual-conversation-engine');
+
 class MultilingualConversationEngine {
   constructor() {
     // Supported languages with regional variants
@@ -665,8 +669,7 @@ class MultilingualConversationEngine {
 
   async getCandidateProfile(candidateId) {
     // Integration with database
-    const Database = require('better-sqlite3');
-    const db = new Database(require('path').resolve(__dirname, '../db/database.db'));
+    const { db } = require('../db');
     return db.prepare('SELECT * FROM candidates WHERE id = ?').get(candidateId);
   }
 
@@ -686,12 +689,12 @@ class MultilingualConversationEngine {
         languageDetection
       );
 
-      console.log(`🌍 Generated multilingual response for ${candidateId}: ${languageDetection.primaryLanguage}-${languageDetection.region}`);
+      logger.info('Generated multilingual response for ${candidateId}: ${languageDetection.primaryLanguage}-${languageDetection.region}');
 
       return adaptedConversation;
 
     } catch (error) {
-      console.error('Multilingual conversation generation error:', error);
+      logger.error('Multilingual conversation generation error:', { error: error });
       // Return original template as fallback
       return baseTemplate;
     }

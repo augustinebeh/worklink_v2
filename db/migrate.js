@@ -4,16 +4,18 @@
  */
 
 const { db } = require('./index');
+const { createLogger } = require('../utils/structured-logger');
+const logger = createLogger('migrate');
 
 function runMigrations() {
-  console.log('🔄 Running migrations...');
+  logger.info('Running migrations...');
 
   // Helper to safely add columns
   const addColumn = (table, column, type, defaultVal = null) => {
     try {
       const def = defaultVal !== null ? ` DEFAULT ${defaultVal}` : '';
       db.exec(`ALTER TABLE ${table} ADD COLUMN ${column} ${type}${def}`);
-      console.log(`  ✅ Added ${column} to ${table}`);
+      logger.info(`Added ${column} to ${table}`);
     } catch (e) {
       // Column likely already exists
     }
@@ -227,7 +229,7 @@ function runMigrations() {
 
   try {
     db.exec(createTables);
-    console.log('  ✅ Created new tables');
+    logger.info('Created new tables');
   } catch (e) {
     // Tables likely already exist
   }
@@ -253,7 +255,7 @@ function runMigrations() {
   for (const idx of indices) {
     try { db.exec(idx); } catch (e) { }
   }
-  console.log('  ✅ Created indices');
+  logger.info('Created indices');
 
   // Seed referral tiers if empty
   const tierCount = db.prepare('SELECT COUNT(*) as c FROM referral_tiers').get().c;
@@ -267,7 +269,7 @@ function runMigrations() {
     tiers.forEach(t => {
       db.prepare('INSERT INTO referral_tiers (tier_level, jobs_required, bonus_amount, description) VALUES (?,?,?,?)').run(...t);
     });
-    console.log('  ✅ Seeded referral tiers');
+    logger.info('Seeded referral tiers');
   }
 
   // Seed default tender alerts if empty
@@ -282,7 +284,7 @@ function runMigrations() {
     alerts.forEach(a => {
       db.prepare('INSERT INTO tender_alerts (keyword, source, email_notify, active) VALUES (?, ?, 1, 1)').run(...a);
     });
-    console.log('  ✅ Seeded default tender alerts');
+    logger.info('Seeded default tender alerts');
   }
 
   // Generate referral codes for candidates without one
@@ -297,7 +299,7 @@ function runMigrations() {
         Math.random().toString(36).substring(2, 6).toUpperCase();
       updateStmt.run(code, c.id);
     }
-    console.log(`  ✅ Generated referral codes for ${candidatesWithoutCode.length} candidates`);
+    logger.info(`Generated referral codes for ${candidatesWithoutCode.length} candidates`);
   }
 
   // Seed quests if empty
@@ -323,7 +325,7 @@ function runMigrations() {
         db.prepare('INSERT OR IGNORE INTO quests (id, title, description, type, requirement, xp_reward, bonus_reward, active) VALUES (?,?,?,?,?,?,?,?)').run(...q);
       } catch (e) { }
     });
-    console.log('  ✅ Seeded quests');
+    logger.info('Seeded quests');
   }
 
   // Performance indexes
@@ -366,12 +368,12 @@ function runMigrations() {
   createIndex('idx_notifications_candidate', 'notifications', 'candidate_id');
   createIndex('idx_notifications_read', 'notifications', 'candidate_id, read');
 
-  console.log('  ✅ Performance indexes created');
+  logger.info('Performance indexes created');
 
   // =====================================================
   // CLEANUP DUPLICATES IN FAQ AND KNOWLEDGE BASE
   // =====================================================
-  console.log('  🧹 Cleaning up FAQ and Knowledge Base duplicates...');
+  logger.info('Cleaning up FAQ and Knowledge Base duplicates...');
 
   // Remove duplicate FAQs - keep the one with highest priority or lowest ID
   try {
@@ -387,10 +389,10 @@ function runMigrations() {
       faqDupes.forEach(d => {
         deleteFaq.run(d.question, d.keep_id);
       });
-      console.log(`    ✅ Removed ${faqDupes.length} duplicate FAQ entries`);
+      logger.info(`Removed ${faqDupes.length} duplicate FAQ entries`);
     }
   } catch (e) {
-    console.log('    ⚠️ FAQ cleanup skipped:', e.message);
+    logger.warn('FAQ cleanup skipped', { error: e.message });
   }
 
   // Remove duplicate KB entries - keep the one with highest confidence or lowest ID
@@ -410,28 +412,28 @@ function runMigrations() {
       kbDupes.forEach(d => {
         deleteKb.run(d.question, d.keep_id);
       });
-      console.log(`    ✅ Removed ${kbDupes.length} duplicate Knowledge Base entries`);
+      logger.info(`Removed ${kbDupes.length} duplicate Knowledge Base entries`);
     }
   } catch (e) {
-    console.log('    ⚠️ KB cleanup skipped:', e.message);
+    logger.warn('KB cleanup skipped', { error: e.message });
   }
 
   // Create unique indexes to prevent future duplicates
   try {
     db.exec('CREATE UNIQUE INDEX IF NOT EXISTS idx_ai_faq_question ON ai_faq(question)');
-    console.log('    ✅ Created unique index on ai_faq.question');
+    logger.info('Created unique index on ai_faq.question');
   } catch (e) {
     // Index may already exist
   }
 
   try {
     db.exec('CREATE UNIQUE INDEX IF NOT EXISTS idx_ml_kb_question ON ml_knowledge_base(question)');
-    console.log('    ✅ Created unique index on ml_knowledge_base.question');
+    logger.info('Created unique index on ml_knowledge_base.question');
   } catch (e) {
     // Index may already exist
   }
 
-  console.log('✅ Migrations complete');
+  logger.info('Migrations complete');
 }
 
 runMigrations();

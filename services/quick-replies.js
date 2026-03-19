@@ -4,6 +4,8 @@
  */
 
 const { db } = require('../db');
+const { createLogger } = require('../utils/structured-logger');
+const logger = createLogger('quick-replies');
 
 // Context keywords for detection
 const CONTEXT_KEYWORDS = {
@@ -150,7 +152,7 @@ function getLastAdminMessage(candidateId) {
 
     return message || null;
   } catch (error) {
-    console.error('Error fetching last admin message:', error.message);
+    logger.error('Error fetching last admin message', { error: error.message });
     return null;
   }
 }
@@ -203,7 +205,7 @@ function getCustomReplies(candidateId) {
       }));
     }
   } catch (error) {
-    console.error('Error fetching custom replies:', error.message);
+    logger.error('Error fetching custom replies', { error: error.message });
     return [];
   }
 }
@@ -261,7 +263,7 @@ function addFrequentReply(candidateId, reply) {
 
     return true;
   } catch (error) {
-    console.error('Error adding frequent reply:', error.message);
+    logger.error('Error adding frequent reply', { error: error.message });
     return false;
   }
 }
@@ -330,7 +332,7 @@ function getSuggestedReplies(candidateId, limit = 3) {
       lastMessagePreview: lastMessage.content.substring(0, 50) + (lastMessage.content.length > 50 ? '...' : '')
     };
   } catch (error) {
-    console.error('Error getting suggested replies:', error.message);
+    logger.error('Error getting suggested replies', { error: error.message });
     return {
       context: { type: 'default', confidence: 0 },
       suggestions: SUGGESTED_REPLIES.default.slice(0, limit),
@@ -377,7 +379,7 @@ function trackSuggestionUsage(candidateId, suggestion, contextType) {
 
     return true;
   } catch (error) {
-    console.error('Error tracking suggestion usage:', error.message);
+    logger.error('Error tracking suggestion usage', { error: error.message });
     return false;
   }
 }

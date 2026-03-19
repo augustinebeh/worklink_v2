@@ -1,10 +1,9 @@
 const express = require('express');
 const router = express.Router();
-const Database = require('better-sqlite3');
-const path = require('path');
-
-// Initialize database
-const db = new Database(path.join(__dirname, '../data/worklink.db'));
+const { db } = require('../db');
+const { safeJsonParse } = require('../db/utils/db-helpers');
+const { createLogger } = require('../utils/structured-logger');
+const logger = createLogger('calendar');
 
 // Initialize calendar tables
 const initCalendarTables = () => {
@@ -129,7 +128,7 @@ router.get('/availability', (req, res) => {
 
       if (specialDate) {
         if (specialDate.is_available && specialDate.custom_hours) {
-          const customHours = JSON.parse(specialDate.custom_hours);
+          const customHours = safeJsonParse(specialDate.custom_hours, []);
           customHours.forEach(slot => {
             const slotDateTime = new Date(`${dateString}T${slot.start}:00`);
             availabilitySlots.push({
@@ -174,7 +173,7 @@ router.get('/availability', (req, res) => {
       data: availabilitySlots
     });
   } catch (error) {
-    console.error('Get availability error:', error);
+    logger.error('Get availability error', { error: error.message });
     res.status(500).json({
       success: false,
       message: 'Failed to fetch availability'
@@ -217,7 +216,7 @@ router.post('/availability/weekly', (req, res) => {
       message: 'Weekly availability updated successfully'
     });
   } catch (error) {
-    console.error('Update weekly availability error:', error);
+    logger.error('Update weekly availability error', { error: error.message });
     res.status(500).json({
       success: false,
       message: 'Failed to update weekly availability'
@@ -278,7 +277,7 @@ router.get('/interviews', (req, res) => {
       data: formattedInterviews
     });
   } catch (error) {
-    console.error('Get interviews error:', error);
+    logger.error('Get interviews error', { error: error.message });
     res.status(500).json({
       success: false,
       message: 'Failed to fetch interviews'
@@ -346,7 +345,7 @@ router.post('/interviews', (req, res) => {
       message: 'Interview scheduled successfully'
     });
   } catch (error) {
-    console.error('Schedule interview error:', error);
+    logger.error('Schedule interview error', { error: error.message });
     res.status(500).json({
       success: false,
       message: 'Failed to schedule interview'
@@ -404,7 +403,7 @@ router.put('/interviews/:id/reschedule', (req, res) => {
       message: 'Interview rescheduled successfully'
     });
   } catch (error) {
-    console.error('Reschedule interview error:', error);
+    logger.error('Reschedule interview error', { error: error.message });
     res.status(500).json({
       success: false,
       message: 'Failed to reschedule interview'
@@ -437,7 +436,7 @@ router.put('/interviews/:id/cancel', (req, res) => {
       message: 'Interview cancelled successfully'
     });
   } catch (error) {
-    console.error('Cancel interview error:', error);
+    logger.error('Cancel interview error', { error: error.message });
     res.status(500).json({
       success: false,
       message: 'Failed to cancel interview'
@@ -460,11 +459,11 @@ router.get('/special-dates', (req, res) => {
       success: true,
       data: specialDates.map(date => ({
         ...date,
-        custom_hours: date.custom_hours ? JSON.parse(date.custom_hours) : []
+        custom_hours: date.custom_hours ? safeJsonParse(date.custom_hours, []) : []
       }))
     });
   } catch (error) {
-    console.error('Get special dates error:', error);
+    logger.error('Get special dates error', { error: error.message });
     res.status(500).json({
       success: false,
       message: 'Failed to fetch special dates'
@@ -511,7 +510,7 @@ router.post('/special-dates', (req, res) => {
       message: 'Special dates updated successfully'
     });
   } catch (error) {
-    console.error('Update special dates error:', error);
+    logger.error('Update special dates error', { error: error.message });
     res.status(500).json({
       success: false,
       message: 'Failed to update special dates'

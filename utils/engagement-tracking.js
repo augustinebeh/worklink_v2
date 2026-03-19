@@ -11,6 +11,10 @@
  * - Predictive engagement modeling
  */
 
+
+const { createLogger } = require('./structured-logger');
+const logger = createLogger('engagement-tracking');
+
 const { db } = require('../db');
 
 /**
@@ -85,7 +89,7 @@ function trackEngagement(candidateId, engagementType, options = {}) {
   try {
     const engagementConfig = ENGAGEMENT_TYPES[engagementType];
     if (!engagementConfig) {
-      console.warn(`Unknown engagement type: ${engagementType}`);
+      logger.warn('Unknown engagement type: ${engagementType}');
       return null;
     }
 
@@ -111,7 +115,7 @@ function trackEngagement(candidateId, engagementType, options = {}) {
     // Update candidate's engagement metrics
     updateCandidateEngagementMetrics(candidateId);
 
-    console.log(`📊 [Engagement] Tracked ${engagementType} for candidate ${candidateId} (score: ${score})`);
+    logger.info('[Engagement] Tracked ${engagementType} for candidate ${candidateId} (score: ${score})');
 
     return {
       engagementId: result.lastInsertRowid,
@@ -120,7 +124,7 @@ function trackEngagement(candidateId, engagementType, options = {}) {
       category: engagementConfig.category,
     };
   } catch (error) {
-    console.error('Error tracking engagement:', error);
+    logger.error('Error tracking engagement:', { error: error });
     return null;
   }
 }
@@ -184,7 +188,7 @@ function trackEngagementBatch(engagements) {
 
     return results;
   } catch (error) {
-    console.error('Error tracking engagement batch:', error);
+    logger.error('Error tracking engagement batch:', { error: error });
     return [];
   }
 }
@@ -254,9 +258,9 @@ function updateCandidateEngagementMetrics(candidateId) {
       candidateId
     );
 
-    console.log(`📊 [Metrics] Updated engagement metrics for candidate ${candidateId}: score=${normalizedScore}, tier=${tier}`);
+    logger.info('[Metrics] Updated engagement metrics for candidate ${candidateId}: score=${normalizedScore}, tier=${tier}');
   } catch (error) {
-    console.error('Error updating engagement metrics:', error);
+    logger.error('Error updating engagement metrics:', { error: error });
   }
 }
 
@@ -361,7 +365,7 @@ function getCandidateEngagementSummary(candidateId, days = 30) {
       })),
     };
   } catch (error) {
-    console.error('Error getting engagement summary:', error);
+    logger.error('Error getting engagement summary:', { error: error });
     return null;
   }
 }
@@ -387,7 +391,7 @@ function getEngagementLeaderboard(options = {}) {
 
     if (category) {
       // Add category filter (this would require a more complex query)
-      console.log(`Filtering by category: ${category}`);
+      logger.info('Filtering by category: ${category}');
     }
 
     const leaderboard = db.prepare(`
@@ -416,7 +420,7 @@ function getEngagementLeaderboard(options = {}) {
       engagementScore: Math.min(100, Math.round(candidate.total_score * 2)),
     }));
   } catch (error) {
-    console.error('Error getting engagement leaderboard:', error);
+    logger.error('Error getting engagement leaderboard:', { error: error });
     return [];
   }
 }
@@ -501,7 +505,7 @@ function getEngagementAnalytics(days = 30) {
       generatedAt: new Date().toISOString(),
     };
   } catch (error) {
-    console.error('Error getting engagement analytics:', error);
+    logger.error('Error getting engagement analytics:', { error: error });
     return null;
   }
 }
@@ -590,7 +594,7 @@ function predictCandidateResponsiveness(candidateId) {
       },
     };
   } catch (error) {
-    console.error('Error predicting responsiveness:', error);
+    logger.error('Error predicting responsiveness:', { error: error });
     return {
       responsiveness: 'unknown',
       confidence: 0,

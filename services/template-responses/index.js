@@ -16,6 +16,8 @@ const DataAccess = require('./data-access');
 const IntentClassifier = require('./intent-classifier');
 const TemplateManager = require('./template-manager');
 const EscalationHandler = require('./escalation-handler');
+const { createLogger } = require('../../utils/structured-logger');
+const logger = createLogger('template-system');
 
 class FactBasedTemplateSystem {
   constructor() {
@@ -28,7 +30,7 @@ class FactBasedTemplateSystem {
   }
 
   initializeSystem() {
-    console.log('🎯 [Template System] Initializing fact-based response system...');
+    logger.info('Initializing fact-based response system');
 
     // Initialize database tables for template management
     this.createTemplateTables();
@@ -36,7 +38,7 @@ class FactBasedTemplateSystem {
     // Load default templates
     this.loadDefaultTemplates();
 
-    console.log('✅ [Template System] Initialization complete');
+    logger.info('Template system initialization complete');
   }
 
   createTemplateTables() {
@@ -117,7 +119,7 @@ class FactBasedTemplateSystem {
     const { channel = 'app', adminMode = 'auto' } = options;
 
     try {
-      console.log(`🎯 [Template System] Processing message for ${candidateId}: "${message.substring(0, 50)}..."`);
+      logger.info('Processing message', { candidate_id: candidateId, message_preview: message.substring(0, 50) });
 
       // 1. Get candidate data
       const candidate = await this.dataAccess.getCandidateProfile(candidateId);
@@ -127,7 +129,7 @@ class FactBasedTemplateSystem {
 
       // 2. Classify intent
       const intent = await this.intentClassifier.classifyMessage(message);
-      console.log(`🎯 [Intent] Classified as: ${intent.category} (confidence: ${intent.confidence})`);
+      logger.info('Intent classified', { category: intent.category, confidence: intent.confidence });
 
       // 3. Handle pending candidates specially
       if (candidate.status === 'pending') {
@@ -158,7 +160,7 @@ class FactBasedTemplateSystem {
       return response;
 
     } catch (error) {
-      console.error('❌ [Template System] Processing error:', error);
+      logger.error('Processing error', { error: error.message });
       return this.generateErrorResponse('processing_error');
     }
   }
@@ -333,7 +335,7 @@ class FactBasedTemplateSystem {
       `).run(response.templateId);
 
     } catch (error) {
-      console.error('❌ [Template System] Failed to log usage:', error);
+      logger.error('Failed to log usage', { error: error.message });
     }
   }
 
@@ -365,7 +367,7 @@ class FactBasedTemplateSystem {
       }
 
     } catch (error) {
-      console.error('❌ [Template System] Failed to record feedback:', error);
+      logger.error('Failed to record feedback', { error: error.message });
     }
   }
 

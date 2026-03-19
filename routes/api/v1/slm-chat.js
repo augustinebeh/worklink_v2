@@ -8,6 +8,7 @@
 const express = require('express');
 const router = express.Router();
 const { db } = require('../../../db');
+const { authenticateAdmin } = require('../../../middleware/auth');
 
 // =====================================================
 // SLM SETTINGS
@@ -45,7 +46,7 @@ router.get('/settings', (req, res) => {
 
     res.json({ success: true, data: settings });
   } catch (error) {
-    res.status(500).json({ success: false, error: error.message });
+    res.status(500).json({ success: false, error: 'Internal server error' });
   }
 });
 
@@ -53,7 +54,7 @@ router.get('/settings', (req, res) => {
  * PUT /api/v1/slm-chat/settings
  * Update SLM chat settings
  */
-router.put('/settings', (req, res) => {
+router.put('/settings', authenticateAdmin, (req, res) => {
   try {
     const { key, value } = req.body;
 
@@ -75,7 +76,7 @@ router.put('/settings', (req, res) => {
 
     res.json({ success: true, message: 'SLM setting updated' });
   } catch (error) {
-    res.status(500).json({ success: false, error: error.message });
+    res.status(500).json({ success: false, error: 'Internal server error' });
   }
 });
 
@@ -116,7 +117,7 @@ router.get('/conversations/:candidateId/mode', (req, res) => {
 
     res.json({ success: true, data: { mode } });
   } catch (error) {
-    res.status(500).json({ success: false, error: error.message });
+    res.status(500).json({ success: false, error: 'Internal server error' });
   }
 });
 
@@ -124,7 +125,7 @@ router.get('/conversations/:candidateId/mode', (req, res) => {
  * PUT /api/v1/slm-chat/conversations/:candidateId/mode
  * Set SLM mode for a specific conversation
  */
-router.put('/conversations/:candidateId/mode', (req, res) => {
+router.put('/conversations/:candidateId/mode', authenticateAdmin, (req, res) => {
   try {
     const { mode } = req.body;
 
@@ -146,7 +147,7 @@ router.put('/conversations/:candidateId/mode', (req, res) => {
 
     res.json({ success: true, message: 'SLM mode updated', data: { mode } });
   } catch (error) {
-    res.status(500).json({ success: false, error: error.message });
+    res.status(500).json({ success: false, error: 'Internal server error' });
   }
 });
 
@@ -158,7 +159,7 @@ router.put('/conversations/:candidateId/mode', (req, res) => {
  * POST /api/v1/slm-chat/schedule-interview
  * Manually trigger SLM to schedule interview for a candidate
  */
-router.post('/schedule-interview', async (req, res) => {
+router.post('/schedule-interview', authenticateAdmin, async (req, res) => {
   try {
     const { candidateId, message } = req.body;
 
@@ -185,7 +186,7 @@ router.post('/schedule-interview', async (req, res) => {
       message: 'SLM interview scheduling initiated',
     });
   } catch (error) {
-    res.status(500).json({ success: false, error: error.message });
+    res.status(500).json({ success: false, error: 'Internal server error' });
   }
 });
 
@@ -193,7 +194,7 @@ router.post('/schedule-interview', async (req, res) => {
  * POST /api/v1/slm-chat/generate
  * Manually generate an SLM response (for testing or on-demand)
  */
-router.post('/generate', async (req, res) => {
+router.post('/generate', authenticateAdmin, async (req, res) => {
   try {
     const { candidateId, message } = req.body;
 
@@ -217,7 +218,7 @@ router.post('/generate', async (req, res) => {
       data: response,
     });
   } catch (error) {
-    res.status(500).json({ success: false, error: error.message });
+    res.status(500).json({ success: false, error: 'Internal server error' });
   }
 });
 
@@ -229,7 +230,7 @@ router.post('/generate', async (req, res) => {
  * POST /api/v1/slm-chat/smart-route
  * Route SLM response based on worker status classification
  */
-router.post('/smart-route', async (req, res) => {
+router.post('/smart-route', authenticateAdmin, async (req, res) => {
   try {
     const { candidateId, message, conversationContext } = req.body;
 
@@ -256,7 +257,7 @@ router.post('/smart-route', async (req, res) => {
       message: 'SLM routing completed successfully',
     });
   } catch (error) {
-    res.status(500).json({ success: false, error: error.message });
+    res.status(500).json({ success: false, error: 'Internal server error' });
   }
 });
 
@@ -278,7 +279,7 @@ router.get('/worker-status/:candidateId', async (req, res) => {
       data: routingInfo,
     });
   } catch (error) {
-    res.status(500).json({ success: false, error: error.message });
+    res.status(500).json({ success: false, error: 'Internal server error' });
   }
 });
 
@@ -286,7 +287,7 @@ router.get('/worker-status/:candidateId', async (req, res) => {
  * PUT /api/v1/slm-chat/worker-status/:candidateId
  * Manually override worker status (admin only)
  */
-router.put('/worker-status/:candidateId', async (req, res) => {
+router.put('/worker-status/:candidateId', authenticateAdmin, async (req, res) => {
   try {
     const { candidateId } = req.params;
     const { newStatus, reason, adminId } = req.body;
@@ -314,7 +315,7 @@ router.put('/worker-status/:candidateId', async (req, res) => {
       message: 'Worker status updated successfully',
     });
   } catch (error) {
-    res.status(500).json({ success: false, error: error.message });
+    res.status(500).json({ success: false, error: 'Internal server error' });
   }
 });
 
@@ -338,7 +339,7 @@ router.get('/batch-classify', async (req, res) => {
       message: 'Batch classification completed',
     });
   } catch (error) {
-    res.status(500).json({ success: false, error: error.message });
+    res.status(500).json({ success: false, error: 'Internal server error' });
   }
 });
 
@@ -379,7 +380,7 @@ router.get('/status', async (req, res) => {
       stats.workerStatus = statusStats.summary;
       stats.totalWorkers = statusStats.total;
     } catch (e) {
-      console.log('Worker status stats unavailable:', e.message);
+      // Worker status stats unavailable - non-critical
     }
 
     try {
@@ -412,7 +413,7 @@ router.get('/status', async (req, res) => {
 
     res.json({ success: true, data: stats });
   } catch (error) {
-    res.status(500).json({ success: false, error: error.message });
+    res.status(500).json({ success: false, error: 'Internal server error' });
   }
 });
 

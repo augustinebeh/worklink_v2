@@ -13,22 +13,22 @@ const { createLogger } = require('../../utils/structured-logger');
 const logger = createLogger('websocket:event-notifiers');
 
 /**
- * Create a notification in the database
- * (This should eventually be moved to a notifications service)
+ * Create a notification in the database and broadcast it to the candidate
+ * This is the canonical notification creation function used across the WebSocket layer.
  * @param {string} candidateId - Candidate ID
  * @param {string} type - Notification type
  * @param {string} title - Notification title
  * @param {string} message - Notification message
  * @param {Object|null} data - Additional data
- * @returns {number} Notification ID
+ * @returns {Object|null} The created notification object, or null on failure
  */
 function createNotification(candidateId, type, title, message, data = null) {
   try {
     const stmt = db.prepare(`
-      INSERT INTO notifications (candidate_id, type, title, message, data, read)
-      VALUES (?, ?, ?, ?, ?, 0)
+      INSERT INTO notifications (candidate_id, type, title, message, data, read, created_at)
+      VALUES (?, ?, ?, ?, ?, 0, datetime('now'))
     `);
-    
+
     const result = stmt.run(
       candidateId,
       type,
@@ -37,21 +37,23 @@ function createNotification(candidateId, type, title, message, data = null) {
       data ? JSON.stringify(data) : null
     );
 
-    // Broadcast the new notification
-    broadcast.broadcastToCandidate(candidateId, {
-      type: EventTypes.NOTIFICATION,
-      notification: {
-        id: result.lastInsertRowid,
-        type,
-        title,
-        message,
-        data,
-        read: false,
-        created_at: new Date().toISOString()
-      }
+    // Re-read from DB to get the full row with server-generated fields
+    const notification = db.prepare('SELECT * FROM notifications WHERE rowid = ?')
+      .get(result.lastInsertRowid);
+
+    logger.info('Notification created', {
+      candidateId,
+      type,
+      notificationId: result.lastInsertRowid
     });
 
-    return result.lastInsertRowid;
+    // Broadcast the new notification to the candidate if online
+    broadcast.broadcastToCandidate(candidateId, {
+      type: EventTypes.NOTIFICATION,
+      notification
+    });
+
+    return notification;
   } catch (error) {
     logger.error('Failed to create notification', {
       candidateId,
@@ -285,28 +287,72 @@ function notifyStatusChange(candidateId, status, additionalData = {}) {
   });
 }
 
+// FOMO event notifiers
+
+function notifyFOMOEvent(candidateId, trigger) {
+  broadcast.broadcastToCandidate(candidateId, {
+    type: EventTypes.FOMO_TRIGGER,
+    trigger
+  });
+}
+
+function notifyUrgencyAlert(candidateId, alert) {
+  broadcast.broadcastToCandidate(candidateId, {
+    type: EventTypes.FOMO_URGENCY,
+    alert
+  });
+}
+
+function notifyScarcityAlert(candidateId, alert) {
+  broadcast.broadcastToCandidate(candidateId, {
+    type: EventTypes.FOMO_SCARCITY,
+    alert
+  });
+}
+
+function notifyStreakRisk(candidateId, risk) {
+  broadcast.broadcastToCandidate(candidateId, {
+    type: EventTypes.FOMO_STREAK_RISK,
+    risk
+  });
+}
+
+function notifyCompetitivePressure(candidateId, pressure) {
+  broadcast.broadcastToCandidate(candidateId, {
+    type: EventTypes.FOMO_COMPETITIVE_PRESSURE,
+    pressure
+  });
+}
+
 module.exports = {
   // Notification creation
   createNotification,
-  
+
   // Job events
   notifyJobCreated,
   notifyJobUpdated,
-  
+
   // Deployment events
   notifyDeploymentUpdated,
-  
+
   // Payment events
   notifyPaymentCreated,
   notifyPaymentStatusChanged,
-  
+
   // Gamification events
   notifyXPEarned,
   notifyLevelUp,
   notifyAchievementUnlocked,
   notifyQuestCompleted,
-  
+
   // Candidate events
   notifyCandidateUpdated,
-  notifyStatusChange
+  notifyStatusChange,
+
+  // FOMO events
+  notifyFOMOEvent,
+  notifyUrgencyAlert,
+  notifyScarcityAlert,
+  notifyStreakRisk,
+  notifyCompetitivePressure,
 };

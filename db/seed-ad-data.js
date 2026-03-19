@@ -5,8 +5,10 @@
  */
 
 const { db } = require('./index');
+const { createLogger } = require('../utils/structured-logger');
+const logger = createLogger('seed-ad-data');
 
-console.log('Cleaning up duplicate ad data...');
+logger.info('Cleaning up duplicate ad data...');
 
 // Clear all ad-related tables
 db.exec(`
@@ -17,7 +19,7 @@ db.exec(`
   DELETE FROM ad_timing_scores;
 `);
 
-console.log('Adding unique constraints...');
+logger.info('Adding unique constraints...');
 
 // Add unique constraints to prevent future duplicates
 try {
@@ -32,7 +34,7 @@ try {
   db.exec(`CREATE UNIQUE INDEX IF NOT EXISTS idx_ad_timing_scores_unique ON ad_timing_scores(hour, day_of_week)`);
 } catch (e) { /* already exists */ }
 
-console.log('Seeding diverse ad training data...');
+logger.info('Seeding diverse ad training data...');
 
 // Diverse ad training data with different job types, styles, and performance metrics
 const adTrainingData = [
@@ -444,10 +446,10 @@ adTrainingData.forEach(ad => {
   );
 });
 
-console.log(`Inserted ${adTrainingData.length} training data entries`);
+logger.info(`Inserted ${adTrainingData.length} training data entries`);
 
 // Insert variable scores with diverse data
-console.log('Seeding variable scores...');
+logger.info('Seeding variable scores...');
 
 const variableScores = [
   // Tone variations
@@ -500,10 +502,10 @@ variableScores.forEach(v => {
   insertVariable.run(v.name, v.value, v.win, v.lose, v.tests, v.responses, v.rate, v.confidence);
 });
 
-console.log(`Inserted ${variableScores.length} variable scores`);
+logger.info(`Inserted ${variableScores.length} variable scores`);
 
 // Insert timing scores
-console.log('Seeding timing scores...');
+logger.info('Seeding timing scores...');
 
 const timingScores = [];
 // Generate realistic timing data (certain hours/days perform better)
@@ -561,10 +563,10 @@ timingScores.forEach(t => {
   insertTiming.run(t.hour, t.day_of_week, t.post_count, t.total_responses, t.avg_response_rate, t.score);
 });
 
-console.log(`Inserted ${timingScores.length} timing scores`);
+logger.info(`Inserted ${timingScores.length} timing scores`);
 
 // Create sample ad variants for existing jobs
-console.log('Creating sample ad variants...');
+logger.info('Creating sample ad variants...');
 
 const jobs = db.prepare(`SELECT id, title, location, pay_rate FROM jobs LIMIT 5`).all();
 
@@ -592,7 +594,7 @@ if (jobs.length > 0) {
     );
   });
 
-  console.log(`Created variants for ${jobs.length} jobs`);
+  logger.info(`Created variants for ${jobs.length} jobs`);
 
   // Add performance data for variants
   const variants = db.prepare(`SELECT id, job_id FROM ad_variants`).all();
@@ -614,12 +616,12 @@ if (jobs.length > 0) {
     }
   });
 
-  console.log('Added performance history for variants');
+  logger.info('Added performance history for variants');
 }
 
-console.log('\n✅ Ad optimization data seeded successfully!');
-console.log('Summary:');
-console.log(`  - Training data: ${adTrainingData.length} entries`);
-console.log(`  - Variable scores: ${variableScores.length} entries`);
-console.log(`  - Timing scores: ${timingScores.length} entries`);
-console.log(`  - Ad variants: ${jobs.length * 2} entries`);
+logger.info('Ad optimization data seeded successfully!', {
+  trainingData: adTrainingData.length,
+  variableScores: variableScores.length,
+  timingScores: timingScores.length,
+  adVariants: jobs.length * 2
+});

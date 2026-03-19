@@ -6,6 +6,7 @@
 const express = require('express');
 const router = express.Router();
 const { db } = require('../../../../../db');
+const { safeJsonParse } = require('../../../../../db/utils/db-helpers');
 const { verifyTelegramAuth, processReferral, generateRandomAvatar } = require('../helpers/auth-utils');
 const { generateDemoToken } = require('../helpers/token-manager');
 const logger = require('../../../../../utils/logger');
@@ -21,22 +22,17 @@ router.post('/telegram/login', (req, res) => {
   try {
     const { referralCode, ...telegramData } = req.body;
 
-    logger.info('📱 Telegram login attempt:', {
-      id: telegramData.id,
+    logger.info('Telegram login attempt', {
+      telegramId: telegramData.id,
       username: telegramData.username,
-      referralCode,
-      requestBody: req.body,
-      hasHash: !!telegramData.hash,
-      authDate: telegramData.auth_date,
-      fields: Object.keys(telegramData)
+      hasReferral: !!referralCode
     });
 
     // Verify the Telegram authentication data
     if (!verifyTelegramAuth(telegramData)) {
-      logger.error('❌ Telegram auth verification failed', {
-        telegramData,
-        botTokenExists: !!TELEGRAM_BOT_TOKEN,
-        tokenPrefix: TELEGRAM_BOT_TOKEN ? TELEGRAM_BOT_TOKEN.substring(0, 10) + '...' : 'missing'
+      logger.error('Telegram auth verification failed', {
+        telegramId: telegramData.id,
+        botTokenConfigured: !!TELEGRAM_BOT_TOKEN
       });
       return res.status(401).json({ success: false, error: 'Invalid Telegram authentication' });
     }
@@ -63,7 +59,7 @@ router.post('/telegram/login', (req, res) => {
       `).run(username, photoUrl, telegramId);
 
       candidate = db.prepare('SELECT * FROM candidates WHERE telegram_chat_id = ?').get(telegramId);
-      candidate.certifications = JSON.parse(candidate.certifications || '[]');
+      candidate.certifications = safeJsonParse(candidate.certifications, []);
 
       logger.info(`✅ Telegram login success: ${candidate.name} (existing user)`);
 
@@ -92,7 +88,7 @@ router.post('/telegram/login', (req, res) => {
     const referredBy = processReferral(id, fullName, referralCode);
 
     candidate = db.prepare('SELECT * FROM candidates WHERE id = ?').get(id);
-    candidate.certifications = JSON.parse(candidate.certifications || '[]');
+    candidate.certifications = safeJsonParse(candidate.certifications, []);
 
     logger.info(`📱 New Telegram registration: ${fullName} (@${username || 'no username'})${referredBy ? ` - referred by ${referredBy}` : ''}`);
 
@@ -105,8 +101,8 @@ router.post('/telegram/login', (req, res) => {
       message: 'Account created! Your account is pending approval.',
     });
   } catch (error) {
-    logger.error('Telegram login error:', error);
-    res.status(500).json({ success: false, error: error.message });
+    logger.error('Telegram login error', { error: error.message });
+    res.status(500).json({ success: false, error: 'Internal server error' });
   }
 });
 
@@ -125,42 +121,6 @@ router.get('/telegram/config', (req, res) => {
     success: true,
     botUsername: botUsername,
   });
-});
-
-/**
- * POST /telegram/debug
- * Telegram Debug - test auth verification (for debugging only)
- */
-router.post('/telegram/debug', (req, res) => {
-  try {
-    const telegramData = req.body;
-
-    logger.info('🔧 Telegram debug request:', {
-      body: req.body,
-      headers: req.headers,
-      ip: req.ip,
-      userAgent: req.get('User-Agent')
-    });
-
-    const verificationResult = verifyTelegramAuth(telegramData);
-
-    res.json({
-      success: true,
-      debug: {
-        receivedData: telegramData,
-        verificationPassed: verificationResult,
-        botTokenConfigured: !!TELEGRAM_BOT_TOKEN,
-        currentTimestamp: Math.floor(Date.now() / 1000)
-      }
-    });
-  } catch (error) {
-    logger.error('Debug endpoint error:', error);
-    res.status(500).json({
-      success: false,
-      error: error.message,
-      stack: error.stack
-    });
-  }
 });
 
 module.exports = router;

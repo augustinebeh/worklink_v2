@@ -20,7 +20,7 @@ const logger = createLogger('websocket:candidate-handler');
  * @param {Function} aiProcessorCallback - Callback to trigger AI processing
  */
 async function sendMessageFromCandidate(candidateId, content, channel = 'app', aiProcessorCallback = null) {
-  console.log(`📨 Candidate ${candidateId} sent message: "${content.substring(0, 50)}..."`);
+  logger.debug('Candidate message received', { candidateId, contentPreview: content.substring(0, 50) });
   const id = Date.now();
   const timestamp = new Date().toISOString();
   
@@ -43,7 +43,7 @@ async function sendMessageFromCandidate(candidateId, content, channel = 'app', a
         convManager.updateStatus(candidateId, 'open');
       }
     } catch (e) {
-      console.log('Conv manager error:', e.message);
+      logger.debug('Conv manager error', { error: e.message });
     }
   }
 
@@ -69,7 +69,7 @@ async function sendMessageFromCandidate(candidateId, content, channel = 'app', a
         smartNotif.queueNotification(candidateId, content);
       }
     } catch (e) {
-      console.log('Smart notif error:', e.message);
+      logger.debug('Smart notif error', { error: e.message });
     }
   }
 
@@ -86,7 +86,7 @@ async function sendMessageFromCandidate(candidateId, content, channel = 'app', a
         });
       }
     } catch (e) {
-      console.log('Escalation check error:', e.message);
+      logger.debug('Escalation check error', { error: e.message });
     }
   }
 
@@ -112,7 +112,7 @@ async function sendMessageFromCandidate(candidateId, content, channel = 'app', a
   try {
     const ml = require('../../services/ml');
     ml.processImplicitFeedback(candidateId, content).catch(err => {
-      console.error('Implicit feedback processing error:', err.message);
+      logger.debug('Implicit feedback processing error', { error: err.message });
     });
   } catch (error) {
     // ML service not loaded, skip
@@ -120,9 +120,9 @@ async function sendMessageFromCandidate(candidateId, content, channel = 'app', a
 
   // Trigger AI processing if callback provided
   if (aiProcessorCallback) {
-    console.log(`🤖 [WS] Triggering AI processing for candidate ${candidateId}`);
+    logger.debug('Triggering AI processing', { candidateId });
     aiProcessorCallback(candidateId, content, channel).catch(error => {
-      console.error(`🤖 [WS] AI processing failed for candidate ${candidateId}:`, error.message);
+      logger.error('AI processing failed', { candidateId, error: error.message });
     });
   }
 

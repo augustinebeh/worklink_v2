@@ -41,7 +41,7 @@ const authService = {
       const response = await apiClient.postJSON('/api/v1/auth/logout');
       return response;
     } catch (error) {
-      console.warn('Logout API call failed:', error.message);
+      // Logout API call failed - continue with local cleanup
       // Continue with local cleanup even if API call fails
       return { success: true };
     } finally {
@@ -251,7 +251,7 @@ const authService = {
       const userData = sessionStorage.getItem('admin_user') || localStorage.getItem('admin_user');
       return userData ? JSON.parse(userData) : null;
     } catch (error) {
-      console.error('Error parsing user data from storage:', error);
+      // Error parsing user data from storage
       // Clear corrupted data and try to recover
       this.clearLocalAuth();
       return null;

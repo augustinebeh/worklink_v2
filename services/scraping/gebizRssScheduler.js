@@ -6,6 +6,8 @@
 
 const cron = require('node-cron');
 const GeBIZRSSOrchestrator = require('./gebizRssOrchestrator');
+const { createLogger } = require('../../utils/structured-logger');
+const logger = createLogger('gebiz-rss-scheduler');
 
 class GeBIZRSSScheduler {
   constructor() {
@@ -28,8 +30,8 @@ class GeBIZRSSScheduler {
       totalExecutionTime: 0
     };
 
-    console.log('📅 GeBIZ RSS Scheduler initialized');
-    console.log(`⏰ Schedule: Every 6 hours (00:00, 06:00, 12:00, 18:00 ${this.timezone})`);
+    logger.info('GeBIZ RSS Scheduler initialized');
+    logger.info(`Schedule: Every 6 hours (00:00, 06:00, 12:00, 18:00 ${this.timezone})`);
   }
 
   /**
@@ -37,7 +39,7 @@ class GeBIZRSSScheduler {
    */
   start() {
     if (this.scheduledJob) {
-      console.log('⚠️  Scheduler already running');
+      logger.warn('Scheduler already running');
       return false;
     }
 
@@ -54,12 +56,12 @@ class GeBIZRSSScheduler {
       this.isEnabled = true;
       this.updateNextExecutionTime();
 
-      console.log('✅ GeBIZ RSS Scheduler started successfully');
-      console.log(`📅 Next execution: ${this.stats.nextExecution}`);
+      logger.info('GeBIZ RSS Scheduler started successfully');
+      logger.info(`Next execution: ${this.stats.nextExecution}`);
 
       return true;
     } catch (error) {
-      console.error('❌ Failed to start scheduler:', error.message);
+      logger.error('Failed to start scheduler', { error: error.message });
       return false;
     }
   }
@@ -69,7 +71,7 @@ class GeBIZRSSScheduler {
    */
   stop() {
     if (!this.scheduledJob) {
-      console.log('⚠️  Scheduler not running');
+      logger.warn('Scheduler not running');
       return false;
     }
 
@@ -79,10 +81,10 @@ class GeBIZRSSScheduler {
       this.scheduledJob = null;
       this.isEnabled = false;
 
-      console.log('🛑 GeBIZ RSS Scheduler stopped');
+      logger.info('GeBIZ RSS Scheduler stopped');
       return true;
     } catch (error) {
-      console.error('❌ Failed to stop scheduler:', error.message);
+      logger.error('Failed to stop scheduler', { error: error.message });
       return false;
     }
   }
@@ -91,7 +93,7 @@ class GeBIZRSSScheduler {
    * Restart the scheduler
    */
   restart() {
-    console.log('🔄 Restarting GeBIZ RSS Scheduler...');
+    logger.info('Restarting GeBIZ RSS Scheduler...');
     this.stop();
     setTimeout(() => this.start(), 1000);
     return true;
@@ -104,15 +106,15 @@ class GeBIZRSSScheduler {
     const executionId = `SCHED-${Date.now()}`;
     const startTime = Date.now();
 
-    console.log(`🕐 Scheduled scraping execution started (${executionId})`);
-    console.log(`📅 Execution time: ${new Date().toLocaleString('en-SG', { timeZone: this.timezone })}`);
+    logger.info(`Scheduled scraping execution started (${executionId})`);
+    logger.info(`Execution time: ${new Date().toLocaleString('en-SG', { timeZone: this.timezone })}`);
 
     this.stats.jobsExecuted++;
 
     try {
       // Check if orchestrator is available and not already running
       if (this.orchestrator.isRunning) {
-        console.log('⚠️  Previous scraping job still running, skipping this execution');
+        logger.warn('Previous scraping job still running, skipping this execution');
         return {
           skipped: true,
           reason: 'Previous job still running',
@@ -130,8 +132,8 @@ class GeBIZRSSScheduler {
       const executionTime = Date.now() - startTime;
       this.updateExecutionStats(executionTime, true);
 
-      console.log(`✅ Scheduled scraping completed successfully (${executionTime}ms)`);
-      console.log(`📊 Results: ${result.summary.newTenders} new tenders, ${result.summary.duplicates} duplicates`);
+      logger.info(`Scheduled scraping completed successfully (${executionTime}ms)`);
+      logger.info(`Results: ${result.summary.newTenders} new tenders, ${result.summary.duplicates} duplicates`);
 
       return {
         success: true,
@@ -145,7 +147,7 @@ class GeBIZRSSScheduler {
       const executionTime = Date.now() - startTime;
       this.updateExecutionStats(executionTime, false);
 
-      console.error(`❌ Scheduled scraping failed (${executionId}): ${error.message}`);
+      logger.error(`Scheduled scraping failed (${executionId})`, { error: error.message });
 
       // Log the error for monitoring
       await this.logSchedulerError(executionId, error);
@@ -215,7 +217,7 @@ class GeBIZRSSScheduler {
       this.stats.nextExecution = nextExecution.toISOString();
 
     } catch (error) {
-      console.error('Error calculating next execution time:', error.message);
+      logger.error('Error calculating next execution time', { error: error.message });
       this.stats.nextExecution = 'Error calculating';
     }
   }
@@ -238,13 +240,13 @@ class GeBIZRSSScheduler {
       };
 
       // For now, just log to console (could be extended to write to database or external service)
-      console.error('📝 Scheduler Error Log:', JSON.stringify(errorLog, null, 2));
+      logger.error('Scheduler Error Log', errorLog);
 
       // Could also send to external monitoring service here
       // await this.sendToMonitoringService(errorLog);
 
     } catch (logError) {
-      console.error('Failed to log scheduler error:', logError.message);
+      logger.error('Failed to log scheduler error', { error: logError.message });
     }
   }
 
@@ -310,7 +312,7 @@ class GeBIZRSSScheduler {
    * @returns {Object} Execution result
    */
   async executeNow() {
-    console.log('🔧 Manual execution triggered');
+    logger.info('Manual execution triggered');
     return this.executeScheduledScraping();
   }
 
@@ -340,11 +342,11 @@ class GeBIZRSSScheduler {
         this.start();
       }
 
-      console.log(`📅 Schedule updated: ${newCronExpression} (${this.timezone})`);
+      logger.info(`Schedule updated: ${newCronExpression} (${this.timezone})`);
       return true;
 
     } catch (error) {
-      console.error('❌ Failed to update schedule:', error.message);
+      logger.error('Failed to update schedule', { error: error.message });
       return false;
     }
   }

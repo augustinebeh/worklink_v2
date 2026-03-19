@@ -36,7 +36,7 @@ const ConsultantPerformance = () => {
         setDashboardMetrics(data.data);
       }
     } catch (error) {
-      console.error('Failed to fetch dashboard metrics:', error);
+      // Failed to fetch dashboard metrics:
     } finally {
       setLoading(false);
     }
@@ -54,7 +54,7 @@ const ConsultantPerformance = () => {
         await fetchDashboardMetrics();
       }
     } catch (error) {
-      console.error('Failed to run daily analytics:', error);
+      // Failed to run daily analytics:
     }
   };
 
@@ -70,7 +70,7 @@ const ConsultantPerformance = () => {
         await fetchDashboardMetrics();
       }
     } catch (error) {
-      console.error('Failed to run KPI calculation:', error);
+      // Failed to run KPI calculation:
     }
   };
 

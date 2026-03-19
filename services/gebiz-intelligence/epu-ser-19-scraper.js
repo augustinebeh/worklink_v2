@@ -17,6 +17,8 @@ const axios = require('axios');
 const cheerio = require('cheerio');
 const EPUSer19Monitor = require('./epu-ser-19-monitor');
 
+const { createLogger } = require('../../utils/structured-logger');
+const logger = createLogger('epu-ser-19-scraper');
 // Configure stealth mode
 puppeteer.use(StealthPlugin());
 
@@ -142,14 +144,14 @@ class EPUSer19Scraper {
 
       // Handle dialogs/popups
       this.page.on('dialog', async dialog => {
-        console.log(`Dialog detected: ${dialog.message()}`);
+        logger.debug(`Dialog detected: ${dialog.message()}`);
         await dialog.accept();
       });
 
       this.isInitialized = true;
-      console.log('EPU/SER/19 scraper initialized successfully');
+      logger.info('EPU/SER/19 scraper initialized successfully');
     } catch (error) {
-      console.error('Failed to initialize EPU scraper:', error);
+      logger.error('Failed to initialize EPU scraper', { error: error.message });
       await this.cleanup();
       throw error;
     }
@@ -170,7 +172,7 @@ class EPUSer19Scraper {
 
         await this.initialize();
 
-        console.log(`🔍 Scraping EPU/SER/19 tenders (attempt ${attempts}/${maxAttempts})...`);
+        logger.info(`Scraping EPU/SER/19 tenders (attempt ${attempts}/${maxAttempts})...`);
 
         // Strategy 1: Direct GeBIZ portal search
         let tenders = await this.searchGeBIZPortal();
@@ -211,12 +213,12 @@ class EPUSer19Scraper {
         }
 
         const duration = Date.now() - startTime;
-        console.log(`✅ EPU scraping completed: ${processedTenders.length} EPU tenders found in ${duration}ms`);
+        logger.info(`EPU scraping completed: ${processedTenders.length} EPU tenders found in ${duration}ms`);
 
         return processedTenders;
 
       } catch (error) {
-        console.error(`EPU scraping attempt ${attempts} failed:`, error.message);
+        logger.error(`EPU scraping attempt ${attempts} failed`, { error: error.message });
         this.scrapingStats.failedScrapes++;
         this.scrapingStats.errors.push({
           timestamp: new Date().toISOString(),
@@ -234,7 +236,7 @@ class EPUSer19Scraper {
         const jitter = Math.random() * 1000;
         const backoffDelay = Math.min(45000, baseDelay + jitter);
 
-        console.log(`⏱️  Waiting ${backoffDelay}ms before retry...`);
+        logger.info(`Waiting ${backoffDelay}ms before retry...`);
         await this.delay(backoffDelay);
 
         // Reset browser on persistent failures
@@ -253,7 +255,7 @@ class EPUSer19Scraper {
     const tenders = [];
 
     try {
-      console.log('🌐 Navigating to GeBIZ opportunities portal...');
+      logger.info('Navigating to GeBIZ opportunities portal...');
       await this.page.goto(this.searchUrl, {
         waitUntil: 'networkidle2',
         timeout: this.options.timeout
@@ -268,7 +270,7 @@ class EPUSer19Scraper {
       // Perform targeted searches for EPU/SER/19 terms
       for (const searchTerm of this.epuSearchTerms.slice(0, 3)) { // Limit to avoid being blocked
         try {
-          console.log(`🔍 Searching for: "${searchTerm}"`);
+          logger.info(`Searching for: "${searchTerm}"`);
 
           const searchResults = await this.performSearch(searchTerm);
           tenders.push(...searchResults);
@@ -276,18 +278,18 @@ class EPUSer19Scraper {
           // Add delay between searches
           await this.randomDelay(4000, 7000);
         } catch (searchError) {
-          console.log(`⚠️  Search failed for "${searchTerm}":`, searchError.message);
+          logger.warn(`Search failed for "${searchTerm}"`, { error: searchError.message });
         }
       }
 
       // Remove duplicates based on tender number or title
       const uniqueTenders = this.removeDuplicateTenders(tenders);
-      console.log(`📊 Found ${uniqueTenders.length} unique tenders from portal search`);
+      logger.info(`Found ${uniqueTenders.length} unique tenders from portal search`);
 
       return uniqueTenders;
 
     } catch (error) {
-      console.error('Portal search failed:', error);
+      logger.error('Portal search failed', { error: error.message });
       return [];
     }
   }
@@ -305,9 +307,9 @@ class EPUSer19Scraper {
         this.page.waitForSelector('form', { timeout: 15000 })
       ]);
 
-      console.log('✅ Search form detected');
+      logger.info('Search form detected');
     } catch (error) {
-      console.log('⚠️  No search form found, continuing with page scraping');
+      logger.warn('No search form found, continuing with page scraping');
     }
   }
 
@@ -348,7 +350,7 @@ class EPUSer19Scraper {
       results.push(...pageResults);
 
     } catch (error) {
-      console.log(`Search execution failed for "${searchTerm}":`, error.message);
+      logger.warn(`Search execution failed for "${searchTerm}"`, { error: error.message });
     }
 
     return results;
@@ -376,8 +378,6 @@ class EPUSer19Scraper {
           tenderElements = document.querySelectorAll(selector);
           if (tenderElements.length > 0) break;
         }
-
-        console.log(`Found ${tenderElements.length} potential tender elements`);
 
         tenderElements.forEach((element, index) => {
           try {
@@ -449,18 +449,18 @@ class EPUSer19Scraper {
               scraped_at: new Date().toISOString()
             });
           } catch (e) {
-            console.log('Error processing tender element:', e.message);
+            // Silently skip malformed tender elements in browser context
           }
         });
 
         return results;
       }, searchContext);
 
-      console.log(`📊 Extracted ${tenders.length} tenders from page`);
+      logger.info(`Extracted ${tenders.length} tenders from page`);
       return tenders;
 
     } catch (error) {
-      console.error('Failed to extract tender data from page:', error);
+      logger.error('Failed to extract tender data from page', { error: error.message });
       return [];
     }
   }
@@ -470,7 +470,7 @@ class EPUSer19Scraper {
    */
   async parseGeBIZRSS() {
     try {
-      console.log('📡 Fetching GeBIZ RSS feed...');
+      logger.info('Fetching GeBIZ RSS feed...');
 
       const response = await axios.get(this.rssUrl, {
         timeout: 15000,
@@ -510,15 +510,15 @@ class EPUSer19Scraper {
             });
           }
         } catch (e) {
-          console.log('Error processing RSS item:', e.message);
+          logger.warn('Error processing RSS item', { error: e.message });
         }
       });
 
-      console.log(`📡 Found ${tenders.length} tenders from RSS feed`);
+      logger.info(`Found ${tenders.length} tenders from RSS feed`);
       return tenders;
 
     } catch (error) {
-      console.error('RSS parsing failed:', error);
+      logger.error('RSS parsing failed', { error: error.message });
       return [];
     }
   }
@@ -529,7 +529,7 @@ class EPUSer19Scraper {
   async extractFromHistoricalPatterns() {
     // This would connect to the historical database and look for patterns
     // For now, return empty array
-    console.log('📊 Analyzing historical patterns for missed opportunities...');
+    logger.info('Analyzing historical patterns for missed opportunities...');
     return [];
   }
 
@@ -591,9 +591,9 @@ class EPUSer19Scraper {
         this.browser = null;
       }
       this.isInitialized = false;
-      console.log('EPU scraper cleaned up');
+      logger.info('EPU scraper cleaned up');
     } catch (error) {
-      console.error('Error during cleanup:', error);
+      logger.error('Error during cleanup', { error: error.message });
     }
   }
 
@@ -601,19 +601,19 @@ class EPUSer19Scraper {
    * Schedule regular EPU/SER/19 monitoring
    */
   startMonitoring(intervalMinutes = 30) {
-    console.log(`🕐 Starting EPU/SER/19 monitoring every ${intervalMinutes} minutes`);
+    logger.info(`Starting EPU/SER/19 monitoring every ${intervalMinutes} minutes`);
 
     const interval = setInterval(async () => {
       try {
-        console.log('🔄 Starting scheduled EPU/SER/19 scan...');
+        logger.info('Starting scheduled EPU/SER/19 scan...');
         await this.scrapeEPUTenders();
 
         // Generate market report after each scan
         const report = this.monitor.generateMarketReport();
-        console.log(`📊 Market Report: ${report.active_opportunities} active opportunities, $${report.total_estimated_value.toLocaleString()} total value`);
+        logger.info(`Market Report: ${report.active_opportunities} active opportunities, $${report.total_estimated_value.toLocaleString()} total value`);
 
       } catch (error) {
-        console.error('Scheduled EPU scan failed:', error.message);
+        logger.error('Scheduled EPU scan failed', { error: error.message });
       }
     }, intervalMinutes * 60 * 1000);
 

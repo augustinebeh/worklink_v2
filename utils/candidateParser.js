@@ -5,6 +5,8 @@
  * Used to avoid duplicate parsing code across routes
  */
 
+const { safeJsonParse } = require('../db/utils/db-helpers');
+
 /**
  * Parse JSON fields in a candidate record
  * @param {Object} candidate - Raw candidate record from database
@@ -32,28 +34,6 @@ function parseCandidateData(candidate) {
 function parseCandidatesData(candidates) {
   if (!Array.isArray(candidates)) return [];
   return candidates.map(parseCandidateData);
-}
-
-/**
- * Safely parse JSON with a default value
- * @param {string|any} value - Value to parse
- * @param {any} defaultValue - Default if parsing fails
- * @returns {any} - Parsed value or default
- */
-function safeJsonParse(value, defaultValue = null) {
-  if (value === null || value === undefined) {
-    return defaultValue;
-  }
-
-  if (typeof value !== 'string') {
-    return value; // Already parsed
-  }
-
-  try {
-    return JSON.parse(value);
-  } catch (error) {
-    return defaultValue;
-  }
 }
 
 /**

@@ -184,7 +184,7 @@ export default function RetentionAnalytics() {
         loading: false
       });
     } catch (error) {
-      console.error('Error fetching retention data:', error);
+      // Error fetching retention data:
       setData(prev => ({ ...prev, loading: false }));
     }
   };
